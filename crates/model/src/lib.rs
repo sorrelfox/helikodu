@@ -6,3 +6,12 @@
 //! See the crate's README for its place in the workspace.
 
 #![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+pub mod audio;
+pub mod library;
+pub mod player;
+pub mod settings;
+mod text_form;
+
+pub use text_form::ParseError;
