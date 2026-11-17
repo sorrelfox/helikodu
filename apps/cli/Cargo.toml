@@ -13,5 +13,22 @@ publish.workspace = true
 name = "helikodu-cli"
 path = "src/main.rs"
 
+[features]
+default = ["pipewire", "alsa", "dsd"]
+# The native PipeWire output backend.
+pipewire = ["helikodu-service/pipewire"]
+# The native ALSA output backend.
+alsa = ["helikodu-service/alsa"]
+# The DSF/DFF reader, which plays DSD files as PCM.
+dsd = ["helikodu-service/dsd"]
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+crossterm.workspace = true
+helikodu-model.workspace = true
+helikodu-service.workspace = true
+serde_json.workspace = true
+
 [lints]
 workspace = true

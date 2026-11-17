@@ -22,14 +22,20 @@ alsa = "0.11"
 anyhow = "1"
 # Guesses the legacy charset of tag text that is not valid in its declared encoding.
 chardetng = "1"
+# Argument parsing of the command-line tool.
+clap = { version = "4.6", features = ["derive"] }
+# Raw terminal mode and key events for the command-line tool's interactive keys.
+crossterm = { version = "0.29", default-features = false, features = ["events"] }
 # Decodes legacy charsets (cp1251, Shift-JIS, GBK, …) in tags and CUE sheets.
 encoding_rs = "0.8"
 # Raw FFmpeg bindings; the safe layer is `ffmpeg-bridge`. Only libavformat (with
 # libavcodec and libavutil), linked dynamically through pkg-config.
 ffmpeg-sys-next = { version = "=9.1.1", default-features = false, features = ["avformat"] }
+helikodu-engine = { path = "crates/engine", default-features = false }
 helikodu-extra-decoders = { path = "crates/extra-decoders", default-features = false }
 helikodu-ffmpeg-bridge = { path = "crates/ffmpeg-bridge" }
 helikodu-model = { path = "crates/model" }
+helikodu-service = { path = "crates/service", default-features = false }
 # Locale-aware sort order of the library: a custom SQLite collation. Unicode-3.0.
 # The compiled data is the CLDR collation data for every locale.
 icu_collator = "2.4"

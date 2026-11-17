@@ -9,5 +9,19 @@ authors.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[features]
+default = ["pipewire", "alsa", "dsd"]
+# The native PipeWire output backend of the engine.
+pipewire = ["helikodu-engine/pipewire"]
+# The native ALSA output backend of the engine.
+alsa = ["helikodu-engine/alsa"]
+# The DSF/DFF reader of the engine.
+dsd = ["helikodu-engine/dsd"]
+
+[dependencies]
+helikodu-engine.workspace = true
+helikodu-model.workspace = true
+thiserror.workspace = true
+
 [lints]
 workspace = true
