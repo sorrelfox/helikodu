@@ -22,7 +22,7 @@ const USAGE: &str = "\
 usage: cargo xtask <command>
 
 commands:
-  ci            run every check that CI runs, in the same order
+  ci            run every check that CI runs, in the same order (--tests-only)
   check-deps    check the crate dependency rules and the unsafe-code policy
   corpus        generate the test corpus into target/corpus (--check, --strict)
   help          print this message
@@ -31,7 +31,7 @@ commands:
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
-        Some("ci") => ci::run(),
+        Some("ci") => ci::run(&args[1..]),
         Some("check-deps") => check_deps::run(),
         Some("corpus") => corpus::run(&args[1..]),
         Some("help" | "--help" | "-h") | None => {

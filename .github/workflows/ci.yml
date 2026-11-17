@@ -71,8 +71,7 @@ jobs:
             -v ~/ci-cache/target:/src/target \
             "helikodu-ci:${{ matrix.distro }}" sh -euxc '
               rustup toolchain install
-              cargo build --workspace --all-targets --all-features --locked
-              cargo test --workspace --all-features --locked
+              cargo xtask ci --tests-only
             '
 
   msrv:
