@@ -1,3 +1,3 @@
 # Website
 
-The static website at helikodu.org. It will carry the user guide and the release notes.
+The static website, published with GitHub Pages at <https://sorrelfox.github.io/helikodu/>. It will carry the user guide and the release notes.

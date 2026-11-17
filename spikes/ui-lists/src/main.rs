@@ -250,7 +250,7 @@ fn main() -> glib::ExitCode {
     }
     let rss_start = stats::rss_kib().0;
     let app = gtk::Application::builder()
-        .application_id("org.helikodu.SpikeUiLists")
+        .application_id("io.github.sorrelfox.SpikeUiLists")
         .flags(gtk::gio::ApplicationFlags::NON_UNIQUE)
         .build();
     let a = args.clone();
