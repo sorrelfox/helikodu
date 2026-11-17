@@ -3,17 +3,44 @@
 
 //! The music library: database, scanner, watcher, search, query language and statistics.
 //!
-//! See the crate's README for its place in the workspace.
+//! [`Library`] is the entry point: it opens the database and offers typed operations on
+//! tracks, statistics and search. See the crate's README for its place in the
+//! workspace.
 
 #![forbid(unsafe_code)]
 
+mod catalog;
 mod db;
+mod library;
 mod search;
+mod stats;
 
-pub use db::{
-    Database, DatabaseConfig, DbError, LocaleCollation, Location, MemoryName, SCHEMA_VERSION,
-    WriteTicket, Writer, display_text, path_from_blob, path_to_blob,
+pub use catalog::{
+    AudioProperties, FileStamp, IdentityId, RootId, TrackChange, TrackFingerprint, TrackKind,
+    TrackRecord, TrackTags, TrackWrite,
 };
-/// The SQLite bindings, whose types appear in the read and write callbacks.
-pub use rusqlite;
-pub use search::fold;
+pub use db::{
+    DatabaseConfig, DbError, LocaleCollation, Location, MemoryName, SCHEMA_VERSION, SqliteError,
+    display_text, path_from_blob, path_to_blob,
+};
+pub use library::Library;
+pub use search::{MatchRank, SearchHit, SearchRequest, SearchResults, fold};
+pub use stats::{
+    HistoryEntry, HistoryQuery, Listen, ListenEnd, ListenOutcome, PlayRules, Rating, TrackStats,
+};
+
+/// Direct SQL access to the database, below [`Library`].
+///
+/// For this crate's tests and benchmarks, and for diagnostics. It is not a stable
+/// interface: the schema and these types change without notice. Code in other crates
+/// uses the typed operations of [`Library`].
+pub mod raw {
+    pub use crate::db::{Database, WriteTicket, Writer};
+    /// The SQLite bindings, whose types appear in the read and write callbacks.
+    pub use rusqlite;
+
+    /// The error from the SQLite bindings underneath `error`.
+    pub fn sqlite_error(error: &crate::SqliteError) -> &rusqlite::Error {
+        error.inner()
+    }
+}

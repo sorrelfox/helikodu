@@ -3,8 +3,11 @@
 
 //! Errors of the database layer.
 
+use std::fmt;
+use std::path::PathBuf;
 use std::sync::Arc;
 
+use helikodu_model::library::TrackId;
 use thiserror::Error;
 
 /// An error from the library database.
@@ -13,12 +16,12 @@ use thiserror::Error;
 pub enum DbError {
     /// SQLite reported an error, or a write or read job returned one.
     #[error("database error: {0}")]
-    Sqlite(#[from] rusqlite::Error),
+    Sqlite(#[from] SqliteError),
 
     /// The batch a write belonged to could not be committed, so the write was rolled
     /// back with the rest of the batch.
     #[error("the write batch could not be committed: {0}")]
-    BatchFailed(Arc<rusqlite::Error>),
+    BatchFailed(Arc<SqliteError>),
 
     /// The database was written by a newer version of Helikodu.
     #[error(
@@ -41,7 +44,7 @@ pub enum DbError {
         name: &'static str,
         /// What went wrong.
         #[source]
-        source: rusqlite::Error,
+        source: SqliteError,
     },
 
     /// The SQLite library is older than the oldest supported version.
@@ -74,7 +77,67 @@ pub enum DbError {
     #[error("the database writer has stopped")]
     WriterStopped,
 
+    /// The track is not in the library.
+    #[error("there is no track {0} in the library")]
+    UnknownTrack(TrackId),
+
+    /// No file at this path is in the library.
+    #[error("there is no file {} in the library", .0.display())]
+    UnknownPath(PathBuf),
+
+    /// The path does not name a file: it has no file name or no parent folder.
+    #[error("not a file path: {}", .0.display())]
+    InvalidPath(PathBuf),
+
     /// The writer thread could not be started.
     #[error("could not start the database writer thread: {0}")]
     Thread(#[source] std::io::Error),
+}
+
+impl From<rusqlite::Error> for DbError {
+    fn from(error: rusqlite::Error) -> Self {
+        Self::Sqlite(SqliteError(error))
+    }
+}
+
+/// An error reported by SQLite.
+///
+/// The SQLite bindings stay out of the public API; [`raw`](crate::raw) gives access to
+/// the error underneath for code that works with SQL directly.
+pub struct SqliteError(pub(crate) rusqlite::Error);
+
+impl SqliteError {
+    /// Whether a constraint was violated: a unique key, a foreign key or a `CHECK`.
+    pub fn is_constraint_violation(&self) -> bool {
+        self.0.sqlite_error_code() == Some(rusqlite::ErrorCode::ConstraintViolation)
+    }
+
+    /// The error from the SQLite bindings.
+    pub(crate) fn inner(&self) -> &rusqlite::Error {
+        &self.0
+    }
+}
+
+impl From<rusqlite::Error> for SqliteError {
+    fn from(error: rusqlite::Error) -> Self {
+        Self(error)
+    }
+}
+
+impl fmt::Debug for SqliteError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl fmt::Display for SqliteError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl std::error::Error for SqliteError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.0.source()
+    }
 }

@@ -46,6 +46,8 @@ macro_rules! migration {
 pub(crate) const MIGRATIONS: &[Migration] = &[
     migration!(1, "0001", "library_schema"),
     migration!(2, "0002", "search_index"),
+    migration!(3, "0003", "identity_fingerprint"),
+    migration!(4, "0004", "search_support"),
 ];
 
 /// The schema version this build creates and understands.
@@ -95,10 +97,10 @@ pub(crate) fn migrate(connection: &mut Connection) -> Result<u32, DbError> {
 }
 
 fn apply(connection: &mut Connection, migration: &Migration) -> Result<(), DbError> {
-    let failed = |source| DbError::Migration {
+    let failed = |source: rusqlite::Error| DbError::Migration {
         version: migration.version,
         name: migration.name,
-        source,
+        source: source.into(),
     };
     // `foreign_keys` cannot change inside a transaction.
     connection

@@ -16,6 +16,7 @@ mod functions;
 mod migrations;
 mod path_bytes;
 mod read_pool;
+pub(crate) mod unix_time;
 mod writer;
 
 use std::path::PathBuf;
@@ -24,7 +25,7 @@ use rusqlite::{Connection, OptionalExtension};
 
 pub use collation::LocaleCollation;
 pub use connection::{Location, MemoryName};
-pub use error::DbError;
+pub use error::{DbError, SqliteError};
 pub use migrations::SCHEMA_VERSION;
 pub use path_bytes::{display_text, path_from_blob, path_to_blob};
 pub use writer::{WriteTicket, Writer};
@@ -80,7 +81,11 @@ impl DatabaseConfig {
     }
 }
 
-/// An open library database.
+/// An open library database, with direct SQL access.
+///
+/// This is the layer below [`Library`](crate::Library), reachable through
+/// [`raw`](crate::raw): its read and write callbacks receive SQLite connections. Other
+/// crates use the typed operations of `Library`.
 ///
 /// Dropping it commits the writes already queued and stops the writer thread.
 #[derive(Debug)]

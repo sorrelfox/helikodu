@@ -20,6 +20,7 @@ use std::thread::{self, JoinHandle};
 use rusqlite::Connection;
 
 use super::DbError;
+use super::error::SqliteError;
 
 /// A write job with its result channel, type-erased.
 trait WriteJob: Send {
@@ -59,7 +60,7 @@ where
         let deliver: Deliver = Box::new(move |batch| {
             let result = match (value, batch) {
                 (Ok(value), Ok(())) => Ok(value),
-                (Err(error), _) => Err(DbError::Sqlite(error)),
+                (Err(error), _) => Err(DbError::from(error)),
                 (Ok(_), Err(error)) => Err(error),
             };
             // The caller may have dropped the ticket; that is fine.
@@ -245,7 +246,7 @@ fn commit_batch(connection: &Connection, batch: &mut Vec<Job>) {
     let jobs = std::mem::take(batch);
     if let Err(error) = connection.execute_batch("BEGIN IMMEDIATE") {
         // No job has run; each fails with the reason the batch could not start.
-        let error = Arc::new(error);
+        let error = Arc::new(SqliteError(error));
         for job in jobs {
             job.fail(DbError::BatchFailed(Arc::clone(&error)));
         }
@@ -268,7 +269,7 @@ fn commit_batch(connection: &Connection, batch: &mut Vec<Job>) {
         if !connection.is_autocommit() {
             let _ = connection.execute_batch("ROLLBACK");
         }
-        Arc::new(error)
+        Arc::new(SqliteError(error))
     });
     for Outcome { succeeded, deliver } in deliveries {
         let result = match &batch_result {
@@ -284,7 +285,7 @@ fn commit_batch(connection: &Connection, batch: &mut Vec<Job>) {
 /// Runs one job inside its own savepoint, so that a failing job is rolled back alone.
 fn run_job(connection: &Connection, job: Job) -> Outcome {
     if let Err(error) = connection.execute_batch("SAVEPOINT job") {
-        let error = Arc::new(error);
+        let error = Arc::new(SqliteError(error));
         job.fail(DbError::BatchFailed(Arc::clone(&error)));
         return Outcome {
             succeeded: false,
@@ -300,7 +301,7 @@ fn run_job(connection: &Connection, job: Job) -> Outcome {
     match ended {
         Ok(()) => Outcome { succeeded, deliver },
         Err(error) => {
-            let error = Arc::new(error);
+            let error = Arc::new(SqliteError(error));
             Outcome {
                 succeeded: false,
                 deliver: Box::new(move |_| deliver(Err(DbError::BatchFailed(error)))),

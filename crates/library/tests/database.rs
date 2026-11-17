@@ -13,10 +13,11 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use helikodu_library::rusqlite::{self, Connection, OptionalExtension};
+use helikodu_library::raw::Database;
+use helikodu_library::raw::rusqlite::{self, Connection, OptionalExtension};
 use helikodu_library::{
-    Database, DatabaseConfig, DbError, LocaleCollation, SCHEMA_VERSION, display_text,
-    path_from_blob, path_to_blob,
+    DatabaseConfig, DbError, LocaleCollation, SCHEMA_VERSION, display_text, path_from_blob,
+    path_to_blob,
 };
 
 /// A fresh directory for one test's database files.

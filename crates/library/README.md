@@ -5,6 +5,20 @@ The SQLite schema and its migrations, the scan coordinator and file watcher, the
 - **May depend on:** `model`, `meta`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
 
+## The public API
+
+`Library` is the entry point. It opens the database (`Library::open`, `Library::open_read_only`) and offers typed operations; no SQLite type appears in them.
+
+| Area | Operations |
+|---|---|
+| Catalogue | `add_root`, `upsert_track` / `upsert_tracks` (a `TrackRecord`: path, `FileStamp`, sub-track, `AudioProperties`, `TrackTags`, a rating from the tags), `move_file`, `mark_file_missing`, `remove_file`, `remove_track`, `track_at`, `identity_of`, `identities_with` |
+| Statistics | `record_listen` (a `Listen` judged by `PlayRules`), `stats`, `set_rating` (`Option<Rating>`), `set_resume_position`, `history` (`HistoryQuery`) |
+| Search | `search` (`SearchRequest` → `SearchResults`), `rebuild_search_index` |
+
+Errors are `DbError`; an error from SQLite is the opaque `SqliteError`.
+
+The module `raw` gives direct SQL access below `Library`: `raw::Database` with its read and write callbacks, the `Writer`, and the `rusqlite` bindings. It exists for this crate's tests and benchmarks and for diagnostics, and it is not a stable interface. Other crates use `Library`.
+
 ## The database
 
 `src/db/` holds the connections, the migration runner, the collation and the SQL functions.
@@ -25,7 +39,7 @@ The SQLite schema and its migrations, the scan coordinator and file watcher, the
 
 ### Schema
 
-Version 1 (`0001_library_schema.sql`, `0002_search_index.sql`):
+Version 4 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fingerprint.sql`, `0004_search_support.sql`):
 
 | Area | Tables |
 |---|---|
@@ -38,9 +52,11 @@ Version 1 (`0001_library_schema.sql`, `0002_search_index.sql`):
 
 - **Paths are bytes.** `roots.path`, `dirs.path`, `files.name`, `covers.source_path` and `playlist_items.missing_ref` are BLOBs holding the bytes the kernel returned. `path_to_blob` and `path_from_blob` convert between them and `Path` without going through `String`. The `*_text` columns beside them hold `display_text`, which is for display and search only. Uniqueness and lookups use the bytes. Every table is `STRICT`, so a path stored as TEXT by mistake is an error.
 - **Statistics** hang off `identities`, not off paths, so they survive moves. `stats.rating` holds half stars from 0 to 10; `NULL` means not rated.
+- **Identity fingerprints.** `identities.content_hash` (the file's quick hash) and `identities.audio_key` (sub-track, frame range, duration, sample rate, channels) find an identity again when its track comes back.
+- **`tracks.artists_fold`** holds the folded artist and album artist names, separated by U+001F, for short-query scans and ranking. The library writes it with `track_people`.
 - **Folded columns** (`title_fold`, `people.fold`, `genres.fold`) hold `hk_fold()` of the text.
 - **Sort columns** (`tracks.title_sort`, `albums.title_sort`, `people.sort_name`) are declared `COLLATE HK_LOCALE`, and `genres` has an index on `name COLLATE HK_LOCALE`. No unique constraint uses the collation, so rebuilding the indexes for another locale cannot fail.
-- **Search tables** are contentless with `contentless_delete=1`, so a track's row can be deleted and inserted again when its tags change. Their rowid is `tracks.id`, and they are filled with folded text.
+- **Search tables** are contentless with `contentless_delete=1`, so a track's row can be deleted and inserted again when its tags change. Their rowid is `tracks.id`, and they are filled with folded text. The library refills a track's rows whenever it writes the track or moves its file; a trigger removes them when the track row is deleted, including by `ON DELETE CASCADE`.
 
 ### SQL functions and the collation
 
@@ -50,13 +66,40 @@ Every connection registers:
 |---|---|
 | `HK_LOCALE` (collation) | The alphabet order of the interface language, from ICU4X (`icu_collator`). `LocaleCollation::new` takes a BCP 47 tag (`sv-SE`) or a POSIX locale name (`sv_SE.UTF-8`); `C` and `POSIX` select the root order. |
 | `regexp(pattern, value)` | `value REGEXP pattern` with the `regex` crate. NULL if either side is NULL. The compiled pattern is cached per statement, and its size is limited to 1 MiB because patterns come from user queries. |
+| `hk_match_rank(field, query)` | How a folded field matches a folded query, 0 (equal) to 4 (not as a whole); a field with several values separated by U+001F ranks as its best one. Used to order search results. |
 | `hk_fold(text)` | The folded form: NFKD, lower case, Latin and Greek diacritics removed, `ß → ss`, `ё → е`, `ς → σ`, then NFC. Marks that belong to the letters of other scripts (Thai vowels, kana voicing marks, Devanagari) are kept. The same function is available in Rust as `fold`. |
 
 `db_meta` records the locale the `HK_LOCALE` indexes were built for. `Database::open` with another locale, and `Database::set_collation`, run `REINDEX HK_LOCALE`. Reader connections take the new order the next time they are lent out.
 
-### Substring search across scripts
+### Track identity and moves
 
-`tracks_fts` (tokenizer `unicode61 remove_diacritics 2`) matches whole words and word prefixes. `tracks_tri` (tokenizer `trigram`) holds the folded title, artists and album and answers substring queries of three characters or more in any script, including Chinese, Japanese and Thai. A shorter query scans the folded columns instead (`instr(title_fold, …)`). `tests/search.rs` shows both.
+A track's statistics, rating and history belong to its identity (`identities`), not to its path.
+
+- A file that is renamed while watched is moved with `move_file`: its row changes, so the tracks keep their ids and identities.
+- A file marked missing (`mark_file_missing`) that turns up elsewhere with the same size and quick hash is moved there by `upsert_track` (`TrackChange::Moved`).
+- A track that left the library (`remove_file`, `remove_track`) leaves its identity behind. A new track with the same fingerprint gets it back (`TrackChange::Returned`), with its statistics.
+- A re-encoded or re-ripped file has another fingerprint and gets a new identity.
+- The tracks of a CUE sheet or the subsongs of a file each have their own identity.
+- The rating found in a file's tags is taken only when a new identity is created. From then on the database wins, also over a cleared rating.
+
+### Statistics rules
+
+`PlayRules` decides what a listen counts as. Its functions are pure and tested on their own.
+
+- A **play** when the time actually played (seeks excluded) reaches the threshold: half the track or 4 minutes, whichever comes first; without a known length, 4 minutes. Both numbers are configurable. A play raises `play_count` and sets `first_played` and `last_played` (the start of the listen).
+- A **skip** when the user moved to another track before the threshold. It raises `skip_count` and sets `last_skipped`.
+- Anything else (stopped, or finished after seeking past most of it) counts as neither.
+- Every listen that played some audio is appended to `history`, with `counted` telling whether it was a play.
+- Audiobooks and tracks over 20 minutes remember where listening stopped (`resume_ms`) and forget it when they finish.
+
+### Search
+
+`Library::search` folds the text (`fold`), splits it at white space and returns the tracks that match every term, one page at a time, with the total count.
+
+- A term of three characters or more is looked up in `tracks_tri` (a substring of the title, artists or album in any script, including Chinese, Japanese, Korean and Thai) and in `tracks_fts` (a word prefix in any indexed column: also album artist, genre, composer and path). FTS5 syntax in the query is plain text.
+- A term of one or two characters is too short for trigrams. It is found by scanning the folded title, artists, album and genre columns with `instr()`.
+- Results are ranked by how the whole query matches the title, an artist or the album: exactly, as a prefix, at the start of a word, inside a word, and last the tracks that only match term by term (`MatchRank`). Within a rank they are in the locale order of `title_sort`.
+- The query language is not part of this yet; it will compile to the same indexes.
 
 ## SQLite: bundled or system
 
@@ -81,6 +124,23 @@ The crate needs SQLite 3.43 or newer, built with FTS5 (contentless-delete tables
 | All rows in order, through the index | 31 ms | 191 ms |
 | All rows in order, sorted without an index | 219 ms | 1.3 s |
 
+`benches/search.rs` measures `Library::search` (the first page of 50 and the total count) over a generated library in memory: titles, artists and albums of one to four words in Latin with diacritics, Cyrillic, Greek, Chinese, Japanese, Thai and Korean, 20 tracks per artist, 10 per album, five genres.
+
+Median of seven runs, Zen 5, one thread, bundled SQLite 3.54:
+
+| Query | 100 000 tracks: matches | time | 500 000 tracks: matches | time |
+|---|---|---|---|---|
+| `love` (trigram and word index) | 13 912 | 11 ms | 69 136 | 53 ms |
+| `我的心` (trigram) | 8 976 | 8 ms | 46 162 | 38 ms |
+| `LOVE song`, `night rain` (two long terms) | 1 906, 2 355 | 7–8 ms | | |
+| `lo`, `мо`, `αγ` (two characters, scan) | 13 912–14 365 | 24 ms | 69 136 | 117 ms |
+| `心`, `사랑`, `代表` (one or two CJK characters, scan) | 8 967–9 258 | 20–22 ms | 45 816–46 162 | 101–108 ms |
+| `9` (scan, no match) | 0 | 15 ms | 0 | 79 ms |
+| `a`, `o`, `e` (one letter, nearly every track) | 86 472–87 876 | 59–65 ms | 437 416 | 325 ms |
+| `a b c` (three short terms) | 15 304 | 47 ms | 76 425 | 240 ms |
+
+Writing 100 000 tracks with both indexes through `upsert_tracks` takes 15 s (154 µs per track, including people, albums and genres); rebuilding both indexes takes 0.44 s at 100 000 tracks and 2.6 s at 500 000. Every query meets the 100 ms budget at 100 000 tracks. At 500 000, queries of three characters or more stay well inside it, while one- and two-character queries, which scan, take up to a third of a second.
+
 A collation comparison costs about 12 times a byte comparison. Through the index, ordered reads cost the same as code-point order, because the index is already sorted; the collation's cost falls on writes and on a locale switch. Creating a collator takes well under a millisecond.
 
 The ICU4X data is compiled into the binary. In a stripped release build, `icu_collator` with the collation data of every locale adds about 1.3 MB, and `icu_normalizer` (which it needs anyway, and which `fold` uses) about 0.14 MB.
@@ -88,6 +148,8 @@ The ICU4X data is compiled into the binary. In a stripped release build, `icu_co
 ```sh
 cargo bench -p helikodu-library --bench collation            # 100 000 titles
 cargo bench -p helikodu-library --bench collation -- 500000
+cargo bench -p helikodu-library --bench search               # 100 000 tracks, every query
+cargo bench -p helikodu-library --bench search -- 500000 a 我的心   # 500 000 tracks, chosen queries
 ```
 
 ## Tests
@@ -98,5 +160,6 @@ cargo test -p helikodu-library --features bundled-sqlite
 ```
 
 - `tests/database.rs`: migrating an empty database, reopening, refusing a newer schema and opening it read-only, a failing migration that leaves nothing behind, file names that are not UTF-8, the locale order in English, Swedish, German and Estonian, and the rebuild of the sort indexes when the locale changes.
-- `tests/search.rs`: trigram substring search in Chinese, Japanese and Thai with queries of one to four characters, word search without accents, replacing and deleting index rows, and `regexp()`.
+- `tests/search.rs`: search through `Library` in Latin with diacritics, Cyrillic, Greek, Chinese, Japanese (kana and kanji), Thai and Korean, with queries of one to four characters; short queries; every term must match; FTS5 syntax as plain text; genre, composer, album artist and path through the word index; ranking and paging; the indexes after tag changes, moves and removals, and after a rebuild; `regexp()`.
+- `tests/stats.rs`: plays, skips and partial listens; ratings from 0 to 10 and not rated; the rating from the tags taken once; statistics after a watched move, after a file that disappears and reappears elsewhere, and after a track that leaves and comes back; a re-encoded file; CUE tracks; the history and its filters; resume positions.
 - `tests/writer.rs`: batching, a failed job rolled back alone, a batch that cannot commit rolled back whole, a panicking job, and the writes queued at shutdown.

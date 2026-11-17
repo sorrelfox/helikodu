@@ -15,7 +15,8 @@ use std::cell::Cell;
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 
-use helikodu_library::{Database, DatabaseConfig, LocaleCollation, fold};
+use helikodu_library::raw::Database;
+use helikodu_library::{DatabaseConfig, LocaleCollation, fold};
 
 /// Words in several scripts, so that the titles exercise contractions, expansions,
 /// diacritics and the implicit weights of Han characters.

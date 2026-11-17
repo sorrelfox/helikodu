@@ -454,6 +454,7 @@ version = "0.0.0"
 name = "helikodu-library"
 version = "0.0.0"
 dependencies = [
+ "helikodu-model",
  "icu_collator",
  "icu_locale_core",
  "icu_normalizer",

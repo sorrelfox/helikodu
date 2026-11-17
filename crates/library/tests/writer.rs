@@ -13,8 +13,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
-use helikodu_library::rusqlite::{self, Connection};
-use helikodu_library::{Database, DatabaseConfig, DbError, WriteTicket, Writer};
+use helikodu_library::raw::rusqlite::{self, Connection};
+use helikodu_library::raw::{Database, WriteTicket, Writer};
+use helikodu_library::{DatabaseConfig, DbError};
 
 struct Scratch {
     dir: PathBuf,

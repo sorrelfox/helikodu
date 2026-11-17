@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! SQL functions registered on every connection: `regexp()` and `hk_fold()`.
+//! SQL functions registered on every connection: `regexp()`, `hk_fold()` and
+//! `hk_match_rank()`.
 
 use std::borrow::Cow;
 
@@ -10,7 +11,7 @@ use rusqlite::Connection;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 
-use crate::search::fold;
+use crate::search::{fold, match_rank};
 
 /// The most memory a compiled pattern may use. Patterns come from user queries.
 const REGEX_SIZE_LIMIT: usize = 1 << 20;
@@ -23,6 +24,7 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     // `value REGEXP pattern` calls `regexp(pattern, value)`.
     connection.create_scalar_function("regexp", 2, flags, regexp)?;
     connection.create_scalar_function("hk_fold", 1, flags, hk_fold)?;
+    connection.create_scalar_function("hk_match_rank", 2, flags, hk_match_rank)?;
     Ok(())
 }
 
@@ -49,6 +51,16 @@ fn regexp(ctx: &mut Context<'_>) -> rusqlite::Result<Option<bool>> {
 /// `hk_fold(text)`: the folded form of `text` (see [`fold`]). NULL for NULL.
 fn hk_fold(ctx: &mut Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(text_of(ctx.get_raw(0)).map(|text| fold(&text)))
+}
+
+/// `hk_match_rank(field, query)`: how the folded `field` matches the folded `query`,
+/// from 0 (equal) to 4 (not as a whole); see [`MatchRank`](crate::search::MatchRank).
+/// NULL if either is NULL.
+fn hk_match_rank(ctx: &mut Context<'_>) -> rusqlite::Result<Option<i64>> {
+    let (Some(field), Some(query)) = (text_of(ctx.get_raw(0)), text_of(ctx.get_raw(1))) else {
+        return Ok(None);
+    };
+    Ok(Some(match_rank(&field, &query).to_sql()))
 }
 
 type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -126,5 +138,20 @@ mod tests {
             "arzte strasse"
         );
         assert_eq!(query::<Option<String>>(&c, "SELECT hk_fold(NULL)"), None);
+    }
+
+    #[test]
+    fn hk_match_rank_function() {
+        let c = connection();
+        assert_eq!(query::<i64>(&c, "SELECT hk_match_rank('love', 'love')"), 0);
+        assert_eq!(
+            query::<i64>(&c, "SELECT hk_match_rank('my love', 'love')"),
+            2
+        );
+        assert_eq!(query::<i64>(&c, "SELECT hk_match_rank('x', 'love')"), 4);
+        assert_eq!(
+            query::<Option<i64>>(&c, "SELECT hk_match_rank(NULL, 'love')"),
+            None
+        );
     }
 }
