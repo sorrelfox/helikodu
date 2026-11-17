@@ -14,11 +14,19 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 helikodu-ffmpeg-bridge = { path = "../crates/ffmpeg-bridge" }
+helikodu-meta = { path = "../crates/meta" }
 helikodu-model = { path = "../crates/model" }
 
 [[bin]]
 name = "ffmpeg_bridge_open"
 path = "fuzz_targets/ffmpeg_bridge_open.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cue_parse"
+path = "fuzz_targets/cue_parse.rs"
 test = false
 doc = false
 bench = false

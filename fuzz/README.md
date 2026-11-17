@@ -9,9 +9,15 @@ This folder is outside the Cargo workspace because fuzzing needs a nightly toolc
 | Target | What it exercises |
 |---|---|
 | `ffmpeg_bridge_open` | `helikodu-ffmpeg-bridge`: opening arbitrary bytes with every offline lock on, metadata, chapters, attached pictures, decoding and seeking |
+| `cue_parse` | `helikodu-meta`'s CUE sheet parser: charset detection, parsing and resolution into virtual tracks, checking that no track's file leaves the sheet's folder and that every span is ordered |
 
 ```sh
 cargo +nightly fuzz run ffmpeg_bridge_open
+cargo +nightly fuzz run cue_parse
 ```
 
 Good seed inputs are small files of every format the player opens; `cargo test -p helikodu-ffmpeg-bridge` leaves a set in `target/tmp/ffmpeg-bridge-media/`.
+
+### CUE sheets
+
+Seed `cue_parse` with real sheets: EAC and foobar2000 rips (single file with pregaps, one file per track), sheets in cp1251, Shift-JIS and UTF-16, and the sheets written by `cargo test -p helikodu-meta --test cue` into `target/tmp/meta-cue/`. The first byte of each input picks the legacy charset the parser is told the user chose, so the rest of the input is the sheet.

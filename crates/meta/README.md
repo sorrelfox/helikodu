@@ -41,10 +41,46 @@ Multiple values are NUL-separated values in ID3v2 and APEv2, repeated Vorbis com
 
 `POPM` (by player e-mail: range table, linear for Quod Libet and Picard, MusicBee's half-star values), `FMPS_RATING`, `RATING` (0–5 or 0–100) and ASF `WM/SharedUserRating` are read onto the half-star scale. The table is in `src/tags/rating.rs`.
 
+## CUE sheets and chapters
+
+```rust
+use helikodu_meta::cue::{CueOptions, read_cue, read_embedded_cue, read_chapters};
+
+let album = read_cue("/music/Album/Album.cue", &CueOptions::default())?;
+for track in &album.tracks {
+    println!("{} {:?} {:?}..{:?}", track.number, track.tags.title, track.start(), track.end());
+}
+let embedded = read_embedded_cue("/music/Album.flac", &CueOptions::default())?; // Option<CueTracks>
+let chapters = read_chapters("/books/Book.m4b")?; // Vec<VirtualTrack>
+```
+
+| Type | What it is |
+|---|---|
+| `read_cue` | Read a `.cue` file and resolve its tracks against the files beside it |
+| `read_embedded_cue` | The sheet inside an audio file: the `CUESHEET` tag (Vorbis comment, APEv2) through the tag reader, then FFmpeg, then the FLAC `CUESHEET` block. Every `FILE` stands for the audio file; the file's tags fill the album fields the sheet lacks |
+| `read_chapters`, `chapters_to_tracks` | Container chapters (MP4/M4B, Matroska, Ogg, ID3v2 `CHAP`) through FFmpeg, in the same form |
+| `CueSheet` | The parsed sheet: `CATALOG`, `CDTEXTFILE`, `TITLE`, `PERFORMER`, `SONGWRITER`, `REM` lines, `FILE`s and `TRACK`s with `INDEX`, `PREGAP`, `POSTGAP`, `FLAGS`, `ISRC`; `parse` takes bytes, `parse_text` text, `resolve` gives the tracks without touching the disk |
+| `VirtualTrack` | A track number, a `MediaSource` with a `SourceSection::Span`, `TrackTags`, the `INDEX 00` position and the pre-emphasis flag |
+| `CueTracks` | The tracks, where they came from (`CueOrigin`), the sheet and every warning |
+| `CueWarning` | What was skipped or repaired, with its line |
+| `CueTime` | `mm:ss:ff` at 75 frames per second; converts exactly to `MediaTime` |
+
+The parser is tolerant: commands in any case, LF, CRLF or CR line ends, quoted or unquoted values, quotes inside quoted values, unknown commands and malformed lines skipped with a line-numbered warning. It is bounded: 1 MiB per sheet, 8 KiB per line, 1000 files, 1000 tracks, 100 indexes per track, 256 remarks per track or album, 256 warnings. It never panics; `fuzz/` has a target for it.
+
+**Charsets.** A byte order mark decides (UTF-8, UTF-16); then UTF-16 without a mark; then valid UTF-8; then the legacy charset the user chose (`CueOptions::legacy_charset`), or else the one `chardetng` guesses from the whole sheet (cp1251, Shift-JIS, GBK, …).
+
+**Paths.** `FILE` names are kept as bytes. Absolute paths, drive letters, network shares and URLs are rejected, `\` is a separator, and `..` may not leave the sheet's folder. A name in a legacy charset is tried both as UTF-8 and as its original bytes. A missing file is looked for in another case and with another audio extension (`Album.wav` beside `Album.flac`); tracks of a file found nowhere are kept with a warning.
+
+**Pregaps.** A track starts at `INDEX 01` (without one: its lowest index above 01, else `INDEX 00`, with a warning) and ends at the next track's `INDEX 01` in the same file, so a pregap plays at the end of the previous track as on a CD. The last track of a file is open-ended. `INDEX 00` in the same file is `VirtualTrack::pregap_start`. `PREGAP` and `POSTGAP` are silence not stored in the file and stay on the parsed track.
+
+**Tags.** Album `TITLE` and `PERFORMER` become the album and album artist; the track's `PERFORMER` (or else the album's) the artist; `SONGWRITER` a writer credit; `CATALOG` and `ISRC` the `barcode` and `isrc` extras; `REM DATE`, `GENRE`, `COMMENT`, `DISCNUMBER`, `TOTALDISCS`, `REPLAYGAIN_*`, `COMPOSER`, `LABEL` and the `MUSICBRAINZ_*` IDs their fields; other `REM` keys (`DISCID`, …) go to `extra` in lower case. A track's `REM` lines override the album's. The table is in `src/cue/fields.rs`.
+
 ## Tests
 
 ```sh
 cargo test -p helikodu-meta
 ```
+
+The integration tests in `tests/cue/` write sheets shaped like those found in the wild (EAC single-file rips with pregaps and `REM` lines, multi-file rips, CRLF, byte order marks, UTF-16, cp1251, Shift-JIS, malformed lines, hostile paths) and generate audio with the `ffmpeg` tool: FLAC and WavPack files with a `CUESHEET` tag, a FLAC file given a cue sheet block by `metaflac`, and Matroska and M4B files with chapters from an FFMETADATA file. A test whose tool is missing prints `SKIPPED:` and passes.
 
 The integration tests in `tests/tags/` generate their media at test time in Cargo's temporary directory: a WAV file written by the tests, encoded with the `ffmpeg` tool with `-metadata`, then edited with lofty where a test needs frames FFmpeg cannot write (`POPM`, `UFID`, `TMCL`, `TIPL`, multi-valued fields, Latin-1 frames holding cp1251, Shift-JIS and GBK bytes). A test whose tool or encoder is missing prints `SKIPPED:` and passes.
