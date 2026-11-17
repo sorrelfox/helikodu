@@ -10,6 +10,7 @@
 
 mod check_deps;
 mod ci;
+mod corpus;
 
 use std::env;
 use std::path::PathBuf;
@@ -23,6 +24,7 @@ usage: cargo xtask <command>
 commands:
   ci            run every check that CI runs, in the same order
   check-deps    check the crate dependency rules and the unsafe-code policy
+  corpus        generate the test corpus into target/corpus (--check, --strict)
   help          print this message
 ";
 
@@ -31,6 +33,7 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("ci") => ci::run(),
         Some("check-deps") => check_deps::run(),
+        Some("corpus") => corpus::run(&args[1..]),
         Some("help" | "--help" | "-h") | None => {
             print!("{USAGE}");
             return ExitCode::SUCCESS;

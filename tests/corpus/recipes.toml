@@ -1,0 +1,1536 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Recipes for the generated test corpus. `cargo xtask corpus` reads this file
+# and writes the files to target/corpus/. The format is described in README.md
+# in this folder.
+
+# ---------------------------------------------------------------------------
+# Sources: signals written by xtask itself, bit-identical on every machine.
+# A linear sweep from 20 Hz with -40 dBFS noise; each channel starts the sweep
+# at a different point.
+
+[[source]]
+name = "s44-16"
+sample_rate = 44100
+channels = 2
+encoding = "s16"
+frames = 88200
+signal = "sweep-noise"
+
+[[source]]
+name = "s44-f32"
+sample_rate = 44100
+channels = 2
+encoding = "f32"
+frames = 88200
+signal = "sweep-noise"
+
+[[source]]
+name = "s22-16"
+sample_rate = 22050
+channels = 2
+encoding = "s16"
+frames = 44100
+signal = "sweep-noise"
+
+[[source]]
+name = "s48-16"
+sample_rate = 48000
+channels = 2
+encoding = "s16"
+frames = 96000
+signal = "sweep-noise"
+
+[[source]]
+name = "s96-24"
+sample_rate = 96000
+channels = 2
+encoding = "s24"
+frames = 192000
+signal = "sweep-noise"
+
+[[source]]
+name = "c51-48-24"
+sample_rate = 48000
+channels = 6
+encoding = "s24"
+frames = 48000
+signal = "sweep-noise"
+
+[[source]]
+name = "m8-16"
+sample_rate = 8000
+channels = 1
+encoding = "s16"
+frames = 16000
+signal = "sweep-noise"
+
+[[source]]
+name = "m11-16"
+sample_rate = 11025
+channels = 1
+encoding = "s16"
+frames = 22050
+signal = "sweep-noise"
+
+[[source]]
+name = "m16-16"
+sample_rate = 16000
+channels = 1
+encoding = "s16"
+frames = 32000
+signal = "sweep-noise"
+
+[[source]]
+name = "m22-16"
+sample_rate = 22050
+channels = 1
+encoding = "s16"
+frames = 44100
+signal = "sweep-noise"
+
+[[source]]
+name = "m48-16"
+sample_rate = 48000
+channels = 1
+encoding = "s16"
+frames = 96000
+signal = "sweep-noise"
+
+# The gapless references. The split points are not multiples of any codec's
+# frame size (576, 960, 1024, 1152, 4096 …).
+[[source]]
+name = "gapless-44k1"
+sample_rate = 44100
+channels = 2
+encoding = "s16"
+frames = 220500
+signal = "sweep-noise"
+seed = 2
+split = [44101, 103333, 170017]
+
+[[source]]
+name = "gapless-48k"
+sample_rate = 48000
+channels = 2
+encoding = "s16"
+frames = 240000
+signal = "sweep-noise"
+seed = 3
+split = [48017, 112211, 185557]
+
+# ---------------------------------------------------------------------------
+# Formats: one sample per codec and container. Each distinct `format` label
+# counts once; variants (bit depth, channel layout, bit-rate mode) share it.
+
+# PCM and simple codecs in WAV.
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-s16.wav"
+format = "WAV, PCM 16-bit"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s16le"]
+needs = ["encoder:pcm_s16le", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_s16le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-s24-96k.wav"
+format = "WAV (extensible), PCM 24-bit"
+source = "s96-24"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s24le"]
+needs = ["encoder:pcm_s24le", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_s24le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-s24-5.1.wav"
+format = "WAV (extensible), PCM 24-bit"
+source = "c51-48-24"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s24le"]
+needs = ["encoder:pcm_s24le", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_s24le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-s32.wav"
+format = "WAV, PCM 32-bit"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s32le"]
+needs = ["encoder:pcm_s32le", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_s32le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-f32.wav"
+format = "WAV, PCM 32-bit float"
+source = "s44-f32"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_f32le"]
+needs = ["encoder:pcm_f32le", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_f32le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-f64.wav"
+format = "WAV, PCM 64-bit float"
+source = "s44-f32"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_f64le"]
+needs = ["encoder:pcm_f64le", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_f64le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-u8.wav"
+format = "WAV, PCM 8-bit"
+source = "m22-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_u8"]
+needs = ["encoder:pcm_u8", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_u8", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-alaw.wav"
+format = "WAV, G.711 A-law"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_alaw"]
+needs = ["encoder:pcm_alaw", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_alaw", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-mulaw.wav"
+format = "WAV, G.711 mu-law"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_mulaw"]
+needs = ["encoder:pcm_mulaw", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_mulaw", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-adpcm-ms.wav"
+format = "WAV, Microsoft ADPCM"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "adpcm_ms"]
+needs = ["encoder:adpcm_ms", "muxer:wav"]
+expect = { demuxer = "wav", codec = "adpcm_ms" }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-adpcm-ima.wav"
+format = "WAV, IMA ADPCM"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "adpcm_ima_wav"]
+needs = ["encoder:adpcm_ima_wav", "muxer:wav"]
+expect = { demuxer = "wav", codec = "adpcm_ima_wav" }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-gsm.wav"
+format = "WAV, GSM 6.10"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "libgsm_ms"]
+needs = ["encoder:libgsm_ms", "muxer:wav"]
+expect = { demuxer = "wav", codec = "gsm_ms" }
+
+[[sample]]
+set = "formats"
+name = "pcm/wav-g726.wav"
+format = "WAV, G.726 ADPCM"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "g726", "-b:a", "32k"]
+needs = ["encoder:g726", "muxer:wav"]
+expect = { demuxer = "wav", codec = "adpcm_g726" }
+
+# Large and other PCM containers.
+
+[[sample]]
+set = "formats"
+name = "pcm/rf64.wav"
+format = "RF64, PCM 16-bit"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s16le", "-rf64", "always"]
+needs = ["encoder:pcm_s16le", "muxer:wav"]
+expect = { demuxer = "wav", codec = "pcm_s16le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/wave64.w64"
+format = "Sony Wave64, PCM 24-bit"
+source = "s96-24"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s24le"]
+needs = ["encoder:pcm_s24le", "muxer:w64"]
+expect = { demuxer = "w64", codec = "pcm_s24le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/aiff-s16.aiff"
+format = "AIFF, PCM 16-bit"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s16be"]
+needs = ["encoder:pcm_s16be", "muxer:aiff"]
+expect = { demuxer = "aiff", codec = "pcm_s16be", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/aiff-s24.aiff"
+format = "AIFF, PCM 24-bit"
+source = "s96-24"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s24be"]
+needs = ["encoder:pcm_s24be", "muxer:aiff"]
+expect = { demuxer = "aiff", codec = "pcm_s24be", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/aifc-f32.aifc"
+format = "AIFF-C, PCM 32-bit float"
+source = "s44-f32"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_f32be", "-f", "aiff"]
+needs = ["encoder:pcm_f32be", "muxer:aiff"]
+expect = { demuxer = "aiff", codec = "pcm_f32be", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/aifc-ima4.aifc"
+format = "AIFF-C, IMA4 ADPCM"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "adpcm_ima_qt", "-f", "aiff"]
+needs = ["encoder:adpcm_ima_qt", "muxer:aiff"]
+expect = { demuxer = "aiff", codec = "adpcm_ima_qt" }
+
+[[sample]]
+set = "formats"
+name = "pcm/caf-s24.caf"
+format = "CAF, PCM 24-bit"
+source = "s96-24"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s24be"]
+needs = ["encoder:pcm_s24be", "muxer:caf"]
+expect = { demuxer = "caf", codec = "pcm_s24be", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/au-s16.au"
+format = "Sun AU, PCM 16-bit"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s16be"]
+needs = ["encoder:pcm_s16be", "muxer:au"]
+expect = { demuxer = "au", codec = "pcm_s16be", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/au-mulaw.au"
+format = "Sun AU, G.711 mu-law"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_mulaw"]
+needs = ["encoder:pcm_mulaw", "muxer:au"]
+expect = { demuxer = "au", codec = "pcm_mulaw", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/voc-u8.voc"
+format = "Creative VOC, PCM 8-bit"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_u8"]
+needs = ["encoder:pcm_u8", "muxer:voc"]
+expect = { demuxer = "voc", codec = "pcm_u8", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/ircam.sf"
+format = "IRCAM, PCM 16-bit"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s16le", "-f", "ircam"]
+needs = ["encoder:pcm_s16le", "muxer:ircam"]
+expect = { demuxer = "ircam", codec = "pcm_s16le", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/8svx.8svx"
+format = "IFF 8SVX, PCM 8-bit"
+source = "m22-16"
+tool = "sox"
+args = ["-R", "-D", "{input}", "--comment", "", "-e", "signed-integer", "-b", "8", "{output}"]
+expect = { demuxer = "iff", codec = "pcm_s8_planar", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/nist-sphere.sph"
+format = "NIST SPHERE, PCM 16-bit"
+source = "m16-16"
+tool = "sox"
+args = ["-R", "-D", "{input}", "--comment", "", "{output}"]
+expect = { demuxer = "nistsphere", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/avr.avr"
+format = "Audio Visual Research, PCM 16-bit"
+source = "m22-16"
+tool = "sox"
+args = ["-R", "-D", "{input}", "--comment", "", "{output}"]
+expect = { demuxer = "avr", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "pcm/hcom.hcom"
+format = "Macintosh HCOM"
+source = "m22-16"
+tool = "sox"
+args = ["-R", "-D", "{input}", "--comment", "", "-b", "8", "-e", "unsigned-integer", "{output}"]
+expect = { demuxer = "hcom", codec = "hcom" }
+
+[[sample]]
+set = "formats"
+name = "pcm/smaf.mmf"
+format = "Yamaha SMAF, Yamaha ADPCM"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "adpcm_yamaha"]
+needs = ["encoder:adpcm_yamaha", "muxer:mmf"]
+expect = { demuxer = "mmf", codec = "adpcm_yamaha" }
+
+[[sample]]
+set = "formats"
+name = "pcm/adx.adx"
+format = "CRI ADX"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "adpcm_adx"]
+needs = ["encoder:adpcm_adx", "muxer:adx"]
+expect = { demuxer = "adx", codec = "adpcm_adx" }
+
+[[sample]]
+set = "formats"
+name = "pcm/westwood.aud"
+format = "Westwood AUD, IMA ADPCM"
+source = "m22-16"
+tool = "ffmpeg"
+args = ["-c:a", "adpcm_ima_ws"]
+needs = ["encoder:adpcm_ima_ws", "muxer:wsaud"]
+expect = { demuxer = "wsaud", codec = "adpcm_ima_ws" }
+
+# Lossless.
+
+[[sample]]
+set = "formats"
+name = "lossless/flac.flac"
+format = "FLAC"
+source = "s44-16"
+tool = "flac"
+args = ["--silent", "--force", "--best", "-o", "{output}", "{input}"]
+expect = { demuxer = "flac", codec = "flac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/flac-24-96k.flac"
+format = "FLAC"
+source = "s96-24"
+tool = "flac"
+args = ["--silent", "--force", "-o", "{output}", "{input}"]
+expect = { demuxer = "flac", codec = "flac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/flac-5.1.flac"
+format = "FLAC"
+source = "c51-48-24"
+tool = "flac"
+args = ["--silent", "--force", "-o", "{output}", "{input}"]
+expect = { demuxer = "flac", codec = "flac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/flac.oga"
+format = "Ogg FLAC"
+source = "s44-16"
+tool = "flac"
+args = ["--silent", "--force", "--ogg", "--serial-number=1", "-o", "{output}", "{input}"]
+expect = { demuxer = "ogg", codec = "flac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/flac.mka"
+format = "Matroska, FLAC"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "flac"]
+needs = ["encoder:flac", "muxer:matroska"]
+expect = { demuxer = "matroska,webm", codec = "flac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/flac.mp4"
+format = "MP4, FLAC"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "flac"]
+needs = ["encoder:flac", "muxer:mp4"]
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "flac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/flac.nut"
+format = "NUT, FLAC"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "flac"]
+needs = ["encoder:flac", "muxer:nut"]
+expect = { demuxer = "nut", codec = "flac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/alac.m4a"
+format = "M4A, ALAC"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "alac"]
+needs = ["encoder:alac", "muxer:ipod"]
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "alac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/alac.caf"
+format = "CAF, ALAC"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "alac"]
+needs = ["encoder:alac", "muxer:caf"]
+# FFmpeg's CAF muxer writes no packet table, so the decoded length is not exact.
+expect = { demuxer = "caf", codec = "alac" }
+
+[[sample]]
+set = "formats"
+name = "lossless/wavpack.wv"
+format = "WavPack"
+source = "s44-16"
+tool = "wavpack"
+args = ["-q", "-y", "-hh", "{input}", "-o", "{output}"]
+expect = { demuxer = "wv", codec = "wavpack", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/wavpack-float.wv"
+format = "WavPack"
+source = "s44-f32"
+tool = "wavpack"
+args = ["-q", "-y", "{input}", "-o", "{output}"]
+expect = { demuxer = "wv", codec = "wavpack", exact_length = true }
+
+# A hybrid file: the .wv holds the lossy part, the .wvc the correction.
+[[sample]]
+set = "formats"
+name = "lossless/wavpack-hybrid.wv"
+format = "WavPack hybrid"
+source = "s44-16"
+tool = "wavpack"
+args = ["-q", "-y", "-b256", "-c", "{input}", "-o", "{output}"]
+extra_outputs = ["wvc"]
+expect = { demuxer = "wv", codec = "wavpack", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/tta.tta"
+format = "True Audio (TTA)"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "tta"]
+needs = ["encoder:tta", "muxer:tta"]
+expect = { demuxer = "tta", codec = "tta", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossless/mlp.mlp"
+format = "MLP"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "mlp", "-strict", "experimental"]
+needs = ["encoder:mlp", "muxer:mlp"]
+expect = { demuxer = "mlp", codec = "mlp" }
+
+[[sample]]
+set = "formats"
+name = "lossless/truehd.thd"
+format = "Dolby TrueHD"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "truehd", "-strict", "experimental"]
+needs = ["encoder:truehd", "muxer:truehd"]
+expect = { demuxer = "truehd", codec = "truehd" }
+
+# Monkey's Audio needs `mac`, which most distributions do not package.
+[[sample]]
+set = "formats"
+name = "lossless/monkeys-audio.ape"
+format = "Monkey's Audio (APE)"
+source = "s44-16"
+tool = "mac"
+args = ["{input}", "{output}", "-c2000"]
+expect = { demuxer = "ape", codec = "ape", exact_length = true }
+
+# Lossy.
+
+[[sample]]
+set = "formats"
+name = "lossy/mp3-cbr320.mp3"
+format = "MP3, MPEG-1 Layer III"
+source = "s44-16"
+tool = "lame"
+args = ["--quiet", "-b", "320", "{input}", "{output}"]
+expect = { demuxer = "mp3", codec = "mp3", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/mp3-vbr.mp3"
+format = "MP3, MPEG-1 Layer III"
+source = "s44-16"
+tool = "lame"
+args = ["--quiet", "-V", "2", "{input}", "{output}"]
+expect = { demuxer = "mp3", codec = "mp3", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/mp3-mpeg2.mp3"
+format = "MP3, MPEG-2 Layer III"
+source = "s22-16"
+tool = "lame"
+args = ["--quiet", "-b", "64", "{input}", "{output}"]
+expect = { demuxer = "mp3", codec = "mp3", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/mp3-mpeg25.mp3"
+format = "MP3, MPEG-2.5 Layer III"
+source = "m11-16"
+tool = "lame"
+args = ["--quiet", "-b", "32", "{input}", "{output}"]
+expect = { demuxer = "mp3", codec = "mp3", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/mp2.mp2"
+format = "MP2, MPEG-1 Layer II"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "mp2", "-b:a", "192k"]
+needs = ["encoder:mp2", "muxer:mp2"]
+expect = { demuxer = "mp3", codec = "mp2" }
+
+[[sample]]
+set = "formats"
+name = "lossy/aac-lc.aac"
+format = "ADTS, AAC-LC"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "aac", "-b:a", "128k"]
+needs = ["encoder:aac", "muxer:adts"]
+expect = { demuxer = "aac", codec = "aac" }
+
+[[sample]]
+set = "formats"
+name = "lossy/aac-lc.m4a"
+format = "M4A, AAC-LC"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "aac", "-b:a", "128k"]
+needs = ["encoder:aac", "muxer:ipod"]
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "aac", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/he-aac-v1.m4a"
+format = "M4A, HE-AAC v1"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "libfdk_aac", "-profile:a", "aac_he", "-b:a", "64k"]
+needs = ["encoder:libfdk_aac", "muxer:ipod"]
+# Builds of FDK AAC without SBR (such as fdk-aac-free) cannot make HE-AAC.
+optional = true
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "aac" }
+
+[[sample]]
+set = "formats"
+name = "lossy/he-aac-v2.m4a"
+format = "M4A, HE-AAC v2"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "libfdk_aac", "-profile:a", "aac_he_v2", "-b:a", "32k"]
+needs = ["encoder:libfdk_aac", "muxer:ipod"]
+# Builds of FDK AAC without SBR (such as fdk-aac-free) cannot make HE-AAC.
+optional = true
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "aac" }
+
+[[sample]]
+set = "formats"
+name = "lossy/aac-latm.latm"
+format = "LATM/LOAS, AAC-LC"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "aac", "-b:a", "128k"]
+needs = ["encoder:aac", "muxer:latm"]
+expect = { demuxer = "loas", codec = "aac_latm" }
+
+[[sample]]
+set = "formats"
+name = "lossy/aac-lc.ts"
+format = "MPEG-TS, AAC-LC"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "aac", "-b:a", "128k"]
+needs = ["encoder:aac", "muxer:mpegts"]
+expect = { demuxer = "mpegts", codec = "aac" }
+
+[[sample]]
+set = "formats"
+name = "lossy/vorbis.ogg"
+format = "Ogg Vorbis"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "libvorbis", "-q:a", "4"]
+needs = ["encoder:libvorbis", "muxer:ogg"]
+expect = { demuxer = "ogg", codec = "vorbis", exact_length = true }
+
+# The reference Vorbis encoder; usually not installed next to FFmpeg's.
+[[sample]]
+set = "formats"
+name = "lossy/vorbis-oggenc.ogg"
+format = "Ogg Vorbis"
+source = "s44-16"
+tool = "oggenc"
+args = ["--quiet", "--serial", "1", "-q", "4", "-o", "{output}", "{input}"]
+expect = { demuxer = "ogg", codec = "vorbis", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/vorbis.webm"
+format = "WebM, Vorbis"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "libvorbis", "-q:a", "4"]
+needs = ["encoder:libvorbis", "muxer:webm"]
+expect = { demuxer = "matroska,webm", codec = "vorbis" }
+
+[[sample]]
+set = "formats"
+name = "lossy/opus.opus"
+format = "Ogg Opus"
+source = "s48-16"
+tool = "opusenc"
+args = ["--quiet", "--serial", "1", "{input}", "{output}"]
+expect = { demuxer = "ogg", codec = "opus", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/opus-5.1.opus"
+format = "Ogg Opus"
+source = "c51-48-24"
+tool = "opusenc"
+args = ["--quiet", "--serial", "1", "{input}", "{output}"]
+expect = { demuxer = "ogg", codec = "opus", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/opus.webm"
+format = "WebM, Opus"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "libopus", "-b:a", "96k"]
+needs = ["encoder:libopus", "muxer:webm"]
+expect = { demuxer = "matroska,webm", codec = "opus", exact_length = true }
+
+[[sample]]
+set = "formats"
+name = "lossy/opus.mp4"
+format = "MP4, Opus"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "libopus", "-b:a", "96k"]
+needs = ["encoder:libopus", "muxer:mp4"]
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "opus" }
+
+[[sample]]
+set = "formats"
+name = "lossy/speex.spx"
+format = "Ogg Speex"
+source = "m16-16"
+tool = "ffmpeg"
+args = ["-c:a", "libspeex"]
+needs = ["encoder:libspeex", "muxer:spx"]
+expect = { demuxer = "ogg", codec = "speex" }
+
+# Musepack needs `mpcenc`, which most distributions do not package.
+[[sample]]
+set = "formats"
+name = "lossy/musepack.mpc"
+format = "Musepack SV8"
+source = "s44-16"
+tool = "mpcenc"
+args = ["--silent", "--overwrite", "{input}", "{output}"]
+expect = { demuxer = "mpc8", codec = "musepack8" }
+
+[[sample]]
+set = "formats"
+name = "lossy/ac3.ac3"
+format = "AC-3"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "ac3", "-b:a", "192k"]
+needs = ["encoder:ac3", "muxer:ac3"]
+expect = { demuxer = "ac3", codec = "ac3" }
+
+[[sample]]
+set = "formats"
+name = "lossy/ac3-5.1.ac3"
+format = "AC-3"
+source = "c51-48-24"
+tool = "ffmpeg"
+args = ["-c:a", "ac3", "-b:a", "448k"]
+needs = ["encoder:ac3", "muxer:ac3"]
+expect = { demuxer = "ac3", codec = "ac3" }
+
+[[sample]]
+set = "formats"
+name = "lossy/eac3.eac3"
+format = "E-AC-3"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "eac3", "-b:a", "192k"]
+needs = ["encoder:eac3", "muxer:eac3"]
+expect = { demuxer = "eac3", codec = "eac3" }
+
+[[sample]]
+set = "formats"
+name = "lossy/dts.dts"
+format = "DTS"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "dca", "-strict", "experimental"]
+needs = ["encoder:dca", "muxer:dts"]
+expect = { demuxer = "dts", codec = "dts" }
+
+[[sample]]
+set = "formats"
+name = "lossy/wma-v1.wma"
+format = "ASF, WMA v1"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "wmav1", "-b:a", "128k"]
+needs = ["encoder:wmav1", "muxer:asf"]
+expect = { demuxer = "asf", codec = "wmav1" }
+
+[[sample]]
+set = "formats"
+name = "lossy/wma-v2.wma"
+format = "ASF, WMA v2"
+source = "s44-16"
+tool = "ffmpeg"
+args = ["-c:a", "wmav2", "-b:a", "128k"]
+needs = ["encoder:wmav2", "muxer:asf"]
+expect = { demuxer = "asf", codec = "wmav2" }
+
+[[sample]]
+set = "formats"
+name = "lossy/nellymoser.flv"
+format = "FLV, Nellymoser"
+source = "m22-16"
+tool = "ffmpeg"
+args = ["-c:a", "nellymoser"]
+needs = ["encoder:nellymoser", "muxer:flv"]
+expect = { demuxer = "flv", codec = "nellymoser" }
+
+[[sample]]
+set = "formats"
+name = "lossy/adpcm-swf.flv"
+format = "FLV, Shockwave Flash ADPCM"
+source = "m22-16"
+tool = "ffmpeg"
+args = ["-c:a", "adpcm_swf"]
+needs = ["encoder:adpcm_swf", "muxer:flv"]
+expect = { demuxer = "flv", codec = "adpcm_swf" }
+
+[[sample]]
+set = "formats"
+name = "lossy/realaudio-14_4.ra"
+format = "RealAudio 1.0 (14.4)"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "real_144", "-f", "rm"]
+needs = ["encoder:real_144", "muxer:rm"]
+expect = { demuxer = "rm", codec = "ra_144" }
+
+[[sample]]
+set = "formats"
+name = "lossy/sbc.sbc"
+format = "Bluetooth SBC"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "sbc"]
+needs = ["encoder:sbc", "muxer:sbc"]
+expect = { demuxer = "sbc", codec = "sbc" }
+
+[[sample]]
+set = "formats"
+name = "lossy/aptx.aptx"
+format = "aptX"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "aptx"]
+needs = ["encoder:aptx", "muxer:aptx"]
+expect = { demuxer = "aptx", codec = "aptx" }
+
+[[sample]]
+set = "formats"
+name = "lossy/aptx-hd.aptxhd"
+format = "aptX HD"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "aptx_hd"]
+needs = ["encoder:aptx_hd", "muxer:aptx_hd"]
+expect = { demuxer = "aptx_hd", codec = "aptx_hd" }
+
+[[sample]]
+set = "formats"
+name = "lossy/lc3.lc3"
+format = "LC3"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-c:a", "liblc3"]
+needs = ["encoder:liblc3", "muxer:lc3"]
+expect = { demuxer = "lc3", codec = "lc3" }
+
+[[sample]]
+set = "formats"
+name = "lossy/dfpwm.dfpwm"
+format = "DFPWM"
+source = "m48-16"
+tool = "ffmpeg"
+args = ["-c:a", "dfpwm"]
+needs = ["encoder:dfpwm", "muxer:dfpwm"]
+expect = { demuxer = "dfpwm", codec = "dfpwm" }
+
+# Speech codecs.
+
+[[sample]]
+set = "formats"
+name = "speech/amr-nb.amr"
+format = "AMR-NB"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "libopencore_amrnb", "-b:a", "12.2k"]
+needs = ["encoder:libopencore_amrnb", "muxer:amr"]
+expect = { demuxer = "amr", codec = "amr_nb" }
+
+[[sample]]
+set = "formats"
+name = "speech/amr-wb.amr"
+format = "AMR-WB"
+source = "m16-16"
+tool = "ffmpeg"
+args = ["-c:a", "libvo_amrwbenc", "-b:a", "23.85k"]
+needs = ["encoder:libvo_amrwbenc", "muxer:amr"]
+expect = { demuxer = "amr", codec = "amr_wb" }
+
+[[sample]]
+set = "formats"
+name = "speech/amr-nb.3gp"
+format = "3GP, AMR-NB"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "libopencore_amrnb", "-b:a", "12.2k"]
+needs = ["encoder:libopencore_amrnb", "muxer:3gp"]
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "amr_nb" }
+
+[[sample]]
+set = "formats"
+name = "speech/gsm.gsm"
+format = "GSM 6.10 (raw)"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "libgsm"]
+needs = ["encoder:libgsm", "muxer:gsm"]
+expect = { demuxer = "gsm", codec = "gsm" }
+
+[[sample]]
+set = "formats"
+name = "speech/g722.g722"
+format = "G.722"
+source = "m16-16"
+tool = "ffmpeg"
+args = ["-c:a", "g722"]
+needs = ["encoder:g722", "muxer:g722"]
+expect = { demuxer = "g722", codec = "adpcm_g722" }
+
+[[sample]]
+set = "formats"
+name = "speech/g723_1.tco"
+format = "G.723.1"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "g723_1", "-b:a", "6.3k"]
+needs = ["encoder:g723_1", "muxer:g723_1"]
+expect = { demuxer = "g723_1", codec = "g723_1" }
+
+[[sample]]
+set = "formats"
+name = "speech/ilbc.lbc"
+format = "iLBC"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "libilbc"]
+needs = ["encoder:libilbc", "muxer:ilbc"]
+expect = { demuxer = "ilbc", codec = "ilbc" }
+
+[[sample]]
+set = "formats"
+name = "speech/codec2.c2"
+format = "Codec 2"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-c:a", "libcodec2", "-mode", "3200"]
+needs = ["encoder:libcodec2", "muxer:codec2"]
+expect = { demuxer = "codec2", codec = "codec2" }
+
+# ---------------------------------------------------------------------------
+# Gapless: the reference split into four parts at points that are not frame
+# boundaries, each part encoded on its own. Played back to back, the parts
+# must give the reference again (bit-exact for lossless codecs,
+# sample-exact length for lossy ones).
+
+[[sample]]
+set = "gapless"
+name = "reference-44k1.wav"
+source = "gapless-44k1"
+tool = "copy"
+
+[[sample]]
+set = "gapless"
+name = "reference-48k.wav"
+source = "gapless-48k"
+tool = "copy"
+
+[[sample]]
+set = "gapless"
+name = "wav/{part}.wav"
+source = "gapless-44k1"
+parts = true
+tool = "copy"
+expect = { codec = "pcm_s16le", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "flac/{part}.flac"
+source = "gapless-44k1"
+parts = true
+tool = "flac"
+args = ["--silent", "--force", "-o", "{output}", "{input}"]
+expect = { codec = "flac", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "wavpack/{part}.wv"
+source = "gapless-44k1"
+parts = true
+tool = "wavpack"
+args = ["-q", "-y", "{input}", "-o", "{output}"]
+expect = { codec = "wavpack", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "tta/{part}.tta"
+source = "gapless-44k1"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "tta"]
+needs = ["encoder:tta", "muxer:tta"]
+expect = { codec = "tta", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "alac/{part}.m4a"
+source = "gapless-44k1"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "alac"]
+needs = ["encoder:alac", "muxer:ipod"]
+expect = { codec = "alac", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "mp3-lame/{part}.mp3"
+source = "gapless-44k1"
+parts = true
+tool = "lame"
+args = ["--quiet", "-V", "2", "{input}", "{output}"]
+expect = { codec = "mp3", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "mp3-ffmpeg/{part}.mp3"
+source = "gapless-44k1"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "libmp3lame", "-q:a", "2"]
+needs = ["encoder:libmp3lame", "muxer:mp3"]
+expect = { codec = "mp3", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "aac/{part}.m4a"
+source = "gapless-44k1"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "aac", "-b:a", "128k"]
+needs = ["encoder:aac", "muxer:ipod"]
+expect = { codec = "aac", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "aac-fdk/{part}.m4a"
+source = "gapless-44k1"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "libfdk_aac", "-b:a", "128k"]
+needs = ["encoder:libfdk_aac", "muxer:ipod"]
+expect = { codec = "aac", exact_length = true }
+
+# Raw ADTS carries no gapless information: the parts are longer than the
+# reference. Kept to test that the player does not pretend otherwise.
+[[sample]]
+set = "gapless"
+name = "aac-adts/{part}.aac"
+source = "gapless-44k1"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "aac", "-b:a", "128k"]
+needs = ["encoder:aac", "muxer:adts"]
+expect = { codec = "aac" }
+
+[[sample]]
+set = "gapless"
+name = "vorbis/{part}.ogg"
+source = "gapless-44k1"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "libvorbis", "-q:a", "4"]
+needs = ["encoder:libvorbis", "muxer:ogg"]
+expect = { codec = "vorbis", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "opus/{part}.opus"
+source = "gapless-48k"
+parts = true
+tool = "opusenc"
+args = ["--quiet", "--serial", "1", "{input}", "{output}"]
+expect = { codec = "opus", exact_length = true }
+
+[[sample]]
+set = "gapless"
+name = "opus-webm/{part}.webm"
+source = "gapless-48k"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "libopus", "-b:a", "96k"]
+needs = ["encoder:libopus", "muxer:webm"]
+expect = { codec = "opus", exact_length = true }
+
+# ---------------------------------------------------------------------------
+# Video: the player must play the audio stream and never decode the video.
+# The picture is FFmpeg's test pattern, 2 s at 25 frames per second.
+
+[[sample]]
+set = "video"
+name = "h264-aac.mp4"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k"]
+needs = ["encoder:libx264", "encoder:aac", "muxer:mp4"]
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "aac", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "h265-aac.mkv"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "libx265", "-preset", "veryfast", "-x265-params", "pools=none:frame-threads=1:log-level=error", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k"]
+needs = ["encoder:libx265", "encoder:aac", "muxer:matroska"]
+expect = { demuxer = "matroska,webm", codec = "aac", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "vp9-opus.webm"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "200k", "-c:a", "libopus", "-b:a", "96k"]
+needs = ["encoder:libvpx-vp9", "encoder:libopus", "muxer:webm"]
+expect = { demuxer = "matroska,webm", codec = "opus", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "av1-ac3.mkv"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "libaom-av1", "-cpu-used", "8", "-usage", "realtime", "-b:v", "200k", "-c:a", "ac3", "-b:a", "192k"]
+needs = ["encoder:libaom-av1", "encoder:ac3", "muxer:matroska"]
+expect = { demuxer = "matroska,webm", codec = "ac3", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "mpeg2-mp2.mpg"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=352x288:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "mpeg2video", "-c:a", "mp2", "-b:a", "192k", "-f", "mpeg"]
+needs = ["encoder:mpeg2video", "encoder:mp2", "muxer:mpeg"]
+expect = { demuxer = "mpeg", codec = "mp2", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "mpeg2-ac3.vob"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=720x576:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "mpeg2video", "-c:a", "ac3", "-b:a", "192k", "-f", "vob"]
+needs = ["encoder:mpeg2video", "encoder:ac3", "muxer:vob"]
+expect = { demuxer = "mpeg", codec = "ac3", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "mpeg2-ac3.ts"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=352x288:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "mpeg2video", "-c:a", "ac3", "-b:a", "192k"]
+needs = ["encoder:mpeg2video", "encoder:ac3", "muxer:mpegts"]
+expect = { demuxer = "mpegts", codec = "ac3", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "mpeg4-mp3.avi"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "mpeg4", "-c:a", "libmp3lame", "-b:a", "128k"]
+needs = ["encoder:mpeg4", "encoder:libmp3lame", "muxer:avi"]
+expect = { demuxer = "avi", codec = "mp3", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "theora-vorbis.ogv"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "libtheora", "-c:a", "libvorbis"]
+needs = ["encoder:libtheora", "encoder:libvorbis", "muxer:ogv"]
+expect = { demuxer = "ogg", codec = "vorbis", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "h264-aac.flv"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k"]
+needs = ["encoder:libx264", "encoder:aac", "muxer:flv"]
+expect = { demuxer = "flv", codec = "aac", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "h263-amrnb.3gp"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=176x144:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "h263", "-c:a", "libopencore_amrnb", "-ar", "8000", "-ac", "1", "-b:a", "12.2k"]
+needs = ["encoder:h263", "encoder:libopencore_amrnb", "muxer:3gp"]
+expect = { demuxer = "mov,mp4,m4a,3gp,3g2,mj2", codec = "amr_nb", sample_rate = 8000, channels = 1, audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "wmv2-wma2.wmv"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "wmv2", "-c:a", "wmav2", "-b:a", "128k"]
+needs = ["encoder:wmv2", "encoder:wmav2", "muxer:asf"]
+expect = { demuxer = "asf", codec = "wmav2", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "rv10-ra144.rm"
+source = "m8-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x128:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "rv10", "-c:a", "real_144"]
+needs = ["encoder:rv10", "encoder:real_144", "muxer:rm"]
+expect = { demuxer = "rm", codec = "ra_144", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "dv-pcm.dv"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=720x576:rate=25:duration=1", "-map", "1:v", "-map", "0:a", "-t", "1", "-c:v", "dvvideo", "-pix_fmt", "yuv420p", "-c:a", "pcm_s16le"]
+needs = ["encoder:dvvideo", "encoder:pcm_s16le", "muxer:dv"]
+expect = { demuxer = "dv", codec = "pcm_s16le", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "mpeg2-pcm.mxf"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=720x576:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "mpeg2video", "-c:a", "pcm_s16le"]
+needs = ["encoder:mpeg2video", "encoder:pcm_s16le", "muxer:mxf"]
+expect = { demuxer = "mxf", codec = "pcm_s16le", audio_streams = 1, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "mpeg4-flac.nut"
+source = "s48-16"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-map", "1:v", "-map", "0:a", "-c:v", "mpeg4", "-c:a", "flac"]
+needs = ["encoder:mpeg4", "encoder:flac", "muxer:nut"]
+expect = { demuxer = "nut", codec = "flac", audio_streams = 1, video_streams = 1 }
+
+# Three audio streams in different languages; the second is the default.
+[[sample]]
+set = "video"
+name = "multi-audio.mkv"
+source = "s48-16"
+tool = "ffmpeg"
+args = [
+    "-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2",
+    "-map", "1:v", "-map", "0:a", "-map", "0:a", "-map", "0:a",
+    "-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "200k",
+    "-c:a:0", "libopus", "-b:a:0", "96k",
+    "-c:a:1", "ac3", "-b:a:1", "192k",
+    "-c:a:2", "flac",
+    "-metadata:s:a:0", "language=eng",
+    "-metadata:s:a:1", "language=deu",
+    "-metadata:s:a:2", "language=fin",
+    "-disposition:a:0", "0", "-disposition:a:1", "default", "-disposition:a:2", "0",
+]
+needs = ["encoder:libvpx-vp9", "encoder:libopus", "encoder:ac3", "encoder:flac", "muxer:matroska"]
+expect = { demuxer = "matroska,webm", codec = "opus", audio_streams = 3, video_streams = 1 }
+
+[[sample]]
+set = "video"
+name = "video-only.mkv"
+tool = "ffmpeg"
+args = ["-f", "lavfi", "-i", "testsrc2=size=160x120:rate=25:duration=2", "-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "200k"]
+needs = ["encoder:libvpx-vp9", "muxer:matroska"]
+expect = { demuxer = "matroska,webm", audio_streams = 0, video_streams = 1 }
+
+# ---------------------------------------------------------------------------
+# Broken files: the player must report them, not crash or hang.
+
+[[sample]]
+set = "broken"
+name = "truncated.flac"
+from = "formats/lossless/flac.flac"
+tool = "truncate"
+keep = 0.5
+
+[[sample]]
+set = "broken"
+name = "truncated.mp3"
+from = "formats/lossy/mp3-cbr320.mp3"
+tool = "truncate"
+keep = 0.5
+
+[[sample]]
+set = "broken"
+name = "truncated.opus"
+from = "formats/lossy/opus.opus"
+tool = "truncate"
+keep = 0.5
+
+[[sample]]
+set = "broken"
+name = "truncated.wav"
+from = "formats/pcm/wav-s16.wav"
+tool = "truncate"
+keep = 0.5
+
+# The index (moov) is at the end of the file, so this one has none.
+[[sample]]
+set = "broken"
+name = "truncated.m4a"
+from = "formats/lossy/aac-lc.m4a"
+tool = "truncate"
+keep = 0.6
+
+[[sample]]
+set = "broken"
+name = "truncated.mkv"
+from = "video/multi-audio.mkv"
+tool = "truncate"
+keep = 0.5
+
+[[sample]]
+set = "broken"
+name = "header-only.wav"
+from = "formats/pcm/wav-s16.wav"
+tool = "truncate"
+keep = 0.0005
+
+[[sample]]
+set = "broken"
+name = "empty.flac"
+tool = "empty"
+
+[[sample]]
+set = "broken"
+name = "empty.mp3"
+tool = "empty"
+
+[[sample]]
+set = "broken"
+name = "empty.wav"
+tool = "empty"
+
+[[sample]]
+set = "broken"
+name = "empty.m4a"
+tool = "empty"
+
+# Valid headers followed by noise.
+[[sample]]
+set = "broken"
+name = "garbage-payload.wav"
+from = "formats/pcm/wav-s16.wav"
+tool = "garbage"
+keep_bytes = 44
+seed = 11
+
+[[sample]]
+set = "broken"
+name = "garbage-payload.flac"
+from = "formats/lossless/flac.flac"
+tool = "garbage"
+keep_bytes = 9000
+seed = 12
+
+[[sample]]
+set = "broken"
+name = "garbage-payload.mp3"
+from = "formats/lossy/mp3-cbr320.mp3"
+tool = "garbage"
+keep_bytes = 1044
+seed = 13
+
+[[sample]]
+set = "broken"
+name = "garbage-payload.opus"
+from = "formats/lossy/opus.opus"
+tool = "garbage"
+keep_bytes = 1000
+seed = 14
+
+# Noise from the first byte, under an audio extension.
+[[sample]]
+set = "broken"
+name = "noise.mp3"
+from = "formats/lossy/mp3-cbr320.mp3"
+tool = "garbage"
+keep_bytes = 0
+seed = 15
+
+# A valid file whose extension names another format.
+[[sample]]
+set = "broken"
+name = "flac-named-mp3.mp3"
+from = "formats/lossless/flac.flac"
+tool = "copy"
+
+# ---------------------------------------------------------------------------
+# File names: names that are not valid UTF-8, very long names, and names that
+# shells and command lines misread. The content is a valid WAV file.
+
+[[sample]]
+set = "names"
+name = "latin1-caf%E9.wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "cp1251-%CF%F0%E8%E2%E5%F2.wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "shift-jis-%83%65%83%58%83%67.wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "latin1-folder-%E9t%E9/track.wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "max-length-.wav"
+pad_name_to = 255
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "line%0Abreak.wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "-leading-dash.wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "--help.wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = " leading and trailing space .wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "windows-reserved-a:b*c?d.wav"
+source = "s44-16"
+tool = "copy"
+
+# The same name in Unicode NFC and NFD.
+[[sample]]
+set = "names"
+name = "Björk-nfc.wav"
+source = "s44-16"
+tool = "copy"
+
+[[sample]]
+set = "names"
+name = "Björk-nfd.wav"
+source = "s44-16"
+tool = "copy"
