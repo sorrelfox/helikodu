@@ -63,8 +63,11 @@ pub struct StreamTiming {
     pub rate: SampleRate,
     /// Frames the render side has written into the ring buffer.
     pub frames_written: u64,
-    /// Frames the device side has taken from the ring buffer.
+    /// Frames the device side has taken from the ring buffer and sent on.
     pub frames_delivered: u64,
+    /// Frames the device side has dropped from the ring buffer unheard, for a seek
+    /// or a pause ([`DeviceAction::Discard`](super::DeviceAction::Discard)).
+    pub frames_discarded: u64,
     /// Frames delivered but not yet heard: the device's and sound server's delay,
     /// as last reported.
     pub delay_frames: u64,
@@ -88,9 +91,18 @@ impl StreamTiming {
         MediaTime::from_frames(self.frames_played(), self.rate)
     }
 
-    /// Frames in the ring buffer, written but not yet delivered.
+    /// Frames in the ring buffer, written but neither delivered nor discarded.
     pub const fn queued_frames(&self) -> u64 {
-        self.frames_written.saturating_sub(self.frames_delivered)
+        self.frames_written
+            .saturating_sub(self.frames_delivered)
+            .saturating_sub(self.frames_discarded)
+    }
+
+    /// The ring position (frames written before it) of the frame the listener hears
+    /// now: the frames taken from the ring buffer, delivered or discarded, minus the
+    /// device delay.
+    pub const fn heard_position(&self) -> u64 {
+        (self.frames_delivered + self.frames_discarded).saturating_sub(self.delay_frames)
     }
 }
 
@@ -118,6 +130,7 @@ mod tests {
             rate: SampleRate::HZ_48000,
             frames_written: 96_000,
             frames_delivered: 48_000,
+            frames_discarded: 0,
             delay_frames: 4_800,
             underruns: 0,
             silent_frames: 0,
@@ -126,6 +139,13 @@ mod tests {
         assert_eq!(timing.frames_played(), 43_200);
         assert_eq!(timing.played(), MediaTime::from_millis(900));
         assert_eq!(timing.queued_frames(), 48_000);
+        assert_eq!(timing.heard_position(), 43_200);
+        let flushed = StreamTiming {
+            frames_discarded: 40_000,
+            ..timing
+        };
+        assert_eq!(flushed.queued_frames(), 8_000);
+        assert_eq!(flushed.heard_position(), 83_200);
         let early = StreamTiming {
             frames_delivered: 100,
             ..timing

@@ -73,7 +73,7 @@ impl SoftwareStream {
                 device: config.device.clone(),
                 reason: format!("{} cannot be written", spec.format),
             })?;
-        let (writer, reader, shared) = ring(spec.channel_count(), spec.rate, config.buffer);
+        let (writer, reader, shared) = ring(spec, config.buffer);
         let worker = Worker {
             reader,
             shared: shared.clone(),
@@ -211,7 +211,7 @@ impl Worker {
                     self.period_frames
                 }
                 Pacing::Freewheel => {
-                    let frames = self.reader.available_frames().min(self.period_frames);
+                    let frames = self.reader.read_available(&mut samples);
                     if frames == 0 {
                         thread::park_timeout(Duration::from_millis(1));
                         continue;
@@ -220,7 +220,9 @@ impl Worker {
                 }
             };
             let samples = &mut samples[..frames * channels];
-            self.reader.read(samples);
+            if self.pacing == Pacing::RealTime {
+                self.reader.read(samples);
+            }
             let len = self.encoder.encode(samples, &mut bytes);
             if let Err(error) = target.write(&bytes[..len]) {
                 self.shared.set_state(StreamState::Failed);

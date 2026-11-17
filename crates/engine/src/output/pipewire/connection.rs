@@ -26,7 +26,8 @@ use super::{KIND, default_sink_name};
 pub(super) enum Command {
     Open {
         id: u64,
-        request: OpenRequest,
+        /// Boxed: it carries the stream's whole device side.
+        request: Box<OpenRequest>,
         reply: mpsc::Sender<Result<(), OutputError>>,
     },
     Start {
@@ -222,7 +223,7 @@ impl Thread {
             Command::Open { id, request, reply } => {
                 let target_known =
                     |name: &str| self.devices.lock().is_ok_and(|table| table.contains(name));
-                match StreamEntry::create(core, request, reply, self.events.clone(), &target_known)
+                match StreamEntry::create(core, *request, reply, self.events.clone(), &target_known)
                 {
                     Ok(entry) => {
                         self.streams.borrow_mut().insert(id, entry);

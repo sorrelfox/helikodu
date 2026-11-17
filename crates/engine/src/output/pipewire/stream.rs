@@ -74,6 +74,7 @@ impl PipeWireStream {
     /// its device, or has failed.
     pub(super) fn open(&self, request: OpenRequest) -> Result<(), OutputError> {
         let id = self.id;
+        let request = Box::new(request);
         self.link
             .call(OPEN_TIMEOUT, "the stream to connect", |reply| {
                 Command::Open { id, request, reply }

@@ -59,7 +59,9 @@ Not done yet in the decoding layer:
 
 ## Output
 
-`src/output.rs` defines the `OutputBackend` and `OutputStream` traits; each backend has its own file in `src/output/`. Opening a stream negotiates the device format and returns a `SampleWriter`, the producer side of a lock-free ring buffer (`rtrb`) of interleaved `f32` samples. The backend's real-time side only copies out of the ring buffer and converts to the device format; underruns are counted in atomics. Device changes, lost devices and failures arrive as `OutputEvent`s on a channel.
+`src/output.rs` defines the `OutputBackend` and `OutputStream` traits; each backend has its own file in `src/output/`. Opening a stream negotiates the device format and returns a `SampleWriter`, the producer side of a lock-free ring buffer (`rtrb`) of interleaved `f32` samples. The backend's real-time side copies out of the ring buffer, runs the device-side stage (below) and converts to the device format; underruns are counted in atomics. Device changes, lost devices and failures arrive as `OutputEvent`s on a channel.
+
+**The device-side stage** (`src/output/device_stage.rs`) applies software volume, the anti-click fades (the pipeline's `Fader`) and dither after the ring buffer, so that volume, pause, seek and stop are heard within one device period rather than after the whole buffer. The render thread controls it through the writer: `SampleWriter::volume()` is a `SharedVolume` (two atomics), and `SampleWriter::schedule(at, DeviceAction)` queues a fade, an open or shut fader, a change of dither, or a `Discard` of buffered frames on a second lock-free queue, each to apply at a ring position (frames written since the stream opened), so a fade starts on exactly the frame it is meant for. `is_silent()` and `silent_since()` tell the render thread when a fade out has finished and where. A `Discard` with `hold` drops the buffered audio and plays silence, without counting underruns, until the next fade in, so the buffer can be refilled after a seek. Until told otherwise the fader is open and the volume full, so samples pass unchanged. `StreamTiming` counts the discarded frames, and `heard_position()` gives the ring position being heard.
 
 | Backend | Cargo feature | Device names |
 |---|---|---|
@@ -101,10 +103,67 @@ Not done yet in the output layer:
 
 Not done yet in the processing path:
 
-- **The render thread and the transport** that drive the chains, and with them crossfades and the DSP chain (the plan already has their switches).
-- **Software volume in the real-time callback.** The output backends only copy and convert, so `OutputChain` runs before the ring buffer for now, and a volume change is heard after the buffer length.
+- **Crossfades and the DSP chain** (the plan already has their switches).
+- **`OutputChain` is not used by the transport**: its stages run on the device side of the ring buffer instead (see Output).
 - **Bit-perfect 32-bit integer sources.** The ring buffer holds floats, which carry 24 bits exactly; such sources always go the processed way.
 - **Reading loudness tags.** `parse_gain_db`, `parse_peak` and `LoudnessInfo::from_r128` take the values; the tag reader that finds them comes with the metadata layer.
+
+## Transport
+
+`src/transport.rs` and `src/transport/` join decoding, processing and output into a playing engine. `Engine::spawn(EngineConfig)` starts the engine thread and returns the handle and the receiver of `EngineEvent`s; `Engine::send` (or a cloned `EngineSender`) takes the model's `EngineCommand`s. There is no async runtime: one thread does control and rendering, and a second one forwards the backends' events to it.
+
+```rust
+use helikodu_engine::transport::{Engine, EngineConfig};
+
+let (engine, events) = Engine::spawn(EngineConfig::default())?;
+engine.send(EngineCommand::Load { item, start: MediaTime::ZERO, paused: false })?;
+for event in events.iter() {
+    if let EngineEvent::NearEnd { .. } = event {
+        engine.send(EngineCommand::SetNext(next_item()))?;
+    }
+}
+```
+
+| File | What it holds |
+|---|---|
+| `transport.rs` | `Engine`, `EngineSender`, the state and event rules |
+| `transport/config.rs` | `EngineConfig`: output settings, processing settings, start volume, the pacing of the test sinks, `NearEnd` lead time (5 s), position interval (100 ms) |
+| `transport/worker.rs` | The engine thread's loop, state and events |
+| `transport/commands.rs` | Load, play, pause, stop, seek, next item, volume, output |
+| `transport/render.rs` | Filling the ring buffer, joins, draining, the fades and refills around transitions |
+| `transport/recovery.rs` | Settling after a transition; a failed output or a lost device |
+| `transport/source.rs` | One item: decoder and `SourceChain` |
+| `transport/timeline.rs` | Which item each part of the ring buffer belongs to, and the heard position |
+| `transport/device.rs` | The connected backend, the open stream, and opening one for an item |
+
+**How it plays.** While playing, the thread wakes every few milliseconds (a sixteenth of the buffer, 2 to 10 ms), writes at most one buffer length, follows the heard position and sends what is due. While stopped or paused it sleeps until a command arrives. Each block of work is bounded, and rendering reuses its buffers, so the steady state does not allocate; opening an item, a join and a transition do.
+
+**Transitions.** Pause, seek, stop, a device switch and a `Load` that replaces playing audio fade out on the device side (10 ms, 5 ms for a seek), wait until the device side reports silence, and take the ring position where it began as the point heard last. Pause continues from exactly that point; seek, resume and a device switch drop the buffer (`Discard` with `hold`), seek the decoder, refill about 50 ms and fade in at the first new frame. A track that starts at its beginning is not faded in. Resuming after a pause re-decodes from the paused position instead of playing the stale buffer.
+
+**Gapless joins.** `SetNext` opens the next item at once (errors are reported then). When the current item ends, the next one continues in the same render iteration if the settings would open the same stream for it (`stream_config` gives the same rate, format and channels); the samples join exactly. Otherwise the buffer plays out and the device is reopened (`Reconfiguring`). The timeline records where each item starts in the ring buffer, so `TrackEnded` and `TrackStarted` are sent when the join is heard. A `SetNext` that replaces an item already written after the heard one drops that part of the buffer with a `Discard` at its start.
+
+**Position.** The heard ring position is the frames the device side has taken (played or dropped) minus the delay the backend reports; the timeline turns it into the item and its position, at the source rate.
+
+**Errors.** An item that does not open (on `Load` or `SetNext`) sends `Error` and `TrackEnded` (`Failed`) at once; for `SetNext`, `NearEnd` follows again so the service can name the next item. A decoding error midway ends the item there; its `Error` and `TrackEnded` (`Failed`) come when that point is heard, and playback continues with the next item. A lost or failed stream applies `on_device_lost`: pause (the default), continue on the default device, or stop. A device missing at start-up falls back to the default one under `fallback-default`; otherwise the engine reports the error and pauses (or stops).
+
+**Freewheeling sinks.** With `EngineConfig::sink_pacing` set to `Pacing::Freewheel`, the null and WAV sinks take audio as fast as it is rendered. There is no deadline then, so at the end of an item the engine waits (up to `next_wait`, 5 s) for the answer to `NearEnd` instead of draining at once; tests and rendering to a file get the same joins as real playback.
+
+`examples/play.rs` plays one file to a chosen backend and device and prints the events; lines on standard input pause, resume, seek, change the volume and switch the output:
+
+```sh
+cargo run -p helikodu-engine --example play -- song.flac --backend pipewire --device <node name>
+cargo run -p helikodu-engine --example play -- --list-devices --backend alsa
+```
+
+Not done yet in the transport:
+
+- **Loudness tags** are not passed to the path plan yet (no gain is applied); the metadata layer reads them.
+- **Opening the next item happens on the engine thread.** It takes milliseconds from local storage; slow storage would delay the buffer by as much.
+- **The engine thread's priority** is not raised yet (it needs the same rtkit or portal route as the ALSA writer).
+- **A hardware mixer** (`volume = "hardware:…"`) is not driven; the engine applies software volume instead.
+- **DAC warm-up** (`preroll_ms`) is not applied, and settings other than the output selection cannot be changed while the engine runs.
+- **`NearEnd` for items of unknown length** comes only when the item has been decoded to its end, about one buffer length before it ends.
+- **Underruns and the signal path** are not reported as events; the model has no events for them yet.
 
 ## Tests
 
@@ -115,6 +174,8 @@ cargo test -p helikodu-engine
 The null and WAV sinks are tested end to end, including bit-exact WAV output.
 
 The processing tests (`tests/pipeline.rs` and the unit tests in `src/pipeline/`) check the gain arithmetic including the R128 conversion, the mixing matrices, that volume changes and fades never step more than the signal itself, that a resampled sine keeps its frequency, level, timing and length, the statistics of the dither noise, and that a bit-perfect plan passes samples through bit for bit.
+
+The transport tests in `tests/transport/` play generated media through the engine to the WAV and null sinks, freewheeling, with the test acting as the service (answering `NearEnd` from a queue and skipping failed items). They check gapless joins of a signal cut into three files (WAV and FLAC bit-exact, MP3 and Opus with the exact total length), the reopening of the device for a change of rate, pause and resume continuing at exactly the reported position, seeks landing on the exact frame (the shape of the fade in shows a landing that is off by one), seeking while paused, stop, a start position, a device switch continuing at the same frame on the second WAV file, software volume, the order of the events and rising positions, a broken file in the queue being skipped with an exact join around it, and outputs that cannot be opened. Every transition is checked for clicks: no step between samples above 1.5 times the largest step of the test sine.
 
 The decoding tests in `tests/decoding/` generate their media at test time: a reference signal written as WAV by the tests, encoded with the `ffmpeg` tool into Cargo's temporary directory, and DSF/DFF files of a sigma-delta modulated sine. A test whose tool or encoder is missing prints `SKIPPED:` and passes. They check the backend choice (by content, also for misnamed files), exact lengths for WAV, FLAC, MP3, Opus, Vorbis and AAC, bit-exact sections and joins of consecutive sections, exact seeks in files and sections, DSD level and length, and the mapping of failures to `EngineError`.
 

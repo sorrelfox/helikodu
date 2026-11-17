@@ -169,7 +169,7 @@ impl OutputBackend for PipeWireBackend {
             format: SampleFormat::F32(Endianness::NATIVE),
             ..config.spec
         };
-        let (writer, reader, shared) = ring(spec.channel_count(), spec.rate, config.buffer);
+        let (writer, reader, shared) = ring(spec, config.buffer);
         let id = self.next_stream.fetch_add(1, Ordering::Relaxed);
         let request = OpenRequest {
             config: config.clone(),

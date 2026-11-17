@@ -10,7 +10,9 @@
 //!
 //! The render thread fills the ring buffer ahead of playback. The backend's
 //! real-time side (an audio callback, or a writer thread for ALSA and the
-//! software sinks) only copies out of the ring buffer and converts to the device
+//! software sinks) copies out of the ring buffer, applies software volume,
+//! anti-click fades and dither (the device-side stage, controlled with
+//! [`DeviceAction`]s and [`SampleWriter::volume`]) and converts to the device
 //! format. It never allocates, locks or blocks; when the ring buffer runs dry it
 //! plays silence and counts an underrun in an atomic counter.
 //!
@@ -29,6 +31,7 @@
 #[cfg(feature = "alsa")]
 mod alsa;
 mod convert;
+mod device_stage;
 mod error;
 mod event;
 mod null;
@@ -48,6 +51,7 @@ use helikodu_model::audio::{
 
 #[cfg(feature = "alsa")]
 pub use self::alsa::AlsaBackend;
+pub use self::device_stage::DeviceAction;
 pub use self::error::OutputError;
 pub use self::event::{EventSender, OutputEvent};
 pub use self::null::NullBackend;

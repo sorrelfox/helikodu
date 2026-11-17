@@ -89,7 +89,7 @@ impl AlsaStream {
         events: EventSender,
     ) -> Result<OpenedStream, OutputError> {
         let spec = negotiated.spec;
-        let (writer, reader, shared) = ring(spec.channel_count(), spec.rate, config.buffer);
+        let (writer, reader, shared) = ring(spec, config.buffer);
         let worker = Writer {
             pcm,
             reader,
