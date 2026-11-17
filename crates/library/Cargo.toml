@@ -9,5 +9,22 @@ authors.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[features]
+# Build the SQLite copy that rusqlite bundles instead of linking the system library.
+# On in CI and in the Flatpak; distributions link their own SQLite (3.43 or newer, with FTS5).
+bundled-sqlite = ["rusqlite/bundled"]
+
+[dependencies]
+icu_collator.workspace = true
+icu_locale_core.workspace = true
+icu_normalizer.workspace = true
+regex.workspace = true
+rusqlite.workspace = true
+thiserror.workspace = true
+
+[[bench]]
+name = "collation"
+harness = false
+
 [lints]
 workspace = true
