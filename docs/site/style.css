@@ -1,0 +1,60 @@
+/*
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: CC-BY-SA-4.0
+*/
+:root {
+  color-scheme: light dark;
+  --bg: #ECECE9;
+  --pane: #F8F8F6;
+  --line: #D6D6D1;
+  --t1: #1B1C20;
+  --t2: #4A4D55;
+  --accent: #F0B23C;
+  --accent-text: #7A4E00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131417;
+    --pane: #1B1C20;
+    --line: #2A2C32;
+    --t1: #EDEEF0;
+    --t2: #B4B8C0;
+    --accent-text: #F5C46A;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--t1);
+  font: 1.0625rem/1.6 system-ui, -apple-system, "Segoe UI", Cantarell, "Noto Sans", Ubuntu, sans-serif;
+}
+.skip { position: absolute; left: -999px; }
+.skip:focus { left: 1rem; top: 1rem; background: var(--pane); padding: .5rem 1rem; }
+.hero, main, footer { max-width: 44rem; margin: 0 auto; padding: 0 1rem; }
+.hero { text-align: center; padding-top: 3.5rem; padding-bottom: 1.5rem; }
+.hero img { display: block; margin: 0 auto 1rem; }
+h1 { font-size: 2.6rem; margin: 0; letter-spacing: -.02em; }
+.meaning { color: var(--t2); margin: .4rem 0 0; }
+.meaning span { color: var(--accent-text); font-style: italic; font-weight: 600; }
+section {
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: .5rem 1.5rem 1rem;
+  margin: 1rem 0;
+}
+h2 { font-size: 1.2rem; margin: 1rem 0 .5rem; }
+ul { padding-left: 1.2rem; }
+li { margin: .4rem 0; }
+li::marker { color: var(--accent); }
+.status { border-left: 4px solid var(--accent); }
+a { color: var(--accent-text); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; border-radius: 2px; }
+.links { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; }
+footer { color: var(--t2); font-size: .9rem; padding-bottom: 2.5rem; text-align: center; }
+@media (max-width: 30rem) {
+  h1 { font-size: 2.1rem; }
+  section { padding: .25rem 1rem .75rem; }
+}
