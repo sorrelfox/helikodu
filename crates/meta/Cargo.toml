@@ -14,7 +14,9 @@ chardetng.workspace = true
 encoding_rs.workspace = true
 helikodu-ffmpeg-bridge.workspace = true
 helikodu-model.workspace = true
+image.workspace = true
 lofty.workspace = true
+sha2.workspace = true
 thiserror.workspace = true
 
 [lints]

@@ -30,3 +30,10 @@ path = "fuzz_targets/cue_parse.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "cover_decode"
+path = "fuzz_targets/cover_decode.rs"
+test = false
+doc = false
+bench = false

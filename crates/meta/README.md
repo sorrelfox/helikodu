@@ -25,7 +25,7 @@ println!("{:?} at {:?} Hz", file.audio.duration, file.audio.sample_rate);
 | `Rating` | 0 to 10 in half stars; `None` in `TrackTags::rating` means not rated |
 | `TagReader`, `LoftyReader`, `FfmpegReader` | The reader seam; each reader on its own |
 
-lofty reads MP3 (ID3v2, APEv2, ID3v1), FLAC, Ogg Vorbis, Opus, Speex, MP4, Monkey's Audio, Musepack, WavPack, WAV (RIFF INFO, ID3v2), AIFF and ADTS AAC. FFmpeg reads the rest (Matroska, ASF/WMA, DSF, DFF, TAK, TTA); those tags are read-only. Cover art is not read here.
+lofty reads MP3 (ID3v2, APEv2, ID3v1), FLAC, Ogg Vorbis, Opus, Speex, MP4, Monkey's Audio, Musepack, WavPack, WAV (RIFF INFO, ID3v2), AIFF and ADTS AAC. FFmpeg reads the rest (Matroska, ASF/WMA, DSF, DFF, TAK, TTA); those tags are read-only. Cover art is not read here; see [Covers](#covers).
 
 ### Field mapping
 
@@ -75,6 +75,37 @@ The parser is tolerant: commands in any case, LF, CRLF or CR line ends, quoted o
 
 **Tags.** Album `TITLE` and `PERFORMER` become the album and album artist; the track's `PERFORMER` (or else the album's) the artist; `SONGWRITER` a writer credit; `CATALOG` and `ISRC` the `barcode` and `isrc` extras; `REM DATE`, `GENRE`, `COMMENT`, `DISCNUMBER`, `TOTALDISCS`, `REPLAYGAIN_*`, `COMPOSER`, `LABEL` and the `MUSICBRAINZ_*` IDs their fields; other `REM` keys (`DISCID`, …) go to `extra` in lower case. A track's `REM` lines override the album's. The table is in `src/cue/fields.rs`.
 
+## Covers
+
+```rust
+use helikodu_meta::covers::{CoverLimits, CoverOptions, find_cover, make_thumbnail};
+
+let options = CoverOptions::default();
+if let Some(cover) = find_cover(path, &options) {
+    let hash = cover.hash()?;                 // SHA-256 of the encoded bytes
+    let thumb = make_thumbnail(cover.bytes()?, 256, &options.limits)?; // RGBA, fits 256 × 256
+    let file = if thumb.is_opaque() { thumb.encode_jpeg(85)? } else { thumb.encode_png()? };
+}
+```
+
+| Type | What it is |
+|---|---|
+| `read_embedded_covers` | A file's embedded pictures: ID3v2 `APIC`, APEv2 `Cover Art (…)`, FLAC `PICTURE`, Vorbis `METADATA_BLOCK_PICTURE` and MP4 `covr` through lofty; FFmpeg's attached pictures and Matroska image attachments when lofty does not know the format or cannot parse the file. Pictures over a limit or in a format that is not decoded are listed as skipped |
+| `find_folder_covers` | The image files beside a track, best first, without reading them |
+| `find_cover`, `choose_front` | One cover for a track: the best embedded picture, then the first folder image that is a JPEG, PNG or WebP (or the other way round, `CoverPreference`) |
+| `Cover` | A `CoverSource` (embedded: tag kind, picture type, position, description; or a folder file's path) and the encoded bytes, read from a folder file only when first needed |
+| `CoverHash` | SHA-256 of the encoded bytes; equal pictures have equal hashes wherever they were found |
+| `PictureFormat` | The format sniffed from the magic bytes (JPEG, PNG, WebP decoded; GIF, BMP, TIFF, AVIF, HEIF, JPEG XL recognised); declared media types and extensions are ignored |
+| `probe_picture`, `decode_picture`, `make_thumbnail` | Header-only format and dimensions; decoding into `RgbaPicture`; decoding and scaling to fit a square |
+| `RgbaPicture` | 8-bit RGBA pixels; `scale_to_fit` (Lanczos 3, keeps the aspect ratio, never enlarges), `encode_png`, `encode_jpeg` |
+| `CoverLimits` | 32 MiB per picture, 64 Mi pixels (8192 × 8192), 16 pictures per file |
+
+**Choosing the embedded picture.** The picture type decides: the front cover, then "other" or untyped pictures (MP4 has no types), then any other type, then the back cover, then file icons. Among pictures of the same rank the largest in bytes wins, then the first.
+
+**Folder images.** The track's folder is searched, then the parent of a disc folder (`CD1`, `Disc 2`, `disk_03 - Bonus`, …); nothing else, and not recursively. Names are compared ignoring case, with the extension `jpg`, `jpeg`, `png` or `webp`. The order: folder (the track's own first); name (`cover`, `folder`, `front`, `albumart`, `album`, `artwork`, `art`, or the configured list; then Windows Media Player's `AlbumArt_{…}_Large`; then the album title; then `AlbumArt_{…}_Small`; then `AlbumArtSmall`); extension in the order above; then the file name's bytes. Paths are kept as bytes.
+
+**Hostile pictures.** A picture over the byte limit is not copied. Decoding checks the byte size, sniffs the format, parses the header and checks the declared width × height against the pixel limit before any pixel buffer exists; the `image` crate's own allocation limit applies while decoding. Only JPEG, PNG and WebP are decoded, by memory-safe Rust decoders; malformed or truncated input is an error, never a panic. `fuzz/` has a target for the decoder.
+
 ## Tests
 
 ```sh
@@ -84,3 +115,5 @@ cargo test -p helikodu-meta
 The integration tests in `tests/cue/` write sheets shaped like those found in the wild (EAC single-file rips with pregaps and `REM` lines, multi-file rips, CRLF, byte order marks, UTF-16, cp1251, Shift-JIS, malformed lines, hostile paths) and generate audio with the `ffmpeg` tool: FLAC and WavPack files with a `CUESHEET` tag, a FLAC file given a cue sheet block by `metaflac`, and Matroska and M4B files with chapters from an FFMETADATA file. A test whose tool is missing prints `SKIPPED:` and passes.
 
 The integration tests in `tests/tags/` generate their media at test time in Cargo's temporary directory: a WAV file written by the tests, encoded with the `ffmpeg` tool with `-metadata`, then edited with lofty where a test needs frames FFmpeg cannot write (`POPM`, `UFID`, `TMCL`, `TIPL`, multi-valued fields, Latin-1 frames holding cp1251, Shift-JIS and GBK bytes). A test whose tool or encoder is missing prints `SKIPPED:` and passes.
+
+The integration tests in `tests/covers/` encode pictures with the `image` crate and write hostile ones byte by byte (a PNG header claiming 100000 × 100000 pixels, a JPEG claiming 65535 × 65535, a 4096 × 4096 PNG of a few kilobytes against a smaller limit, truncated and corrupted JPEG, PNG and WebP). Audio files get their pictures from the `ffmpeg` tool (`-disposition attached_pic` for MP3, FLAC and M4A; `-attach` for Matroska) or from lofty (several `APIC` types, two FLAC `PICTURE` blocks, an Opus `METADATA_BLOCK_PICTURE`, APEv2 cover items in WavPack). Folder tests build album folders with disc subfolders, mixed-case names and non-UTF-8 names.

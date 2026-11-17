@@ -43,6 +43,9 @@ icu_collator = "2.4"
 icu_locale_core = "2.4"
 # Normalization (NFKD, NFC) for the folded search and grouping form.
 icu_normalizer = "2.4"
+# Cover decoding and thumbnails: JPEG, PNG and WebP only. No default features, so
+# no other format, no AVIF (it would need dav1d) and no thread pool.
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
 libc = "0.2"
 # Tag reading and writing in pure Rust; FFmpeg is the read-only fallback for the
 # formats it lacks (Matroska, ASF/WMA, DSF, DFF, TAK, TTA).
