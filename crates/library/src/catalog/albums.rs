@@ -384,6 +384,10 @@ struct Part {
     disc_no: Option<i64>,
     disc_total: Option<i64>,
     added_at: i64,
+    /// The track's embedded cover.
+    cover: Option<i64>,
+    /// The image of the track's folder.
+    folder_cover: Option<i64>,
     /// Whether the track's row still holds another group key.
     regrouped: bool,
 }
@@ -421,7 +425,9 @@ fn form_albums(
 const PART_COLUMNS: &str = "SELECT id, album_dir_id, coalesce(disc_no, 1), track_no, album_id,
     album_title, album_sort, album_artist, album_artist_sort, main_artist,
     coalesce(compilation, 0), release_type, release_mbid, release_group_mbid, year,
-    original_year, disc_no, disc_total, added_at FROM tracks";
+    original_year, disc_no, disc_total, added_at, cover_id,
+    (SELECT d.cover_id FROM files f JOIN dirs d ON d.id = f.dir_id WHERE f.id = tracks.file_id)
+    FROM tracks";
 
 fn part(row: &rusqlite::Row<'_>) -> rusqlite::Result<Part> {
     Ok(Part {
@@ -444,6 +450,8 @@ fn part(row: &rusqlite::Row<'_>) -> rusqlite::Result<Part> {
         disc_no: row.get(16)?,
         disc_total: row.get(17)?,
         added_at: row.get(18)?,
+        cover: row.get(19)?,
+        folder_cover: row.get(20)?,
         regrouped: false,
     })
 }
@@ -497,6 +505,29 @@ struct AlbumValues {
     mbid: Option<String>,
     group_mbid: Option<String>,
     disc_total: Option<i64>,
+    cover: Option<i64>,
+}
+
+/// The cover of an album with the tracks `tracks`: the embedded cover most of them
+/// have, or else the folder image most of them have. Of covers that equally many
+/// have, the one of the first track (by disc and track number).
+fn album_cover(tracks: &[&Part]) -> Option<i64> {
+    let pick = |cover_of: fn(&Part) -> Option<i64>| {
+        let mut counts: HashMap<i64, (usize, (i64, i64, i64))> = HashMap::new();
+        for t in tracks {
+            if let Some(cover) = cover_of(t) {
+                let place = (t.disc, t.track_no.unwrap_or(i64::MAX), t.id);
+                let entry = counts.entry(cover).or_insert((0, place));
+                entry.0 += 1;
+                entry.1 = entry.1.min(place);
+            }
+        }
+        counts
+            .into_iter()
+            .max_by(|(_, (n, a)), (_, (m, b))| n.cmp(m).then_with(|| b.cmp(a)))
+            .map(|(cover, _)| cover)
+    };
+    pick(|t| t.cover).or_else(|| pick(|t| t.folder_cover))
 }
 
 /// Who an album is by.
@@ -606,6 +637,7 @@ fn write_album(
             .iter()
             .filter_map(|t| t.disc_total.max(t.disc_no))
             .max(),
+        cover: album_cover(tracks),
     };
     let added_at = tracks.iter().map(|t| t.added_at).min();
 
@@ -613,7 +645,7 @@ fn write_album(
         .prepare_cached(
             "SELECT id, title, title_sort, title_fold, artist, artist_sort, year,
                     original_year, is_compilation, release_type, mbid, release_group_mbid,
-                    disc_total, added_at
+                    disc_total, added_at, cover_id
              FROM albums WHERE album_key = ?1",
         )?
         .query_row([key], |row| {
@@ -633,6 +665,7 @@ fn write_album(
                     mbid: row.get(10)?,
                     group_mbid: row.get(11)?,
                     disc_total: row.get(12)?,
+                    cover: row.get(14)?,
                 },
             ))
         })
@@ -651,7 +684,7 @@ fn write_album(
                     "UPDATE albums SET title = ?2, title_sort = ?3, title_fold = ?4,
                          artist = ?5, artist_sort = ?6, year = ?7, original_year = ?8,
                          is_compilation = ?9, release_type = ?10, mbid = ?11,
-                         release_group_mbid = ?12, disc_total = ?13
+                         release_group_mbid = ?12, disc_total = ?13, cover_id = ?14
                      WHERE id = ?1",
                 )?
                 .execute(params![
@@ -667,7 +700,8 @@ fn write_album(
                     v.release_type,
                     v.mbid,
                     v.group_mbid,
-                    v.disc_total
+                    v.disc_total,
+                    v.cover
                 ])?;
             }
             if old.title_fold != values.title_fold {
@@ -679,8 +713,8 @@ fn write_album(
             .prepare_cached(
                 "INSERT INTO albums (album_key, title, title_sort, title_fold, artist,
                      artist_sort, year, original_year, is_compilation, release_type, mbid,
-                     release_group_mbid, disc_total, added_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+                     release_group_mbid, disc_total, added_at, cover_id)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
                  RETURNING id",
             )?
             .query_row(
@@ -698,7 +732,8 @@ fn write_album(
                     v.mbid,
                     v.group_mbid,
                     v.disc_total,
-                    added_at
+                    added_at,
+                    v.cover
                 ],
                 |row| row.get(0),
             )?,

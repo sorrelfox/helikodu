@@ -11,8 +11,8 @@ use helikodu_model::audio::SampleRate;
 use super::filter::{FileClass, is_audiobook};
 use super::walk::Found;
 use crate::catalog::{
-    ArtistRole, AudioProperties, CatalogTags, Credit, FileStamp, RootId, TrackKind, TrackRecord,
-    TrackSection, TrackTags,
+    ArtistRole, AudioProperties, CatalogTags, Credit, FileStamp, ReplayGain, RootId, TrackCovers,
+    TrackKind, TrackRecord, TrackSection, TrackTags,
 };
 use crate::stats::Rating;
 
@@ -21,8 +21,14 @@ use crate::stats::Rating;
 /// chapter; or else one for the whole file.
 ///
 /// The file's stamp is the one the walk saw, so a file that changed while it was
-/// being read is read again by the next scan.
-pub(crate) fn tracks_of(root: RootId, found: &Found, report: &FileReport) -> Vec<TrackRecord> {
+/// being read is read again by the next scan. With `covers`, the covers of the
+/// report replace the stored ones (the worker was asked for them).
+pub(crate) fn tracks_of(
+    root: RootId,
+    found: &Found,
+    report: &FileReport,
+    covers: bool,
+) -> Vec<TrackRecord> {
     let file = FileStamp {
         size: found.stamp.size,
         mtime_ns: Some(found.stamp.mtime_ns),
@@ -38,6 +44,10 @@ pub(crate) fn tracks_of(root: RootId, found: &Found, report: &FileReport) -> Vec
     let base = TrackRecord {
         kind,
         audio,
+        covers: covers.then(|| TrackCovers {
+            embedded: report.cover.clone(),
+            folder: report.folder_cover.clone(),
+        }),
         ..TrackRecord::new(root, &found.path, file)
     };
     // A track that starts after the end of the file (a sheet written for a longer
@@ -69,6 +79,7 @@ pub(crate) fn tracks_of(root: RootId, found: &Found, report: &FileReport) -> Vec
         tags: track_tags(tags),
         catalog: catalog_tags(tags),
         rating_from_tags: rating(tags),
+        replay_gain: replay_gain(tags),
         ..base
     }]
 }
@@ -94,6 +105,7 @@ fn section_track(base: &TrackRecord, track: &VirtualTrack, section: TrackSection
         tags: track_tags(&track.tags),
         catalog: catalog_tags(&track.tags),
         rating_from_tags: rating(&track.tags),
+        replay_gain: replay_gain(&track.tags),
         ..base.clone()
     }
 }
@@ -194,6 +206,18 @@ fn role(role: Role) -> Option<ArtistRole> {
     })
 }
 
+/// The loudness values, relative to the ReplayGain 2.0 reference: the
+/// `REPLAYGAIN_*` tags, or else the Opus `R128_*_GAIN` tags converted.
+fn replay_gain(tags: &meta_tags::TrackTags) -> ReplayGain {
+    let rg = &tags.replay_gain;
+    ReplayGain {
+        track_gain_db: rg.track_gain_rg2_db(),
+        track_peak: rg.track_peak,
+        album_gain_db: rg.album_gain_rg2_db(),
+        album_peak: rg.album_peak,
+    }
+}
+
 fn rating(tags: &meta_tags::TrackTags) -> Option<Rating> {
     tags.rating
         .and_then(|rating| Rating::from_half_stars(rating.half_stars()))
@@ -229,6 +253,12 @@ mod tests {
                     }],
                     date: Some("1999-02-03".into()),
                     rating: meta_tags::Rating::from_half_stars(8),
+                    replay_gain: meta_tags::ReplayGainTags {
+                        track_gain_db: Some(-7.5),
+                        track_peak: Some(0.98),
+                        r128_album_gain: Some(-512),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
                 audio: meta_tags::AudioProperties {
@@ -244,6 +274,8 @@ mod tests {
             },
             cue,
             chapters: Vec::new(),
+            cover: None,
+            folder_cover: None,
             notes: Vec::new(),
         }
     }
@@ -262,7 +294,12 @@ mod tests {
 
     #[test]
     fn a_whole_file() {
-        let records = tracks_of(RootId(1), &found("a.m4b", FileClass::Audio), &report(None));
+        let records = tracks_of(
+            RootId(1),
+            &found("a.m4b", FileClass::Audio),
+            &report(None),
+            true,
+        );
         let [record] = records.as_slice() else {
             panic!("{records:?}");
         };
@@ -275,6 +312,19 @@ mod tests {
         assert_eq!(record.rating_from_tags, Rating::from_half_stars(8));
         assert_eq!(record.file.inode, Some(7));
         assert_eq!(record.file.quick_hash, vec![9; 16]);
+        assert_eq!(record.replay_gain.track_gain_db, Some(-7.5));
+        assert_eq!(record.replay_gain.track_peak, Some(0.98));
+        // R128 −2 dB relative to −23 LUFS is +3 dB relative to −18 LUFS.
+        assert_eq!(record.replay_gain.album_gain_db, Some(3.0));
+        assert_eq!(record.replay_gain.album_peak, None);
+        assert_eq!(record.covers, Some(TrackCovers::default()));
+        let without = tracks_of(
+            RootId(1),
+            &found("a.flac", FileClass::Audio),
+            &report(None),
+            false,
+        );
+        assert_eq!(without[0].covers, None);
     }
 
     #[test]
@@ -307,6 +357,7 @@ mod tests {
             RootId(1),
             &found("a.mkv", FileClass::Video),
             &report(Some(cue)),
+            true,
         );
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].sub_index, 1);

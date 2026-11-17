@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What a worker does with one request: read the file's tags, quick hash, CUE sheet
-//! and chapters.
+//! What a worker does with one request: read the file's tags, quick hash, CUE sheet,
+//! chapters and covers.
 
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom};
@@ -10,8 +10,10 @@ use std::os::unix::ffi::OsStrExt;
 use std::panic::{self, AssertUnwindSafe};
 use std::path::Path;
 
+use super::covers::{embedded_cover, folder_cover};
 use super::message::{CueReport, Failure, FailureKind, FileReport, Request, Response};
 use super::quick_hash::quick_hash;
+use crate::covers::CoverLimits;
 use crate::cue::{CueOptions, CueOrigin, read_chapters, read_cue, read_embedded_cue};
 use crate::tags::{ReadOptions, TagError, read_tags_from_file};
 
@@ -110,12 +112,24 @@ pub fn read_file(request: &Request) -> Result<FileReport, Failure> {
         }
     }
 
+    let (cover, folder_cover) = if options.covers {
+        let limits = CoverLimits::default();
+        (
+            embedded_cover(path, &limits, &mut notes),
+            folder_cover(path, tags.tags.album.as_deref(), &limits, &mut notes),
+        )
+    } else {
+        (None, None)
+    };
+
     Ok(FileReport {
         size,
         quick_hash,
         tags,
         cue,
         chapters,
+        cover,
+        folder_cover,
         notes,
     })
 }

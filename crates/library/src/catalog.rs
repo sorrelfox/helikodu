@@ -12,6 +12,7 @@
 
 pub(crate) mod albums;
 mod browse;
+pub(crate) mod covers;
 mod fingerprint;
 mod folders;
 mod ids;
@@ -26,12 +27,13 @@ pub use browse::{
     TrackQuery, TrackSummary,
 };
 pub(crate) use browse::{album, albums, artists, genres, tracks};
+pub use covers::{CoverInfo, CoverLocation};
 pub use fingerprint::TrackFingerprint;
 pub use ids::{AlbumId, GenreId, IdentityId, PersonId, RootId};
 pub(crate) use ids::{sql_track_id, track_id_from_sql};
 pub use roots::RootState;
 pub use track_record::{
-    ArtistRole, AudioProperties, CatalogTags, Credit, FileStamp, TrackKind, TrackRecord,
-    TrackSection, TrackTags,
+    ArtistRole, AudioProperties, CatalogTags, Credit, FileStamp, ReplayGain, TrackCovers,
+    TrackKind, TrackRecord, TrackSection, TrackTags,
 };
 pub use write::{TrackChange, TrackWrite};

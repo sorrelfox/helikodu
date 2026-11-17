@@ -6,6 +6,9 @@
 //! Every frame starts with a kind byte: 1 for [`Hello`], 2 for [`Request`], 3 for
 //! [`Response`]. The rest of the layout is the order of the fields in the code below;
 //! [`PROTOCOL_VERSION`] changes whenever it changes.
+//!
+//! Version 2 added the covers: [`RequestOptions::covers`], and in a [`FileReport`]
+//! the file's embedded cover and its folder image as [`CoverReport`]s.
 
 use std::ffi::OsStr;
 use std::num::NonZeroU32;
@@ -17,6 +20,7 @@ use helikodu_model::audio::MediaTime;
 use helikodu_model::library::{MediaSource, SourceSection};
 
 use super::wire::{DecodeError, Decoder, Encoder};
+use crate::covers::{CoverHash, EmbeddedTag, PictureFormat, PictureType};
 use crate::cue::{CueOrigin, VirtualTrack};
 use crate::tags::{
     AudioProperties, Credit, FileTags, MusicBrainzIds, Rating, ReplayGainTags, Role, TagSource,
@@ -25,7 +29,7 @@ use crate::tags::{
 
 /// The version of the message layout. A worker announces it in its [`Hello`]; the
 /// scanner refuses a worker with another version.
-pub const PROTOCOL_VERSION: u16 = 1;
+pub const PROTOCOL_VERSION: u16 = 2;
 
 /// The bytes that start a [`Hello`], so that a program that is not a worker is
 /// recognised at once.
@@ -92,6 +96,8 @@ pub struct RequestOptions {
     pub embedded_cue: bool,
     /// Whether container chapters are read (in the formats that have them).
     pub chapters: bool,
+    /// Whether the embedded cover and the folder image are looked for.
+    pub covers: bool,
 }
 
 impl Default for RequestOptions {
@@ -102,6 +108,7 @@ impl Default for RequestOptions {
             cue_sheets: Vec::new(),
             embedded_cue: true,
             chapters: true,
+            covers: true,
         }
     }
 }
@@ -128,6 +135,11 @@ pub struct FileReport {
     pub cue: Option<CueReport>,
     /// The container's chapters as virtual tracks; empty without chapters.
     pub chapters: Vec<VirtualTrack>,
+    /// The picture embedded in the file that best serves as its cover, if any.
+    pub cover: Option<CoverReport>,
+    /// The first usable image file in the file's folder (or in the folder above a
+    /// disc folder), if any.
+    pub folder_cover: Option<CoverReport>,
     /// Things that went wrong without making the file unreadable, such as a sheet
     /// that could not be parsed.
     pub notes: Vec<String>,
@@ -144,6 +156,46 @@ pub struct CueReport {
     pub tracks: Vec<VirtualTrack>,
     /// What the parser skipped or repaired, as text.
     pub warnings: Vec<String>,
+}
+
+/// A cover a worker found, without its bytes: what identifies it, where it is,
+/// and what its header says. The worker checks the header within the picture
+/// limits but decodes no pixels; whoever needs the pixels reads the bytes again
+/// from [`origin`](Self::origin) and checks them against [`hash`](Self::hash).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoverReport {
+    /// The content hash of the encoded picture.
+    pub hash: CoverHash,
+    /// Where the picture is.
+    pub origin: CoverOrigin,
+    /// Its format: JPEG, PNG or WebP.
+    pub format: PictureFormat,
+    /// Its width in pixels, after the stored orientation.
+    pub width: u32,
+    /// Its height in pixels, after the stored orientation.
+    pub height: u32,
+    /// The size of the encoded picture in bytes.
+    pub byte_len: u64,
+}
+
+/// Where a [`CoverReport`]'s picture is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CoverOrigin {
+    /// Embedded in the file that was read.
+    Embedded {
+        /// The tag or structure that holds it.
+        tag: EmbeddedTag,
+        /// Its picture type, when the tag has one.
+        picture_type: Option<PictureType>,
+        /// Its position among the file's pictures, as
+        /// [`CoverSource::Embedded`](crate::covers::CoverSource::Embedded) counts them.
+        index: u32,
+    },
+    /// An image file.
+    Folder {
+        /// The image file.
+        path: PathBuf,
+    },
 }
 
 /// Why a file could not be read.
@@ -195,6 +247,7 @@ impl Message {
                 e.list(&o.cue_sheets, |e, p| path(e, p));
                 e.bool(o.embedded_cue);
                 e.bool(o.chapters);
+                e.bool(o.covers);
             }
             Self::Response(response) => {
                 e.u8(KIND_RESPONSE);
@@ -247,6 +300,7 @@ impl Message {
                     cue_sheets: d.list(read_path)?,
                     embedded_cue: d.bool()?,
                     chapters: d.bool()?,
+                    covers: d.bool()?,
                 };
                 Self::Request(Request { id, path, options })
             }
@@ -315,7 +369,100 @@ fn file_report(e: &mut Encoder, r: &FileReport) {
         e.strs(&cue.warnings);
     });
     e.list(&r.chapters, virtual_track);
+    e.opt(r.cover.as_ref(), cover_report);
+    e.opt(r.folder_cover.as_ref(), cover_report);
     e.strs(&r.notes);
+}
+
+const EMBEDDED_TAGS: [EmbeddedTag; 7] = [
+    EmbeddedTag::Id3v2,
+    EmbeddedTag::Ape,
+    EmbeddedTag::FlacPicture,
+    EmbeddedTag::VorbisComment,
+    EmbeddedTag::Mp4Cover,
+    EmbeddedTag::FfmpegAttachedPicture,
+    EmbeddedTag::MatroskaAttachment,
+];
+
+const PICTURE_FORMATS: [PictureFormat; 9] = [
+    PictureFormat::Jpeg,
+    PictureFormat::Png,
+    PictureFormat::WebP,
+    PictureFormat::Gif,
+    PictureFormat::Bmp,
+    PictureFormat::Tiff,
+    PictureFormat::Avif,
+    PictureFormat::Heif,
+    PictureFormat::JpegXl,
+];
+
+/// The position of `value` in `table`, as a byte.
+fn code_of<T: PartialEq>(table: &[T], value: &T) -> u8 {
+    table
+        .iter()
+        .position(|t| t == value)
+        .and_then(|i| u8::try_from(i).ok())
+        .unwrap_or(u8::MAX)
+}
+
+/// The entry of `table` at `code`.
+fn from_code<T: Copy>(table: &[T], code: u8, what: &'static str) -> Result<T, DecodeError> {
+    table
+        .get(usize::from(code))
+        .copied()
+        .ok_or(DecodeError::UnknownTag { what, value: code })
+}
+
+fn cover_report(e: &mut Encoder, c: &CoverReport) {
+    e.bytes(c.hash.as_bytes());
+    match &c.origin {
+        CoverOrigin::Embedded {
+            tag,
+            picture_type,
+            index,
+        } => {
+            e.u8(0);
+            e.u8(code_of(&EMBEDDED_TAGS, tag));
+            e.opt(picture_type.map(|t| t.0), Encoder::u8);
+            e.u32(*index);
+        }
+        CoverOrigin::Folder { path: p } => {
+            e.u8(1);
+            path(e, p);
+        }
+    }
+    e.u8(code_of(&PICTURE_FORMATS, &c.format));
+    e.u32(c.width);
+    e.u32(c.height);
+    e.u64(c.byte_len);
+}
+
+fn read_cover_report(d: &mut Decoder<'_>) -> Result<CoverReport, DecodeError> {
+    let hash = CoverHash::from_bytes(d.bytes()?).ok_or(DecodeError::Invalid("cover hash"))?;
+    let origin = match d.u8()? {
+        0 => CoverOrigin::Embedded {
+            tag: from_code(&EMBEDDED_TAGS, d.u8()?, "embedded tag")?,
+            picture_type: d.opt(Decoder::u8)?.map(PictureType),
+            index: d.u32()?,
+        },
+        1 => CoverOrigin::Folder {
+            path: read_path(d)?,
+        },
+        value => {
+            return Err(DecodeError::UnknownTag {
+                what: "cover origin",
+                value,
+            });
+        }
+    };
+    Ok(CoverReport {
+        hash,
+        origin,
+        format: from_code(&PICTURE_FORMATS, d.u8()?, "picture format")?,
+        width: d.u32()?,
+        height: d.u32()?,
+        byte_len: d.u64()?,
+    })
 }
 
 fn read_file_report(d: &mut Decoder<'_>) -> Result<FileReport, DecodeError> {
@@ -343,6 +490,8 @@ fn read_file_report(d: &mut Decoder<'_>) -> Result<FileReport, DecodeError> {
             })
         })?,
         chapters: d.list(read_virtual_track)?,
+        cover: d.opt(read_cover_report)?,
+        folder_cover: d.opt(read_cover_report)?,
         notes: d.strings()?,
     })
 }
@@ -694,6 +843,28 @@ mod tests {
                 warnings: vec!["line 3: odd".into()],
             }),
             chapters: Vec::new(),
+            cover: Some(CoverReport {
+                hash: CoverHash::of(b"front"),
+                origin: CoverOrigin::Embedded {
+                    tag: EmbeddedTag::MatroskaAttachment,
+                    picture_type: Some(PictureType::FRONT_COVER),
+                    index: 2,
+                },
+                format: PictureFormat::WebP,
+                width: 1200,
+                height: 1199,
+                byte_len: 345_678,
+            }),
+            folder_cover: Some(CoverReport {
+                hash: CoverHash::of(b"folder"),
+                origin: CoverOrigin::Folder {
+                    path: PathBuf::from(OsStr::from_bytes(b"/m/\xe9/cover.jpg")),
+                },
+                format: PictureFormat::Jpeg,
+                width: 500,
+                height: 500,
+                byte_len: 40_000,
+            }),
             notes: vec!["note".into()],
         }
     }
@@ -747,6 +918,61 @@ mod tests {
             let mut damaged = bytes.clone();
             damaged[i] ^= 0xff;
             let _ = Message::decode(&damaged);
+        }
+    }
+
+    #[test]
+    fn every_cover_code_round_trips() {
+        for tag in EMBEDDED_TAGS {
+            for format in PICTURE_FORMATS {
+                let mut r = report();
+                r.cover = r.cover.map(|c| CoverReport {
+                    origin: CoverOrigin::Embedded {
+                        tag,
+                        picture_type: None,
+                        index: 0,
+                    },
+                    format,
+                    ..c
+                });
+                r.folder_cover = None;
+                let message = Message::Response(Box::new(Response {
+                    id: 9,
+                    result: Ok(r),
+                }));
+                assert_eq!(Message::decode(&message.encode()).unwrap(), message);
+            }
+        }
+    }
+
+    #[test]
+    fn a_short_cover_hash_is_refused() {
+        let mut e = Encoder::default();
+        e.bytes(&[1; 31]);
+        e.u8(1);
+        e.bytes(b"/x");
+        e.u8(0);
+        e.u32(1);
+        e.u32(1);
+        e.u64(1);
+        let bytes = e.finish();
+        assert_eq!(
+            read_cover_report(&mut Decoder::new(&bytes)),
+            Err(DecodeError::Invalid("cover hash"))
+        );
+    }
+
+    #[test]
+    fn a_version_1_hello_is_reported_as_such() {
+        let mut bytes = Message::Hello(Hello::current()).encode();
+        bytes[5] = 1;
+        bytes[6] = 0;
+        match Message::decode(&bytes).unwrap() {
+            Message::Hello(hello) => {
+                assert_eq!(hello.version, 1);
+                assert_ne!(hello.version, PROTOCOL_VERSION);
+            }
+            other => panic!("not a hello: {other:?}"),
         }
     }
 

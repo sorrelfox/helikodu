@@ -11,6 +11,7 @@ use rusqlite::types::Value;
 
 use super::rank::MatchRank;
 use super::terms::{self, Terms};
+use crate::catalog::roots::visibility;
 use crate::catalog::track_id_from_sql;
 use crate::db::unix_time;
 
@@ -26,6 +27,9 @@ pub struct SearchRequest {
     pub offset: usize,
     /// How many results to return, at most 1000.
     pub limit: usize,
+    /// Whether the tracks of masked library folders are found too. Off by default,
+    /// as in the browsing queries.
+    pub include_masked: bool,
 }
 
 impl SearchRequest {
@@ -35,6 +39,7 @@ impl SearchRequest {
             text: text.into(),
             offset: 0,
             limit: 50,
+            include_masked: false,
         }
     }
 
@@ -96,7 +101,11 @@ pub(crate) fn search(c: &Connection, request: &SearchRequest) -> rusqlite::Resul
     };
     let limit = request.limit.min(MAX_PAGE);
     let mut params: Vec<Value> = vec![Value::Text(terms.whole.clone())];
-    let matched = matching_condition(&terms, &mut params);
+    let visible = visibility(c, request.include_masked)?;
+    let mut matched = matching_condition(&terms, &mut params);
+    if visible != "1" {
+        matched = format!("{matched} AND {visible}");
+    }
     let mut total = 0;
     let mut hits = Vec::new();
     if limit > 0 {

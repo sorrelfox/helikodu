@@ -12,6 +12,7 @@ use helikodu_model::library::TrackId;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use super::albums::{Regroup, main_artist};
+use super::covers;
 use super::fingerprint::TrackFingerprint;
 use super::folders::disc_folder;
 use super::ids::{IdentityId, RootId, sql_track_id, track_id_from_sql};
@@ -148,6 +149,22 @@ pub(crate) fn upsert_track(
     Ok(written.write)
 }
 
+/// Writes `records` like [`upsert_track`], regrouping the albums they affect once
+/// for all of them.
+pub(crate) fn upsert_tracks(
+    c: &Connection,
+    records: &[TrackRecord],
+    now: i64,
+) -> rusqlite::Result<Vec<TrackWrite>> {
+    let mut regroup = Regroup::default();
+    let mut written = Vec::with_capacity(records.len());
+    for record in records {
+        written.push(write_track(c, record, now, &mut regroup)?);
+    }
+    finish_tracks(c, regroup, &written)?;
+    Ok(written.iter().map(|w| w.write).collect())
+}
+
 /// A track written by [`write_track`], before its albums are regrouped and its search
 /// rows written.
 #[derive(Debug, Clone, Copy)]
@@ -259,6 +276,9 @@ pub(crate) fn write_track(
 
     write_people(c, track, &record.tags, &record.catalog)?;
     write_genres(c, track, &record.tags.genres)?;
+    if let Some(covers) = &record.covers {
+        covers::write_track_covers(c, track, dir_id, &record.path, covers)?;
+    }
     regroup.add_track(c, track)?;
     Ok(Written {
         write: TrackWrite {
@@ -444,6 +464,7 @@ fn write_track_columns(
     let tags = &record.tags;
     let more = &record.catalog;
     let audio = &record.audio;
+    let gain = &record.replay_gain;
     let title_sort = tags.title_sort.as_ref().or(tags.title.as_ref());
     let title_fold = tags.title.as_deref().map(fold);
     let (start, end) = match record.frames {
@@ -517,6 +538,10 @@ fn write_track_columns(
         folder.album_dir,
         artists_fold(tags),
         now,
+        gain.track_gain_db,
+        gain.track_peak,
+        gain.album_gain_db,
+        gain.album_peak,
     ];
     match track {
         None => c
@@ -528,11 +553,12 @@ fn write_track_columns(
                      channels, bitrate, work, movement, movement_no, has_lyrics, album_title,
                      album_fold, album_sort, album_artist, album_artist_sort, main_artist,
                      compilation, release_type, release_mbid, release_group_mbid,
-                     album_dir_id, artists_fold, added_at)
+                     album_dir_id, artists_fold, added_at, rg_track_gain, rg_track_peak,
+                     rg_album_gain, rg_album_peak)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
                          ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28,
                          ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42,
-                         ?43)
+                         ?43, ?44, ?45, ?46, ?47)
                  RETURNING id",
             )?
             .query_row(values, |row| row.get(0)),
@@ -549,8 +575,10 @@ fn write_track_columns(
                      album_fold = ?32, album_sort = ?33, album_artist = ?34,
                      album_artist_sort = ?35, main_artist = ?36, compilation = ?37,
                      release_type = ?38, release_mbid = ?39, release_group_mbid = ?40,
-                     album_dir_id = ?41, artists_fold = ?42, modified_at = ?43
-                 WHERE id = ?44",
+                     album_dir_id = ?41, artists_fold = ?42, modified_at = ?43,
+                     rg_track_gain = ?44, rg_track_peak = ?45, rg_album_gain = ?46,
+                     rg_album_peak = ?47
+                 WHERE id = ?48",
             )?
             .execute(rusqlite::params_from_iter(
                 values

@@ -34,6 +34,9 @@ pub struct ScanOptions {
     /// The legacy charset the user chose for old tags and CUE sheets, as a WHATWG
     /// label such as `windows-1251`. Guessed when unset.
     pub legacy_charset: Option<String>,
+    /// Whether covers are looked for: the picture embedded in each file, and the
+    /// image file in its folder (`cover.jpg`, `folder.png`, …). On by default.
+    pub covers: bool,
     /// The worker processes.
     pub workers: WorkerOptions,
 }
@@ -51,6 +54,7 @@ impl ScanOptions {
             retry_unreadable: false,
             repair_charsets: true,
             legacy_charset: None,
+            covers: true,
             workers: WorkerOptions::default(),
         }
     }

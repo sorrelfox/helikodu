@@ -9,7 +9,8 @@
 //! sends a [`Request`] (a path, as bytes, and [`RequestOptions`]) on the worker's
 //! standard input; the worker answers with a [`Response`] on its standard output:
 //! a [`FileReport`] with the tags, the audio properties, the quick hash, the CUE
-//! sheet's virtual tracks and the chapters, or a [`Failure`].
+//! sheet's virtual tracks, the chapters and the covers ([`CoverReport`]), or a
+//! [`Failure`].
 //!
 //! The exchange is binary: each message is a frame, a 32-bit little-endian length
 //! and that many bytes, at most [`MAX_FRAME_BYTES`]. A worker sends a [`Hello`]
@@ -19,6 +20,7 @@
 //!
 //! The worker's main loop is [`serve`] with [`handle`].
 
+mod covers;
 mod extract;
 mod message;
 mod quick_hash;
@@ -27,8 +29,8 @@ mod wire;
 
 pub use extract::{MAX_EXTRA_VALUE_BYTES, handle, read_file};
 pub use message::{
-    CueReport, Failure, FailureKind, FileReport, Hello, Message, PROTOCOL_VERSION, Request,
-    RequestOptions, Response,
+    CoverOrigin, CoverReport, CueReport, Failure, FailureKind, FileReport, Hello, Message,
+    PROTOCOL_VERSION, Request, RequestOptions, Response,
 };
 pub use quick_hash::{QUICK_HASH_LEN, QUICK_HASH_SPAN, quick_hash};
 pub use serve::serve;

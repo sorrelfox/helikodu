@@ -260,6 +260,7 @@ fn read_files(
     let request_options = RequestOptions {
         repair_charsets: options.repair_charsets,
         legacy_charset: options.legacy_charset.clone(),
+        covers: options.covers,
         ..RequestOptions::default()
     };
     let requests: Vec<Job> = to_read
@@ -318,7 +319,7 @@ fn read_files(
                 let item = &to_read[index];
                 match result {
                     Ok(report) => {
-                        let records = tracks_of(item.root, &item.found, &report);
+                        let records = tracks_of(item.root, &item.found, &report, options.covers);
                         let ticket =
                             writer.submit(move |c| store::write_file_tracks(c, &records, now))?;
                         pending.push_back(Pending::Tracks(index, ticket));

@@ -3,6 +3,7 @@
 
 //! Lists of albums, and one album with its discs and tracks.
 
+use helikodu_meta::covers::CoverHash;
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
@@ -18,7 +19,8 @@ use crate::db::unix_time;
 
 /// The album columns that [`album_row`] reads, from the albums `a`.
 const ALBUM_COLUMNS: &str = "a.id, a.title, a.artist, a.is_compilation, a.year,
-    a.original_year, a.release_type, a.disc_total, a.added_at";
+    a.original_year, a.release_type, a.disc_total, a.added_at,
+    (SELECT hash FROM covers WHERE id = a.cover_id)";
 
 /// An album from a row of [`ALBUM_COLUMNS`], without its counts.
 fn album_row(row: &Row<'_>) -> rusqlite::Result<AlbumSummary> {
@@ -44,6 +46,9 @@ fn album_row(row: &Row<'_>) -> rusqlite::Result<AlbumSummary> {
         disc_total: row.get(7)?,
         duration: None,
         added_at: row.get(8)?,
+        cover: row
+            .get::<_, Option<Vec<u8>>>(9)?
+            .and_then(|hash| CoverHash::from_bytes(&hash)),
     })
 }
 
@@ -160,10 +165,10 @@ pub(crate) fn album(
         .query_row([id.0], |row| {
             Ok((
                 album_row(row)?,
-                row.get::<_, Option<String>>(9)?,
                 row.get::<_, Option<String>>(10)?,
                 row.get::<_, Option<String>>(11)?,
                 row.get::<_, Option<String>>(12)?,
+                row.get::<_, Option<String>>(13)?,
             ))
         })
         .optional()?;

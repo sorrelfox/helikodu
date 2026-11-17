@@ -10,6 +10,7 @@
 #![forbid(unsafe_code)]
 
 mod catalog;
+mod covers;
 mod db;
 mod details;
 mod library;
@@ -25,8 +26,13 @@ pub use catalog::{
     TrackSection, TrackSummary,
 };
 pub use catalog::{
-    AudioProperties, FileStamp, IdentityId, RootId, TrackChange, TrackFingerprint, TrackKind,
-    TrackRecord, TrackTags, TrackWrite,
+    AudioProperties, CoverInfo, CoverLocation, FileStamp, IdentityId, ReplayGain, RootId,
+    TrackChange, TrackCovers, TrackFingerprint, TrackKind, TrackRecord, TrackTags, TrackWrite,
+};
+pub use covers::{
+    ArtworkOptions, ArtworkPool, CoverLocator, CoverReadError, DEFAULT_CACHE_BYTES, Removed,
+    Thumbnail, ThumbnailCache, ThumbnailCacheOptions, ThumbnailEvent, ThumbnailSize, read_cover,
+    render_thumbnail,
 };
 pub use db::{
     DatabaseConfig, DbError, LocaleCollation, Location, MemoryName, SCHEMA_VERSION, SqliteError,
@@ -35,6 +41,10 @@ pub use db::{
 pub use details::{
     FileDetails, LibraryTotals, PlayedTrack, ReadFileError, TrackDetails, read_file_details,
 };
+/// The content hash of a cover, the key of the thumbnail cache.
+pub use helikodu_meta::covers::CoverHash;
+/// A cover found by a scan worker, as a [`TrackCovers`] holds it.
+pub use helikodu_meta::worker::{CoverOrigin, CoverReport};
 pub use library::Library;
 pub use scan::{
     CancelToken, ExcludeRule, FailureKind, FileFailure, ScanError, ScanEvent, ScanHandle,

@@ -63,7 +63,7 @@ usage: cargo xtask synth-library --tracks N [options]
 
 /// Changes whenever the generated library changes for the same parameters,
 /// so that a library made by an older `xtask` is made again.
-const GENERATOR: &str = "xtask synth-library 1";
+const GENERATOR: &str = "xtask synth-library 2";
 /// The parameter file in the library folder.
 const HEADER_FILE: &str = "synth-library.json";
 /// The track manifest in the library folder.

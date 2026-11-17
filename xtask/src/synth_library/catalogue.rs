@@ -49,6 +49,8 @@ const NO_TITLE_SHARE: f64 = 0.02;
 const NO_ARTIST_SHARE: f64 = 0.015;
 const NO_ALBUM_SHARE: f64 = 0.02;
 const NO_TRACK_NUMBER_SHARE: f64 = 0.03;
+/// Share of albums tagged with MusicBrainz IDs.
+pub(crate) const MUSICBRAINZ_SHARE: f64 = 0.25;
 /// Share of person artists whose sort name ("Family, Given") is tagged.
 const PERSON_SORT_SHARE: f64 = 0.4;
 
@@ -206,7 +208,9 @@ struct AlbumTags {
     genres: Vec<String>,
     label: Option<String>,
     release_type: Option<&'static str>,
-    musicbrainz: bool,
+    /// The MusicBrainz release and release group IDs, on a share of the albums
+    /// ([`MUSICBRAINZ_SHARE`]); their tracks also get recording IDs.
+    musicbrainz: Option<(String, String)>,
     compilation: bool,
     /// ReplayGain album gain in dB, and peak.
     gain: Option<(f64, f64)>,
@@ -260,7 +264,11 @@ impl Catalogue {
             write_track_numbers: !self.rng.chance(NO_TRACK_NUMBER_SHARE),
             slashed_numbers: self.rng.chance(0.1),
             write_disc_numbers: discs > 1 || self.rng.chance(0.3),
-            musicbrainz: self.rng.chance(0.25),
+            musicbrainz: if self.rng.chance(MUSICBRAINZ_SHARE) {
+                Some((self.rng.uuid(), self.rng.uuid()))
+            } else {
+                None
+            },
             ..AlbumTags::default()
         };
         let year = 2025 - self.rng.below(66).min(self.rng.below(66)) as u32;
@@ -612,8 +620,10 @@ impl Catalogue {
         if let Some(release_type) = shared.release_type {
             tags.push(("RELEASETYPE", release_type.to_owned()));
         }
-        if shared.musicbrainz {
+        if let Some((release, release_group)) = &shared.musicbrainz {
             tags.push(("MUSICBRAINZ_TRACKID", self.rng.uuid()));
+            tags.push(("MUSICBRAINZ_ALBUMID", release.clone()));
+            tags.push(("MUSICBRAINZ_RELEASEGROUPID", release_group.clone()));
         }
         if let Some((album_gain, album_peak)) = shared.gain {
             let track_gain = album_gain + f64::from(self.rng.range(0, 400)) / 100.0 - 2.0;
@@ -804,6 +814,41 @@ mod tests {
             }
         }
         assert_eq!(scripts.len(), ranges.len(), "{scripts:?}");
+    }
+
+    #[test]
+    fn musicbrainz_ids_mark_a_share_of_the_albums() {
+        let albums = collect(11, 20_000);
+        let mut releases = HashSet::new();
+        let mut tagged = 0;
+        for album in &albums {
+            let ids: BTreeSet<(Vec<&str>, Vec<&str>)> = album
+                .tracks
+                .iter()
+                .filter(|t| !t.tags.is_empty())
+                .map(|t| {
+                    (
+                        values(t, "MUSICBRAINZ_ALBUMID"),
+                        values(t, "MUSICBRAINZ_RELEASEGROUPID"),
+                    )
+                })
+                .collect();
+            // Every tagged track of an album has the same IDs, or none.
+            assert!(ids.len() <= 1, "{ids:?}");
+            if let Some((release, group)) = ids.into_iter().next()
+                && let ([release], [group]) = (release.as_slice(), group.as_slice())
+            {
+                tagged += 1;
+                assert_eq!(release.len(), 36);
+                assert_ne!(release, group);
+                assert!(releases.insert(release.to_string()), "{release} twice");
+                for track in album.tracks.iter().filter(|t| !t.tags.is_empty()) {
+                    assert_eq!(values(track, "MUSICBRAINZ_TRACKID").len(), 1);
+                }
+            }
+        }
+        let share = tagged as f64 / albums.len() as f64;
+        assert!((0.18..0.32).contains(&share), "{share}");
     }
 
     #[test]

@@ -6,6 +6,8 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
+use helikodu_meta::worker::CoverReport;
+
 use super::ids::RootId;
 use crate::stats::Rating;
 
@@ -38,6 +40,11 @@ pub struct TrackRecord {
     /// The rating found in the tags. It is taken only when the track first enters the
     /// library with a new identity; from then on the database wins.
     pub rating_from_tags: Option<Rating>,
+    /// The loudness values of the tags.
+    pub replay_gain: ReplayGain,
+    /// The covers found for the file, or `None` when they were not looked for; then
+    /// the covers stored for the track and its folder stay as they are.
+    pub covers: Option<TrackCovers>,
 }
 
 impl TrackRecord {
@@ -55,8 +62,55 @@ impl TrackRecord {
             tags: TrackTags::default(),
             catalog: CatalogTags::default(),
             rating_from_tags: None,
+            replay_gain: ReplayGain::default(),
+            covers: None,
         }
     }
+}
+
+/// The ReplayGain values of a track, relative to the ReplayGain 2.0 reference
+/// (−18 LUFS). An Opus `R128_*_GAIN` tag is converted to it.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ReplayGain {
+    /// The track gain in dB.
+    pub track_gain_db: Option<f64>,
+    /// The track peak, linear (1.0 is full scale).
+    pub track_peak: Option<f64>,
+    /// The album gain in dB.
+    pub album_gain_db: Option<f64>,
+    /// The album peak, linear.
+    pub album_peak: Option<f64>,
+}
+
+impl ReplayGain {
+    fn bits(&self) -> [Option<u64>; 4] {
+        [
+            self.track_gain_db,
+            self.track_peak,
+            self.album_gain_db,
+            self.album_peak,
+        ]
+        .map(|v| v.map(f64::to_bits))
+    }
+}
+
+/// Values are equal when their bits are.
+impl PartialEq for ReplayGain {
+    fn eq(&self, other: &Self) -> bool {
+        self.bits() == other.bits()
+    }
+}
+
+impl Eq for ReplayGain {}
+
+/// The covers found for a file: its embedded picture and the image file in its
+/// folder. Either may be missing.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TrackCovers {
+    /// The picture embedded in the file that best serves as its cover.
+    pub embedded: Option<CoverReport>,
+    /// The image file in the file's folder, or in the folder above a disc folder.
+    pub folder: Option<CoverReport>,
 }
 
 /// What the file looked like when it was read.

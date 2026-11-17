@@ -380,3 +380,62 @@ fn tags_without_title_are_found_by_file_name() {
     assert_eq!(found(&library, "untitled"), [track.get()]);
     assert_eq!(found(&library, "demo"), [track.get()]);
 }
+
+#[test]
+fn tracks_of_masked_library_folders_are_not_found() {
+    let (library, root) = library();
+    let usb = library.add_root("/media/usb").unwrap();
+    library
+        .upsert_tracks(vec![
+            tagged(root, "/music/a.flac", "a", "Harbour Lights", "Ann", "Home"),
+            tagged(
+                usb,
+                "/media/usb/b.flac",
+                "b",
+                "Harbour Nights",
+                "Qu",
+                "Away",
+            ),
+        ])
+        .unwrap();
+    let titles = |request: SearchRequest| -> Vec<String> {
+        let mut titles: Vec<String> = library
+            .search(&request)
+            .unwrap()
+            .hits
+            .into_iter()
+            .filter_map(|hit| hit.title)
+            .collect();
+        titles.sort();
+        titles
+    };
+    assert_eq!(
+        titles(SearchRequest::new("harbour")),
+        ["Harbour Lights", "Harbour Nights"]
+    );
+
+    library.set_root_masked(usb, true).unwrap();
+    assert_eq!(titles(SearchRequest::new("harbour")), ["Harbour Lights"]);
+    // Short terms are matched another way; they leave the masked tracks out too.
+    assert_eq!(titles(SearchRequest::new("qu")), Vec::<String>::new());
+    let results = library.search(&SearchRequest::new("nights")).unwrap();
+    assert_eq!((results.total, results.hits.len()), (0, 0));
+    // The total of a page past the end leaves them out as well.
+    let past = library
+        .search(&SearchRequest::new("harbour").page(5, 10))
+        .unwrap();
+    assert_eq!(past.total, 1);
+
+    let mut everything = SearchRequest::new("harbour");
+    everything.include_masked = true;
+    assert_eq!(titles(everything), ["Harbour Lights", "Harbour Nights"]);
+
+    library.set_mask_when_missing(usb, false).unwrap();
+    assert_eq!(
+        titles(SearchRequest::new("harbour")),
+        ["Harbour Lights", "Harbour Nights"]
+    );
+    library.set_mask_when_missing(usb, true).unwrap();
+    library.set_root_masked(usb, false).unwrap();
+    assert_eq!(titles(SearchRequest::new("harbour")).len(), 2);
+}

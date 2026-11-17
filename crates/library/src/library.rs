@@ -9,11 +9,16 @@ use std::time::{Duration, SystemTime};
 
 use helikodu_model::library::TrackId;
 
+use std::collections::HashSet;
+
+use helikodu_meta::covers::CoverHash;
+
 use crate::catalog::{self, IdentityId, RootId, TrackFingerprint, TrackRecord, TrackWrite};
 use crate::catalog::{
     AlbumDetail, AlbumId, AlbumQuery, AlbumSummary, ArtistQuery, ArtistSummary, GenreQuery,
     GenreSummary, Paged, RootState, TrackQuery, TrackSummary,
 };
+use crate::catalog::{CoverInfo, CoverLocation};
 use crate::db::unix_time::{to_millis, to_unix_seconds};
 use crate::db::{Database, DatabaseConfig, DbError, LocaleCollation};
 use crate::scan::{self, CancelToken, ScanError, ScanEvent, ScanOptions, ScanSummary};
@@ -97,18 +102,14 @@ impl Library {
     }
 
     /// Writes several tracks in one transaction, like [`upsert_track`](Self::upsert_track).
-    /// If one fails, none is written.
+    /// The albums they affect are regrouped once, after all of them are written. If one
+    /// fails, none is written.
     pub fn upsert_tracks(&self, records: Vec<TrackRecord>) -> Result<Vec<TrackWrite>, DbError> {
         for record in &records {
             check_file_path(&record.path)?;
         }
         let now = to_unix_seconds(SystemTime::now());
-        self.write(move |c| {
-            records
-                .iter()
-                .map(|record| catalog::write::upsert_track(c, record, now))
-                .collect()
-        })
+        self.write(move |c| catalog::write::upsert_tracks(c, &records, now))
     }
 
     /// Moves the file at `from` to `to` inside the library folder `root`, as when a
@@ -248,6 +249,32 @@ impl Library {
     /// One page of the tracks of an album, a person or a genre.
     pub fn tracks(&self, query: &TrackQuery) -> Result<Paged<TrackSummary>, DbError> {
         self.db.read(|c| catalog::tracks(c, query))
+    }
+
+    // --- Covers ----------------------------------------------------------------------
+
+    /// The cover of `album`: the embedded cover most of its tracks have, or else the
+    /// folder image most of them have.
+    pub fn album_cover(&self, album: AlbumId) -> Result<Option<CoverInfo>, DbError> {
+        self.db.read(|c| catalog::covers::album_cover(c, album))
+    }
+
+    /// The cover of `track`: its embedded picture, else its folder's image, else its
+    /// album's cover.
+    pub fn track_cover(&self, track: TrackId) -> Result<Option<CoverInfo>, DbError> {
+        self.db.read(|c| catalog::covers::track_cover(c, track))
+    }
+
+    /// Where the bytes of the cover with `hash` can be read, best first; empty when
+    /// the library has no such cover.
+    pub fn cover_locations(&self, hash: &CoverHash) -> Result<Vec<CoverLocation>, DbError> {
+        self.db.read(|c| catalog::covers::cover_locations(c, hash))
+    }
+
+    /// The hashes of every cover in the library, for removing the thumbnails of the
+    /// others ([`ThumbnailCache::remove_unreferenced`](crate::ThumbnailCache::remove_unreferenced)).
+    pub fn cover_hashes(&self) -> Result<HashSet<CoverHash>, DbError> {
+        self.db.read(catalog::covers::cover_hashes)
     }
 
     // --- Library folders -------------------------------------------------------------

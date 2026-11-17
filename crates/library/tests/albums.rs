@@ -1060,3 +1060,152 @@ fn a_track_that_loses_its_album_title_leaves_the_album() {
     library.remove_file("/music/a/01.flac").unwrap();
     assert_eq!(count(&library, "albums"), 0);
 }
+
+/// A track's path with its album's key, title, artist, compilation flag and year.
+type AlbumRow = (
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    bool,
+    Option<i64>,
+);
+
+/// Every track's [`AlbumRow`], in path order.
+fn album_rows(library: &Library) -> Vec<AlbumRow> {
+    library
+        .database()
+        .read(|c| {
+            let mut statement = c.prepare(
+                "SELECT d.path_text || '/' || f.name_text, a.album_key, a.title, a.artist,
+                        a.is_compilation, a.year
+                 FROM tracks t JOIN files f ON f.id = t.file_id JOIN dirs d ON d.id = f.dir_id
+                 LEFT JOIN albums a ON a.id = t.album_id
+                 ORDER BY 1, t.sub_index",
+            )?;
+            let rows = statement.query_map([], |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get::<_, Option<bool>>(4)?.unwrap_or(false),
+                    r.get(5)?,
+                ))
+            })?;
+            rows.collect()
+        })
+        .unwrap()
+}
+
+#[test]
+fn a_batch_groups_albums_as_one_write_at_a_time_does() {
+    let tracks = |root: RootId| -> Vec<TrackRecord> {
+        let mut out = vec![
+            // Discs in folders of their own.
+            T::new("/music/Set/CD1/01.flac", "S1", "Ann", "Set")
+                .by("Ann")
+                .no(1)
+                .record(root),
+            T::new("/music/Set/CD2/01.flac", "S2", "Ann", "Set")
+                .by("Ann")
+                .no(1)
+                .record(root),
+            // A folder without album artists: three artists make a compilation.
+            T::new("/music/Mix/01.flac", "M1", "Bo", "Mix")
+                .no(1)
+                .record(root),
+            T::new("/music/Mix/02.flac", "M2", "Cy feat. Bo", "Mix")
+                .no(2)
+                .record(root),
+            T::new("/music/Mix/03.flac", "M3", "Di", "Mix")
+                .no(3)
+                .record(root),
+            // Two copies of one album: split by folder.
+            T::new("/music/Copy1/01.flac", "C1", "Ed", "Copy")
+                .by("Ed")
+                .year(1999)
+                .no(1)
+                .record(root),
+            T::new("/music/Copy2/01.flac", "C1", "Ed", "Copy")
+                .by("Ed")
+                .year(1999)
+                .no(1)
+                .record(root),
+            // The year most tracks have.
+            T::new("/music/Y/01.flac", "Y1", "Fay", "Y")
+                .by("Fay")
+                .year(2001)
+                .no(1)
+                .record(root),
+            T::new("/music/Y/02.flac", "Y2", "Fay", "Y")
+                .by("Fay")
+                .year(2002)
+                .no(2)
+                .record(root),
+            T::new("/music/Y/03.flac", "Y3", "Fay", "Y")
+                .by("Fay")
+                .year(2002)
+                .no(3)
+                .record(root),
+            // No album title.
+            T::new("/music/Loose/01.flac", "L", "Gus", "").record(root),
+        ];
+        // A MusicBrainz release across two folders.
+        for (path, no) in [("/music/MB/a.flac", 1), ("/music/Elsewhere/b.flac", 2)] {
+            let mut r = T::new(path, "MB", "Hal", "Tagged differently")
+                .no(no)
+                .record(root);
+            r.catalog.release_mbid = Some("0b1c2d3e-0000-4000-8000-000000000001".into());
+            out.push(r);
+        }
+        out[10].tags.album = None;
+        out
+    };
+
+    let (one_by_one, root_a) = library();
+    for record in tracks(root_a) {
+        one_by_one.upsert_track(record).unwrap();
+    }
+    let (batch, root_b) = library();
+    batch.upsert_tracks(tracks(root_b)).unwrap();
+    let expected = album_rows(&one_by_one);
+    assert_eq!(album_rows(&batch), expected);
+    assert_eq!(count(&batch, "albums"), count(&one_by_one, "albums"));
+
+    // A second batch that retitles, re-artists and moves tracks between albums.
+    let changes = |root: RootId| -> Vec<TrackRecord> {
+        vec![
+            T::new("/music/Mix/02.flac", "M2", "Bo", "Mix")
+                .no(2)
+                .record(root),
+            T::new("/music/Copy2/01.flac", "C1", "Ed", "Copy (Live)")
+                .by("Ed")
+                .year(1999)
+                .no(1)
+                .record(root),
+            T::new("/music/Y/01.flac", "Y1", "Fay", "Y")
+                .by("Fay")
+                .year(2002)
+                .no(1)
+                .record(root),
+            T::new("/music/Loose/01.flac", "L", "Gus", "Set")
+                .by("Ann")
+                .no(2)
+                .record(root),
+        ]
+    };
+    for record in changes(root_a) {
+        one_by_one.upsert_track(record).unwrap();
+    }
+    batch.upsert_tracks(changes(root_b)).unwrap();
+    let expected = album_rows(&one_by_one);
+    assert_eq!(album_rows(&batch), expected);
+    assert_eq!(count(&batch, "albums"), count(&one_by_one, "albums"));
+    // The retitled copy no longer splits the other.
+    assert!(
+        expected
+            .iter()
+            .any(|row| row.0 == "/music/Copy1/01.flac" && row.2.as_deref() == Some("Copy"))
+    );
+}

@@ -5,7 +5,7 @@ Builds `helikodu-scan-worker`, which reads the tags, audio properties, quick has
 - **May depend on:** `model`, `meta`, `ffmpeg-bridge`, `extra-decoders`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
 
-The program is wiring only. The protocol and the reading are in `helikodu_meta::worker`; the pool that starts and stops the workers is in `helikodu-library` (`src/scan/pool.rs`).
+The program is wiring only. The protocol and the reading (tags, quick hash, CUE sheets, chapters, and the hash and header of the embedded cover and the folder image, never their bytes) are in `helikodu_meta::worker`; the pool that starts and stops the workers is in `helikodu-library` (`src/scan/pool.rs`).
 
 ## Running
 
@@ -19,7 +19,7 @@ Before it reads anything, the worker:
 - sets the core-dump size to 0, so a crash leaves no core file;
 - sets FFmpeg's log level to quiet.
 
-It then says hello (the protocol version) and answers requests until its input closes, when it exits with status 0. A malformed request ends it with status 1, and a bad argument with status 2. A reader that panics is answered as a failure and the worker carries on; a reader that crashes the process or exceeds the memory limit kills it, and the scanner starts another.
+It then says hello (the protocol version, 2 since covers were added; the scanner refuses any other) and answers requests until its input closes, when it exits with status 0. A malformed request ends it with status 1, and a bad argument with status 2. A reader that panics is answered as a failure and the worker carries on; a reader that crashes the process or exceeds the memory limit kills it, and the scanner starts another.
 
 ## Deliberate failures for tests
 

@@ -13,6 +13,7 @@ mod tracks;
 
 use std::time::Duration;
 
+use helikodu_meta::covers::CoverHash;
 use helikodu_model::library::TrackId;
 use rusqlite::types::Value;
 
@@ -150,6 +151,8 @@ pub struct AlbumSummary {
     pub duration: Option<Duration>,
     /// When its first track was added, in seconds since the Unix epoch.
     pub added_at: Option<i64>,
+    /// The hash of its cover, the key of the thumbnail cache; `None` without one.
+    pub cover: Option<CoverHash>,
 }
 
 /// An album with its discs and tracks.
