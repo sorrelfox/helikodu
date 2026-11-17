@@ -23,7 +23,7 @@ A run makes only the files whose recipe, tool version or input changed; everythi
 
 The summary line counts the distinct `format` labels in `formats/`. Each label is one codec in one container; variants such as another bit depth, channel layout or bit-rate mode share their label and do not count again.
 
-Not generated yet, and to be added as recipes: the tag set (every tag format, legacy encodings, embedded pictures, lyrics, ReplayGain and R128, ratings, sort and classical fields), CUE sheets (single-file, multi-file, embedded, pregaps, non-UTF-8), titles in many scripts and locale-sensitive names, oversized tags and pictures, playlists (nested, looping, referring to URLs), and the synthetic libraries. Formats without a Linux encoder (TAK, ATRAC, WMA Pro and Lossless, DTS-HD MA, DSD, MP1, many game formats) need a separate, licence-reviewed sample repository referenced by checksum.
+Not generated yet, and to be added as recipes: the tag set (every tag format, legacy encodings, embedded pictures, lyrics, ReplayGain and R128, ratings, sort and classical fields), CUE sheets (single-file, multi-file, embedded, pregaps, non-UTF-8), titles in many scripts and locale-sensitive names, oversized tags and pictures, and playlists (nested, looping, referring to URLs). Synthetic libraries for benchmarks come from `cargo xtask synth-library` (see `xtask/README.md`). Formats without a Linux encoder (TAK, ATRAC, WMA Pro and Lossless, DTS-HD MA, DSD, MP1, many game formats) need a separate, licence-reviewed sample repository referenced by checksum.
 
 ## Recipes
 

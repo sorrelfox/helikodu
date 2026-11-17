@@ -12,6 +12,7 @@ mod check_deps;
 mod ci;
 mod corpus;
 mod offline_audit;
+mod synth_library;
 
 use std::env;
 use std::path::PathBuf;
@@ -39,6 +40,7 @@ fn main() -> ExitCode {
         Some("check-deps") => check_deps::run(),
         Some("corpus") => corpus::run(&args[1..]),
         Some("offline-audit") => offline_audit::run(&args[1..]),
+        Some("synth-library") => synth_library::run(&args[1..]),
         Some("help" | "--help" | "-h") | None => {
             print!("{USAGE}");
             return ExitCode::SUCCESS;

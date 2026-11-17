@@ -13,12 +13,12 @@
 //! corpus against its manifest without making anything.
 
 mod builtin;
-mod manifest;
-mod names;
+pub(crate) mod manifest;
+pub(crate) mod names;
 mod probe;
 mod recipe;
 mod signal;
-mod tools;
+pub(crate) mod tools;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
