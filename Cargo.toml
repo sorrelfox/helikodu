@@ -20,6 +20,10 @@ publish = false
 # alsa-sys versions cannot be linked into one build, so both move together.
 alsa = "0.11"
 anyhow = "1"
+# Guesses the legacy charset of tag text that is not valid in its declared encoding.
+chardetng = "1"
+# Decodes legacy charsets (cp1251, Shift-JIS, GBK, …) in tags and CUE sheets.
+encoding_rs = "0.8"
 # Raw FFmpeg bindings; the safe layer is `ffmpeg-bridge`. Only libavformat (with
 # libavcodec and libavutil), linked dynamically through pkg-config.
 ffmpeg-sys-next = { version = "=9.1.1", default-features = false, features = ["avformat"] }
@@ -34,6 +38,9 @@ icu_locale_core = "2.4"
 # Normalization (NFKD, NFC) for the folded search and grouping form.
 icu_normalizer = "2.4"
 libc = "0.2"
+# Tag reading and writing in pure Rust; FFmpeg is the read-only fallback for the
+# formats it lacks (Matroska, ASF/WMA, DSF, DFF, TAK, TTA).
+lofty = "0.25.5"
 # Native PipeWire output; the crate is young, so the version is exact.
 pipewire = { version = "=0.10.1", features = ["v1_2_0"] }
 # The `regexp()` SQL function behind the query language's `~` operator.

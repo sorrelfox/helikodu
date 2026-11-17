@@ -6,3 +6,7 @@
 //! See the crate's README for its place in the workspace.
 
 #![forbid(unsafe_code)]
+
+pub mod tags;
+
+pub use tags::{FileTags, ReadOptions, TagError, TrackTags, read_tags};

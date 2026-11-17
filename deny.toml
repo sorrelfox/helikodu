@@ -5,7 +5,11 @@ all-features = true
 
 [advisories]
 # RustSec advisories. Every exception needs a comment with the reason.
-ignore = []
+ignore = [
+    # paste is unmaintained. It is a compile-time procedural macro pulled in by
+    # lofty and contributes no code to the built programs.
+    { id = "RUSTSEC-2024-0436", reason = "unmaintained compile-time macro used by lofty; no runtime code" },
+]
 
 [licenses]
 # Licences compatible with GPL-3.0-or-later. Anything else needs a documented decision.
