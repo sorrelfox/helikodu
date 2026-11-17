@@ -1,0 +1,39 @@
+[workspace]
+resolver = "3"
+members = ["apps/*", "crates/*", "xtask"]
+# Fuzz targets need a nightly toolchain and the spikes are throwaway experiments.
+exclude = ["fuzz", "spikes"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+# Minimum supported Rust version: the latest stable release minus two.
+rust-version = "1.98"
+license = "GPL-3.0-or-later"
+authors = ["sorrelfox and Helikodu contributors"]
+repository = "https://github.com/sorrelfox/helikodu"
+publish = false
+
+# Every version, internal and third-party, is set here and only here.
+[workspace.dependencies]
+anyhow = "1"
+serde_json = "1"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+
+[workspace.lints.clippy]
+# Every `unsafe` block explains why it is sound.
+undocumented_unsafe_blocks = "warn"
+# A module is one file; a folder sits beside a file of the same name. No `mod.rs`.
+mod_module_files = "warn"
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+unwrap_used = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

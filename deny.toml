@@ -1,0 +1,83 @@
+# Dependency policy, checked by `cargo deny check` in CI.
+
+[graph]
+all-features = true
+
+[advisories]
+# RustSec advisories. Every exception needs a comment with the reason.
+ignore = []
+
+[licenses]
+# Licences compatible with GPL-3.0-or-later. Anything else needs a documented decision.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "GPL-2.0-or-later",
+    "GPL-3.0",
+    "GPL-3.0-or-later",
+    "ISC",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0-or-later",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "WTFPL",
+    "Zlib",
+]
+confidence-threshold = 0.9
+
+[licenses.private]
+# The workspace's own crates are not published; their licence is set in Cargo.toml.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+# Helikodu works entirely offline. No crate that opens network connections,
+# speaks TLS or resolves names may enter the dependency graph.
+deny = [
+    # HTTP clients and servers
+    { crate = "reqwest", reason = "network access" },
+    { crate = "ureq", reason = "network access" },
+    { crate = "hyper", reason = "network access" },
+    { crate = "h2", reason = "network access" },
+    { crate = "h3", reason = "network access" },
+    { crate = "isahc", reason = "network access" },
+    { crate = "surf", reason = "network access" },
+    { crate = "attohttpc", reason = "network access" },
+    { crate = "minreq", reason = "network access" },
+    { crate = "curl", reason = "network access" },
+    { crate = "curl-sys", reason = "network access" },
+    { crate = "axum", reason = "network access" },
+    { crate = "actix-web", reason = "network access" },
+    { crate = "warp", reason = "network access" },
+    { crate = "tungstenite", reason = "network access" },
+    { crate = "quinn", reason = "network access" },
+    # TLS
+    { crate = "rustls", reason = "TLS" },
+    { crate = "native-tls", reason = "TLS" },
+    { crate = "openssl", reason = "TLS" },
+    { crate = "openssl-sys", reason = "TLS" },
+    { crate = "boring", reason = "TLS" },
+    { crate = "boring-sys", reason = "TLS" },
+    # DNS
+    { crate = "trust-dns-resolver", reason = "DNS" },
+    { crate = "hickory-resolver", reason = "DNS" },
+    { crate = "hickory-proto", reason = "DNS" },
+    # A general async runtime is not used; threads and channels are.
+    { crate = "tokio", reason = "no general async runtime; use threads and channels" },
+    { crate = "async-std", reason = "no general async runtime; use threads and channels" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

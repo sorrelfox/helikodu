@@ -1,0 +1,13 @@
+[package]
+name = "helikodu-gme-sys"
+description = "Raw bindings to libgme (Game_Music_Emu)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

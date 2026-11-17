@@ -1,0 +1,13 @@
+[package]
+name = "helikodu-ffmpeg-bridge"
+description = "Safe wrapper over the FFmpeg C API, restricted to local files."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

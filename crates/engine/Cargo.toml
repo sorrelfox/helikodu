@@ -1,0 +1,13 @@
+[package]
+name = "helikodu-engine"
+description = "The playback engine: decoding, processing, output backends and the transport."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

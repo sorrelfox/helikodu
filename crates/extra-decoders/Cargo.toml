@@ -1,0 +1,13 @@
+[package]
+name = "helikodu-extra-decoders"
+description = "Decoders for the long tail of formats: tracker modules, game music, SID, MIDI and DSD files."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true

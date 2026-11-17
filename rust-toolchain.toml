@@ -1,0 +1,6 @@
+# The toolchain used for development, CI and release builds.
+# The minimum supported version (rust-version in Cargo.toml) is two releases older.
+[toolchain]
+channel = "1.100.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
