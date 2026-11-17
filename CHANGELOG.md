@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Output device lists mark the system default device for PipeWire and ALSA.
 
 - Cargo workspace with the programs in `apps/` and the libraries in `crates/`.
 - Developer commands: `cargo xtask ci` and `cargo xtask check-deps`.

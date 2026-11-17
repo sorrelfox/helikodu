@@ -12,6 +12,7 @@ mod check_deps;
 mod ci;
 mod corpus;
 mod offline_audit;
+mod stress;
 mod synth_library;
 
 use std::env;
@@ -30,6 +31,8 @@ commands:
   corpus          generate the test corpus into target/corpus (--check, --strict)
   offline-audit   run every test program without a network and fail on any
                   Internet socket (--self-test)
+  stress          play in real time under full CPU load and fail on any underrun
+                  (--secs N, --backend null|pipewire, --load THREADS)
   help            print this message
 ";
 
@@ -40,6 +43,7 @@ fn main() -> ExitCode {
         Some("check-deps") => check_deps::run(),
         Some("corpus") => corpus::run(&args[1..]),
         Some("offline-audit") => offline_audit::run(&args[1..]),
+        Some("stress") => stress::run(&args[1..]),
         Some("synth-library") => synth_library::run(&args[1..]),
         Some("help" | "--help" | "-h") | None => {
             print!("{USAGE}");

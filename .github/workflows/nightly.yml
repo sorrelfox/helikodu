@@ -1,6 +1,8 @@
 # The extended check set: started by hand, for example before a release.
-# Longer suites (full corpus, fuzzing, benchmarks, hardware tests) will be
-# added here. It has no schedule, to save shared CI resources.
+# It generates the test corpus (so the engine's corpus tests run in full),
+# runs every check, then the one-hour underrun stress test. Longer suites
+# (fuzzing, benchmarks, hardware tests) will be added here. It has no
+# schedule, to save shared CI resources.
 name: Extended checks
 
 on:
@@ -25,6 +27,22 @@ jobs:
           restore-keys: nightly-
       - name: Build container
         run: docker build -t helikodu-ci:fedora -f ci/containers/fedora.Containerfile ci/containers
+      - name: Test corpus
+        run: |
+          mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target ~/ci-cache/tools
+          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+            -v "$PWD:/src" \
+            -v ~/ci-cache/registry:/usr/local/cargo/registry \
+            -v ~/ci-cache/git:/usr/local/cargo/git \
+            -v ~/ci-cache/target:/src/target \
+            helikodu-ci:fedora sh -euxc '
+              dnf install -y ffmpeg flac lame opus-tools wavpack sox vorbis-tools
+              rustup toolchain install
+              cargo xtask corpus
+              cargo xtask corpus --check
+            '
+      # Runs with the corpus in place, so the engine's corpus tests
+      # (crates/engine/tests/corpus) run in full as part of the tests.
       - name: cargo xtask ci
         run: |
           mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target ~/ci-cache/tools
@@ -40,4 +58,18 @@ jobs:
               cargo install --locked --root /opt/tools cargo-deny
               PATH=/opt/tools/bin:$PATH cargo xtask ci
             '
-
+      # Plays near-silent material in real time to the null sink for one hour
+      # while every processor is busy; any underrun fails it.
+      - name: Underrun stress test (one hour)
+        timeout-minutes: 75
+        run: |
+          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+            -v "$PWD:/src" \
+            -v ~/ci-cache/registry:/usr/local/cargo/registry \
+            -v ~/ci-cache/git:/usr/local/cargo/git \
+            -v ~/ci-cache/target:/src/target \
+            helikodu-ci:fedora sh -euxc '
+              dnf install -y ffmpeg
+              rustup toolchain install
+              cargo xtask stress --secs 3600 --backend null
+            '

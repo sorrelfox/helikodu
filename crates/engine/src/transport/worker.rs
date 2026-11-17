@@ -25,6 +25,7 @@ use helikodu_model::player::{
 use super::EngineConfig;
 use super::device::{Backends, Output};
 use super::source::Source;
+use super::stats::EngineStats;
 use super::timeline::{Segment, Timeline};
 use crate::decode::DecoderRegistry;
 use crate::output::{EventSender, OutputEvent};
@@ -87,6 +88,8 @@ pub(super) struct Worker {
     last_position: Option<Instant>,
     /// Events collected while advancing the timeline.
     pub(super) pending: Vec<EngineEvent>,
+    /// The output counters shared with the [`Engine`](super::Engine) handle.
+    pub(super) stats: EngineStats,
 }
 
 impl Worker {
@@ -96,6 +99,7 @@ impl Worker {
         inputs: Receiver<Input>,
         events: Sender<EngineEvent>,
         output_events: EventSender,
+        stats: EngineStats,
     ) -> Self {
         let selection = config.output.selection();
         let volume = config.volume;
@@ -127,6 +131,7 @@ impl Worker {
             paused_since: None,
             last_position: None,
             pending: Vec::new(),
+            stats,
         }
     }
 
@@ -252,6 +257,9 @@ impl Worker {
                 }
                 self.fill();
                 self.follow();
+                if let Some(output) = &mut self.output {
+                    output.publish_stats();
+                }
                 self.check_drain();
             }
             TransportState::Paused => {

@@ -14,6 +14,7 @@ use helikodu_model::player::{EngineError, EngineEvent, Loudness};
 use helikodu_model::settings::DeviceLostPolicy;
 
 use super::source::Source;
+use super::stats::{EngineStats, Reported};
 use super::worker::Worker;
 use crate::output::{
     EventSender, NullBackend, OutputBackend, OutputError, OutputStream, Pacing, SampleWriter,
@@ -104,6 +105,9 @@ pub(super) struct Output {
     pub(super) freewheel: bool,
     /// Started and not paused.
     pub(super) running: bool,
+    /// The engine's counters, and what this stream has added to them.
+    stats: EngineStats,
+    reported: Reported,
 }
 
 impl Output {
@@ -114,6 +118,7 @@ impl Output {
         control: &VolumeControl,
         volume: Volume,
         freewheel: bool,
+        stats: EngineStats,
     ) -> Result<Self, OutputError> {
         if *control == VolumeControl::System {
             config.volume = Some(volume.amplitude());
@@ -134,7 +139,10 @@ impl Output {
             volume: plan,
             freewheel,
             running: false,
+            stats,
+            reported: Reported::default(),
         };
+        output.stats.stream_opened();
         output.set_volume(volume);
         Ok(output)
     }
@@ -171,8 +179,15 @@ impl Output {
         self.running = false;
     }
 
+    /// Adds what the stream has done since the last call to the engine's counters.
+    pub(super) fn publish_stats(&mut self) {
+        let timing = self.stream.timing();
+        self.reported.publish(&timing, &self.stats);
+    }
+
     /// Stops the stream and closes the device.
     pub(super) fn close(mut self) {
+        self.publish_stats();
         // Errors of a closing stream (a WAV file that could not be finished) were
         // reported as events when they happened, or are of no use now.
         let _ = self.stream.stop();
@@ -249,6 +264,7 @@ impl Worker {
             &self.config.output.volume,
             self.volume,
             freewheel,
+            self.stats.clone(),
         );
         if let Some(devices) = fresh {
             self.emit(EngineEvent::DevicesChanged {

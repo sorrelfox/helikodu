@@ -93,6 +93,32 @@ fn lists_cards_by_id_string_with_capabilities() {
 
 #[test]
 #[ignore = "needs sound hardware"]
+fn marks_the_device_behind_default() {
+    let (events, _received) = mpsc::channel();
+    let backend = AlsaBackend::new(events);
+    let devices = backend.devices().unwrap();
+    let defaults: Vec<&str> = devices
+        .iter()
+        .filter(|d| d.is_default)
+        .map(|d| d.id.as_str())
+        .collect();
+    println!("default: {defaults:?}");
+    assert_eq!(
+        defaults.len(),
+        1,
+        "exactly one default device: {devices:#?}"
+    );
+    // With a sound server's plugin as `default`, its PCM is the default; otherwise
+    // one device of a card.
+    let id = defaults[0];
+    assert!(
+        id.starts_with("hw:CARD=") || ["pipewire", "pulse"].contains(&id),
+        "{id}"
+    );
+}
+
+#[test]
+#[ignore = "needs sound hardware"]
 fn negotiates_exclusively_and_closes_without_playing() {
     let (events, _received) = mpsc::channel();
     let backend = AlsaBackend::new(events);

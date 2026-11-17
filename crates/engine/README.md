@@ -70,6 +70,8 @@ Not done yet in the decoding layer:
 | Null | always built | `null` |
 | WAV file | always built | The file name |
 
+**The default device.** Each backend marks the device "System default" plays to with `DeviceInfo::is_default`. PipeWire follows `default.audio.sink` in the session manager's `default` metadata; the backend reports itself connected only after a second round trip to the daemon, so the mark is there in the first device list. ALSA opens the `default` PCM without starting it: when it leads to a card (directly or through `plug`/`dmix`), that card's `hw:` device is the default; when it is a sound server's plugin, the server's PCM (`pipewire`, `pulse`) is; when it is busy, the first card's first device.
+
 Building the native backends needs the PipeWire and ALSA development files (`pkg-config` names `libpipewire-0.3` and `alsa`) and `libclang` for the PipeWire bindings. `--no-default-features` builds the crate without them.
 
 The `alsa` crate is pinned to the version cpal uses (0.11 with cpal 0.18): two versions of `alsa-sys` cannot be linked into one program, so both are upgraded together.
@@ -107,7 +109,7 @@ Not done yet in the processing path:
 - **Crossfades and the DSP chain** (the plan already has their switches).
 - **`OutputChain` is not used by the transport**: its stages run on the device side of the ring buffer instead (see Output).
 - **Bit-perfect 32-bit integer sources.** The ring buffer holds floats, which carry 24 bits exactly; such sources always go the processed way.
-- **Reading loudness tags.** `parse_gain_db`, `parse_peak` and `LoudnessInfo::from_r128` take the values; the tag reader that finds them comes with the metadata layer.
+- **True peaks from a scan.** The loudness values come with the `PlaybackItem` (its `Loudness`, filled by the service from the file's tags); tags carry sample peaks, so `true_peak` is always off until the loudness scanner exists.
 
 ## Transport
 
@@ -158,13 +160,12 @@ cargo run -p helikodu-engine --example play -- --list-devices --backend alsa
 
 Not done yet in the transport:
 
-- **Loudness tags** are not passed to the path plan yet (no gain is applied); the metadata layer reads them.
 - **Opening the next item happens on the engine thread.** It takes milliseconds from local storage; slow storage would delay the buffer by as much.
 - **The engine thread's priority** is not raised yet (it needs the same rtkit or portal route as the ALSA writer).
 - **A hardware mixer** (`volume = "hardware:…"`) is not driven; the engine applies software volume instead.
 - **DAC warm-up** (`preroll_ms`) is not applied, and settings other than the output selection cannot be changed while the engine runs.
 - **`NearEnd` for items of unknown length** comes only when the item has been decoded to its end, about one buffer length before it ends.
-- **Underruns and the signal path** are not reported as events; the model has no events for them yet.
+- **Underruns and the signal path** are not reported as events; the model has no events for them yet. `Engine::stats()` gives the output counters (streams opened, frames delivered, underruns, silent frames) summed over every stream, lock-free, for diagnostics and tests.
 
 ## Tests
 
@@ -180,6 +181,26 @@ The transport tests in `tests/transport/` play generated media through the engin
 
 The decoding tests in `tests/decoding/` generate their media at test time: a reference signal written as WAV by the tests, encoded with the `ffmpeg` tool into Cargo's temporary directory, and DSF/DFF files of a sigma-delta modulated sine. A test whose tool or encoder is missing prints `SKIPPED:` and passes. They check the backend choice (by content, also for misnamed files), exact lengths for WAV, FLAC, MP3, Opus, Vorbis and AAC, bit-exact sections and joins of consecutive sections, exact seeks in files and sections, DSD level and length, and the mapping of failures to `EngineError`.
 
+The corpus tests in `tests/corpus/` run the engine against the generated test corpus (`cargo xtask corpus`, see `tests/corpus/README.md`). Without `target/corpus/` (or `$HELIKODU_CORPUS`) they print `SKIPPED:` and pass; with it they take a few seconds and run as part of `cargo test` and `cargo xtask ci`. Each prints a table of results with `-- --nocapture` and writes it to `target/tmp/corpus-report/`:
+
+| Test | What it checks |
+|---|---|
+| `formats` | Every sample of the formats set opens through the decoder registry and decodes to the rate and channels of its manifest entry, and to the exact length where the manifest states one (otherwise within 2 % plus 0.1 s of the source) |
+| `gapless` | Each encoder's split set plays as a queue through the transport into the WAV sink, freewheeling, with one `TrackStarted`/`TrackEnded` pair per part and no reopened device: lossless sets bit-exact against the reference, lossy sets with its exact length. AAC in ADTS has no gapless information; its difference is reported, not checked |
+| `seeking` | Seeks to five positions (forwards and backwards) in every format: lossless formats land on the exact frame; lossy ones aligned (after the decoder settles, the output matches a straight decode best at the target frame). The table shows each lossy decoder's warm-up after a seek |
+| `video` | Every video file plays its audio only (the default stream when there are several) through the registry and the transport; a video-only file is unplayable. A child process decodes the set with FFmpeg's log on: every video stream's decoder is refused by the bridge's codec whitelist, and the whitelist names none of the build's video decoders (from `ffmpeg -decoders`) |
+| `broken` | Truncated, empty, garbage and misnamed files never panic; each plays what it has or fails with an error event, and the good files queued between them all play to their end |
+| `names` | Files whose names are not UTF-8, 255 bytes long, or contain a newline, a leading dash or characters Windows forbids play through the transport, bit-exact |
+
+Formats and seeks the engine does not handle yet are listed in `tests/corpus/formats.rs`, `seeking.rs` and `video.rs` with the reason, and are reported as gaps rather than failures; `HELIKODU_CORPUS_STRICT=1` makes them fail.
+
+`tests/stress.rs` is the underrun stress test, ignored by default: an endless queue of near-silent material plays in real time while one busy thread per processor competes for the CPU, and any underrun (counted by `Engine::stats()`), error or reopened device fails it. `HELIKODU_STRESS_SECS` sets the length (60 s by default), `HELIKODU_STRESS_BACKEND` the output (`null`, paced like a device, or `pipewire`, a temporary null sink loaded with `pactl`), `HELIKODU_STRESS_LOAD` the number of busy threads. `cargo xtask stress` runs it with optimisations; the extended checks run it for an hour.
+
+```sh
+cargo xtask corpus && cargo test -p helikodu-engine --test corpus -- --nocapture
+cargo xtask stress --secs 600 --backend pipewire
+```
+
 Tests against real sound servers and hardware are ignored by default. They never make a sound:
 
 ```sh
@@ -187,8 +208,9 @@ Tests against real sound servers and hardware are ignored by default. They never
 # loads a temporary null sink, plays digital silence into it by name, and unloads it.
 cargo test -p helikodu-engine --test pipewire_output -- --ignored
 
-# ALSA: needs sound cards. Lists devices, opens each free hw: device, negotiates a
-# format and closes it again, without starting a stream or writing a sample.
+# ALSA: needs sound cards. Lists devices and the default one, opens each free hw:
+# device, negotiates a format and closes it again, without starting a stream or
+# writing a sample.
 cargo test -p helikodu-engine --test alsa_output -- --ignored
 ```
 

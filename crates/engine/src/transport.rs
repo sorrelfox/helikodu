@@ -78,6 +78,7 @@ mod device;
 mod recovery;
 mod render;
 mod source;
+mod stats;
 mod timeline;
 mod worker;
 
@@ -88,6 +89,7 @@ use std::thread::{self, JoinHandle};
 use helikodu_model::player::{EngineCommand, EngineEvent};
 
 pub use self::config::EngineConfig;
+pub use self::stats::{EngineStats, StatsSnapshot};
 use self::worker::{Input, Worker};
 use crate::decode::DecoderRegistry;
 use crate::output::OutputEvent;
@@ -97,6 +99,7 @@ use crate::output::OutputEvent;
 #[derive(Debug)]
 pub struct Engine {
     sender: EngineSender,
+    stats: EngineStats,
     thread: Option<JoinHandle<()>>,
 }
 
@@ -125,12 +128,21 @@ impl Engine {
                     }
                 }
             })?;
-        let worker = Worker::new(config, registry, input_receiver, events, output_events);
+        let stats = EngineStats::default();
+        let worker = Worker::new(
+            config,
+            registry,
+            input_receiver,
+            events,
+            output_events,
+            stats.clone(),
+        );
         let thread = thread::Builder::new()
             .name("helikodu-engine".into())
             .spawn(move || worker.run())?;
         let engine = Self {
             sender: EngineSender(inputs),
+            stats,
             thread: Some(thread),
         };
         Ok((engine, event_receiver))
@@ -144,6 +156,13 @@ impl Engine {
     /// A handle for sending commands from other threads.
     pub fn sender(&self) -> EngineSender {
         self.sender.clone()
+    }
+
+    /// The output counters (underruns, frames delivered, streams opened), summed
+    /// over every stream the engine has opened. The handle stays valid after the
+    /// engine is dropped.
+    pub fn stats(&self) -> EngineStats {
+        self.stats.clone()
     }
 }
 

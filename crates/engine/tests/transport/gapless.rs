@@ -163,3 +163,21 @@ fn a_change_of_rate_reopens_the_device_between_items() {
         "{milestones:#?}"
     );
 }
+
+#[test]
+fn the_stats_count_what_the_device_took() {
+    let a = media::write_wav("stats-a.wav", &media::sine(44_100, 30_000));
+    let b = media::write_wav("stats-b.wav", &media::sine(48_000, 20_000));
+    let mut session = Session::new(null_config());
+    let stats = session.engine.stats();
+    assert_eq!(stats.snapshot().streams_opened, 0);
+    session.play_queue(&[item(1, &a), item(2, &b)]);
+    session.wait_state(TransportState::Stopped);
+    drop(session);
+    let snapshot = stats.snapshot();
+    // One stream per rate, every frame delivered, and a freewheeling sink never
+    // runs dry.
+    assert_eq!(snapshot.streams_opened, 2, "{snapshot:?}");
+    assert_eq!(snapshot.frames_delivered, 50_000, "{snapshot:?}");
+    assert_eq!(snapshot.underruns, 0, "{snapshot:?}");
+}

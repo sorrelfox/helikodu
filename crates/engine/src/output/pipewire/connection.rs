@@ -4,7 +4,7 @@
 //! The PipeWire thread: the main loop, the registry and the commands from other
 //! threads.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -341,7 +341,10 @@ fn serve(
         })
         .register();
 
-    // The first listing is complete when the daemon answers a sync.
+    // The first listing is complete when the daemon answers a sync. The objects
+    // bound while it was read (the "default" metadata) send their state only after
+    // that, so a second sync waits for them: without it the default sink would not
+    // be known yet when the backend reports it is connected.
     let pending = match core.sync(0) {
         Ok(seq) => seq,
         Err(error) => {
@@ -349,17 +352,28 @@ fn serve(
             return;
         }
     };
+    let pending = Cell::new(Some((pending, false)));
     let ready = RefCell::new(Some(ready));
     let _core_listener = core
         .add_listener_local()
         .done({
             let thread = thread.clone();
+            let core = core.downgrade();
             move |id, seq| {
-                if id == pw::core::PW_ID_CORE && seq == pending {
-                    *thread.listed.borrow_mut() = true;
-                    if let Some(ready) = ready.borrow_mut().take() {
-                        let _ = ready.send(Ok(()));
-                    }
+                let Some((waited, second)) = pending.get() else {
+                    return;
+                };
+                if id != pw::core::PW_ID_CORE || seq != waited {
+                    return;
+                }
+                if !second && let Some(next) = core.upgrade().and_then(|core| core.sync(0).ok()) {
+                    pending.set(Some((next, true)));
+                    return;
+                }
+                pending.set(None);
+                *thread.listed.borrow_mut() = true;
+                if let Some(ready) = ready.borrow_mut().take() {
+                    let _ = ready.send(Ok(()));
                 }
             }
         })

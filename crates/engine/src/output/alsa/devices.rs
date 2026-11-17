@@ -18,7 +18,7 @@ use alsa_lib::pcm::{HwParams, PCM};
 use helikodu_model::audio::{DeviceCapabilities, DeviceId, DeviceInfo, SampleFormat, SampleRate};
 
 use super::super::{EventSender, OutputError, OutputEvent};
-use super::{KIND, alsa_format};
+use super::{KIND, alsa_format, libc_errno};
 
 /// How often the card watcher looks at the list of cards.
 const WATCH_INTERVAL: Duration = Duration::from_secs(2);
@@ -77,7 +77,90 @@ pub(super) fn list(probe: bool) -> Result<Vec<DeviceInfo>, OutputError> {
         }
     }
     devices.extend(configured_pcms());
+    if let Some(default) = pick_default(&default_pcm(), &devices) {
+        for device in &mut devices {
+            device.is_default = device.id == default;
+        }
+    }
     Ok(devices)
+}
+
+/// What the `default` PCM ("System default") plays to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum DefaultPcm {
+    /// A device of a card: directly, or through the plug, dmix or another layer.
+    Card { id: String, device: u32 },
+    /// A PCM that belongs to no card, such as a sound server's plugin. The text is
+    /// alsa-lib's description of the PCM (its dump), for example
+    /// `ALSA <-> PipeWire PCM I/O Plugin`.
+    Plugin(String),
+    /// The `default` PCM could not be opened and does not tell.
+    Unknown,
+}
+
+/// Opens the `default` PCM, without starting it or writing a sample, and finds out
+/// what it plays to. A `default` that is busy is a card held by another program:
+/// then it is the first card, alsa-lib's default card.
+fn default_pcm() -> DefaultPcm {
+    match PCM::new("default", Direction::Playback, true) {
+        Ok(pcm) => {
+            if let Ok(info) = pcm.info()
+                && let Some(id) = card_id(info.get_card())
+            {
+                return DefaultPcm::Card {
+                    id,
+                    device: info.get_device(),
+                };
+            }
+            let Ok(mut out) = alsa_lib::Output::buffer_open() else {
+                return DefaultPcm::Unknown;
+            };
+            if pcm.dump(&mut out).is_err() {
+                return DefaultPcm::Unknown;
+            }
+            DefaultPcm::Plugin(out.buffer_string(|text| String::from_utf8_lossy(text).into_owned()))
+        }
+        Err(error) if error.errno() == libc_errno::EBUSY => alsa_lib::card::Iter::new()
+            .flatten()
+            .next()
+            .and_then(|card| card_id(card.get_index()))
+            .map_or(DefaultPcm::Unknown, |id| DefaultPcm::Card { id, device: 0 }),
+        Err(_) => DefaultPcm::Unknown,
+    }
+}
+
+/// The ID string of the card with index `index`.
+fn card_id(index: i32) -> Option<String> {
+    if index < 0 {
+        return None;
+    }
+    let ctl = Ctl::from_card(&alsa_lib::card::Card::new(index), false).ok()?;
+    let info = ctl.card_info().ok()?;
+    info.get_id().ok().map(str::to_owned)
+}
+
+/// The listed device that `default` plays to: the card's device, or the PCM of the
+/// sound server whose plugin `default` is (`pipewire`, `pulse`, `jack`).
+fn pick_default(default: &DefaultPcm, devices: &[DeviceInfo]) -> Option<DeviceId> {
+    let wanted = match default {
+        DefaultPcm::Card { id, device } => format!("hw:CARD={id},DEV={device}"),
+        DefaultPcm::Plugin(text) => {
+            let text = text.to_ascii_lowercase();
+            let server = [
+                ("pipewire", "pipewire"),
+                ("pulse", "pulse"),
+                ("jack", "jack"),
+            ]
+            .into_iter()
+            .find(|(mark, _)| text.contains(mark))?;
+            server.1.to_owned()
+        }
+        DefaultPcm::Unknown => return None,
+    };
+    devices
+        .iter()
+        .find(|device| device.id.as_str() == wanted)
+        .map(|device| device.id.clone())
 }
 
 /// PCMs from the ALSA configuration that belong to no card, such as `pipewire`.
@@ -263,5 +346,48 @@ mod tests {
         let status = "state: RUNNING\nowner_pid   : 4121\ntrigger_time: 1.0\n";
         assert_eq!(owner_pid(status), Some(4121));
         assert_eq!(owner_pid("closed\n"), None);
+    }
+
+    fn device(name: &str) -> DeviceInfo {
+        DeviceInfo {
+            backend: KIND,
+            id: DeviceId::new(name).unwrap(),
+            description: name.to_owned(),
+            is_default: false,
+            capabilities: DeviceCapabilities::default(),
+        }
+    }
+
+    #[test]
+    fn the_default_is_the_card_or_the_sound_server_behind_default() {
+        let devices = [
+            device("hw:CARD=PCH,DEV=0"),
+            device("hw:CARD=PCH,DEV=3"),
+            device("hw:CARD=D10s,DEV=0"),
+            device("pipewire"),
+            device("pulse"),
+        ];
+        let pick = |default: DefaultPcm| pick_default(&default, &devices).map(|id| id.to_string());
+        let card = |id: &str, device| DefaultPcm::Card {
+            id: id.into(),
+            device,
+        };
+        assert_eq!(pick(card("PCH", 3)).as_deref(), Some("hw:CARD=PCH,DEV=3"));
+        assert_eq!(pick(card("D10s", 0)).as_deref(), Some("hw:CARD=D10s,DEV=0"));
+        // A card that is not listed (no playback device of that number).
+        assert_eq!(pick(card("PCH", 7)), None);
+        let plugin = |text: &str| DefaultPcm::Plugin(text.into());
+        assert_eq!(
+            pick(plugin("ALSA <-> PipeWire PCM I/O Plugin\nIts setup is:\n")).as_deref(),
+            Some("pipewire")
+        );
+        assert_eq!(
+            pick(plugin("ALSA <-> PulseAudio PCM I/O Plugin\n")).as_deref(),
+            Some("pulse")
+        );
+        // JACK is not listed here.
+        assert_eq!(pick(plugin("ALSA <-> JACK PCM I/O Plugin\n")), None);
+        assert_eq!(pick(plugin("Null PCM\n")), None);
+        assert_eq!(pick(DefaultPcm::Unknown), None);
     }
 }

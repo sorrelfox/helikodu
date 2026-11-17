@@ -643,7 +643,9 @@ dependencies = [
  "pipewire",
  "rtrb",
  "rubato",
+ "serde",
  "thiserror",
+ "toml",
 ]
 
 [[package]]

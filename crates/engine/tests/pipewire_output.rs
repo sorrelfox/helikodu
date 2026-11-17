@@ -213,6 +213,38 @@ fn lists_devices_and_reports_hot_plug() {
     assert!(backend.devices().unwrap().iter().all(|d| d.id != device.id));
 }
 
+/// The sink `pactl` reports as the default, if any.
+fn pactl_default_sink() -> Option<String> {
+    let output = Command::new("pactl")
+        .arg("get-default-sink")
+        .output()
+        .ok()?;
+    let name = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    (output.status.success() && !name.is_empty()).then_some(name)
+}
+
+#[test]
+#[ignore = "needs a PipeWire session"]
+fn the_default_sink_is_marked_as_soon_as_connected() {
+    let (events, _received) = mpsc::channel();
+    let backend = PipeWireBackend::connect(events).unwrap();
+    let devices = backend.devices().unwrap();
+    let defaults: Vec<&str> = devices
+        .iter()
+        .filter(|d| d.is_default)
+        .map(|d| d.id.as_str())
+        .collect();
+    match pactl_default_sink() {
+        Some(name) if devices.iter().any(|d| d.id.as_str() == name) => {
+            assert_eq!(defaults, [name.as_str()], "{devices:#?}");
+        }
+        other => {
+            eprintln!("SKIPPED: no default sink among the devices ({other:?})");
+            assert!(defaults.len() <= 1, "{devices:#?}");
+        }
+    }
+}
+
 #[test]
 #[ignore = "needs a PipeWire session; loads a temporary null sink"]
 fn plays_silence_into_a_null_sink() {
