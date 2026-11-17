@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "spike-output"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Standalone: the spikes folder is excluded from the main workspace.
+[workspace]
+
+[dependencies]
+pipewire = { version = "=0.10.1", features = ["v1_2_0"] }
+# cpal 0.18.2 depends on alsa 0.11 (alsa-sys 0.4); alsa 0.12 links a second alsa-sys
+# and Cargo refuses two crates that link the same native library.
+alsa = "0.11"
+cpal = { version = "=0.18.2", features = ["pulseaudio", "jack", "pipewire"] }
+rtrb = "=0.4.1"
+# The same JACK binding cpal uses, to patch ports in the JACK test.
+jack = "=0.13.5"
+anyhow = "1"
+# Only for the device-reservation probe (local session bus).
+zbus = { version = "6.3", default-features = false, features = ["default-rt", "proxy", "service"] }
