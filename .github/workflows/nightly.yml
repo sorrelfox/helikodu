@@ -1,0 +1,44 @@
+# Scheduled run of the full check set. Longer suites (full corpus, fuzzing,
+# benchmarks, hardware tests) will be added here.
+name: Nightly
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  checks:
+    name: All checks (Fedora)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/ci-cache
+          key: nightly-${{ hashFiles('ci/containers/fedora.Containerfile', 'rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: nightly-
+      - name: Build container
+        run: docker build -t helikodu-ci:fedora -f ci/containers/fedora.Containerfile ci/containers
+      - name: cargo xtask ci
+        run: |
+          mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target ~/ci-cache/tools
+          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+            -v "$PWD:/src" \
+            -v ~/ci-cache/registry:/usr/local/cargo/registry \
+            -v ~/ci-cache/git:/usr/local/cargo/git \
+            -v ~/ci-cache/target:/src/target \
+            -v ~/ci-cache/tools:/opt/tools \
+            helikodu-ci:fedora sh -euxc '
+              dnf install -y reuse
+              rustup toolchain install
+              cargo install --locked --root /opt/tools cargo-deny
+              PATH=/opt/tools/bin:$PATH cargo xtask ci
+            '
+

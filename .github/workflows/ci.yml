@@ -1,0 +1,101 @@
+# Every check runs inside the containers in ci/containers and is started
+# through `cargo xtask ci`, so the same checks run locally.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: Lint and test (Fedora, all checks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/ci-cache
+          key: lint-${{ hashFiles('ci/containers/fedora.Containerfile', 'rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: lint-
+      - name: Build container
+        run: docker build -t helikodu-ci:fedora -f ci/containers/fedora.Containerfile ci/containers
+      - name: cargo xtask ci
+        run: |
+          mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target ~/ci-cache/tools
+          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+            -v "$PWD:/src" \
+            -v ~/ci-cache/registry:/usr/local/cargo/registry \
+            -v ~/ci-cache/git:/usr/local/cargo/git \
+            -v ~/ci-cache/target:/src/target \
+            -v ~/ci-cache/tools:/opt/tools \
+            helikodu-ci:fedora sh -euxc '
+              dnf install -y reuse
+              rustup toolchain install
+              cargo install --locked --root /opt/tools cargo-deny
+              PATH=/opt/tools/bin:$PATH cargo xtask ci
+            '
+
+  build-and-test:
+    name: Build and test (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [debian, ubuntu, fedora, arch]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/ci-cache
+          key: test-${{ matrix.distro }}-${{ hashFiles(format('ci/containers/{0}.Containerfile', matrix.distro), 'rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: test-${{ matrix.distro }}-
+      - name: Build container
+        run: docker build -t "helikodu-ci:${{ matrix.distro }}" -f "ci/containers/${{ matrix.distro }}.Containerfile" ci/containers
+      - name: Build and test
+        run: |
+          mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target
+          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+            -v "$PWD:/src" \
+            -v ~/ci-cache/registry:/usr/local/cargo/registry \
+            -v ~/ci-cache/git:/usr/local/cargo/git \
+            -v ~/ci-cache/target:/src/target \
+            "helikodu-ci:${{ matrix.distro }}" sh -euxc '
+              rustup toolchain install
+              cargo build --workspace --all-targets --all-features --locked
+              cargo test --workspace --all-features --locked
+            '
+
+  msrv:
+    name: Build with the minimum supported Rust version (1.98)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/ci-cache
+          key: msrv-${{ hashFiles('ci/containers/debian.Containerfile', 'Cargo.lock') }}
+          restore-keys: msrv-
+      - name: Build container
+        run: docker build -t helikodu-ci:debian -f ci/containers/debian.Containerfile ci/containers
+      - name: cargo build (1.98)
+        run: |
+          mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target
+          docker run --rm -e CI=true -e CARGO_TERM_COLOR -e RUSTUP_TOOLCHAIN=1.98 \
+            -v "$PWD:/src" \
+            -v ~/ci-cache/registry:/usr/local/cargo/registry \
+            -v ~/ci-cache/git:/usr/local/cargo/git \
+            -v ~/ci-cache/target:/src/target \
+            helikodu-ci:debian sh -euxc '
+              rustup toolchain install 1.98 --profile minimal
+              cargo build --workspace --all-targets --all-features --locked
+            '
