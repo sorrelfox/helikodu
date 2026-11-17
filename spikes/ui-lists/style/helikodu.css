@@ -1,0 +1,267 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * Helikodu application stylesheet, as used by the UI spike.
+ *
+ * Copied from the design's draft stylesheet, with the colour tokens as CSS
+ * custom properties (GTK 4.16 or newer). Loaded at
+ * GTK_STYLE_PROVIDER_PRIORITY_APPLICATION; a second provider one step above
+ * overrides the accent variables at run time.
+ *
+ * GTK CSS only paints. Sizes of boxes, spacing between children and alignment
+ * come from the widgets (GtkBox spacing, margins, halign/valign, size requests).
+ */
+
+/* ---- 1. Tokens ---------------------------------------------------------- */
+/* Put exactly one of .hk-dark / .hk-light on every toplevel window. */
+
+.hk-dark {
+  --hk-win: #17181B;  --hk-side: #131417;  --hk-pane: #1B1C20;
+  --hk-field: #25272D; --hk-hover: #26282E; --hk-seg: #2C2E35;
+  --hk-line: #2A2C32; --hk-line2: #3B3E46;
+  --hk-t1: #EDEEF0;   --hk-t2: #B4B8C0;    --hk-t3: #8E929A;
+  --hk-zebra: rgba(255,255,255,0.024); --hk-menu: #222429;
+  /* Accent defaults (Amber). A second provider overrides these at run time. */
+  --hk-accent: #F0B23C; --hk-accent-fill: #F0B23C; --hk-accent-text: #F3C169;
+  --hk-sel: rgba(240,178,60,0.16); --hk-on-accent: #15120B;
+}
+
+.hk-light {
+  --hk-win: #ECECE9;  --hk-side: #E4E4E0;  --hk-pane: #F8F8F6;
+  --hk-field: #FFFFFF; --hk-hover: #E2E2DD; --hk-seg: #E2E2DD;
+  --hk-line: #D6D6D0; --hk-line2: #BDBDB6;
+  --hk-t1: #1A1B1E;   --hk-t2: #474A51;    --hk-t3: #5A5E66;
+  --hk-zebra: rgba(0,0,0,0.028); --hk-menu: #FFFFFF;
+  --hk-accent: #F0B23C; --hk-accent-fill: #B2832A; --hk-accent-text: #6A4D15;
+  --hk-sel: rgba(240,178,60,0.24); --hk-on-accent: #15120B;
+}
+
+/* Always-dark "glass" subtrees: deck, Now Playing, mini player, output popover,
+   signal-path / query readouts, EQ graph. Same variable names, dark values,
+   so every component below works unchanged inside them. */
+.hk-glass {
+  --hk-win: #0D0E10;  --hk-side: #131417;  --hk-pane: #0D0E10;
+  --hk-field: #15161A; --hk-hover: #1E2025; --hk-seg: #2A2C33;
+  --hk-line: #26282D; --hk-line2: #3B3E46;
+  --hk-t1: #E9EAEC;   --hk-t2: #A4A8B0;    --hk-t3: #8E929A;
+  --hk-zebra: rgba(255,255,255,0.024);
+  --hk-accent-fill: var(--hk-accent); --hk-accent-text: var(--hk-accent);
+  --hk-sel: rgba(240,178,60,0.16);
+  background-color: var(--hk-win);
+  color: var(--hk-t1);
+}
+
+/* ---- 2. Base and text --------------------------------------------------- */
+
+window.hk { background-color: var(--hk-win); color: var(--hk-t1); font-size: 13px; }
+.hk *:focus-visible { outline: 2px solid var(--hk-accent-text); outline-offset: 1px; }
+
+.hk-t2 { color: var(--hk-t2); }
+.hk-t3 { color: var(--hk-t3); }
+.hk-numeric { font-feature-settings: "tnum"; }
+.hk-mono { font-family: monospace; font-feature-settings: "tnum", "liga" 0, "calt" 0; }
+.hk-secondary { font-size: 12px; }
+.hk-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hk-t3); }
+.hk-view-title { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.hk-hero-title { font-size: 34px; font-weight: 600; letter-spacing: -0.025em; }
+.hk-hero-title.small { font-size: 28px; letter-spacing: -0.02em; }
+.hk-accent-text { color: var(--hk-accent-text); }
+.hk-playing { color: var(--hk-accent-text); font-weight: 600; }
+
+/* ---- 3. Shell surfaces -------------------------------------------------- */
+
+.hk-sidebar { background-color: var(--hk-side); border-right: 1px solid var(--hk-line); }
+.hk-content { background-color: var(--hk-pane); }
+.hk-panel { background-color: var(--hk-win); border-left: 1px solid var(--hk-line); }
+.hk-header { min-height: 46px; padding: 0 12px; border-bottom: 1px solid var(--hk-line); }
+.hk-statusbar { min-height: 28px; padding: 0 24px; border-top: 1px solid var(--hk-line); background-color: var(--hk-win); color: var(--hk-t3); font-size: 12px; }
+.hk-deck { border-top: 1px solid #000000; }
+.hk-readout { padding: 12px 16px; border-radius: 8px; }
+
+/* ---- 4. Lists and tables ------------------------------------------------ */
+
+listview.hk-list { background: none; }
+listview.hk-list > row { min-height: 30px; padding: 0 10px; border-radius: 6px; color: var(--hk-t2); }
+listview.hk-list > row:hover { background-color: var(--hk-hover); }
+listview.hk-list > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); font-weight: 600; }
+/* Tertiary text fails contrast on the selection tint: step it up one level. */
+row:selected .hk-t3, .hk-selected .hk-t3 { color: var(--hk-t2); }
+
+columnview.hk-table { background: none; }
+columnview.hk-table > header > button {
+  min-height: 32px; padding: 0 8px; border: none; border-radius: 0; box-shadow: none;
+  background-color: var(--hk-win); color: var(--hk-t3);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+}
+columnview.hk-table > listview > row { min-height: 30px; padding: 0; border-radius: 0; }
+columnview.hk-table > listview > row.hk-alt { background-color: var(--hk-zebra); }
+columnview.hk-table > listview > row:hover { background-color: var(--hk-hover); }
+columnview.hk-table > listview > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
+columnview.hk-table > listview > row > cell { padding: 0 8px; }
+
+gridview.hk-grid { background: none; }
+gridview.hk-grid > child { padding: 0; border-radius: 6px; background: none; }
+.hk-cover { border-radius: 6px; box-shadow: 0 0 0 1px rgba(0,0,0,0.22); }
+.hk-cover.playing { box-shadow: 0 0 0 2px var(--hk-pane), 0 0 0 4px var(--hk-accent-fill); }
+
+/* ---- 5. Controls -------------------------------------------------------- */
+
+button.hk-btn {
+  min-height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--hk-line2);
+  background: none; box-shadow: none; color: var(--hk-t1); font-weight: 500;
+}
+button.hk-btn:hover { background-color: var(--hk-hover); }
+button.hk-btn.primary { border-color: transparent; background-color: var(--hk-accent); color: var(--hk-on-accent); font-weight: 600; }
+button.hk-btn.small { min-height: 30px; padding: 0 12px; border-radius: 7px; border-color: var(--hk-line); color: var(--hk-t2); font-weight: 400; }
+button.hk-btn.text { min-height: 28px; padding: 0 10px; border-radius: 6px; border-color: transparent; color: var(--hk-t2); font-weight: 400; }
+
+button.hk-icon { min-width: 30px; min-height: 30px; padding: 0; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-t2); }
+button.hk-icon:hover { background-color: var(--hk-hover); }
+
+.hk-seg { padding: 2px; border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); }
+.hk-seg > button { min-height: 24px; padding: 0 10px; border: none; border-radius: 5px; background: none; box-shadow: none; color: var(--hk-t2); }
+.hk-seg > button:hover { background-color: var(--hk-hover); }
+.hk-seg > button:checked { background-color: var(--hk-seg); box-shadow: inset 0 0 0 1px var(--hk-line2); color: var(--hk-t1); font-weight: 600; }
+
+.hk-tabs > button { padding: 0; border: none; border-radius: 0; background: none; box-shadow: none; color: var(--hk-t2); }
+.hk-tabs > button:checked { color: var(--hk-t1); font-weight: 600; box-shadow: inset 0 -2px 0 var(--hk-accent-fill); }
+
+entry.hk-input { min-height: 32px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); color: var(--hk-t1); box-shadow: none; }
+entry.hk-input.search { min-height: 30px; }
+entry.hk-input.search:focus-within { border-color: var(--hk-accent-fill); box-shadow: 0 0 0 3px var(--hk-sel); outline: none; }
+entry.hk-input.edited { border-color: var(--hk-accent-fill); }
+
+.hk-badge { padding: 3px 7px; border-radius: 4px; border: 1px solid var(--hk-line2); color: var(--hk-t2); font-size: 10.5px; font-weight: 500; letter-spacing: 0.03em; }
+
+.hk-option-card { padding: 11px 14px; border-radius: 8px; border: 1px solid var(--hk-line); }
+.hk-option-card.selected { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); }
+
+switch.hk-switch { min-width: 30px; min-height: 18px; padding: 0; border: none; border-radius: 9px; background-color: var(--hk-line2); }
+switch.hk-switch:checked { background-color: var(--hk-accent-fill); }
+switch.hk-switch > slider { min-width: 14px; min-height: 14px; margin: 2px; border: none; border-radius: 7px; background-color: #FFFFFF; box-shadow: none; }
+
+scale.hk-slider > trough { min-height: 3px; border: none; border-radius: 2px; background-color: var(--hk-line2); }
+scale.hk-slider > trough > highlight { min-width: 0; margin: 0; min-height: 3px; border: none; border-radius: 2px; background-color: var(--hk-accent-fill); }
+scale.hk-slider > trough > slider { min-width: 14px; min-height: 14px; margin: -6px 0; border: none; border-radius: 7px; background-color: var(--hk-t1); box-shadow: 0 0 0 3px var(--hk-pane); }
+
+/* ---- 6. Player deck (inside .hk-glass) ---------------------------------- */
+
+button.hk-play { min-width: 44px; min-height: 44px; padding: 0; border: none; border-radius: 22px; background-color: var(--hk-accent-fill); color: var(--hk-on-accent); box-shadow: none; }
+button.hk-transport { min-width: 36px; min-height: 36px; padding: 0; border: none; border-radius: 18px; background: none; box-shadow: none; color: var(--hk-t1); }
+button.hk-transport:hover, button.hk-output:hover { background-color: var(--hk-hover); }
+button.hk-output { min-height: 40px; padding: 0 8px 0 12px; border-radius: 8px; border: 1px solid var(--hk-line); background: none; box-shadow: none; }
+scale.hk-volume > trough { min-height: 3px; border: none; border-radius: 2px; background-color: #3B3E46; }
+scale.hk-volume > trough > highlight { min-width: 0; margin: 0; min-height: 3px; border: none; border-radius: 2px; background-color: #C9CCD2; }
+scale.hk-volume > trough > slider { min-width: 11px; min-height: 11px; margin: -4px 0; border: none; border-radius: 6px; background-color: #E9EAEC; box-shadow: none; }
+
+.hk-signal { font-size: 10px; font-weight: 500; letter-spacing: 0.04em; }
+.hk-signal.bit-perfect { color: #8FE0C8; }
+.hk-signal.processed { color: #B9C8F5; }
+.hk-signal.idle { color: #8E929A; }
+
+popover.hk-popover > contents { padding: 0; border-radius: 14px; border: 1px solid #2A2C32; background-color: #15161A; color: #E9EAEC; }
+
+/* ---- 7. Menus, toasts and small parts ---------------------- */
+
+/* Menus are stock GtkPopoverMenu and GtkPopoverMenuBar. Only colours, radii and
+   minimum sizes are set. Node names follow the GTK 4 documentation: the popover
+   has the .menu class, items are button.model, the menu bar is menubar > item
+   and the open item has .active. The accelerator label's node name is not
+   documented: check it in the Inspector. A popover is its own surface, so give
+   each menu popover the hk and hk-dark / hk-light classes of its window. */
+
+popover.menu > contents { padding: 6px; border-radius: 10px; border: 1px solid var(--hk-line2); background-color: var(--hk-menu); color: var(--hk-t1); box-shadow: 0 14px 34px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.25); }
+.hk-light popover.menu > contents, popover.menu.hk-light > contents { box-shadow: 0 14px 34px rgba(0,0,0,0.16), 0 2px 6px rgba(0,0,0,0.08); }
+popover.menu button.model { min-height: 28px; padding: 0 10px; border: none; border-radius: 5px; background: none; box-shadow: none; }
+popover.menu button.model:hover, popover.menu button.model:selected { background-color: var(--hk-seg); }
+popover.menu button.model accelerator { color: var(--hk-t3); font-size: 12px; }
+popover.menu separator { min-height: 1px; margin: 4px 6px; background-color: var(--hk-line); }
+popover.menu label.title { color: var(--hk-t3); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+menubar { min-height: 28px; padding: 0 6px; border-bottom: 1px solid var(--hk-line); background-color: var(--hk-win); }
+menubar > item { min-height: 24px; padding: 0 9px; border-radius: 5px; }
+menubar > item:hover, menubar > item.active { background-color: var(--hk-seg); }
+
+/* Toast: an overlay child with the hk-glass and hk-toast classes. */
+.hk-toast { min-height: 44px; padding: 0 6px 0 16px; border-radius: 10px; border: 1px solid #2A2C32; box-shadow: 0 14px 30px -8px rgba(0,0,0,0.55); }
+.hk-toast button.action { min-height: 30px; padding: 0 10px; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-accent); font-weight: 600; }
+.hk-toast button.action:hover { background-color: var(--hk-hover); }
+
+/* Compact secondary button: settings rows, dialogs, table rows. */
+button.hk-btn.compact { min-height: 30px; padding: 0 13px; border-radius: 7px; }
+
+.hk-key { min-height: 20px; min-width: 18px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--hk-line2); color: var(--hk-t2); font-size: 11px; font-weight: 500; }
+
+/* Usage meter: neutral, never the accent. */
+levelbar.hk-meter > trough { min-height: 4px; padding: 0; border: none; border-radius: 2px; background-color: var(--hk-line2); }
+levelbar.hk-meter > trough > block { min-height: 4px; border: none; border-radius: 2px; }
+levelbar.hk-meter > trough > block.filled { background-color: var(--hk-t2); }
+levelbar.hk-meter > trough > block.empty { background-color: transparent; }
+
+/* Accent swatch in Settings, Appearance. The colour comes from an inline provider. */
+button.hk-swatch { min-width: 22px; min-height: 22px; padding: 0; border: none; border-radius: 11px; box-shadow: none; }
+button.hk-swatch:checked { box-shadow: 0 0 0 2px var(--hk-pane), 0 0 0 4px var(--hk-t1); }
+
+/* Idle play button and the stop-after mark (an overlay child of the play button). */
+button.hk-play:disabled { background-color: #26282D; color: #8E929A; }
+.hk-stop-mark { min-width: 16px; min-height: 16px; border-radius: 8px; background-color: #E9EAEC; color: #0D0E10; box-shadow: 0 0 0 2px #0D0E10; }
+
+/* Placeholder tile and bars while a cover or album row is loading. */
+.hk-placeholder { border-radius: 6px; border: 1px solid var(--hk-line); background-color: var(--hk-win); }
+.hk-placeholder-bar { min-height: 8px; border-radius: 3px; background-color: var(--hk-line); }
+
+/* ---- 8. Signal path and DSP stages ------------------------- */
+
+/* Stage box in Settings, DSP and EQ: a toggle button that selects the stage. */
+button.hk-stage-box { padding: 9px 12px 10px; border-radius: 8px; border: 1px solid var(--hk-line); background: none; box-shadow: none; color: var(--hk-t2); font-weight: 500; }
+button.hk-stage-box.on { border-color: var(--hk-line2); color: var(--hk-t1); font-weight: 600; }
+button.hk-stage-box:checked { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); }
+
+/* Signal path list: rows inside a glass card. The rail and the nodes are drawn
+   by the widget; these rules cover the text. */
+.hk-signal-card { margin: 12px 12px 0; padding: 14px 14px 9px; border-radius: 10px; }
+.hk-signal-row { min-height: 30px; }
+.hk-signal-row .stage { color: #8E929A; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.hk-signal-row .value { color: #A4A8B0; font-size: 11.5px; font-weight: 500; }
+.hk-signal-row.active .value, .hk-signal-row.endpoint .value { color: #E9EAEC; }
+.hk-signal-row .detail { color: #8E929A; font-size: 10.5px; }
+
+
+/* ---- 9. Additions from the UI spike ------------------------------------- */
+
+/* The GTK theme paints the list inside a column view and the grid view with
+   its own view colour (Breeze and Adwaita both do), which does not follow the
+   application palette. Reset it, and give rows the palette's text colour. */
+columnview.hk-table > listview,
+gridview.hk-grid,
+listview.hk-list { background-color: transparent; color: var(--hk-t1); }
+columnview.hk-table > listview > row { color: var(--hk-t1); }
+gridview.hk-grid > child:selected { background-color: var(--hk-sel); }
+
+/* The desktop's window buttons inside the top strips. Only size and colours
+   are set; which buttons appear and on which side comes from the desktop. */
+windowcontrols { border-spacing: 6px; }
+windowcontrols > button {
+  min-width: 24px; min-height: 24px; padding: 0; margin: 0;
+  border: none; border-radius: 12px; background: none; box-shadow: none;
+  color: var(--hk-t2);
+}
+windowcontrols > button:hover { background-color: var(--hk-hover); color: var(--hk-t1); }
+windowcontrols > button > image { padding: 0; background: none; box-shadow: none; }
+
+/* ---- 10. Resets against theme rules ------------------------------------ */
+
+/* GTK's built-in theme (Adwaita) paints buttons, slider knobs and switches
+   with background-image, which a background-color rule does not replace, and
+   gives buttons its own text colour. Reset both on every restyled stock widget,
+   so the application looks the same under Adwaita and Breeze. */
+button.hk-btn, button.hk-icon, .hk-seg > button, .hk-tabs > button,
+button.hk-play, button.hk-transport, button.hk-output, button.hk-swatch,
+button.hk-stage-box, .hk-toast button.action, popover.menu button.model,
+windowcontrols > button, columnview.hk-table > header > button,
+scale.hk-slider > trough, scale.hk-slider > trough > highlight, scale.hk-slider > trough > slider,
+scale.hk-volume > trough, scale.hk-volume > trough > highlight, scale.hk-volume > trough > slider,
+switch.hk-switch, switch.hk-switch > slider, entry.hk-input,
+levelbar.hk-meter > trough > block { background-image: none; }
+button.hk-output, button.hk-transport { color: var(--hk-t1); }

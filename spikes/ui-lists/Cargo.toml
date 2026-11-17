@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "ui-lists-spike"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Standalone: not part of the main workspace.
+[workspace]
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11.5", features = ["v4_20"] }
+image = { version = "0.25.10", default-features = false, features = ["jpeg"] }
+async-channel = "2"
+
+[profile.release]
+debug = 1
