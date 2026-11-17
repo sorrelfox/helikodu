@@ -99,7 +99,11 @@ impl Worker {
     ) -> Self {
         let selection = config.output.selection();
         let volume = config.volume;
-        let backends = Backends::new(output_events, config.sink_pacing);
+        let backends = Backends::new(
+            output_events,
+            config.sink_pacing,
+            config.device_reservation.clone(),
+        );
         Self {
             config,
             registry,

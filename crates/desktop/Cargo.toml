@@ -9,5 +9,13 @@ authors.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[dependencies]
+thiserror.workspace = true
+zbus.workspace = true
+
+[dev-dependencies]
+# The device reservation test opens the reserved hw: device and writes silence.
+alsa.workspace = true
+
 [lints]
 workspace = true

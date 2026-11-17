@@ -8,7 +8,7 @@ use std::time::Duration;
 use helikodu_model::player::Volume;
 use helikodu_model::settings::OutputSettings;
 
-use crate::output::Pacing;
+use crate::output::{Pacing, SharedReservation};
 use crate::pipeline::ProcessingSettings;
 
 /// What the engine starts with.
@@ -35,6 +35,10 @@ pub struct EngineConfig {
     pub position_interval: Duration,
     /// How long a freewheeling sink waits for the next item at the end of one.
     pub next_wait: Duration,
+    /// How the ALSA backend takes a sound card that another program (usually the
+    /// sound server) holds. The default, [`NoReservation`](crate::output::NoReservation),
+    /// takes nothing: such a device is then reported busy.
+    pub device_reservation: SharedReservation,
 }
 
 impl Default for EngineConfig {
@@ -47,6 +51,7 @@ impl Default for EngineConfig {
             near_end: Duration::from_secs(5),
             position_interval: Duration::from_millis(100),
             next_wait: Duration::from_secs(5),
+            device_reservation: SharedReservation::default(),
         }
     }
 }

@@ -74,9 +74,10 @@ Building the native backends needs the PipeWire and ALSA development files (`pkg
 
 The `alsa` crate is pinned to the version cpal uses (0.11 with cpal 0.18): two versions of `alsa-sys` cannot be linked into one program, so both are upgraded together.
 
+**Device reservation.** A sound server usually holds every card, so a `hw:` device is busy. The ALSA backend takes the card through a `DeviceReservation` (`src/output/reservation.rs`) that the program running the engine injects, with `EngineConfig::device_reservation`, `AlsaBackend::with_reservation` or `connect_backend_with`. This crate does not speak D-Bus: `helikodu-desktop` implements the protocol (`org.freedesktop.ReserveDevice1`). In exclusive mode the backend takes the card before opening a `hw:` or `plughw:` device; in shared mode only when the device is busy. After taking it, it retries a busy device for up to one second while the previous holder closes it. The stream keeps the `ReservationGuard` until it is stopped or dropped (which the transport does on stop and after `exclusive_release_s` of pause) and drops it after closing the device. A holder that refuses gives `OutputError::DeviceBusy` naming it; without a reservation (the default, `NoReservation`) or when reservation fails, the device is opened anyway and a busy one is reported busy, naming the program that holds it. The guard reports whether someone has asked for the card back (`release_requested`); the engine does not act on it yet.
+
 Not done yet in the output layer:
 
-- **ALSA exclusive access while PipeWire holds the card.** Taking the card through device reservation (`org.freedesktop.ReserveDevice1`, over D-Bus) is left for later, so this crate does not depend on a D-Bus library. Until then, a `hw:` device that the sound server holds fails with `OutputError::DeviceBusy`, naming the program that holds it.
 - **Real-time priority for the ALSA writer thread** (rtkit or the Realtime portal). PipeWire's process callback already runs on PipeWire's real-time thread.
 - **ALSA hot-plug through udev.** The ALSA backend polls `/proc/asound/cards` every two seconds instead.
 - **Device capabilities on PipeWire.** The device list carries none yet; ALSA probes them from the hardware parameters.
@@ -127,7 +128,7 @@ for event in events.iter() {
 | File | What it holds |
 |---|---|
 | `transport.rs` | `Engine`, `EngineSender`, the state and event rules |
-| `transport/config.rs` | `EngineConfig`: output settings, processing settings, start volume, the pacing of the test sinks, `NearEnd` lead time (5 s), position interval (100 ms) |
+| `transport/config.rs` | `EngineConfig`: output settings, processing settings, start volume, the pacing of the test sinks, `NearEnd` lead time (5 s), position interval (100 ms), the device reservation |
 | `transport/worker.rs` | The engine thread's loop, state and events |
 | `transport/commands.rs` | Load, play, pause, stop, seek, next item, volume, output |
 | `transport/render.rs` | Filling the ring buffer, joins, draining, the fades and refills around transitions |

@@ -16,8 +16,8 @@ use helikodu_model::audio::{
 use super::super::convert::Encoder;
 use super::super::ring::{SampleReader, StreamShared, ring};
 use super::super::{
-    EventSender, OpenedStream, OutputError, OutputEvent, OutputStream, StreamConfig, StreamState,
-    StreamTiming,
+    EventSender, OpenedStream, OutputError, OutputEvent, OutputStream, ReservationGuard,
+    StreamConfig, StreamState, StreamTiming,
 };
 use super::{KIND, libc_errno};
 
@@ -79,6 +79,8 @@ pub(super) struct AlsaStream {
     spec: AudioSpec,
     shared: Arc<StreamShared>,
     thread: Option<JoinHandle<()>>,
+    /// The card taken from its holder, given back once the device is closed.
+    reservation: Option<ReservationGuard>,
 }
 
 impl AlsaStream {
@@ -87,6 +89,7 @@ impl AlsaStream {
         config: &StreamConfig,
         negotiated: Negotiated,
         events: EventSender,
+        reservation: Option<ReservationGuard>,
     ) -> Result<OpenedStream, OutputError> {
         let spec = negotiated.spec;
         let (writer, reader, shared) = ring(spec, config.buffer);
@@ -108,6 +111,7 @@ impl AlsaStream {
                 spec,
                 shared,
                 thread: Some(thread),
+                reservation,
             }),
             writer,
         })
@@ -162,15 +166,20 @@ impl OutputStream for AlsaStream {
             self.shared.set_state(StreamState::Closed);
         }
         self.wake();
-        if let Some(thread) = self.thread.take()
-            && thread.join().is_err()
-        {
+        // The writer thread owns the device and closes it when it ends.
+        let panicked = self
+            .thread
+            .take()
+            .is_some_and(|thread| thread.join().is_err());
+        self.shared.set_state(StreamState::Closed);
+        // Only now that the device is closed, give the card back.
+        self.reservation = None;
+        if panicked {
             return Err(OutputError::Backend {
                 backend: KIND,
                 reason: "the writer thread panicked".into(),
             });
         }
-        self.shared.set_state(StreamState::Closed);
         Ok(())
     }
 }

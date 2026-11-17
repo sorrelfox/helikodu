@@ -19,6 +19,10 @@
 //! Device additions and removals, a stream's device going away and other
 //! failures arrive as [`OutputEvent`]s on the channel given to the backend.
 //!
+//! Exclusive access to a sound card that another program holds goes through an
+//! injected [`DeviceReservation`] (see the [`reservation`](DeviceReservation)
+//! types); the engine itself does not speak D-Bus.
+//!
 //! Backends:
 //!
 //! | Backend | Type | Cargo feature |
@@ -37,6 +41,7 @@ mod event;
 mod null;
 #[cfg(feature = "pipewire")]
 mod pipewire;
+mod reservation;
 mod ring;
 mod software_sink;
 mod stream_status;
@@ -57,6 +62,10 @@ pub use self::event::{EventSender, OutputEvent};
 pub use self::null::NullBackend;
 #[cfg(feature = "pipewire")]
 pub use self::pipewire::PipeWireBackend;
+pub use self::reservation::{
+    DeviceReservation, NoReservation, ReservationError, ReservationGuard, ReservedCard,
+    SharedReservation,
+};
 pub use self::ring::SampleWriter;
 pub use self::software_sink::Pacing;
 pub use self::stream_status::{StreamState, StreamTiming};
@@ -206,17 +215,29 @@ pub fn connect_backend(
     kind: OutputBackendKind,
     events: &EventSender,
 ) -> Result<Box<dyn OutputBackend>, OutputError> {
+    connect_backend_with(kind, events, &SharedReservation::default())
+}
+
+/// Connects to a backend by kind, like [`connect_backend`], with the device
+/// reservation the ALSA backend uses to take cards that another program holds.
+pub fn connect_backend_with(
+    kind: OutputBackendKind,
+    events: &EventSender,
+    reservation: &SharedReservation,
+) -> Result<Box<dyn OutputBackend>, OutputError> {
     let unavailable = |reason: &str| OutputError::BackendUnavailable {
         backend: kind,
         reason: reason.to_owned(),
     };
-    // Without the native features the event channel is not used.
-    let _ = events;
+    // Without the native features the event channel and reservation are not used.
+    let _ = (events, reservation);
     match kind {
         #[cfg(feature = "pipewire")]
         OutputBackendKind::PipeWire => Ok(Box::new(PipeWireBackend::connect(events.clone())?)),
         #[cfg(feature = "alsa")]
-        OutputBackendKind::Alsa => Ok(Box::new(AlsaBackend::new(events.clone()))),
+        OutputBackendKind::Alsa => Ok(Box::new(
+            AlsaBackend::new(events.clone()).with_reservation(reservation.clone()),
+        )),
         OutputBackendKind::Null => Ok(Box::new(NullBackend::new())),
         OutputBackendKind::Wav => Err(unavailable("needs a file name; use WavBackend::new")),
         OutputBackendKind::PulseAudio | OutputBackendKind::Jack => {

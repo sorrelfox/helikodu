@@ -11,15 +11,23 @@
 //! In exclusive mode the device is opened without the rate converter of the plug
 //! layer, and the format, rate and channel count are negotiated exactly; what
 //! the device refuses is reported in the negotiated spec. In shared mode alsa-lib
-//! may convert. Exclusive access to a card that PipeWire holds needs device
-//! reservation (`org.freedesktop.ReserveDevice1`), which is not part of this
-//! backend yet: such a device fails with [`OutputError::DeviceBusy`], naming the
-//! program that holds it.
+//! may convert.
+//!
+//! A sound server usually holds every card, so a `hw:` or `plughw:` device is
+//! busy. The backend takes the card through the injected
+//! [`DeviceReservation`](super::DeviceReservation) (see
+//! [`with_reservation`](AlsaBackend::with_reservation)): in exclusive mode before
+//! it opens the device, in shared mode when the device turns out to be busy. The
+//! stream keeps the card until it is stopped or dropped, and gives it back after
+//! closing the device. Without a reservation, or when the holder refuses, the
+//! device fails with [`OutputError::DeviceBusy`], naming the program that holds
+//! it.
 //!
 //! A writer thread per stream takes the place of an audio callback. It does not
 //! ask for real-time scheduling yet.
 
 mod devices;
+mod reserve;
 mod writer;
 
 use std::sync::Arc;
@@ -36,7 +44,10 @@ use helikodu_model::audio::{
 
 use self::writer::{AlsaStream, Negotiated};
 use super::convert::Encoder;
-use super::{EventSender, OpenedStream, OutputBackend, OutputError, StreamConfig};
+use super::{
+    EventSender, OpenedStream, OutputBackend, OutputError, ReservedCard, SharedReservation,
+    StreamConfig,
+};
 
 const KIND: OutputBackendKind = OutputBackendKind::Alsa;
 /// The hardware buffer the backend asks for, in microseconds. The ring buffer in
@@ -51,6 +62,7 @@ const PERIODS: u32 = 4;
 /// two seconds, from `/proc/asound/cards`) and reports them on the event channel.
 pub struct AlsaBackend {
     events: EventSender,
+    reservation: SharedReservation,
     watcher: Option<(JoinHandle<()>, Arc<AtomicBool>)>,
 }
 
@@ -73,7 +85,43 @@ impl AlsaBackend {
             })
             .ok()
             .map(|thread| (thread, stop));
-        Self { events, watcher }
+        Self {
+            events,
+            reservation: SharedReservation::default(),
+            watcher,
+        }
+    }
+
+    /// Uses `reservation` to take cards that another program holds. Without it,
+    /// such devices are reported busy.
+    #[must_use]
+    pub fn with_reservation(mut self, reservation: SharedReservation) -> Self {
+        self.reservation = reservation;
+        self
+    }
+
+    /// Opens the PCM `name`, taking `card` first or when busy.
+    fn open_pcm(
+        &self,
+        config: &StreamConfig,
+        name: &str,
+        card: Option<&ReservedCard>,
+    ) -> Result<OpenedStream, OutputError> {
+        let target = reserve::Target {
+            reservation: &self.reservation,
+            card,
+            exclusive: config.mode == OutputMode::Exclusive,
+            device: &config.device,
+            name,
+        };
+        // Non-blocking, so a busy device fails at once instead of waiting.
+        let (pcm, reservation) = reserve::open(
+            &target,
+            || PCM::new(name, Direction::Playback, true),
+            |error| open_error(&config.device, name, error),
+        )?;
+        let negotiated = negotiate(&pcm, config)?;
+        AlsaStream::spawn(pcm, config, negotiated, self.events.clone(), reservation)
     }
 }
 
@@ -101,11 +149,11 @@ impl OutputBackend for AlsaBackend {
             DeviceSelection::SystemDefault => "default",
             DeviceSelection::Device(id) => id.as_str(),
         };
-        // Non-blocking, so a busy device fails at once instead of waiting.
-        let pcm = PCM::new(name, Direction::Playback, true)
-            .map_err(|error| open_error(&config.device, name, &error))?;
-        let negotiated = negotiate(&pcm, config)?;
-        AlsaStream::spawn(pcm, config, negotiated, self.events.clone())
+        let card = match &config.device {
+            DeviceSelection::SystemDefault => None,
+            DeviceSelection::Device(_) => reserve::card_of(name),
+        };
+        self.open_pcm(config, name, card.as_ref())
     }
 }
 
@@ -284,7 +332,77 @@ fn negotiate(pcm: &PCM, config: &StreamConfig) -> Result<Negotiated, OutputError
 
 #[cfg(test)]
 mod tests {
+    use std::sync::mpsc;
+
+    use super::reserve::tests::{FakeReservation, card};
     use super::*;
+
+    /// Whether alsa-lib has its `null` PCM, which discards everything. The tests
+    /// below open it as if it were a device of a card that has to be taken first.
+    fn null_pcm_exists() -> bool {
+        let exists = PCM::new("null", Direction::Playback, true).is_ok();
+        if !exists {
+            eprintln!("skipped: alsa-lib cannot open its null PCM");
+        }
+        exists
+    }
+
+    fn exclusive_config() -> StreamConfig {
+        let spec = AudioSpec::new(
+            SampleFormat::S16(Endianness::Little),
+            SampleRate::new(48_000).unwrap(),
+            ChannelLayout::default_for_count(2).unwrap(),
+        );
+        let mut config = StreamConfig::new(spec);
+        config.mode = OutputMode::Exclusive;
+        config
+    }
+
+    fn backend(fake: &FakeReservation) -> AlsaBackend {
+        let (events, _received) = mpsc::channel();
+        AlsaBackend::new(events).with_reservation(SharedReservation::new(fake.clone()))
+    }
+
+    #[test]
+    fn the_stream_keeps_the_card_until_it_is_stopped_or_dropped() {
+        if !null_pcm_exists() {
+            return;
+        }
+        let fake = FakeReservation::granting();
+        let backend = backend(&fake);
+        let config = exclusive_config();
+
+        let opened = backend.open_pcm(&config, "null", Some(&card())).unwrap();
+        assert_eq!(fake.entries(), ["acquire 3"]);
+        let mut stream = opened.stream;
+        stream.stop().unwrap();
+        assert_eq!(fake.entries(), ["acquire 3", "release 3"]);
+        drop(stream);
+        assert_eq!(fake.entries(), ["acquire 3", "release 3"]);
+
+        let opened = backend.open_pcm(&config, "null", Some(&card())).unwrap();
+        fake.note("opened");
+        drop(opened);
+        assert_eq!(
+            fake.entries(),
+            ["acquire 3", "release 3", "acquire 3", "opened", "release 3"]
+        );
+    }
+
+    #[test]
+    fn a_refused_card_is_busy_and_the_device_is_not_opened() {
+        let fake = FakeReservation::refusing(super::super::ReservationError::Refused {
+            holder: Some("JACK".into()),
+        });
+        let error = backend(&fake)
+            .open_pcm(&exclusive_config(), "null", Some(&card()))
+            .unwrap_err();
+        assert!(
+            matches!(&error, OutputError::DeviceBusy { owner: Some(o), .. } if o == "JACK"),
+            "{error}"
+        );
+        assert_eq!(fake.entries(), ["acquire 3"]);
+    }
 
     #[test]
     fn requested_format_comes_first_and_dsd_is_dropped() {

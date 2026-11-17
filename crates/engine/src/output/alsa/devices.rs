@@ -163,7 +163,7 @@ pub(super) fn owner(name: &str) -> Option<String> {
 
 /// The card (ID string or index) and device number of `hw:CARD=x,DEV=n`,
 /// `plughw:CARD=x,DEV=n`, `hw:x,n` or `hw:x`.
-fn parse_hw_name(name: &str) -> Option<(String, u32)> {
+pub(super) fn parse_hw_name(name: &str) -> Option<(String, u32)> {
     let args = name
         .strip_prefix("hw:")
         .or_else(|| name.strip_prefix("plughw:"))?;
@@ -185,7 +185,7 @@ fn parse_hw_name(name: &str) -> Option<(String, u32)> {
 }
 
 /// The index of the card with this ID string (or index).
-fn card_index(card: &str) -> Option<i32> {
+pub(super) fn card_index(card: &str) -> Option<i32> {
     if let Ok(index) = card.parse() {
         return Some(index);
     }

@@ -17,7 +17,7 @@ use super::source::Source;
 use super::worker::Worker;
 use crate::output::{
     EventSender, NullBackend, OutputBackend, OutputError, OutputStream, Pacing, SampleWriter,
-    StreamConfig, WavBackend, automatic_backend, connect_backend,
+    SharedReservation, StreamConfig, WavBackend, automatic_backend, connect_backend_with,
 };
 use crate::pipeline::{LoudnessInfo, PathPlan, PathRequest, VolumePlan, stream_config};
 
@@ -28,14 +28,16 @@ pub(super) struct Backends {
     connected: Option<(OutputBackendKind, Box<dyn OutputBackend>)>,
     events: EventSender,
     pacing: Pacing,
+    reservation: SharedReservation,
 }
 
 impl Backends {
-    pub(super) fn new(events: EventSender, pacing: Pacing) -> Self {
+    pub(super) fn new(events: EventSender, pacing: Pacing, reservation: SharedReservation) -> Self {
         Self {
             connected: None,
             events,
             pacing,
+            reservation,
         }
     }
 
@@ -65,7 +67,7 @@ impl Backends {
                     };
                     Box::new(WavBackend::new(path.as_str()).with_pacing(self.pacing))
                 }
-                _ => connect_backend(kind, &self.events)?,
+                _ => connect_backend_with(kind, &self.events, &self.reservation)?,
             };
             fresh = Some(backend.devices().unwrap_or_default());
             self.connected = Some((kind, backend));
