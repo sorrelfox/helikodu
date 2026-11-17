@@ -17,12 +17,12 @@ use helikodu_model::audio::{
 use helikodu_model::player::Volume;
 use helikodu_model::settings::DeviceLostPolicy;
 use helikodu_service::player::{
-    EndReason, Player, PlayerCommand, PlayerConfig, PlayerEvent, SinkPacing,
+    EndReason, Player, PlayerCommand, PlayerConfig, PlayerEvent, ReplayGain, SinkPacing,
 };
 
 use super::keys::{self, Action, RawMode};
 use super::status::{Status, describe_output};
-use super::{BackendArg, ModeArg};
+use super::{BackendArg, ModeArg, ReplayGainArg};
 use crate::{Cli, Outcome};
 
 /// How long the interactive loop waits for keys before it looks at events again.
@@ -49,6 +49,35 @@ pub(crate) struct PlayArgs {
     /// The file the wav backend writes. Needs `--backend wav`.
     #[arg(long, value_name = "PATH", required_if_eq("backend", "wav"))]
     wav_out: Option<PathBuf>,
+    /// Loudness normalization by the files' ReplayGain or Opus R128 tags.
+    #[arg(long, value_enum, default_value_t = ReplayGainArg::Off)]
+    replaygain: ReplayGainArg,
+    /// Added to the gain of files with loudness tags, in dB (-24 to 24).
+    #[arg(
+        long,
+        value_name = "DB",
+        default_value_t = 0.0,
+        allow_negative_numbers = true,
+        value_parser = parse_preamp
+    )]
+    preamp: f64,
+}
+
+/// A preamp in dB, within the player's range.
+fn parse_preamp(text: &str) -> Result<f64, String> {
+    let value: f64 = text
+        .trim()
+        .parse()
+        .map_err(|_| format!("{text:?} is not a number"))?;
+    if ReplayGain::PREAMP_RANGE.contains(&value) {
+        Ok(value)
+    } else {
+        Err(format!(
+            "must be from {} to {} dB",
+            ReplayGain::PREAMP_RANGE.start(),
+            ReplayGain::PREAMP_RANGE.end()
+        ))
+    }
 }
 
 impl PlayArgs {
@@ -106,6 +135,11 @@ pub(crate) fn run(args: PlayArgs) -> Result<Outcome> {
     if let Some(volume) = args.volume {
         config.volume = Volume::clamped(f32::from(volume) / 100.0);
     }
+    config.replay_gain = ReplayGain {
+        mode: args.replaygain.into(),
+        preamp_db: args.preamp,
+        ..ReplayGain::default()
+    };
     if output.backend == BackendSelection::Backend(OutputBackendKind::Wav) {
         // A file has no clock: write it as fast as it is decoded.
         config.pacing = SinkPacing::Freewheel;

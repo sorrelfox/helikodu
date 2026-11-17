@@ -11,7 +11,7 @@ The vocabulary every other crate speaks: audio formats, channel layouts and devi
 |---|---|
 | `audio` | `SampleFormat` (integer, float and DSD, with byte order), `SampleRate`, `ChannelPosition` and `ChannelLayout` in the canonical WAVE order, `AudioSpec`, `MediaTime` (exact times as ticks at a tick rate), `OutputBackendKind`, `BackendSelection`, `DeviceId`, `DeviceSelection`, `DeviceKey`, `DeviceInfo`, `OutputMode`, `OutputSelection` |
 | `library` | `TrackId`, `TrackRef`, `MediaSource` (a path kept as bytes, with an optional subsong or span) |
-| `player` | The engine's `EngineCommand`s and `EngineEvent`s, `TransportState`, `PlaybackItem` and `ItemId`, `Volume` (cubic curve), `EngineError` |
+| `player` | The engine's `EngineCommand`s and `EngineEvent`s, `TransportState`, `PlaybackItem` (with the `Loudness` values of its tags) and `ItemId`, `Volume` (cubic curve), `EngineError` |
 | `settings` | `Settings` with the `[output]` table (`OutputSettings`, per-device `DeviceProfile`s), read from and written to `settings.toml` with defaults |
 
 Album, artist and playlist records, the queue and the service's player commands, and the query tree are still to come.

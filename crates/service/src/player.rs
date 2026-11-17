@@ -34,11 +34,14 @@
 //!   [`PlayerCommand::Next`] on the last file ends playback.
 //! - When playback stops for good, [`PlayerEvent::Ended`] says why and how many
 //!   files played and failed.
+//! - With loudness normalization on ([`PlayerConfig::replay_gain`]), each file's
+//!   ReplayGain or Opus R128 tags are read just before it is handed to the engine.
 
 mod actor;
 mod config;
 mod error;
 mod event;
+mod loudness;
 mod outputs;
 mod queue;
 
@@ -49,7 +52,7 @@ use helikodu_engine::transport::Engine;
 
 pub use self::actor::PlayerCommand;
 use self::actor::{Actor, Input};
-pub use self::config::{PlayerConfig, SinkPacing};
+pub use self::config::{PlayerConfig, ReplayGain, ReplayGainMode, SinkPacing};
 pub use self::error::PlayerError;
 pub use self::event::{EndReason, PlayerEvent};
 pub use self::outputs::{list_outputs, next_output, resolve_backend, sound_backends};
@@ -86,7 +89,13 @@ impl Player {
                 }
             })
             .map_err(PlayerError::Spawn)?;
-        let actor = Actor::new(engine, events, selection, config.volume);
+        let actor = Actor::new(
+            engine,
+            events,
+            selection,
+            config.volume,
+            config.replay_gain.mode,
+        );
         let thread = thread::Builder::new()
             .name("helikodu-player".into())
             .spawn(move || actor.run(&mailbox))

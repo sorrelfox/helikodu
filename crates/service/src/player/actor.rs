@@ -15,6 +15,8 @@ use helikodu_model::player::{
     Volume,
 };
 
+use super::config::ReplayGainMode;
+use super::loudness::LoudnessTags;
 use super::outputs::{next_output, output_choices};
 use super::queue::{Direction, Queue};
 use super::{EndReason, PlayerEvent};
@@ -83,6 +85,8 @@ pub(super) struct Actor {
     engine: Engine,
     events: Sender<PlayerEvent>,
     queue: Queue,
+    /// The loudness tags of the queued files.
+    loudness: LoudnessTags,
     last_id: u64,
     /// The file playing, or being loaded.
     current: Option<Slot>,
@@ -113,11 +117,13 @@ impl Actor {
         events: Sender<PlayerEvent>,
         selection: OutputSelection,
         volume: Volume,
+        replay_gain: ReplayGainMode,
     ) -> Self {
         Self {
             engine,
             events,
             queue: Queue::default(),
+            loudness: LoudnessTags::new(replay_gain),
             last_id: 0,
             current: None,
             pending: None,
@@ -219,6 +225,7 @@ impl Actor {
 
     fn play_files(&mut self, files: Vec<PathBuf>, start: usize) {
         self.queue = Queue::new(files);
+        self.loudness.clear();
         self.played = 0;
         self.failed = 0;
         self.current = None;
@@ -245,6 +252,7 @@ impl Actor {
         self.last_id += 1;
         let id = ItemId::new(self.last_id);
         let item = PlaybackItem::new(id, MediaSource::file(path));
+        let item = self.loudness.complete(&self.queue, index, item);
         self.current = Some(Slot {
             id,
             index,
@@ -402,6 +410,7 @@ impl Actor {
         self.last_id += 1;
         let id = ItemId::new(self.last_id);
         let item = PlaybackItem::new(id, MediaSource::file(path));
+        let item = self.loudness.complete(&self.queue, index, item);
         self.pending = Some(Slot {
             id,
             index,

@@ -3,14 +3,21 @@
 
 //! Commands that use the core directly, without a running application.
 
+pub(crate) mod info;
 pub(crate) mod list_outputs;
 pub(crate) mod play;
+pub(crate) mod scan;
+pub(crate) mod search;
+pub(crate) mod stats;
 
+mod database;
+mod format;
 mod keys;
 mod status;
 
 use clap::ValueEnum;
 use helikodu_model::audio::{BackendSelection, OutputBackendKind, OutputMode};
+use helikodu_service::player::ReplayGainMode;
 
 /// The `--backend` values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -53,6 +60,31 @@ impl From<ModeArg> for OutputMode {
         match arg {
             ModeArg::Shared => Self::Shared,
             ModeArg::Exclusive => Self::Exclusive,
+        }
+    }
+}
+
+/// The `--replaygain` values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum ReplayGainArg {
+    /// No loudness normalization.
+    Off,
+    /// The track gain of each file.
+    Track,
+    /// The album gain, for files in album order.
+    Album,
+    /// The album gain where neighbouring files share their album, the track gain
+    /// otherwise.
+    Auto,
+}
+
+impl From<ReplayGainArg> for ReplayGainMode {
+    fn from(arg: ReplayGainArg) -> Self {
+        match arg {
+            ReplayGainArg::Off => Self::Off,
+            ReplayGainArg::Track => Self::Track,
+            ReplayGainArg::Album => Self::Album,
+            ReplayGainArg::Auto => Self::Auto,
         }
     }
 }

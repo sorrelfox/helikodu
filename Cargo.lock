@@ -733,6 +733,7 @@ name = "helikodu-service"
 version = "0.0.0"
 dependencies = [
  "helikodu-engine",
+ "helikodu-library",
  "helikodu-model",
  "thiserror",
 ]

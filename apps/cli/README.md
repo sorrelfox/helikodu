@@ -1,6 +1,6 @@
 # helikodu-cli
 
-Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (scan, info, verify, convert, list-outputs) that use the core directly. It turns arguments into calls on the core and prints the results.
+Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
 
 - **May depend on:** `model`, `service`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
@@ -12,7 +12,13 @@ The offline commands are in `src/offline/`; the remote control of the running ap
 ```sh
 helikodu-cli play FILE... [--backend auto|pipewire|alsa|null|wav] [--device ID]
                           [--mode shared|exclusive] [--volume 0..100] [--wav-out PATH]
+                          [--replaygain off|track|album|auto] [--preamp DB]
 helikodu-cli list-outputs [--backend auto|pipewire|alsa|null] [--json]
+helikodu-cli scan [FOLDER...] [--exclude PATTERN]... [--workers N] [--worker PATH]
+                  [--json] [--database PATH]
+helikodu-cli search TEXT... [--limit N] [--offset N] [--json] [--database PATH]
+helikodu-cli info FILE|TRACK-ID [--json] [--database PATH]
+helikodu-cli stats [--top N] [--json] [--database PATH]
 helikodu-cli --version
 ```
 
@@ -27,6 +33,8 @@ Plays the files in the order given. Files of the same format join without a gap.
 | `--mode` | `shared` (the default) or `exclusive` |
 | `--volume` | The position of the volume control, from 0 to 100 (the default). The control follows the cubic curve of desktop mixers |
 | `--wav-out` | The file the `wav` backend writes; required with `--backend wav` and refused otherwise. The file is written as fast as the files decode |
+| `--replaygain` | Loudness normalization by the files' ReplayGain tags, or Opus `R128_TRACK_GAIN`/`R128_ALBUM_GAIN` tags (converted to the ReplayGain 2.0 reference of −18 LUFS): `off` (the default), `track`, `album` (for files given in album order), or `auto` (the album gain for a file whose neighbour in the list, before or after it, has the same album title and album artists; the track gain otherwise). A file without the chosen gain uses the other one; a file without either plays unchanged. A positive gain is lowered so that the peak in the tags stays at or below full scale |
+| `--preamp` | Added to the gain of files with loudness tags, in dB, from −24 to 24 (the default 0) |
 
 When standard input is a terminal, these keys control playback, and a status line on standard error shows the file, position, volume and output:
 
@@ -51,18 +59,110 @@ Lists the devices of every backend that plays sound (PipeWire and ALSA), or of t
 helikodu-cli list-outputs --backend pipewire --json | jq -r '.[].id'
 ```
 
+### The library commands
+
+`scan`, `search`, `info` and `stats` work on the library database, `$XDG_DATA_HOME/helikodu/library.db` (`~/.local/share/helikodu/library.db` when `XDG_DATA_HOME` is not set), or the file given with `--database`. `scan` creates it; the other commands need it to exist, except `info` on a file. Sorting follows the locale of `LC_ALL`, `LC_COLLATE` or `LANG`.
+
+Paths in JSON are given as `"path"`, text in which bytes that are not UTF-8 become U+FFFD, and, only when the path is not valid UTF-8, also as `"path_bytes"`, the exact bytes as an array of numbers. Times are seconds since the Unix epoch, lengths are milliseconds, and a value that is not known is `null`. Objects may gain keys in later versions; existing keys keep their meaning.
+
+#### scan
+
+Adds the folders to the library and reads their new and changed files with `helikodu-scan-worker` processes; files that disappeared are marked missing. Without folders, every folder already in the library is scanned again.
+
+| Option | Meaning |
+|---|---|
+| `--exclude` | Leaves out every file and folder whose name matches the pattern (`*` and `?` are wildcards, case matters), or, when the pattern contains a `/`, the folder or file at that path (relative to the current folder unless absolute). Can be given more than once |
+| `--workers` | The number of worker processes, 1 to 64. The default is one per processor, at most 8 |
+| `--worker` | The worker program. The default is `helikodu-scan-worker` beside `helikodu-cli`, or in `../libexec/helikodu/` from it |
+
+Progress goes to standard error (a line that updates itself on a terminal, otherwise the steps and every file that could not be read); the summary goes to standard output. With `--json` the summary is one object:
+
+```json
+{
+  "roots": 1, "unavailable_roots": 0, "found": 120, "unchanged": 0, "read": 120,
+  "added": 118, "returned": 0, "updated": 0, "moved": 0, "missing": 0, "back": 0,
+  "failed": 2, "skipped_unreadable": 0, "worker_restarts": 1, "cancelled": false,
+  "elapsed_ms": 4211,
+  "failures": [
+    {"path": "/music/broken.flac", "kind": "worker_crashed", "message": "…"}
+  ]
+}
+```
+
+`kind` is one of `io`, `unreadable`, `reader_failed`, `worker_crashed`, `timed_out`, `write_failed` and `other`.
+
+#### search
+
+Finds the tracks whose title, artists, album, album artists, genres, composers or path contain every word of `TEXT` (case, accents and character width do not matter), best matches first. `--limit` (1 to 1000, default 50) and `--offset` (default 0) page through them. With `--json`:
+
+```json
+{
+  "query": "morning", "total": 1, "offset": 0, "limit": 50,
+  "hits": [
+    {"track_id": 7, "rank": "prefix", "title": "Morning Light", "artist": "Aurora",
+     "album": "Dawn", "duration_ms": 241000, "path": "/music/Aurora/Dawn/01.flac"}
+  ]
+}
+```
+
+`rank` is how the whole query matched the title, an artist or the album: `exact`, `prefix`, `word_prefix`, `substring`, or `terms` (only word by word). `artist` lists the track artists separated by commas.
+
+#### info
+
+Shows a file or a library track. A file is read directly, so it need not be in the library; when it is, its library entry and statistics are shown too. A number that is not the name of an existing file is a track number, as `search` prints it; the track is shown from the library, with the loudness tags of its file if the file can be read. With `--json`:
+
+```json
+{
+  "path": "/music/Aurora/Dawn/01.flac",
+  "sub_index": 0,
+  "origin": "file",
+  "tags": {"title": "Morning Light", "title_sort": null, "artists": ["Aurora"],
+           "album_artists": ["Aurora"], "composers": [], "album": "Dawn",
+           "genres": ["Ambient"], "track_number": 1, "disc_number": null,
+           "date": "2024", "year": 2024},
+  "audio": {"duration_ms": 241000, "sample_rate": 44100, "channels": 2,
+            "bit_depth": 16, "bitrate": 912000, "codec": "flac", "container": "flac"},
+  "loudness": {"track_gain_db": -4.5, "track_peak": 0.25,
+               "album_gain_db": null, "album_peak": null},
+  "file_error": null,
+  "library": {"track_id": 7, "identity_id": 7, "kind": "music",
+              "added_at": 1795442700, "missing_since": null,
+              "statistics": {"play_count": 2, "skip_count": 0, "first_played": 1795443000,
+                             "last_played": 1795450000, "last_skipped": null,
+                             "rating": null, "resume_position_ms": null}}
+}
+```
+
+`origin` is `file` when the tags and audio properties were read from the file now, `library` when they are what the library stored. `sub_index` is the CUE track or subsong number, 0 for a whole file. `loudness` holds gains in dB relative to −18 LUFS (Opus R128 gains converted) and linear peaks; it is `null` when the file could not be read, and `file_error` then says why. `library` is `null` for a file that is not in the library. `kind` is `music`, `audiobook`, `podcast`, `audio_from_video` or `other`; `rating` is in half stars, 0 to 10.
+
+#### stats
+
+Shows the library folders, the totals and the most played tracks (`--top`, 0 to 1000, default 10; one track for each identity). With `--json`:
+
+```json
+{
+  "roots": [{"path": "/music"}],
+  "totals": {"roots": 1, "files": 118, "tracks": 130, "albums": 12, "artists": 9,
+             "genres": 5, "duration_ms": 31800000, "size_bytes": 2400000000,
+             "missing_files": 0, "unreadable_files": 2, "plays": 41,
+             "played_tracks": 17, "rated_tracks": 3},
+  "most_played": [
+    {"track_id": 7, "title": "Morning Light", "artist": "Aurora", "album": "Dawn",
+     "play_count": 6, "last_played": 1795450000}
+  ]
+}
+```
+
+`files` counts media files with tracks (not CUE sheets); `artists` counts track and album artists.
+
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
-| 0 | Success. For `play`, at least one file played; skipped files are reported but do not change the code |
-| 1 | A runtime error: the output could not be opened or failed, or no backend could be listed |
+| 0 | Success. For `play`, at least one file played; skipped files are reported but do not change the code. For `scan`, files that could not be read are reported but do not change the code. `search` with no match is a success |
+| 1 | A runtime error: the output could not be opened or failed, no backend could be listed, there is no library yet, the library or a file could not be read, a scan could not start or a folder given to it could not be read, or `info` found no such track |
 | 2 | A usage error: an unknown option or value, or options that do not go together |
 | 3 | `play` could not play any of the files |
-
-### Not yet available
-
-Loudness normalization (`--replaygain track|album`) comes next, with the tag reader that supplies the gain values. Until then files play without ReplayGain.
 
 ## Tests
 
@@ -70,4 +170,8 @@ Loudness normalization (`--replaygain track|album`) comes next, with the tag rea
 cargo test -p helikodu-cli
 ```
 
-The tests run the built program against generated WAV files with the `null` and `wav` backends; they make no sound.
+- `tests/cli.rs` runs the built program against generated WAV files with the `null` and `wav` backends; they make no sound.
+- `tests/replaygain.rs` plays FLAC files with ReplayGain tags and an Opus file with R128 tags, made by the `ffmpeg` tool, to the `wav` backend and checks the level of the output in every mode: the track and album gains, the preamp, the automatic choice by album neighbours, clipping prevention by the peak, and untagged files.
+- `tests/library.rs` makes a small library with `ffmpeg` (including a file name that is not UTF-8 and an excluded folder), scans it with real worker processes into a temporary database, and parses the JSON of `scan`, `search`, `info` and `stats`, and checks the errors and exit codes. It builds `helikodu-scan-worker` into the same target folder, beside `helikodu-cli`. It gives one track play counts with the `sqlite3` tool when that is installed.
+
+Tests whose tool or encoder is missing print `SKIPPED:` and pass.

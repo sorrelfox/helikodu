@@ -11,6 +11,7 @@
 
 mod catalog;
 mod db;
+mod details;
 mod library;
 mod scan;
 mod search;
@@ -24,6 +25,9 @@ pub use catalog::{
 pub use db::{
     DatabaseConfig, DbError, LocaleCollation, Location, MemoryName, SCHEMA_VERSION, SqliteError,
     display_text, path_from_blob, path_to_blob,
+};
+pub use details::{
+    FileDetails, LibraryTotals, PlayedTrack, ReadFileError, TrackDetails, read_file_details,
 };
 pub use library::Library;
 pub use scan::{

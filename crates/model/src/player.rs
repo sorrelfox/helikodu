@@ -18,6 +18,6 @@ mod volume;
 pub use engine_command::EngineCommand;
 pub use engine_error::EngineError;
 pub use engine_event::{EngineEvent, TrackEndReason};
-pub use playback_item::{ItemId, PlaybackItem};
+pub use playback_item::{ItemId, Loudness, PlaybackItem};
 pub use transport_state::TransportState;
 pub use volume::Volume;

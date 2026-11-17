@@ -10,7 +10,7 @@ use helikodu_model::audio::{
 use helikodu_model::player::Volume;
 use helikodu_model::settings::VolumeControl;
 
-use helikodu_model::player::{EngineError, EngineEvent};
+use helikodu_model::player::{EngineError, EngineEvent, Loudness};
 use helikodu_model::settings::DeviceLostPolicy;
 
 use super::source::Source;
@@ -186,10 +186,11 @@ impl Worker {
             return Err(EngineError::NothingLoaded);
         };
         let device = output.spec();
+        let item = source.item();
         let request = PathRequest {
             source: source.format(),
-            loudness: LoudnessInfo::default(),
-            album_context: false,
+            loudness: loudness_info(&item.loudness),
+            album_context: item.album_context,
             device,
             volume: output.volume,
             dsp: false,
@@ -263,5 +264,17 @@ impl Worker {
             output.close();
         }
         self.staged = 0..0;
+    }
+}
+
+/// The loudness values of an item as the path plan takes them. Tags carry sample
+/// peaks, not true peaks.
+fn loudness_info(loudness: &Loudness) -> LoudnessInfo {
+    LoudnessInfo {
+        track_gain_db: loudness.track_gain_db,
+        track_peak: loudness.track_peak,
+        album_gain_db: loudness.album_gain_db,
+        album_peak: loudness.album_peak,
+        true_peak: false,
     }
 }

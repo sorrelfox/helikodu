@@ -17,9 +17,12 @@ pipewire = ["helikodu-engine/pipewire"]
 alsa = ["helikodu-engine/alsa"]
 # The DSF/DFF reader of the engine.
 dsd = ["helikodu-engine/dsd"]
+# Build the SQLite copy that rusqlite bundles instead of linking the system library.
+bundled-sqlite = ["helikodu-library/bundled-sqlite"]
 
 [dependencies]
 helikodu-engine.workspace = true
+helikodu-library.workspace = true
 helikodu-model.workspace = true
 thiserror.workspace = true
 

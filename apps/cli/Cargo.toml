@@ -21,6 +21,8 @@ pipewire = ["helikodu-service/pipewire"]
 alsa = ["helikodu-service/alsa"]
 # The DSF/DFF reader, which plays DSD files as PCM.
 dsd = ["helikodu-service/dsd"]
+# Build the SQLite copy that rusqlite bundles instead of linking the system library.
+bundled-sqlite = ["helikodu-service/bundled-sqlite"]
 
 [dependencies]
 anyhow.workspace = true

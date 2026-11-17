@@ -5,7 +5,7 @@ The player service (queue, play modes, session, statistics recording), the libra
 - **May depend on:** `model`, `engine`, `library`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
 
-The Cargo features `pipewire`, `alsa` and `dsd` (all on by default) pass on to the engine's features of the same names.
+The Cargo features `pipewire`, `alsa` and `dsd` (all on by default) pass on to the engine's features of the same names; `bundled-sqlite` (off by default) passes on to the library's.
 
 ## Player
 
@@ -27,7 +27,8 @@ for event in events.iter() {
 |---|---|
 | `player.rs` | `Player`: spawning, sending, shutting down |
 | `player/actor.rs` | `PlayerCommand` and the actor: the queue, the engine's events, skipping |
-| `player/config.rs` | `PlayerConfig`: the output settings built from a backend, device and mode (there is no settings file yet), the start volume, `SinkPacing` |
+| `player/config.rs` | `PlayerConfig`: the output settings built from a backend, device and mode (there is no settings file yet), the start volume, `SinkPacing`, `ReplayGain` (mode, preamps, clipping prevention) |
+| `player/loudness.rs` | Reading the loudness tags of queued files and whether a file plays as part of its album |
 | `player/event.rs` | `PlayerEvent`, `EndReason` |
 | `player/outputs.rs` | `list_outputs`, `sound_backends`, `resolve_backend`, `next_output` |
 | `player/queue.rs` | The queue of files |
@@ -55,20 +56,38 @@ for event in events.iter() {
 
 **Unplayable files.** A file that does not open is reported with `Problem` and skipped in the direction playback was moving: forward normally, backward after `Previous` (and forward again from the first file). A next file that does not open is skipped before it is reached. A file that fails while decoding ends there, and playback goes on with the next one.
 
+**Loudness normalization.** `PlayerConfig::replay_gain` selects `ReplayGainMode::Off` (the default), `Track`, `Album` or `Auto`, with a preamp for tagged files, one for untagged files, and clipping prevention by the peak (on by default). When it is not off, each file's ReplayGain or Opus R128 tags are read (through the library crate, in this process) just before the file is handed to the engine, and go with it as the `PlaybackItem`'s `Loudness`. In `Auto` mode a file plays as part of its album, and so with the album gain, when the file before or after it in the queue has the same album title and album artists.
+
 **Outputs.** `list_outputs(backend)` asks a backend for its devices. `next_output` chooses the device after the current one in a list; a current choice of the default device stands for the device the backend marks as default.
 
 Not done yet in the player:
 
 - Shuffle, repeat, stop-after, consume, enqueueing, and the session that keeps the queue across restarts.
 - The settings store: the output settings are built from parameters.
-- Loudness normalization (ReplayGain): it needs the tag reader of the metadata layer.
 - Statistics: plays and skips are not recorded.
+
+## Library
+
+`src/library.rs` and `src/library/` are the library facade for tools that use the database directly, such as `helikodu-cli scan`, `search`, `info` and `stats`.
+
+| Item | What it does |
+|---|---|
+| `default_database_path` | `$XDG_DATA_HOME/helikodu/library.db`, or `~/.local/share/helikodu/library.db` |
+| `MusicLibrary::open`, `open_existing` | Opens the database, creating it and its folder, or only if it exists (a newer schema opens read-only). The sort order follows `LC_ALL`, `LC_COLLATE` or `LANG` |
+| `MusicLibrary::scan` | Starts a scan (`ScanRequest`: folders, or the library's own folders when empty; exclude patterns; worker count and program) and returns the `ScanHandle` |
+| `MusicLibrary::search` | A page of results, each with its file path |
+| `MusicLibrary::track_info`, `file_info`, `read_file_info` | `TrackInfo`: tags, audio properties, loudness values of the file's tags, and the library entry with statistics. A file is read directly; a library file that cannot be read any more is described from the library |
+| `MusicLibrary::overview` | The library folders, totals and most played tracks |
+
+The library crate's result types the front ends need (`SearchHit`, `ScanEvent`, `ScanSummary`, `TrackTags`, `TrackStats`, `LibraryTotals`, …) are re-exported from `helikodu_service::library`.
 
 ## Tests
 
 ```sh
 cargo test -p helikodu-service
 ```
+
+`tests/library.rs` fills a database file through the library crate and checks the facade: search with paths, track details and statistics, a library file that cannot be read, totals and the most played tracks, a missing library and a scan without folders. The level of ReplayGain playback is checked end to end by `apps/cli/tests/replaygain.rs`.
 
 `tests/player/` plays generated WAV files: to the WAV sink as fast as it takes them (the joins between files bit-exact, unplayable and missing files skipped, an empty queue), and in real time to the null sink (next, previous, pause, seek, volume, a move from the null sink to a WAV file while playing).
 
