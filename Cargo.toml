@@ -34,6 +34,7 @@ ffmpeg-sys-next = { version = "=9.1.1", default-features = false, features = ["a
 helikodu-engine = { path = "crates/engine", default-features = false }
 helikodu-extra-decoders = { path = "crates/extra-decoders", default-features = false }
 helikodu-ffmpeg-bridge = { path = "crates/ffmpeg-bridge" }
+helikodu-meta = { path = "crates/meta" }
 helikodu-model = { path = "crates/model" }
 helikodu-service = { path = "crates/service", default-features = false }
 # Locale-aware sort order of the library: a custom SQLite collation. Unicode-3.0.
@@ -54,6 +55,8 @@ lofty = "0.25.5"
 pipewire = { version = "=0.10.1", features = ["v1_2_0"] }
 # The `regexp()` SQL function behind the query language's `~` operator.
 regex = "1.12"
+# Resource limits (address space, core dumps) that scan workers set on themselves.
+rlimit = "0.11"
 # Lock-free ring buffer between render thread and output; 0.4.1 fixed a double-free.
 rtrb = "0.4.1"
 # Resampling. Its API changes often, so the version is exact and the engine wraps it

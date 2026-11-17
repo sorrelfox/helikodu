@@ -13,5 +13,10 @@ publish.workspace = true
 name = "helikodu-scan-worker"
 path = "src/main.rs"
 
+[dependencies]
+helikodu-ffmpeg-bridge.workspace = true
+helikodu-meta.workspace = true
+rlimit.workspace = true
+
 [lints]
 workspace = true

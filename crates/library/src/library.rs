@@ -4,6 +4,7 @@
 //! The typed operations on the library: tracks, statistics and search.
 
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::Sender;
 use std::time::{Duration, SystemTime};
 
 use helikodu_model::library::TrackId;
@@ -11,6 +12,7 @@ use helikodu_model::library::TrackId;
 use crate::catalog::{self, IdentityId, RootId, TrackFingerprint, TrackRecord, TrackWrite};
 use crate::db::unix_time::{to_millis, to_unix_seconds};
 use crate::db::{Database, DatabaseConfig, DbError, LocaleCollation};
+use crate::scan::{self, CancelToken, ScanError, ScanEvent, ScanOptions, ScanSummary};
 use crate::search::{self, SearchRequest, SearchResults};
 use crate::stats::{
     HistoryEntry, HistoryQuery, Listen, ListenOutcome, PlayRules, Rating, TrackStats, store,
@@ -179,6 +181,32 @@ impl Library {
     ) -> Result<Vec<IdentityId>, DbError> {
         self.db
             .read(|c| catalog::write::identities_with(c, fingerprint))
+    }
+
+    // --- Scanning ------------------------------------------------------------------
+
+    /// Scans the library folders of `options` and waits until the scan ends.
+    ///
+    /// Each folder is added to the library if needed, walked, and compared with the
+    /// database; new and changed files are read by a pool of `helikodu-scan-worker`
+    /// processes and written in batches, and files that disappeared are marked
+    /// missing. Events go to `events` while the scan runs. A file that cannot be read
+    /// (including one that crashes or hangs a worker) is reported and recorded, and
+    /// the scan goes on; only a database failure or a worker that cannot be started
+    /// at all ends it with an error. [`ScanHandle`](crate::ScanHandle) runs a scan on
+    /// its own thread.
+    pub fn scan(
+        &self,
+        options: &ScanOptions,
+        events: Option<&Sender<ScanEvent>>,
+        cancel: &CancelToken,
+    ) -> Result<ScanSummary, ScanError> {
+        scan::run(&self.db, options, events, cancel)
+    }
+
+    /// The files that could not be read, with the reason, in path order.
+    pub fn unreadable_files(&self) -> Result<Vec<(PathBuf, String)>, DbError> {
+        self.db.read(scan::store::unreadable_files)
     }
 
     // --- Search --------------------------------------------------------------------

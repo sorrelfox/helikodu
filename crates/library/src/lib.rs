@@ -12,6 +12,7 @@
 mod catalog;
 mod db;
 mod library;
+mod scan;
 mod search;
 mod stats;
 
@@ -24,6 +25,10 @@ pub use db::{
     display_text, path_from_blob, path_to_blob,
 };
 pub use library::Library;
+pub use scan::{
+    CancelToken, ExcludeRule, FailureKind, FileFailure, ScanError, ScanEvent, ScanHandle,
+    ScanOptions, ScanSummary, SymlinkPolicy, WORKER_PROGRAM, WorkerOptions, find_worker_program,
+};
 pub use search::{MatchRank, SearchHit, SearchRequest, SearchResults, fold};
 pub use stats::{
     HistoryEntry, HistoryQuery, Listen, ListenEnd, ListenOutcome, PlayRules, Rating, TrackStats,

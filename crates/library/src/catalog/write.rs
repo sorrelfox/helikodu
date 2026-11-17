@@ -67,7 +67,7 @@ pub(crate) fn add_root(c: &Connection, path: &Path) -> rusqlite::Result<RootId> 
 }
 
 /// The folder row of `path`, created under `root` if it does not exist.
-fn ensure_dir(c: &Connection, root: RootId, path: &Path) -> rusqlite::Result<i64> {
+pub(crate) fn ensure_dir(c: &Connection, root: RootId, path: &Path) -> rusqlite::Result<i64> {
     let blob = path_to_blob(path);
     let found = c
         .prepare_cached("SELECT id FROM dirs WHERE path = ?1")?

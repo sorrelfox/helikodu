@@ -10,6 +10,7 @@
 pub mod covers;
 pub mod cue;
 pub mod tags;
+pub mod worker;
 
 pub use covers::{Cover, CoverHash, CoverLimits, CoverSource, find_cover};
 pub use cue::{CueSheet, CueTracks, VirtualTrack, read_chapters, read_cue, read_embedded_cue};

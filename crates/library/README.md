@@ -14,8 +14,9 @@ The SQLite schema and its migrations, the scan coordinator and file watcher, the
 | Catalogue | `add_root`, `upsert_track` / `upsert_tracks` (a `TrackRecord`: path, `FileStamp`, sub-track, `AudioProperties`, `TrackTags`, a rating from the tags), `move_file`, `mark_file_missing`, `remove_file`, `remove_track`, `track_at`, `identity_of`, `identities_with` |
 | Statistics | `record_listen` (a `Listen` judged by `PlayRules`), `stats`, `set_rating` (`Option<Rating>`), `set_resume_position`, `history` (`HistoryQuery`) |
 | Search | `search` (`SearchRequest` → `SearchResults`), `rebuild_search_index` |
+| Scanning | `scan` (`ScanOptions`, an optional `Sender<ScanEvent>`, a `CancelToken` → `ScanSummary`), `unreadable_files`; `ScanHandle::spawn` runs a scan on its own thread |
 
-Errors are `DbError`; an error from SQLite is the opaque `SqliteError`.
+Errors are `DbError`; an error from SQLite is the opaque `SqliteError`. A scan fails with `ScanError` only when the database fails or no worker can be started; a file that cannot be read is an event, not an error.
 
 The module `raw` gives direct SQL access below `Library`: `raw::Database` with its read and write callbacks, the `Writer`, and the `rusqlite` bindings. It exists for this crate's tests and benchmarks and for diagnostics, and it is not a stable interface. Other crates use `Library`.
 
@@ -101,6 +102,18 @@ A track's statistics, rating and history belong to its identity (`identities`), 
 - Results are ranked by how the whole query matches the title, an artist or the album: exactly, as a prefix, at the start of a word, inside a word, and last the tracks that only match term by term (`MatchRank`). Within a rank they are in the locale order of `title_sort`.
 - The query language is not part of this yet; it will compile to the same indexes.
 
+## The scanner
+
+`src/scan/` walks the library folders, compares them with the database, has new and changed files read by `helikodu-scan-worker` processes, and writes what they read.
+
+- **Walk** (`walk.rs`). Paths are bytes from start to end. Entries are taken in byte order. Left out: names starting with a dot (unless `include_hidden`), `ExcludeRule::Path` (a folder or file) and `ExcludeRule::Name` (a pattern with `*` and `?`, matched against every name), folders holding the ignore marker (`.nomedia` by default), files that are neither audio nor CUE sheets by their extension, and video files unless `include_video` (their tracks get the kind `AudioFromVideo`). `.m4b` files are audiobooks.
+- **Symbolic links** (`SymlinkPolicy`): `WithinRoots` (the default) follows a link whose target is inside a library folder, `Follow` every link, `Ignore` none. Real folders are walked before links, and every folder and file is taken once by its device and inode, so a link loop ends at once and a file reachable through a link (or a hard link) is recorded under one path.
+- **Compare** (`compare.rs`). A file is read when it is new, when its size, modification time (ns) or inode changed, or when a CUE sheet in its folder appeared, changed or went away. A file that disappeared is marked missing (`missing_since`); its tracks stay until the grace period ends, which the watcher handles. A file that comes back is unmarked; a missing file that turns up under another path with the same size and quick hash is moved there with its tracks. A library folder that cannot be read (not mounted, gone) marks nothing missing, and neither does a subfolder that cannot be read.
+- **Read** (`pool.rs`). A pool of worker processes (one per processor, at most 8, by default) reads one file per worker at a time. Each worker limits its address space (1 GiB by default) and turns core dumps off. A worker that does not answer within the time limit (30 s by default) is killed; one that dies (a crash, or the memory limit) is noticed when its output ends. Either way the file is recorded as unreadable with the reason (`files.scan_state` 1, `scan_error`), a `ScanEvent::FileFailed` is sent, and the next file goes to a new worker. An unreadable file is not read again until it changes, unless `retry_unreadable` is set. The worker program is `WorkerOptions::program`, or `helikodu-scan-worker` beside the running program or in `../libexec/helikodu/` from it.
+- **Records** (`records.rs`). A file described by a CUE sheet becomes one track per sheet track (`sub_index` is the track number, the frame range at the file's sample rate); otherwise it is one whole-file track. A sheet track that starts after the end of the file is left out. Chapters are read by the worker but not stored yet. CUE sheets are recorded as file rows with `scan_state` 2 and no tracks, so that a changed sheet is noticed.
+- **Write** (`store.rs`). Each file is one write job: its tracks through the same upsert as `upsert_track`, then the removal of the file's tracks that are no longer in it (a sheet replaced the whole-file track, or lost tracks). The jobs go to the writer without waiting, so it commits them in batches of up to 512; one job that fails is rolled back alone.
+- **Events** (`ScanEvent`): `Walking`, `RootUnavailable`, `Compared` (found, to read, missing), `Progress` (at most every 100 ms), `FileFailed`, `Finished` with the `ScanSummary`. `CancelToken::cancel` stops a scan within a fraction of a second: the workers are killed and what was read is kept.
+
 ## SQLite: bundled or system
 
 The crate needs SQLite 3.43 or newer, built with FTS5 (contentless-delete tables and the trigram tokenizer). It checks the version when it opens a connection and FTS5 when it opens the writer.
@@ -152,6 +165,21 @@ cargo bench -p helikodu-library --bench search               # 100 000 tracks, e
 cargo bench -p helikodu-library --bench search -- 500000 a 我的心   # 500 000 tracks, chosen queries
 ```
 
+`benches/scan.rs` measures a full scan of a library made by `cargo xtask synth-library` (one-second FLAC files in artist, album and disc folders, about 2.5 % of them with names that are not UTF-8), into a database file, with release builds of the library and the worker. It generates the library under `target/scan-bench/` and deletes it afterwards.
+
+| 100 000 tracks, Zen 5, NVMe SSD, warm cache | Time | Files per second |
+|---|---|---|
+| First scan, 8 workers (the default on 32 threads) | 27.8 s | 3 600 |
+| First scan, 2 or 16 workers | 26.9–27.4 s | 3 650–3 700 |
+| Rescan without changes | 0.25 s | |
+
+The budget is 500 files per second (100 000 files in under 4 minutes). The writer is the limit, not the workers: the time hardly changes between 2 and 16 workers.
+
+```sh
+cargo bench -p helikodu-library --bench scan                   # 100 000 tracks
+cargo bench -p helikodu-library --bench scan -- 10k --workers 4 --keep
+```
+
 ## Tests
 
 ```sh
@@ -162,4 +190,5 @@ cargo test -p helikodu-library --features bundled-sqlite
 - `tests/database.rs`: migrating an empty database, reopening, refusing a newer schema and opening it read-only, a failing migration that leaves nothing behind, file names that are not UTF-8, the locale order in English, Swedish, German and Estonian, and the rebuild of the sort indexes when the locale changes.
 - `tests/search.rs`: search through `Library` in Latin with diacritics, Cyrillic, Greek, Chinese, Japanese (kana and kanji), Thai and Korean, with queries of one to four characters; short queries; every term must match; FTS5 syntax as plain text; genre, composer, album artist and path through the word index; ranking and paging; the indexes after tag changes, moves and removals, and after a rebuild; `regexp()`.
 - `tests/stats.rs`: plays, skips and partial listens; ratings from 0 to 10 and not rated; the rating from the tags taken once; statistics after a watched move, after a file that disappears and reappears elsewhere, and after a track that leaves and comes back; a re-encoded file; CUE tracks; the history and its filters; resume positions.
+- `tests/scan.rs`: a small library made with the `ffmpeg` tool and scanned by real worker processes: a folder and a file name in Latin-1 bytes, a CUE album, an excluded folder, a hidden folder, a link loop, a picture and a fake video; rescans after a tag change, a removal, a move into a new folder, an addition, a file that comes back and a sheet that appears; a library folder that disappeared; a missing worker program. In debug builds, files that make the worker crash, hang or exhaust its memory limit (see `apps/scan-worker`) are reported and recorded while the scan goes on, are not read again until asked, and a scan stuck on hanging files is cancelled. The tests build `helikodu-scan-worker` themselves; without `ffmpeg` they print `SKIPPED:` and pass.
 - `tests/writer.rs`: batching, a failed job rolled back alone, a batch that cannot commit rolled back whole, a panicking job, and the writes queued at shutdown.

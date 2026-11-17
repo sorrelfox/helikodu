@@ -106,6 +106,15 @@ if let Some(cover) = find_cover(path, &options) {
 
 **Hostile pictures.** A picture over the byte limit is not copied. Decoding checks the byte size, sniffs the format, parses the header and checks the declared width × height against the pixel limit before any pixel buffer exists; the `image` crate's own allocation limit applies while decoding. Only JPEG, PNG and WebP are decoded, by memory-safe Rust decoders; malformed or truncated input is an error, never a panic. `fuzz/` has a target for the decoder.
 
+## Scan workers
+
+The `worker` module is the protocol between the library scanner and the `helikodu-scan-worker` processes, which read one file at a time so that a decoder that crashes or hangs on a broken file cannot take the application down.
+
+- Messages are binary frames: a little-endian 32-bit length, then the payload, at most 64 MiB. A worker greets with a magic value, the protocol version and its process ID; the scanner refuses another version.
+- A request names one file (its path as bytes) and the reading options. The answer is a report with the file's size, a quick hash, its tags, a CUE sheet or chapters if it has them, or a failure with its kind.
+- `quick_hash` is SHA-256 over the file size and its first and last 64 KiB, truncated to 16 bytes. It lets the library recognise a moved file without reading all of it.
+- `serve` runs the worker side over any reader and writer; `handle` answers a single request.
+
 ## Tests
 
 ```sh

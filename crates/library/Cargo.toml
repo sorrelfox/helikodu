@@ -15,6 +15,7 @@ publish.workspace = true
 bundled-sqlite = ["rusqlite/bundled"]
 
 [dependencies]
+helikodu-meta.workspace = true
 helikodu-model.workspace = true
 icu_collator.workspace = true
 icu_locale_core.workspace = true
@@ -29,6 +30,10 @@ harness = false
 
 [[bench]]
 name = "search"
+harness = false
+
+[[bench]]
+name = "scan"
 harness = false
 
 [lints]
