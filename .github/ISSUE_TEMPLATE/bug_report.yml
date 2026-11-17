@@ -1,0 +1,60 @@
+name: Bug report
+description: Something does not work as it should
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. For security problems, please do not open an issue; see SECURITY.md instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Helikodu version
+      description: From Help → About, or `helikodu-cli --version`
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed from
+      options:
+        - Flatpak
+        - Distribution package
+        - AUR
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution, desktop and session
+      placeholder: e.g. Fedora 45, KDE Plasma 6, Wayland
+    validations:
+      required: true
+  - type: input
+    id: audio
+    attributes:
+      label: Audio stack and output device
+      placeholder: e.g. PipeWire 1.6, USB DAC, exclusive mode off
+  - type: textarea
+    id: logs
+    attributes:
+      label: Diagnostics or log output
+      description: Help → About → Copy diagnostics, or relevant terminal output
+      render: text

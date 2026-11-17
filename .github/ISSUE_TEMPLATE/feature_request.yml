@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an improvement or a new capability
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Helikodu works entirely offline, has no plugin system and never shows video. Requests for online features (streaming, radio, scrobbling, online metadata) are out of scope for now.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: How should it work? Other players that do it well are a useful reference.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered

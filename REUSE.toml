@@ -1,0 +1,32 @@
+version = 1
+SPDX-PackageName = "Helikodu"
+SPDX-PackageSupplier = "sorrelfox"
+SPDX-PackageDownloadLocation = "https://github.com/sorrelfox/helikodu"
+
+# Build and tool configuration, translation lists and the lock file.
+[[annotations]]
+path = [
+    "**/Cargo.toml",
+    "**/Cargo.lock",
+    "rust-toolchain.toml",
+    "rustfmt.toml",
+    "clippy.toml",
+    "deny.toml",
+    ".cargo/config.toml",
+    ".editorconfig",
+    ".gitignore",
+    "AUTHORS",
+    "po/LINGUAS",
+    "po/POTFILES.in",
+    ".github/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 sorrelfox and Helikodu contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Documentation.
+[[annotations]]
+path = ["**/*.md"]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 sorrelfox and Helikodu contributors"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
