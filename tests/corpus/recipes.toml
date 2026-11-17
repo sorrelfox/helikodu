@@ -882,6 +882,9 @@ args = ["-c:a", "real_144", "-f", "rm"]
 needs = ["encoder:real_144", "muxer:rm"]
 expect = { demuxer = "rm", codec = "ra_144" }
 
+# Unsupported by design: a raw stream without a header, recognised by FFmpeg
+# only from its file name extension. Kept to check that it is refused cleanly
+# (see README.md).
 [[sample]]
 set = "formats"
 name = "lossy/sbc.sbc"
@@ -892,6 +895,9 @@ args = ["-c:a", "sbc"]
 needs = ["encoder:sbc", "muxer:sbc"]
 expect = { demuxer = "sbc", codec = "sbc" }
 
+# Unsupported by design: a raw stream without a header, recognised by FFmpeg
+# only from its file name extension. Kept to check that it is refused cleanly
+# (see README.md).
 [[sample]]
 set = "formats"
 name = "lossy/aptx.aptx"
@@ -902,6 +908,9 @@ args = ["-c:a", "aptx"]
 needs = ["encoder:aptx", "muxer:aptx"]
 expect = { demuxer = "aptx", codec = "aptx" }
 
+# Unsupported by design: a raw stream without a header, recognised by FFmpeg
+# only from its file name extension. Kept to check that it is refused cleanly
+# (see README.md).
 [[sample]]
 set = "formats"
 name = "lossy/aptx-hd.aptxhd"
@@ -922,6 +931,9 @@ args = ["-c:a", "liblc3"]
 needs = ["encoder:liblc3", "muxer:lc3"]
 expect = { demuxer = "lc3", codec = "lc3" }
 
+# Unsupported by design: a raw stream without a header, recognised by FFmpeg
+# only from its file name extension. Kept to check that it is refused cleanly
+# (see README.md).
 [[sample]]
 set = "formats"
 name = "lossy/dfpwm.dfpwm"
@@ -974,6 +986,9 @@ args = ["-c:a", "libgsm"]
 needs = ["encoder:libgsm", "muxer:gsm"]
 expect = { demuxer = "gsm", codec = "gsm" }
 
+# Unsupported by design: a raw stream without a header, recognised by FFmpeg
+# only from its file name extension. Kept to check that it is refused cleanly
+# (see README.md).
 [[sample]]
 set = "formats"
 name = "speech/g722.g722"
@@ -984,6 +999,9 @@ args = ["-c:a", "g722"]
 needs = ["encoder:g722", "muxer:g722"]
 expect = { demuxer = "g722", codec = "adpcm_g722" }
 
+# Unsupported by design: a raw stream without a header, recognised by FFmpeg
+# only from its file name extension. Kept to check that it is refused cleanly
+# (see README.md).
 [[sample]]
 set = "formats"
 name = "speech/g723_1.tco"

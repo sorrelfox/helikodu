@@ -175,3 +175,120 @@ fn aac_in_mp4_seeks_exactly() {
         check_seeks(&p, Tolerance::Aligned);
     }
 }
+
+/// Seeks in `path` are exact by the bridge's own account, and then checked.
+fn check_exact_seeks(path: &Path, tolerance: Tolerance) {
+    assert_eq!(open(path).seek_precision(), 0, "{}", path.display());
+    check_seeks(path, tolerance);
+}
+
+#[test]
+fn flac_in_ogg_seeks_exactly() {
+    // Ogg pages of several FLAC frames: the page granule is not the time of the
+    // first packet after a seek; the frame headers give it.
+    if let Some(p) = media::ffmpeg(
+        "seek_flac.oga",
+        Source::S44k16,
+        &["flac"],
+        &["-c:a", "flac"],
+        "ogg",
+    ) {
+        check_exact_seeks(&p, Tolerance::Exact);
+    }
+}
+
+#[test]
+fn flac_in_matroska_seeks_exactly() {
+    // Matroska time stamps are in milliseconds.
+    if let Some(p) = media::ffmpeg(
+        "seek_flac.mka",
+        Source::S44k16,
+        &["flac"],
+        &["-c:a", "flac"],
+        "matroska",
+    ) {
+        check_exact_seeks(&p, Tolerance::Exact);
+    }
+}
+
+#[test]
+fn adpcm_in_wav_seeks_exactly() {
+    // WAV seeks by byte and derives the time from the rounded average byte rate.
+    for codec in ["adpcm_ms", "adpcm_ima_wav"] {
+        if let Some(p) = media::ffmpeg(
+            &format!("seek_{codec}.wav"),
+            Source::S44k16,
+            &[codec],
+            &["-c:a", codec],
+            "wav",
+        ) {
+            check_exact_seeks(&p, Tolerance::Exact);
+        }
+    }
+}
+
+#[test]
+fn opus_in_webm_seeks_exactly() {
+    // Millisecond time stamps, snapped to whole 2.5 ms Opus frames.
+    if let Some(p) = media::ffmpeg(
+        "seek_opus.webm",
+        Source::S48k16,
+        &["libopus"],
+        &["-c:a", "libopus"],
+        "webm",
+    ) {
+        check_exact_seeks(&p, Tolerance::Aligned);
+    }
+}
+
+#[test]
+fn wma_seeks_exactly() {
+    // ASF time stamps are in milliseconds, snapped to whole WMA frames.
+    if let Some(p) = media::ffmpeg(
+        "seek_wmav2.wma",
+        Source::S44k16,
+        &["wmav2"],
+        &["-c:a", "wmav2"],
+        "asf",
+    ) {
+        check_exact_seeks(&p, Tolerance::Aligned);
+    }
+}
+
+#[test]
+fn vorbis_in_webm_seeks_within_a_millisecond() {
+    // No exact anchor: the stated precision is one millisecond tick and a frame.
+    let Some(p) = media::ffmpeg(
+        "seek_vorbis.webm",
+        Source::S44k16,
+        &["libvorbis"],
+        &["-c:a", "libvorbis"],
+        "webm",
+    ) else {
+        return;
+    };
+    let mut decoder = open(&p);
+    let precision = decoder.seek_precision();
+    assert_eq!(
+        precision, 46,
+        "44.1 kHz: a 1 ms tick is 44.1 frames, plus one"
+    );
+    let full = media::decode(&p);
+    let channels = usize::from(full.spec.channel_count());
+    let rate = full.spec.rate;
+    for target in [100_000u64, 0, 12_345, 50_000] {
+        decoder
+            .seek(MediaTime::from_frames(target, rate))
+            .expect("seek");
+        let (position, got) = read_frames(&mut decoder, 8192);
+        assert_eq!(position, target);
+        // Judged after the decoder has settled.
+        let late = &got[4096 * channels..];
+        let start = (target as usize + 4096) * channels;
+        let lag = best_lag(late, &full.samples, start, channels, 64);
+        assert!(
+            lag.unsigned_abs() <= precision,
+            "seek to {target}: {lag} frames off"
+        );
+    }
+}

@@ -15,6 +15,7 @@ pub(crate) struct Table {
     rows: Vec<Vec<String>>,
     failures: Vec<String>,
     gaps: usize,
+    unsupported: usize,
 }
 
 impl Table {
@@ -25,6 +26,7 @@ impl Table {
             rows: Vec::new(),
             failures: Vec::new(),
             gaps: 0,
+            unsupported: 0,
         }
     }
 
@@ -45,6 +47,14 @@ impl Table {
     pub(crate) fn gap(&mut self, mut cells: Vec<String>, reason: &str) {
         cells.push(format!("GAP: {reason}"));
         self.gaps += 1;
+        self.rows.push(cells);
+    }
+
+    /// Adds a row for a file that is refused on purpose: neither a gap nor a
+    /// failure.
+    pub(crate) fn unsupported(&mut self, mut cells: Vec<String>, reason: &str) {
+        cells.push(format!("UNSUPPORTED BY DESIGN: {reason}"));
+        self.unsupported += 1;
         self.rows.push(cells);
     }
 
@@ -79,10 +89,11 @@ impl Table {
         }
         let _ = writeln!(
             out,
-            "{} rows, {} failed, {} known gaps",
+            "{} rows, {} failed, {} known gaps, {} unsupported by design",
             self.rows.len(),
             self.failures.len(),
-            self.gaps
+            self.gaps,
+            self.unsupported
         );
         out
     }

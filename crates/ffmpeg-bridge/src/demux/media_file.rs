@@ -94,6 +94,8 @@ pub struct MediaFile {
     format_name: String,
     streams: Vec<StreamInfo>,
     tags: Tags,
+    /// Where the demuxer stood after reading the header: the start of the data.
+    data_start: Option<i64>,
 }
 
 impl std::fmt::Debug for MediaFile {
@@ -161,6 +163,16 @@ impl MediaFile {
         options.check_leftovers()?;
         // SAFETY: fmt was opened just now.
         unsafe { verify_locks(input.fmt) }?;
+        // SAFETY: fmt is open; its pb is NULL or the custom I/O context. A zero
+        // seek from the current position is how avio_tell (a C inline) reads it.
+        let data_start = unsafe {
+            let pb = (*input.fmt).pb;
+            if pb.is_null() {
+                None
+            } else {
+                Some(ff::avio_seek(pb, 0, libc::SEEK_CUR)).filter(|&p| p >= 0)
+            }
+        };
 
         // Keep non-audio streams out of probing as far as FFmpeg allows. It still
         // calls avcodec_open2 for them; the codec whitelist refuses those calls.
@@ -187,6 +199,7 @@ impl MediaFile {
             format_name,
             streams,
             tags,
+            data_start,
         })
     }
 
@@ -304,6 +317,11 @@ impl MediaFile {
     /// QuickTime/MP4 demuxer, whose end padding the bridge trims itself.
     pub(crate) fn is_mp4_family(&self) -> bool {
         self.format_name.split(',').any(|n| n == "mov")
+    }
+
+    /// The byte position where the demuxer's data starts (after the header).
+    pub(crate) fn data_start(&self) -> Option<i64> {
+        self.data_start
     }
 
     /// The raw `AVStream` of `index`.

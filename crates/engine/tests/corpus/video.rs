@@ -31,14 +31,9 @@ const CHILD: &str = "HELIKODU_CORPUS_VIDEO_CHILD";
 /// Starts each file's part of the child's log.
 const MARK: &str = "=== corpus file ";
 
-/// Video files the engine does not play yet, with the reason.
-const KNOWN_GAPS: &[(&str, &str)] = &[
-    ("video/mpeg2-mp2.mpg", MPEG_PS),
-    ("video/mpeg2-ac3.vob", MPEG_PS),
-];
-
-const MPEG_PS: &str = "MPEG program stream refused: the ffmpeg-bridge format whitelist \
-     names `mpegps`, but FFmpeg calls the demuxer `mpeg`";
+/// Video files the engine does not play yet, with the reason. Reported as gaps,
+/// not failures, unless `HELIKODU_CORPUS_STRICT` is set.
+const KNOWN_GAPS: &[(&str, &str)] = &[];
 
 /// What FFmpeg's log says about one file.
 #[derive(Debug, Default)]

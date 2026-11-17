@@ -237,3 +237,72 @@ fn a_file_without_audio_is_refused() {
         Err(Error::NoAudioStream)
     ));
 }
+
+/// The generated corpus's video set (`cargo xtask corpus`), when it exists: no
+/// file opens a video decoder, and every file with audio decodes it to the end.
+#[test]
+fn no_video_decoder_is_opened_for_the_corpus_video_set() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let corpus = std::env::var_os("HELIKODU_CORPUS")
+        .map_or_else(|| root.join("target/corpus"), std::path::PathBuf::from);
+    let Ok(entries) = std::fs::read_dir(corpus.join("video")) else {
+        eprintln!(
+            "SKIPPED: no corpus video set under {} (make it with `cargo xtask corpus`)",
+            corpus.display()
+        );
+        return;
+    };
+    assert!(
+        codec_probe::is_active(),
+        "the avcodec_open2 probe is not in use"
+    );
+    let mut paths: Vec<_> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
+    paths.sort();
+    assert!(!paths.is_empty(), "the corpus video set is empty");
+    for path in paths {
+        codec_probe::take();
+        let media =
+            MediaFile::open(&path).unwrap_or_else(|e| panic!("open {}: {e}", path.display()));
+        let has_audio = media.audio_streams().next().is_some();
+        if has_audio {
+            let mut decoder = media
+                .into_decoder(StreamChoice::Auto)
+                .unwrap_or_else(|e| panic!("decoder for {}: {e}", path.display()));
+            let mut frames = 0;
+            while let Some(block) = decoder
+                .read()
+                .unwrap_or_else(|e| panic!("decode {}: {e}", path.display()))
+            {
+                frames += block.frames();
+            }
+            assert!(frames > 0, "{}: no audio decoded", path.display());
+        } else {
+            assert!(
+                matches!(
+                    media.into_decoder(StreamChoice::Auto),
+                    Err(Error::NoAudioStream)
+                ),
+                "{}: a decoder without an audio stream",
+                path.display()
+            );
+        }
+        let records = codec_probe::take();
+        let opened_video: Vec<&str> = records
+            .iter()
+            .filter(|r| r.is_video() && r.opened())
+            .map(|r| r.codec.as_str())
+            .collect();
+        assert!(
+            opened_video.is_empty(),
+            "{}: video decoders opened: {opened_video:?}",
+            path.display()
+        );
+        if has_audio {
+            assert!(
+                records.iter().any(|r| !r.is_video() && r.opened()),
+                "{}: the audio decoder was not recorded: {records:?}",
+                path.display()
+            );
+        }
+    }
+}

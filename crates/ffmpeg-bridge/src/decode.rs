@@ -3,6 +3,7 @@
 
 //! Decoding one audio stream to PCM, gapless trimming and sample-accurate seeking.
 
+mod anchor;
 mod audio_decoder;
 mod end_trim;
 mod owned;

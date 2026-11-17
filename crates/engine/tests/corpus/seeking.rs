@@ -6,49 +6,41 @@
 //! land aligned (once the decoder has settled, the samples after the seek match a
 //! straight decode best at that frame, not at a neighbouring one).
 //!
+//! Where the FFmpeg bridge has no exact anchor and the container's time stamps are
+//! coarser than a frame (Vorbis in WebM: milliseconds), it states how far a seek
+//! may land from its target (`AudioDecoder::seek_precision`); such a file is
+//! checked against that guarantee instead. Lossless files must always be exact.
+//! Files whose decoder output depends on its running state beyond any warm-up
+//! (Codec 2) are checked for position and length only (`NOT_COMPARABLE`).
+//!
 //! Lossy decoders that overlap frames or adapt a predictor start from a different
 //! state after a seek than in a straight decode, so their first frames differ. The
 //! table reports this warm-up: the frames until the output stays within -20 dB
 //! of the straight decode.
 
+use std::path::Path;
+
 use helikodu_engine::decode::{Decoder, PcmBlock};
+use helikodu_ffmpeg_bridge::{MediaFile, StreamChoice};
 use helikodu_model::audio::{MediaTime, SampleRate};
 
 use crate::decoding::{self, Decoded};
-use crate::formats::{known_gap, samples, strict};
+use crate::formats::{known_gap, samples, strict, unsupported_by_design};
 use crate::manifest::{Corpus, is_lossless};
 use crate::report::Table;
 
 /// Seeks known to miss in the FFmpeg bridge, with the reason. They are reported
 /// as gaps, not failures, unless `HELIKODU_CORPUS_STRICT` is set.
-const SEEK_GAPS: &[(&str, &str)] = &[
-    (
-        "formats/lossless/flac.oga",
-        "Ogg FLAC: seeks late in the file land 8192 frames early",
-    ),
-    ("formats/lossless/flac.mka", MILLISECONDS),
-    ("formats/lossy/vorbis.webm", MILLISECONDS),
-    ("formats/lossy/opus.webm", MILLISECONDS),
-    ("formats/lossy/wma-v1.wma", MILLISECONDS),
-    ("formats/lossy/wma-v2.wma", MILLISECONDS),
-    ("formats/lossy/nellymoser.flv", MILLISECONDS),
-    ("formats/lossy/adpcm-swf.flv", MILLISECONDS),
-    (
-        "formats/lossy/realaudio-14_4.ra",
-        "RealMedia: after a seek the stream ends early",
-    ),
-    (
-        "formats/pcm/wav-adpcm-ms.wav",
-        "ADPCM in WAV: seeks land 1 or 2 frames early",
-    ),
-    (
-        "formats/pcm/wav-adpcm-ima.wav",
-        "ADPCM in WAV: seeks land 1 or 2 frames early",
-    ),
-];
+const SEEK_GAPS: &[(&str, &str)] = &[];
 
-const MILLISECONDS: &str = "the container's time stamps are in milliseconds (Matroska, ASF, FLV): \
-     seeks land up to a few tens of frames off";
+/// Lossy files whose decode after a seek cannot be compared with the straight
+/// decode sample by sample, with the reason. Their seeks are checked for the
+/// reported position and the length of what follows only.
+const NOT_COMPARABLE: &[(&str, &str)] = &[(
+    "formats/speech/codec2.c2",
+    "Codec 2 synthesises phases from the decoder's running state (random for \
+     unvoiced speech), so the samples after a seek never match a straight decode",
+)];
 
 /// Frames compared after each seek. Lossy alignment is judged on the second half.
 const WINDOW: usize = 8192;
@@ -71,6 +63,15 @@ fn targets(frames: usize) -> Vec<usize> {
     out.retain(|&t| t < frames);
     out.dedup();
     out
+}
+
+/// How far the FFmpeg bridge says a seek in `path` may land from its target.
+fn seek_precision(path: &Path) -> Option<u64> {
+    let decoder = MediaFile::open(path)
+        .ok()?
+        .into_decoder(StreamChoice::Auto)
+        .ok()?;
+    Some(decoder.seek_precision())
 }
 
 /// The next `frames` frames of `decoder`.
@@ -143,21 +144,27 @@ fn seeks_are_exact_or_aligned_across_formats() {
     };
     let mut table = Table::new(
         "seeking",
-        &["file", "codec", "frames", "seeks", "check", "warm-up"],
+        &[
+            "file",
+            "codec",
+            "frames",
+            "seeks",
+            "check",
+            "precision",
+            "warm-up",
+        ],
     );
     for entry in samples(&corpus) {
         let path = corpus.path(&entry);
         let all = match decoding::decode(&path) {
             Ok(all) => all,
             Err(error) => {
-                let cells = vec![
-                    entry.display(),
-                    "-".into(),
-                    "-".into(),
-                    "-".into(),
-                    "-".into(),
-                    "-".into(),
-                ];
+                let mut cells = vec![entry.display()];
+                cells.extend(["-"; 6].map(String::from));
+                if let Some(reason) = unsupported_by_design(&entry) {
+                    table.unsupported(cells, reason);
+                    continue;
+                }
                 match known_gap(&entry) {
                     Some(reason) if !strict() => table.gap(cells, reason),
                     _ => table.row(cells, Some(error.to_string())),
@@ -169,6 +176,15 @@ fn seeks_are_exact_or_aligned_across_formats() {
         let rate = SampleRate::new(all.rate).unwrap();
         let mut decoder = decoding::open(&path).unwrap();
         let mut problems = Vec::new();
+        let precision = seek_precision(&path).unwrap_or(0);
+        if lossless && precision != 0 {
+            problems.push(format!(
+                "lossless, but the bridge only promises seeks within {precision} frames"
+            ));
+        }
+        let comparable = !NOT_COMPARABLE.iter().any(|(p, _)| *p == entry.path);
+        // How far lossy seeks may land off: the stated precision.
+        let allowed = i64::try_from(precision).unwrap_or(i64::MAX);
         let mut warm_up = Some(0);
         let targets = targets(all.frames());
         for &target in &targets {
@@ -203,6 +219,10 @@ fn seeks_are_exact_or_aligned_across_formats() {
                 }
                 continue;
             }
+            if !comparable {
+                warm_up = None;
+                continue;
+            }
             // Alignment, on the second half, after the warm-up.
             let half = window / 2 * all.channels;
             let (late_got, late_target) = (&got[half..], target + window / 2);
@@ -210,17 +230,29 @@ fn seeks_are_exact_or_aligned_across_formats() {
             let (best, best_error) = best_offset(&all, late_got, late_target, SEARCH);
             if best != 0 && best_error < at_target {
                 let (far, _) = wide_offset(&all, late_got, late_target);
-                problems.push(format!("seek to {target}: lands {far:+} frames off"));
+                if far.abs() > allowed {
+                    problems.push(format!(
+                        "seek to {target}: lands {far:+} frames off (allowed: {precision})"
+                    ));
+                }
             }
             warm_up = warm_up
                 .zip(settled_after(&got, want, all.channels))
                 .map(|(a, b)| a.max(b));
         }
-        let check = if lossless { "exact" } else { "aligned" };
-        let warm_up = match (lossless, warm_up) {
-            (true, _) => "-".into(),
-            (false, Some(frames)) => format!("{frames} frames"),
-            (false, None) => "not settled".into(),
+        let check = match (lossless, comparable) {
+            (true, _) => "exact",
+            (false, true) => "aligned",
+            (false, false) => "position",
+        };
+        let precision = match precision {
+            0 => "exact".to_owned(),
+            frames => format!("±{frames} frames"),
+        };
+        let warm_up = match warm_up {
+            _ if lossless || !comparable => "-".into(),
+            Some(frames) => format!("{frames} frames"),
+            None => "not settled".into(),
         };
         let cells = vec![
             entry.display(),
@@ -228,6 +260,7 @@ fn seeks_are_exact_or_aligned_across_formats() {
             all.frames().to_string(),
             targets.len().to_string(),
             check.into(),
+            precision,
             warm_up,
         ];
         let gap = SEEK_GAPS.iter().find(|(path, _)| *path == entry.path);

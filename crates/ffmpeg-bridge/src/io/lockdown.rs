@@ -32,15 +32,24 @@ use std::sync::OnceLock;
 use crate::error::{Error, check};
 use crate::ffi::{self, ff, media_type};
 
-/// The demuxers the player accepts. Each reads one self-contained file.
+/// The demuxers the player accepts. Each reads one self-contained file and
+/// recognises it by its content (FFmpeg's names: the MPEG program-stream demuxer is
+/// `mpeg`, not `mpegps`).
 ///
 /// Left out on purpose because they open other resources: `hls`, `dash`, `concat`,
 /// `imf`, the image-sequence demuxers, `mlv`, `vobsub`, `dvdvideo`, `avisynth`,
-/// `vapoursynth`, `sap`, `rtsp`, `sdp` and every device input. A name FFmpeg does
-/// not know is harmless here: it matches nothing.
-pub(crate) const FORMAT_WHITELIST: &CStr = c"aac,ac3,aea,aiff,amr,amrnb,amrwb,ape,asf,au,avi,\
-bit,caf,dsf,dts,dtshd,dv,eac3,flac,flv,g722,g723_1,g726,g726le,g729,gsm,iff,loas,matroska,mlp,\
-mov,mp3,mpc,mpc8,mpegps,mpegts,mxf,nut,oma,ogg,rm,shn,tak,truehd,tta,voc,vqf,w64,wav,wsd,wv,xwma";
+/// `vapoursynth`, `sap`, `rtsp`, `sdp` and every device input.
+///
+/// Left out because they cannot recognise a file by its content: the raw,
+/// headerless streams (`sbc`, `aptx`, `aptx_hd`, `dfpwm`, `g722`, `g723_1`, `g726`,
+/// `g726le`, `g729`, `codec2raw`). FFmpeg picks them only by file name extension,
+/// and the bridge never gives FFmpeg a file name, so they could never be chosen.
+///
+/// A name FFmpeg does not know is harmless here: it matches nothing.
+pub(crate) const FORMAT_WHITELIST: &CStr = c"aac,ac3,adx,aea,aiff,amr,amrnb,amrwb,ape,asf,au,\
+avi,avr,bit,caf,codec2,dsf,dts,dtshd,dv,eac3,flac,flv,gsm,hcom,iff,ilbc,ircam,lc3,loas,matroska,\
+mlp,mmf,mov,mp3,mpc,mpc8,mpeg,mpegts,mxf,nistsphere,nut,oma,ogg,rm,shn,tak,truehd,tta,voc,vqf,\
+w64,wav,wsaud,wsd,wv,xwma";
 
 /// The only protocol nested opens could use, if one ever got past `io_open`.
 const PROTOCOL_WHITELIST: &CStr = c"file";
@@ -206,9 +215,47 @@ mod tests {
         let list = FORMAT_WHITELIST.to_str().expect("ASCII");
         let names: Vec<&str> = list.split(',').collect();
         for bad in [
-            "hls", "dash", "concat", "image2", "sdp", "rtsp", "imf", "mlv",
+            "hls", "dash", "concat", "image2", "sdp", "rtsp", "imf", "mlv", "vobsub", "dvdvideo",
         ] {
             assert!(!names.contains(&bad), "{bad} must not be listed");
+        }
+    }
+
+    #[test]
+    fn format_whitelist_names_demuxers_the_running_ffmpeg_knows() {
+        let list = FORMAT_WHITELIST.to_str().expect("ASCII");
+        // Names that differ from the file extension or the format's common name:
+        // a wrong one would silently refuse the format.
+        for name in ["mpeg", "matroska", "nistsphere", "wsaud", "mmf", "ircam"] {
+            assert!(list.split(',').any(|n| n == name), "{name} missing");
+            let c = CString::new(name).expect("no NUL");
+            // SAFETY: a lookup in FFmpeg's static demuxer table by a NUL-terminated
+            // name; the result is only compared with NULL.
+            let found = unsafe { ff::av_find_input_format(c.as_ptr()) };
+            assert!(!found.is_null(), "FFmpeg has no demuxer named {name}");
+        }
+        assert!(!list.split(',').any(|n| n == "mpegps"));
+    }
+
+    #[test]
+    fn format_whitelist_has_no_extension_only_demuxers() {
+        let list = FORMAT_WHITELIST.to_str().expect("ASCII");
+        for raw in [
+            "sbc",
+            "aptx",
+            "aptx_hd",
+            "dfpwm",
+            "g722",
+            "g723_1",
+            "g726",
+            "g726le",
+            "g729",
+            "codec2raw",
+        ] {
+            assert!(
+                !list.split(',').any(|n| n == raw),
+                "{raw} must not be listed"
+            );
         }
     }
 
