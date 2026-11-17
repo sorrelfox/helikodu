@@ -57,7 +57,7 @@ pub struct WatchOptions {
     /// How long events wait at most, however busy the folder. 1 s by default.
     pub max_delay: Duration,
     /// How often a library folder that cannot be watched with inotify is rescanned.
-    /// 15 minutes by default.
+    /// 30 minutes by default.
     pub poll_interval: Duration,
     /// How often the watcher checks that every library folder is still there. 2 s
     /// by default.
@@ -79,7 +79,7 @@ impl WatchOptions {
             initial_scan: true,
             debounce: Duration::from_millis(500),
             max_delay: Duration::from_secs(1),
-            poll_interval: Duration::from_secs(15 * 60),
+            poll_interval: Duration::from_secs(30 * 60),
             check_interval: Duration::from_secs(2),
             grace_period: Duration::from_secs(30 * 24 * 60 * 60),
             mountinfo: PathBuf::from(mounts::MOUNTINFO),
