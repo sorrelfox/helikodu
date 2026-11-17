@@ -10,17 +10,22 @@ repository.workspace = true
 publish.workspace = true
 
 [features]
-default = ["pipewire", "alsa"]
+default = ["pipewire", "alsa", "dsd"]
 # The native PipeWire output backend.
 pipewire = ["dep:pipewire"]
 # The native ALSA output backend.
 alsa = ["dep:alsa"]
+# The DSF/DFF reader of `extra-decoders`, which decodes DSD files to PCM.
+dsd = ["dep:helikodu-extra-decoders", "helikodu-extra-decoders/dsd"]
 
 [dependencies]
 alsa = { workspace = true, optional = true }
+helikodu-extra-decoders = { workspace = true, optional = true }
+helikodu-ffmpeg-bridge.workspace = true
 helikodu-model.workspace = true
 pipewire = { workspace = true, optional = true }
 rtrb.workspace = true
+rubato.workspace = true
 thiserror.workspace = true
 
 [lints]
