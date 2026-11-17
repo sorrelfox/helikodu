@@ -48,6 +48,7 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
     migration!(2, "0002", "search_index"),
     migration!(3, "0003", "identity_fingerprint"),
     migration!(4, "0004", "search_support"),
+    migration!(5, "0005", "album_model"),
 ];
 
 /// The schema version this build creates and understands.

@@ -447,3 +447,100 @@ fn readers_share_the_pool_across_threads() {
         }
     });
 }
+
+/// A database file at schema version 4, as an earlier version left it, with a
+/// track, its album and people, an orphaned person and genre.
+fn version_4_database(path: &Path) {
+    let c = Connection::open(path).unwrap();
+    c.create_collation("HK_LOCALE", |a: &str, b: &str| a.cmp(b))
+        .unwrap();
+    c.execute_batch(
+        "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL,
+                                         applied_at INTEGER NOT NULL) STRICT;",
+    )
+    .unwrap();
+    for (version, name, sql) in [
+        (
+            1,
+            "library_schema",
+            include_str!("../migrations/0001_library_schema.sql"),
+        ),
+        (
+            2,
+            "search_index",
+            include_str!("../migrations/0002_search_index.sql"),
+        ),
+        (
+            3,
+            "identity_fingerprint",
+            include_str!("../migrations/0003_identity_fingerprint.sql"),
+        ),
+        (
+            4,
+            "search_support",
+            include_str!("../migrations/0004_search_support.sql"),
+        ),
+    ] {
+        c.execute_batch(sql).unwrap();
+        c.execute(
+            "INSERT INTO schema_migrations VALUES (?1, ?2, 0)",
+            rusqlite::params![version, name],
+        )
+        .unwrap();
+    }
+    c.execute_batch(
+        "INSERT INTO roots (id, path, path_text) VALUES (1, CAST('/m' AS BLOB), '/m');
+         INSERT INTO dirs (id, root_id, path, path_text) VALUES (1, 1, CAST('/m/a' AS BLOB), '/m/a');
+         INSERT INTO files (id, dir_id, name, name_text, size, mtime_ns, inode, scan_state)
+             VALUES (1, 1, CAST('x.flac' AS BLOB), 'x.flac', 10, 5, 7, 0),
+                    (2, 1, CAST('x.cue' AS BLOB), 'x.cue', 10, 5, 8, 2);
+         INSERT INTO identities (id, created_at) VALUES (1, 0);
+         INSERT INTO albums (id, album_key, title) VALUES (1, 'ann|album|', 'Album'),
+                                                          (2, 'gone', 'Gone');
+         INSERT INTO tracks (id, file_id, identity_id, album_id, title, added_at)
+             VALUES (1, 1, 1, 1, 'Song', 0);
+         INSERT INTO people (id, name, sort_name, fold) VALUES (1, 'Ann', 'Ann', 'ann'),
+                                                               (2, 'Nobody', 'Nobody', 'nobody');
+         INSERT INTO track_people VALUES (1, 1, 0, 0);
+         INSERT INTO genres (id, name, fold) VALUES (1, 'Unused', 'unused');",
+    )
+    .unwrap();
+}
+
+#[test]
+fn migration_5_keeps_the_library_and_reads_every_file_again() {
+    let dir = scratch_dir("migrate-5");
+    let path = dir.join("library.db");
+    version_4_database(&path);
+    let db = Database::open(&DatabaseConfig::file(&path)).unwrap();
+    assert_eq!(db.schema_version(), SCHEMA_VERSION);
+    let count = |sql: &'static str| -> i64 {
+        db.read(move |c| c.query_row(sql, [], |row| row.get(0)))
+            .unwrap()
+    };
+    assert_eq!(count("SELECT count(*) FROM tracks WHERE album_id = 1"), 1);
+    assert_eq!(
+        count("SELECT count(*) FROM albums"),
+        1,
+        "the orphan album is gone"
+    );
+    assert_eq!(
+        count("SELECT count(*) FROM people"),
+        1,
+        "the orphan person is gone"
+    );
+    assert_eq!(count("SELECT count(*) FROM genres"), 0);
+    assert_eq!(
+        count("SELECT count(*) FROM files WHERE mtime_ns IS NULL"),
+        1
+    );
+    assert_eq!(
+        count("SELECT count(*) FROM files WHERE scan_state = 2 AND mtime_ns = 5"),
+        1,
+        "CUE sheets keep their stamp"
+    );
+    assert_eq!(count("SELECT masked FROM roots"), 0);
+    assert_eq!(count("SELECT section FROM tracks"), 0);
+    drop(db);
+    fs::remove_dir_all(dir).unwrap();
+}

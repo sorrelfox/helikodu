@@ -16,6 +16,8 @@ use super::changes::{Notice, Pending};
 use super::mounts::{Mount, max_user_watches, mount_of, needs_polling, read_mounts};
 use super::{Message, PollReason, RescanReason, WatchEvent, WatchMode, WatchOptions};
 use crate::catalog::RootId;
+use crate::catalog::roots;
+use crate::db::unix_time::to_unix_seconds;
 use crate::scan::filter::classify;
 use crate::scan::{self, CancelToken, ScanTarget, Scope, SymlinkPolicy};
 use crate::{DbError, Library};
@@ -81,6 +83,30 @@ impl WatchThread {
 
     fn emit(&self, event: WatchEvent) {
         let _ = self.events.send(event);
+    }
+
+    /// Records the state of the library folder `index` in the database: whether it
+    /// is masked, and whether it is polled.
+    fn record(&self, index: usize, masked: Option<bool>, polled: Option<bool>) {
+        let root = &self.roots[index];
+        let Some(id) = root.id else {
+            return;
+        };
+        let now = to_unix_seconds(SystemTime::now());
+        let written = self.library.database().writer().and_then(|writer| {
+            writer.write(move |c| {
+                if let Some(masked) = masked {
+                    roots::set_masked(c, id, masked, now)?;
+                }
+                if let Some(polled) = polled {
+                    roots::set_polled(c, id, polled)?;
+                }
+                Ok(())
+            })
+        });
+        if let Err(e) = written {
+            self.error(Some(&root.path), e.to_string());
+        }
     }
 
     fn error(&self, root: Option<&Path>, message: impl Into<String>) {
@@ -160,6 +186,8 @@ impl WatchThread {
         for index in 0..self.roots.len() {
             match self.availability(index, mounts.as_deref()) {
                 Availability::There { .. } => {
+                    // Masked when the program last ran, perhaps.
+                    self.record(index, Some(false), None);
                     self.start_root(index, mounts.as_deref());
                     if self.options.initial_scan {
                         self.rescan(index, Scope::Root, RescanReason::Started);
@@ -205,6 +233,8 @@ impl WatchThread {
                 Err(e) => self.poll(index, poll_reason(&e)),
             },
         };
+        let polled = matches!(mode, WatchMode::Polling { .. });
+        self.record(index, None, Some(polled));
         self.emit(WatchEvent::Watching { root: path, mode });
     }
 
@@ -266,6 +296,7 @@ impl WatchThread {
             Err(e) if matches!(e.kind, notify::ErrorKind::MaxFilesWatch) => {
                 // Folders created from now on would not be watched.
                 let mode = self.poll(index, poll_reason(&e));
+                self.record(index, None, Some(true));
                 self.emit(WatchEvent::Watching { root: path, mode });
                 self.rescan(index, Scope::Root, RescanReason::WatchLimit);
             }
@@ -333,6 +364,7 @@ impl WatchThread {
             Availability::Gone(reason) if !masked => self.mask(index, reason),
             Availability::There { .. } if masked => {
                 self.roots[index].masked = false;
+                self.record(index, Some(false), None);
                 let path = self.roots[index].path.clone();
                 self.emit(WatchEvent::RootUnmasked { root: path });
                 self.start_root(index, mounts);
@@ -401,6 +433,7 @@ impl WatchThread {
         root.next_poll = None;
         let path = root.path.clone();
         self.pending.forget_root(index);
+        self.record(index, Some(true), None);
         self.emit(WatchEvent::RootMasked { root: path, reason });
     }
 

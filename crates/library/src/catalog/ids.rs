@@ -46,3 +46,41 @@ pub(crate) fn sql_track_id(track: TrackId) -> i64 {
 pub(crate) fn track_id_from_sql(id: i64) -> TrackId {
     TrackId::new(u64::try_from(id).unwrap_or(0))
 }
+
+macro_rules! row_id {
+    ($(#[$doc:meta])* $name:ident, $what:literal) => {
+        $(#[$doc])*
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub struct $name(pub(crate) i64);
+
+        impl $name {
+            #[doc = concat!("The number of the ", $what, " in the database.")]
+            pub fn get(self) -> i64 {
+                self.0
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+    };
+}
+
+row_id!(
+    /// An album. Its id stays while its tracks keep forming it; an album that splits
+    /// or merges with another may get a new one.
+    AlbumId,
+    "album"
+);
+row_id!(
+    /// A person: an artist, album artist, composer, performer, conductor and so on.
+    PersonId,
+    "person"
+);
+row_id!(
+    /// A genre.
+    GenreId,
+    "genre"
+);

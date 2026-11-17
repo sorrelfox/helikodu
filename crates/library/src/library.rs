@@ -10,6 +10,10 @@ use std::time::{Duration, SystemTime};
 use helikodu_model::library::TrackId;
 
 use crate::catalog::{self, IdentityId, RootId, TrackFingerprint, TrackRecord, TrackWrite};
+use crate::catalog::{
+    AlbumDetail, AlbumId, AlbumQuery, AlbumSummary, ArtistQuery, ArtistSummary, GenreQuery,
+    GenreSummary, Paged, RootState, TrackQuery, TrackSummary,
+};
 use crate::db::unix_time::{to_millis, to_unix_seconds};
 use crate::db::{Database, DatabaseConfig, DbError, LocaleCollation};
 use crate::scan::{self, CancelToken, ScanError, ScanEvent, ScanOptions, ScanSummary};
@@ -208,6 +212,71 @@ impl Library {
     ) -> Result<Vec<IdentityId>, DbError> {
         self.db
             .read(|c| catalog::write::identities_with(c, fingerprint))
+    }
+
+    // --- Browsing ------------------------------------------------------------------
+
+    /// One page of albums: all of them, an artist's, the ones an artist appears on,
+    /// compilations or a genre's, in the order of `query.sort`. Titles and names sort
+    /// in the alphabet order of the interface language.
+    pub fn albums(&self, query: &AlbumQuery) -> Result<Paged<AlbumSummary>, DbError> {
+        self.db.read(|c| catalog::albums(c, query))
+    }
+
+    /// The album `album` with its artists, genres, discs and tracks in order; `None`
+    /// if there is no such album or all its tracks are in masked library folders.
+    pub fn album(&self, album: AlbumId) -> Result<Option<AlbumDetail>, DbError> {
+        self.db.read(|c| catalog::album(c, album, false))
+    }
+
+    /// Like [`album`](Self::album), with the tracks in masked library folders.
+    pub fn album_including_masked(&self, album: AlbumId) -> Result<Option<AlbumDetail>, DbError> {
+        self.db.read(|c| catalog::album(c, album, true))
+    }
+
+    /// One page of the people in a role (artists, album artists, composers,
+    /// conductors, performers, …), by sort name.
+    pub fn artists(&self, query: &ArtistQuery) -> Result<Paged<ArtistSummary>, DbError> {
+        self.db.read(|c| catalog::artists(c, query))
+    }
+
+    /// One page of the genres, by name.
+    pub fn genres(&self, query: &GenreQuery) -> Result<Paged<GenreSummary>, DbError> {
+        self.db.read(|c| catalog::genres(c, query))
+    }
+
+    /// One page of the tracks of an album, a person or a genre.
+    pub fn tracks(&self, query: &TrackQuery) -> Result<Paged<TrackSummary>, DbError> {
+        self.db.read(|c| catalog::tracks(c, query))
+    }
+
+    // --- Library folders -------------------------------------------------------------
+
+    /// Every library folder with its state, in path order.
+    pub fn root_states(&self) -> Result<Vec<RootState>, DbError> {
+        self.db.read(catalog::roots::root_states)
+    }
+
+    /// Masks the library folder `root`, as the watcher does when it is gone, or
+    /// unmasks it. While it is masked (and [`RootState::mask_when_missing`] is set),
+    /// the browsing queries leave out its tracks.
+    pub fn set_root_masked(&self, root: RootId, masked: bool) -> Result<(), DbError> {
+        let now = to_unix_seconds(SystemTime::now());
+        if self.write(move |c| catalog::roots::set_masked(c, root, masked, now))? {
+            Ok(())
+        } else {
+            Err(DbError::UnknownRoot(root))
+        }
+    }
+
+    /// Sets whether the tracks of `root` are hidden while it is masked (the default)
+    /// or still shown.
+    pub fn set_mask_when_missing(&self, root: RootId, hide: bool) -> Result<(), DbError> {
+        if self.write(move |c| catalog::roots::set_mask_when_missing(c, root, hide))? {
+            Ok(())
+        } else {
+            Err(DbError::UnknownRoot(root))
+        }
     }
 
     // --- Scanning ------------------------------------------------------------------

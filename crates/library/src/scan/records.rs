@@ -10,14 +10,18 @@ use helikodu_model::audio::SampleRate;
 
 use super::filter::{FileClass, is_audiobook};
 use super::walk::Found;
-use crate::catalog::{AudioProperties, FileStamp, RootId, TrackKind, TrackRecord, TrackTags};
+use crate::catalog::{
+    ArtistRole, AudioProperties, CatalogTags, Credit, FileStamp, RootId, TrackKind, TrackRecord,
+    TrackSection, TrackTags,
+};
 use crate::stats::Rating;
 
 /// The tracks of the file `found`, read by a worker into `report`: one per track of
-/// its CUE sheet, or one for the whole file.
+/// its CUE sheet; or else, when the container has two chapters or more, one per
+/// chapter; or else one for the whole file.
 ///
 /// The file's stamp is the one the walk saw, so a file that changed while it was
-/// being read is read again by the next scan. Chapters are not tracks.
+/// being read is read again by the next scan.
 pub(crate) fn tracks_of(root: RootId, found: &Found, report: &FileReport) -> Vec<TrackRecord> {
     let file = FileStamp {
         size: found.stamp.size,
@@ -39,25 +43,38 @@ pub(crate) fn tracks_of(root: RootId, found: &Found, report: &FileReport) -> Vec
     // A track that starts after the end of the file (a sheet written for a longer
     // rip) is left out; without any track left, the file is one track.
     let length = base.audio.duration;
+    let within =
+        |track: &&VirtualTrack| length.is_none_or(|length| track.start().as_duration() < length);
     let sheet_tracks: Vec<TrackRecord> = report
         .cue
         .iter()
         .flat_map(|cue| &cue.tracks)
-        .filter(|track| length.is_none_or(|length| track.start().as_duration() < length))
-        .map(|track| cue_track(&base, track))
+        .filter(within)
+        .map(|track| section_track(&base, track, TrackSection::CueSheet))
         .collect();
     if !sheet_tracks.is_empty() {
         return sheet_tracks;
     }
+    let chapters: Vec<TrackRecord> = report
+        .chapters
+        .iter()
+        .filter(within)
+        .map(|chapter| section_track(&base, chapter, TrackSection::Chapter))
+        .collect();
+    if chapters.len() > 1 {
+        return chapters;
+    }
     let tags = &report.tags.tags;
     vec![TrackRecord {
         tags: track_tags(tags),
+        catalog: catalog_tags(tags),
         rating_from_tags: rating(tags),
         ..base
     }]
 }
 
-fn cue_track(base: &TrackRecord, track: &VirtualTrack) -> TrackRecord {
+/// A track that is a part of the file: a CUE sheet track or a chapter.
+fn section_track(base: &TrackRecord, track: &VirtualTrack, section: TrackSection) -> TrackRecord {
     let start = track.start();
     let end = track.end();
     let mut audio = base.audio.clone();
@@ -72,8 +89,10 @@ fn cue_track(base: &TrackRecord, track: &VirtualTrack) -> TrackRecord {
     TrackRecord {
         sub_index: track.number,
         frames,
+        section,
         audio,
         tags: track_tags(&track.tags),
+        catalog: catalog_tags(&track.tags),
         rating_from_tags: rating(&track.tags),
         ..base.clone()
     }
@@ -117,6 +136,62 @@ fn track_tags(tags: &meta_tags::TrackTags) -> TrackTags {
         date: tags.date.clone(),
         year: tags.year(),
     }
+}
+
+/// The tags of the album and artist model.
+fn catalog_tags(tags: &meta_tags::TrackTags) -> CatalogTags {
+    let mb = &tags.musicbrainz;
+    CatalogTags {
+        artist_credit: tags.artist.clone(),
+        artist_sort: tags.artist_sort.clone(),
+        album_artist_credit: tags.album_artist.clone(),
+        album_artist_sort: tags.album_artist_sort.clone(),
+        album_sort: tags.album_sort.clone(),
+        composer_sort: tags.composer_sort.clone(),
+        credits: tags
+            .credits
+            .iter()
+            .filter_map(|credit| {
+                Some(Credit {
+                    role: role(credit.role)?,
+                    name: credit.name.clone(),
+                    instrument: credit.instrument.clone(),
+                })
+            })
+            .collect(),
+        compilation: tags.compilation,
+        release_types: tags.release_types.clone(),
+        release_mbid: mb.release.clone(),
+        release_group_mbid: mb.release_group.clone(),
+        artist_mbids: mb.artists.clone(),
+        album_artist_mbids: mb.album_artists.clone(),
+        track_total: tags.track_total,
+        disc_total: tags.disc_total,
+        disc_subtitle: tags.disc_subtitle.clone(),
+        original_year: tags.original_year(),
+        work: tags.work.clone(),
+        movement: tags.movement.clone(),
+        movement_no: tags.movement_number,
+        has_lyrics: tags.has_lyrics,
+    }
+}
+
+/// The library's role for a credit; the artists, album artists and composers have
+/// their own fields.
+fn role(role: Role) -> Option<ArtistRole> {
+    Some(match role {
+        Role::Artist | Role::AlbumArtist | Role::Composer => return None,
+        Role::Conductor => ArtistRole::Conductor,
+        Role::Lyricist => ArtistRole::Lyricist,
+        Role::Writer => ArtistRole::Writer,
+        Role::Arranger => ArtistRole::Arranger,
+        Role::Remixer => ArtistRole::Remixer,
+        Role::Producer => ArtistRole::Producer,
+        Role::Engineer => ArtistRole::Engineer,
+        Role::Mixer => ArtistRole::Mixer,
+        Role::DjMixer => ArtistRole::DjMixer,
+        Role::Performer => ArtistRole::Performer,
+    })
 }
 
 fn rating(tags: &meta_tags::TrackTags) -> Option<Rating> {

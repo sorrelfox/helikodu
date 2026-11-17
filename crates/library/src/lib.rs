@@ -19,6 +19,12 @@ mod stats;
 mod watch;
 
 pub use catalog::{
+    AlbumDetail, AlbumFilter, AlbumId, AlbumQuery, AlbumSort, AlbumSummary, ArtistQuery, ArtistRef,
+    ArtistRole, ArtistSummary, CatalogTags, Credit, Disc, GenreId, GenreQuery, GenreRef,
+    GenreSummary, MAX_PAGE, Page, Paged, PersonId, RootState, TrackFilter, TrackQuery,
+    TrackSection, TrackSummary,
+};
+pub use catalog::{
     AudioProperties, FileStamp, IdentityId, RootId, TrackChange, TrackFingerprint, TrackKind,
     TrackRecord, TrackTags, TrackWrite,
 };

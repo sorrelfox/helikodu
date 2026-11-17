@@ -56,6 +56,9 @@ pub(crate) enum Role {
     Reader,
 }
 
+/// How many prepared statements a connection keeps.
+const STATEMENT_CACHE: usize = 256;
+
 /// Opens a connection with the pragmas for its role, the `HK_LOCALE` collation and the
 /// SQL functions.
 pub(crate) fn open(
@@ -78,6 +81,9 @@ pub(crate) fn open(
         }
     };
     connection.busy_timeout(BUSY_TIMEOUT)?;
+    // Writing a track runs some fifty different statements, and preparing one that
+    // fires triggers costs more than running it: keep them all prepared.
+    connection.set_prepared_statement_cache_capacity(STATEMENT_CACHE);
     connection.pragma_update(None, "temp_store", "MEMORY")?;
     match role {
         Role::Writer => {

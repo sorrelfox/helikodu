@@ -19,8 +19,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use helikodu_library::{
-    DatabaseConfig, Library, PollReason, RescanReason, ScanOptions, WatchEvent, WatchMode,
-    WatchOptions, Watcher, path_to_blob,
+    DatabaseConfig, Library, PollReason, RescanReason, ScanOptions, TrackQuery, WatchEvent,
+    WatchMode, WatchOptions, Watcher, path_to_blob,
 };
 use support::{flac, folder, have_ffmpeg, worker_program};
 
@@ -408,6 +408,7 @@ fn a_network_folder_is_polled() {
         }),
         "{events:#?}"
     );
+    assert!(library.root_states().unwrap()[0].polled);
 
     let second = root.join("second.flac");
     flac(&second, 550, 1, &[("title", "Second")]);
@@ -456,6 +457,11 @@ fn a_folder_that_disappears_is_masked_until_it_returns() {
         Some(false),
         "not marked missing"
     );
+    // The mask is in the database, and the browsing queries leave the track out.
+    let state = library.root_states().unwrap().remove(0);
+    assert!(state.masked && !state.polled, "{state:?}");
+    let shown = |library: &Library| library.tracks(&TrackQuery::default()).unwrap().total;
+    assert_eq!(shown(&library), 0);
 
     // It comes back: unmasked and rescanned, nothing lost.
     fs::rename(&aside, &root).unwrap();
@@ -484,6 +490,8 @@ fn a_folder_that_disappears_is_masked_until_it_returns() {
     );
     assert_eq!(library.track_at(&song, 0).unwrap(), Some(track));
     assert_eq!(file_state(&library, &song), Some(false));
+    assert!(!library.root_states().unwrap()[0].masked);
+    assert_eq!(shown(&library), 1);
 
     // Watched again: a new file appears.
     let staging = folder("watch-mask-staging");
@@ -529,6 +537,11 @@ fn an_empty_mount_point_is_masked() {
         Some(false),
         "not marked missing"
     );
+    // The mask is in the database, and the browsing queries leave the track out.
+    let state = library.root_states().unwrap().remove(0);
+    assert!(state.masked && !state.polled, "{state:?}");
+    let shown = |library: &Library| library.tracks(&TrackQuery::default()).unwrap().total;
+    assert_eq!(shown(&library), 0);
 
     fs::rename(aside.join("song.flac"), &song).unwrap();
     mount_table(&table, &mounted);

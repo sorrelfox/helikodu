@@ -27,8 +27,14 @@ pub struct TrackRecord {
     pub kind: TrackKind,
     /// The audio properties.
     pub audio: AudioProperties,
+    /// What part of the file the track is: the whole file, a track of a CUE sheet or
+    /// a chapter.
+    pub section: TrackSection,
     /// The tags.
     pub tags: TrackTags,
+    /// The tags of the album and artist model beyond [`TrackTags`]: credits, sort
+    /// names, MusicBrainz identifiers, the compilation flag and the disc.
+    pub catalog: CatalogTags,
     /// The rating found in the tags. It is taken only when the track first enters the
     /// library with a new identity; from then on the database wins.
     pub rating_from_tags: Option<Rating>,
@@ -44,8 +50,10 @@ impl TrackRecord {
             sub_index: 0,
             frames: None,
             kind: TrackKind::Music,
+            section: TrackSection::Whole,
             audio: AudioProperties::default(),
             tags: TrackTags::default(),
+            catalog: CatalogTags::default(),
             rating_from_tags: None,
         }
     }
@@ -102,6 +110,40 @@ impl TrackKind {
     }
 }
 
+/// What part of its file a track is.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum TrackSection {
+    /// The whole file, the default.
+    #[default]
+    Whole,
+    /// A track of a CUE sheet, external or embedded in the file.
+    CueSheet,
+    /// A chapter of the container (MP4/M4B, Matroska, Ogg, ID3v2 `CHAP`).
+    Chapter,
+}
+
+impl TrackSection {
+    /// The value of `tracks.section`.
+    pub(crate) fn to_sql(self) -> i64 {
+        match self {
+            Self::Whole => 0,
+            Self::CueSheet => 1,
+            Self::Chapter => 2,
+        }
+    }
+
+    /// The section stored as `value`; the whole file for a value this build does not
+    /// know.
+    pub(crate) fn from_sql(value: i64) -> Self {
+        match value {
+            1 => Self::CueSheet,
+            2 => Self::Chapter,
+            _ => Self::Whole,
+        }
+    }
+}
+
 /// Audio properties of a track, as the decoder reports them.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AudioProperties {
@@ -146,4 +188,140 @@ pub struct TrackTags {
     pub date: Option<String>,
     /// The release year.
     pub year: Option<i32>,
+}
+
+/// The tags of the album and artist model beyond [`TrackTags`]. Every field is
+/// optional; without them a track is grouped by its album title, album artists or
+/// artists, and year alone.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CatalogTags {
+    /// The track artist as credited, such as `A feat. B`. Without it, the artists
+    /// joined with `, ` are shown.
+    pub artist_credit: Option<String>,
+    /// The track artist for sorting. It names the person when there is one artist.
+    pub artist_sort: Option<String>,
+    /// The album artist as credited, such as `A & B`. Without it, the album artists
+    /// joined with `, `.
+    pub album_artist_credit: Option<String>,
+    /// The album artist for sorting.
+    pub album_artist_sort: Option<String>,
+    /// The album title for sorting.
+    pub album_sort: Option<String>,
+    /// The composer for sorting. It names the person when there is one composer.
+    pub composer_sort: Option<String>,
+    /// The people credited besides the artists, album artists and composers
+    /// (conductors, performers, lyricists, …), in tag order within each role.
+    pub credits: Vec<Credit>,
+    /// The compilation flag (`COMPILATION`, `TCMP`, `cpil`), when the file has one.
+    pub compilation: Option<bool>,
+    /// The release types, such as `album` and `live`.
+    pub release_types: Vec<String>,
+    /// The MusicBrainz release ID. When present it identifies the album.
+    pub release_mbid: Option<String>,
+    /// The MusicBrainz release group ID.
+    pub release_group_mbid: Option<String>,
+    /// The MusicBrainz IDs of the track artists, in the order of
+    /// [`TrackTags::artists`].
+    pub artist_mbids: Vec<String>,
+    /// The MusicBrainz IDs of the album artists, in the order of
+    /// [`TrackTags::album_artists`].
+    pub album_artist_mbids: Vec<String>,
+    /// The number of tracks on the disc.
+    pub track_total: Option<u32>,
+    /// The number of discs.
+    pub disc_total: Option<u32>,
+    /// The disc's title.
+    pub disc_subtitle: Option<String>,
+    /// The year of the original release.
+    pub original_year: Option<i32>,
+    /// The classical work.
+    pub work: Option<String>,
+    /// The movement name.
+    pub movement: Option<String>,
+    /// The movement number.
+    pub movement_no: Option<u32>,
+    /// Whether the file carries lyrics.
+    pub has_lyrics: bool,
+}
+
+/// One person credited on a track besides its artists, album artists and composers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Credit {
+    /// What they did.
+    pub role: ArtistRole,
+    /// The name as tagged.
+    pub name: String,
+    /// The instrument or vocal part of a performer, such as `violin`.
+    pub instrument: Option<String>,
+}
+
+/// What a person did on a track or an album.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[non_exhaustive]
+pub enum ArtistRole {
+    /// A track artist.
+    Artist,
+    /// An album artist. For albums, this is the album's artists as the library
+    /// groups them, which may come from the track artists.
+    AlbumArtist,
+    /// A composer.
+    Composer,
+    /// A performer, possibly with an instrument.
+    Performer,
+    /// A conductor.
+    Conductor,
+    /// A lyricist.
+    Lyricist,
+    /// A writer of music and lyrics.
+    Writer,
+    /// An arranger.
+    Arranger,
+    /// A remixer.
+    Remixer,
+    /// A producer.
+    Producer,
+    /// An engineer.
+    Engineer,
+    /// A mixing engineer.
+    Mixer,
+    /// A DJ mixer.
+    DjMixer,
+}
+
+impl ArtistRole {
+    /// Every role, in the order of their stored values.
+    pub const ALL: [Self; 13] = [
+        Self::Artist,
+        Self::AlbumArtist,
+        Self::Composer,
+        Self::Performer,
+        Self::Conductor,
+        Self::Lyricist,
+        Self::Writer,
+        Self::Arranger,
+        Self::Remixer,
+        Self::Producer,
+        Self::Engineer,
+        Self::Mixer,
+        Self::DjMixer,
+    ];
+
+    /// The value of `track_people.role`.
+    pub(crate) fn to_sql(self) -> i64 {
+        match self {
+            Self::Artist => 0,
+            Self::AlbumArtist => 1,
+            Self::Composer => 2,
+            Self::Performer => 3,
+            Self::Conductor => 4,
+            Self::Lyricist => 5,
+            Self::Writer => 6,
+            Self::Arranger => 7,
+            Self::Remixer => 8,
+            Self::Producer => 9,
+            Self::Engineer => 10,
+            Self::Mixer => 11,
+            Self::DjMixer => 12,
+        }
+    }
 }

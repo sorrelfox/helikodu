@@ -11,20 +11,15 @@ use std::path::{Path, PathBuf};
 use helikodu_model::library::TrackId;
 use rusqlite::{Connection, OptionalExtension, params};
 
+use super::albums::{Regroup, main_artist};
 use super::fingerprint::TrackFingerprint;
+use super::folders::disc_folder;
 use super::ids::{IdentityId, RootId, sql_track_id, track_id_from_sql};
-use super::track_record::{TrackRecord, TrackTags};
+use super::people::{artists_fold, write_genres, write_people};
+use super::track_record::TrackRecord;
 use crate::db::{display_text, path_from_blob, path_to_blob, unix_time};
 use crate::search::{fold, index};
 use crate::stats::store as stats_store;
-
-/// The roles of `track_people.role`.
-#[derive(Debug, Clone, Copy)]
-enum Role {
-    Artist = 0,
-    AlbumArtist = 1,
-    Composer = 2,
-}
 
 /// What writing a track did.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -140,12 +135,70 @@ pub(crate) fn identities_with(
 }
 
 /// Writes `record`: adds the track, or updates it, or moves it if its file came back
-/// under a new path. `now` is in seconds since the Unix epoch.
+/// under a new path. Regroups the albums it affects and updates the search indexes.
+/// `now` is in seconds since the Unix epoch.
 pub(crate) fn upsert_track(
     c: &Connection,
     record: &TrackRecord,
     now: i64,
 ) -> rusqlite::Result<TrackWrite> {
+    let mut regroup = Regroup::default();
+    let written = write_track(c, record, now, &mut regroup)?;
+    finish_tracks(c, regroup, &[written])?;
+    Ok(written.write)
+}
+
+/// A track written by [`write_track`], before its albums are regrouped and its search
+/// rows written.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Written {
+    pub(crate) write: TrackWrite,
+    file: i64,
+    moved: bool,
+}
+
+/// Regroups the albums of `regroup` and writes the search rows of the tracks
+/// `written` and of the tracks whose album changed.
+pub(crate) fn finish_tracks(
+    c: &Connection,
+    regroup: Regroup,
+    written: &[Written],
+) -> rusqlite::Result<()> {
+    let mut reindex = if regroup.is_empty() {
+        Vec::new()
+    } else {
+        regroup.run(c)?
+    };
+    let mut files: Vec<i64> = Vec::new();
+    for w in written {
+        if w.moved {
+            // The path changed for every track of the file.
+            files.push(w.file);
+        } else {
+            reindex.push(sql_track_id(w.write.track));
+        }
+    }
+    files.sort_unstable();
+    files.dedup();
+    for file in files {
+        index::reindex_file(c, file)?;
+    }
+    reindex.sort_unstable();
+    reindex.dedup();
+    for track in reindex {
+        index::reindex_track(c, track)?;
+    }
+    Ok(())
+}
+
+/// Writes the rows of `record` (file, track, identity, people, genres) and notes in
+/// `regroup` what its albums depend on; [`finish_tracks`] does the rest.
+pub(crate) fn write_track(
+    c: &Connection,
+    record: &TrackRecord,
+    now: i64,
+    regroup: &mut Regroup,
+) -> rusqlite::Result<Written> {
     let (Some(dir), Some(name)) = (record.path.parent(), record.path.file_name()) else {
         return Err(rusqlite::Error::InvalidParameterName(format!(
             "not a file path: {}",
@@ -154,7 +207,11 @@ pub(crate) fn upsert_track(
     };
     let dir_id = ensure_dir(c, record.root, dir)?;
     let (file_id, moved) = upsert_file(c, record, dir_id, Path::new(name))?;
+    if moved {
+        refresh_album_dir(c, record.root, file_id, dir, dir_id, regroup)?;
+    }
     let fingerprint = TrackFingerprint::of(record);
+    let folder = FolderFacts::of(c, record.root, dir, dir_id)?;
 
     let existing: Option<(i64, i64)> = c
         .prepare_cached("SELECT id, identity_id FROM tracks WHERE file_id = ?1 AND sub_index = ?2")?
@@ -163,13 +220,14 @@ pub(crate) fn upsert_track(
         })
         .optional()?;
     let (track, identity, change) = if let Some((track, identity)) = existing {
+        regroup.add_track(c, track)?;
         c.prepare_cached("UPDATE identities SET content_hash = ?2, audio_key = ?3 WHERE id = ?1")?
             .execute(params![
                 identity,
                 fingerprint.content_hash,
                 fingerprint.audio_key()
             ])?;
-        write_track_columns(c, Some(track), file_id, identity, record, now)?;
+        write_track_columns(c, Some(track), file_id, identity, record, &folder, now)?;
         let change = if moved {
             TrackChange::Moved
         } else {
@@ -195,23 +253,85 @@ pub(crate) fn upsert_track(
                 (identity, TrackChange::Added)
             }
         };
-        let track = write_track_columns(c, None, file_id, identity, record, now)?;
+        let track = write_track_columns(c, None, file_id, identity, record, &folder, now)?;
         (track, identity, change)
     };
 
-    write_people(c, track, &record.tags)?;
+    write_people(c, track, &record.tags, &record.catalog)?;
     write_genres(c, track, &record.tags.genres)?;
-    if moved {
-        // The path changed for every track of the file.
-        index::reindex_file(c, file_id)?;
-    } else {
-        index::reindex_track(c, track)?;
-    }
-    Ok(TrackWrite {
-        track: track_id_from_sql(track),
-        identity: IdentityId(identity),
-        change,
+    regroup.add_track(c, track)?;
+    Ok(Written {
+        write: TrackWrite {
+            track: track_id_from_sql(track),
+            identity: IdentityId(identity),
+            change,
+        },
+        file: file_id,
+        moved,
     })
+}
+
+/// What a track's folder says about its album.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FolderFacts {
+    /// The album folder: the folder, or the one above a disc folder.
+    album_dir: i64,
+    /// The disc number in the folder's name.
+    disc: Option<u32>,
+    /// The disc title in the folder's name.
+    disc_subtitle: Option<String>,
+}
+
+impl FolderFacts {
+    /// The facts of the folder `dir` (row `dir_id`) in the library folder `root`.
+    fn of(c: &Connection, root: RootId, dir: &Path, dir_id: i64) -> rusqlite::Result<Self> {
+        let Some(disc) = dir
+            .file_name()
+            .and_then(|name| disc_folder(&display_text(name)))
+        else {
+            return Ok(Self {
+                album_dir: dir_id,
+                disc: None,
+                disc_subtitle: None,
+            });
+        };
+        let mut album_dir = dir_id;
+        if disc.whole_name
+            && let Some(parent) = dir.parent()
+        {
+            let root_path: Option<Vec<u8>> = c
+                .prepare_cached("SELECT path FROM roots WHERE id = ?1")?
+                .query_row([root.0], |row| row.get(0))
+                .optional()?;
+            // A disc folder that is itself the library folder is its own album folder.
+            if root_path.is_some_and(|root| root != path_to_blob(dir)) {
+                album_dir = ensure_dir(c, root, parent)?;
+            }
+        }
+        Ok(Self {
+            album_dir,
+            disc: Some(disc.number),
+            disc_subtitle: disc.subtitle,
+        })
+    }
+}
+
+/// Rewrites the album folder of every track of the file `file`, after it moved to
+/// the folder `dir` (row `dir_id`) of `root`, noting the albums affected.
+fn refresh_album_dir(
+    c: &Connection,
+    root: RootId,
+    file: i64,
+    dir: &Path,
+    dir_id: i64,
+    regroup: &mut Regroup,
+) -> rusqlite::Result<()> {
+    regroup.add_tracks_where(c, "file_id = ?1", file)?;
+    let folder = FolderFacts::of(c, root, dir, dir_id)?;
+    c.prepare_cached("UPDATE tracks SET album_dir_id = ?2 WHERE file_id = ?1")?
+        .execute(params![file, folder.album_dir])?;
+    regroup.add_tracks_where(c, "file_id = ?1", file)?;
+    Ok(())
 }
 
 /// The file row for `record`: the one at its path, or a missing file with the same
@@ -310,18 +430,20 @@ fn returning_identity(
     .optional()
 }
 
-/// Inserts the track row (`track` is `None`) or updates it, and returns its id.
+/// Inserts the track row (`track` is `None`) or updates it, and returns its id. The
+/// album is left to the regrouping.
 fn write_track_columns(
     c: &Connection,
     track: Option<i64>,
     file_id: i64,
     identity: i64,
     record: &TrackRecord,
+    folder: &FolderFacts,
     now: i64,
 ) -> rusqlite::Result<i64> {
     let tags = &record.tags;
+    let more = &record.catalog;
     let audio = &record.audio;
-    let album = write_album(c, tags)?;
     let title_sort = tags.title_sort.as_ref().or(tags.title.as_ref());
     let title_fold = tags.title.as_deref().map(fold);
     let (start, end) = match record.frames {
@@ -332,21 +454,45 @@ fn write_track_columns(
         None => (None, None),
     };
     let duration_ms = audio.duration.map(unix_time::to_millis);
+    let artist = more
+        .artist_credit
+        .clone()
+        .or_else(|| (!tags.artists.is_empty()).then(|| tags.artists.join(", ")));
+    let main = artist
+        .as_deref()
+        .map(|credit| main_artist(tags.artists.first().map_or(credit, String::as_str)))
+        .map(str::to_owned);
+    let album_artist = more
+        .album_artist_credit
+        .clone()
+        .or_else(|| (!tags.album_artists.is_empty()).then(|| tags.album_artists.join(", ")));
+    let album_fold = tags.album.as_deref().map(fold);
+    let release_type = (!more.release_types.is_empty()).then(|| more.release_types.join("; "));
+    let disc_no = tags.disc_no.or(folder.disc);
+    let disc_subtitle = more
+        .disc_subtitle
+        .clone()
+        .or_else(|| folder.disc_subtitle.clone());
     let values = params![
         file_id,
         record.sub_index,
         start,
         end,
         identity,
-        album,
         record.kind.to_sql(),
+        record.section.to_sql(),
         tags.title,
         title_sort,
         title_fold,
+        artist,
         tags.track_no,
-        tags.disc_no,
+        more.track_total,
+        disc_no,
+        more.disc_total,
+        disc_subtitle,
         tags.date,
         tags.year,
+        more.original_year,
         duration_ms,
         audio.codec,
         audio.container,
@@ -354,29 +500,57 @@ fn write_track_columns(
         audio.bit_depth,
         audio.channels,
         audio.bitrate,
+        more.work,
+        more.movement,
+        more.movement_no,
+        more.has_lyrics,
+        tags.album,
+        album_fold,
+        more.album_sort,
+        album_artist,
+        more.album_artist_sort,
+        main,
+        more.compilation,
+        release_type,
+        more.release_mbid,
+        more.release_group_mbid,
+        folder.album_dir,
+        artists_fold(tags),
         now,
     ];
     match track {
         None => c
             .prepare_cached(
                 "INSERT INTO tracks (file_id, sub_index, start_frame, end_frame, identity_id,
-                     album_id, kind, title, title_sort, title_fold, track_no, disc_no, date,
-                     year, duration_ms, codec, container, sample_rate, bit_depth, channels,
-                     bitrate, added_at)
+                     kind, section, title, title_sort, title_fold, artist, track_no,
+                     track_total, disc_no, disc_total, disc_subtitle, date, year,
+                     original_year, duration_ms, codec, container, sample_rate, bit_depth,
+                     channels, bitrate, work, movement, movement_no, has_lyrics, album_title,
+                     album_fold, album_sort, album_artist, album_artist_sort, main_artist,
+                     compilation, release_type, release_mbid, release_group_mbid,
+                     album_dir_id, artists_fold, added_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-                         ?16, ?17, ?18, ?19, ?20, ?21, ?22)
+                         ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28,
+                         ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42,
+                         ?43)
                  RETURNING id",
             )?
             .query_row(values, |row| row.get(0)),
         Some(track) => {
             c.prepare_cached(
                 "UPDATE tracks SET file_id = ?1, sub_index = ?2, start_frame = ?3,
-                     end_frame = ?4, identity_id = ?5, album_id = ?6, kind = ?7, title = ?8,
-                     title_sort = ?9, title_fold = ?10, track_no = ?11, disc_no = ?12,
-                     date = ?13, year = ?14, duration_ms = ?15, codec = ?16, container = ?17,
-                     sample_rate = ?18, bit_depth = ?19, channels = ?20, bitrate = ?21,
-                     modified_at = ?22
-                 WHERE id = ?23",
+                     end_frame = ?4, identity_id = ?5, kind = ?6, section = ?7, title = ?8,
+                     title_sort = ?9, title_fold = ?10, artist = ?11, track_no = ?12,
+                     track_total = ?13, disc_no = ?14, disc_total = ?15,
+                     disc_subtitle = ?16, date = ?17, year = ?18, original_year = ?19,
+                     duration_ms = ?20, codec = ?21, container = ?22, sample_rate = ?23,
+                     bit_depth = ?24, channels = ?25, bitrate = ?26, work = ?27,
+                     movement = ?28, movement_no = ?29, has_lyrics = ?30, album_title = ?31,
+                     album_fold = ?32, album_sort = ?33, album_artist = ?34,
+                     album_artist_sort = ?35, main_artist = ?36, compilation = ?37,
+                     release_type = ?38, release_mbid = ?39, release_group_mbid = ?40,
+                     album_dir_id = ?41, artists_fold = ?42, modified_at = ?43
+                 WHERE id = ?44",
             )?
             .execute(rusqlite::params_from_iter(
                 values
@@ -389,100 +563,6 @@ fn write_track_columns(
     }
 }
 
-/// The album row for the tags, created if needed. `None` without an album title.
-///
-/// The key is provisional: the folded album artist (or first artist), title and year.
-/// The album model with MusicBrainz IDs, compilations and the split by folder replaces
-/// it.
-fn write_album(c: &Connection, tags: &TrackTags) -> rusqlite::Result<Option<i64>> {
-    let Some(title) = tags.album.as_deref() else {
-        return Ok(None);
-    };
-    let artist = tags
-        .album_artists
-        .first()
-        .or(tags.artists.first())
-        .map_or(String::new(), |artist| fold(artist));
-    let title_fold = fold(title);
-    let year = tags.year.map_or(String::new(), |year| year.to_string());
-    let key = format!("{artist}\u{1f}{title_fold}\u{1f}{year}");
-    c.prepare_cached(
-        "INSERT INTO albums (album_key, title, title_sort, title_fold, year)
-         VALUES (?1, ?2, ?2, ?3, ?4)
-         ON CONFLICT (album_key) DO UPDATE SET title = excluded.title
-         RETURNING id",
-    )?
-    .query_row(params![key, title, title_fold, tags.year], |row| row.get(0))
-    .map(Some)
-}
-
-/// Replaces the track's artists, album artists and composers, and the folded artist
-/// names that search scans (`tracks.artists_fold`).
-fn write_people(c: &Connection, track: i64, tags: &TrackTags) -> rusqlite::Result<()> {
-    c.prepare_cached("DELETE FROM track_people WHERE track_id = ?1")?
-        .execute([track])?;
-    let mut insert = c.prepare_cached(
-        "INSERT OR IGNORE INTO track_people (track_id, person_id, role, position)
-         VALUES (?1, ?2, ?3, ?4)",
-    )?;
-    for (role, names) in [
-        (Role::Artist, &tags.artists),
-        (Role::AlbumArtist, &tags.album_artists),
-        (Role::Composer, &tags.composers),
-    ] {
-        for (position, name) in (0_i64..).zip(names) {
-            let person = person(c, name)?;
-            insert.execute(params![track, person, role as i64, position])?;
-        }
-    }
-    let artists: Vec<String> = tags
-        .artists
-        .iter()
-        .chain(&tags.album_artists)
-        .map(|name| fold(name))
-        .collect();
-    let artists_fold = (!artists.is_empty()).then(|| artists.join("\u{1f}"));
-    c.prepare_cached("UPDATE tracks SET artists_fold = ?2 WHERE id = ?1")?
-        .execute(params![track, artists_fold])?;
-    Ok(())
-}
-
-/// The person called `name`, created if needed.
-fn person(c: &Connection, name: &str) -> rusqlite::Result<i64> {
-    let folded = fold(name);
-    let found = c
-        .prepare_cached("SELECT id FROM people WHERE fold = ?1 AND name = ?2 LIMIT 1")?
-        .query_row(params![folded, name], |row| row.get(0))
-        .optional()?;
-    match found {
-        Some(id) => Ok(id),
-        None => c
-            .prepare_cached(
-                "INSERT INTO people (name, sort_name, fold) VALUES (?1, ?1, ?2) RETURNING id",
-            )?
-            .query_row(params![name, folded], |row| row.get(0)),
-    }
-}
-
-/// Replaces the track's genres.
-fn write_genres(c: &Connection, track: i64, genres: &[String]) -> rusqlite::Result<()> {
-    c.prepare_cached("DELETE FROM track_genres WHERE track_id = ?1")?
-        .execute([track])?;
-    let mut upsert = c.prepare_cached(
-        "INSERT INTO genres (name, fold) VALUES (?1, ?2)
-         ON CONFLICT (name) DO UPDATE SET fold = excluded.fold
-         RETURNING id",
-    )?;
-    let mut insert = c.prepare_cached(
-        "INSERT OR IGNORE INTO track_genres (track_id, genre_id, position) VALUES (?1, ?2, ?3)",
-    )?;
-    for (position, name) in (0_i64..).zip(genres) {
-        let genre: i64 = upsert.query_row(params![name, fold(name)], |row| row.get(0))?;
-        insert.execute(params![track, genre, position])?;
-    }
-    Ok(())
-}
-
 /// Moves the file at `from` to `to`, in the folder of `root`. Its tracks keep their ids
 /// and identities. Returns whether there was a file at `from`.
 pub(crate) fn move_file(
@@ -490,6 +570,19 @@ pub(crate) fn move_file(
     root: RootId,
     from: &Path,
     to: &Path,
+) -> rusqlite::Result<bool> {
+    let mut regroup = Regroup::default();
+    let moved = move_one_file(c, root, from, to, &mut regroup)?;
+    finish_tracks(c, regroup, &[])?;
+    Ok(moved)
+}
+
+fn move_one_file(
+    c: &Connection,
+    root: RootId,
+    from: &Path,
+    to: &Path,
+    regroup: &mut Regroup,
 ) -> rusqlite::Result<bool> {
     let Some(file) = file_at(c, from)? else {
         return Ok(false);
@@ -508,6 +601,7 @@ pub(crate) fn move_file(
         path_to_blob(Path::new(name)),
         display_text(name)
     ])?;
+    refresh_album_dir(c, root, file, dir, dir_id, regroup)?;
     index::reindex_file(c, file)?;
     Ok(true)
 }
@@ -536,15 +630,17 @@ pub(crate) fn move_folder(
             Ok(path_from_blob(row.get(0)?).join(path_from_blob(row.get(1)?)))
         })?
         .collect::<rusqlite::Result<_>>()?;
+    let mut regroup = Regroup::default();
     let mut moved = 0;
     for file in files {
         let Ok(relative) = file.strip_prefix(from) else {
             continue;
         };
-        if move_file(c, root, &file, &to.join(relative))? {
+        if move_one_file(c, root, &file, &to.join(relative), &mut regroup)? {
             moved += 1;
         }
     }
+    finish_tracks(c, regroup, &[])?;
     Ok(moved)
 }
 
@@ -569,16 +665,21 @@ pub(crate) fn remove_file(c: &Connection, path: &Path) -> rusqlite::Result<usize
     let tracks: i64 = c
         .prepare_cached("SELECT count(*) FROM tracks WHERE file_id = ?1")?
         .query_row([file], |row| row.get(0))?;
-    // The tracks go with the file (ON DELETE CASCADE), and a trigger takes them out of
-    // the search indexes.
+    let mut regroup = Regroup::default();
+    regroup.add_tracks_where(c, "file_id = ?1", file)?;
+    // The tracks go with the file (ON DELETE CASCADE); triggers take them out of the
+    // search indexes and remove the albums, people and genres no track has any more.
     c.prepare_cached("DELETE FROM files WHERE id = ?1")?
         .execute([file])?;
+    finish_tracks(c, regroup, &[])?;
     Ok(usize::try_from(tracks).unwrap_or(0))
 }
 
 /// Removes `track`, and its file if no other track uses it. Its identity stays. Returns
 /// whether the track existed.
 pub(crate) fn remove_track(c: &Connection, track: TrackId) -> rusqlite::Result<bool> {
+    let mut regroup = Regroup::default();
+    regroup.add_tracks_where(c, "id = ?1", sql_track_id(track))?;
     let file: Option<i64> = c
         .prepare_cached("DELETE FROM tracks WHERE id = ?1 RETURNING file_id")?
         .query_row([sql_track_id(track)], |row| row.get(0))
@@ -590,5 +691,6 @@ pub(crate) fn remove_track(c: &Connection, track: TrackId) -> rusqlite::Result<b
         "DELETE FROM files WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM tracks WHERE file_id = ?1)",
     )?
     .execute([file])?;
+    finish_tracks(c, regroup, &[])?;
     Ok(true)
 }

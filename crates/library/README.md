@@ -11,11 +11,14 @@ The SQLite schema and its migrations, the scan coordinator and file watcher, the
 
 | Area | Operations |
 |---|---|
-| Catalogue | `add_root`, `upsert_track` / `upsert_tracks` (a `TrackRecord`: path, `FileStamp`, sub-track, `AudioProperties`, `TrackTags`, a rating from the tags), `move_file`, `move_folder`, `mark_file_missing`, `remove_missing_files` (the end of the grace period), `remove_file`, `remove_track`, `track_at`, `identity_of`, `identities_with` |
+| Catalogue | `add_root`, `upsert_track` / `upsert_tracks` (a `TrackRecord`: path, `FileStamp`, sub-track and `TrackSection`, `AudioProperties`, `TrackTags`, `CatalogTags`, a rating from the tags), `move_file`, `move_folder`, `mark_file_missing`, `remove_missing_files` (the end of the grace period), `remove_file`, `remove_track`, `track_at`, `identity_of`, `identities_with` |
 | Statistics | `record_listen` (a `Listen` judged by `PlayRules`), `stats`, `set_rating` (`Option<Rating>`), `set_resume_position`, `history` (`HistoryQuery`) |
 | Search | `search` (`SearchRequest` → `SearchResults`), `rebuild_search_index` |
 | Scanning | `scan` (`ScanOptions`, an optional `Sender<ScanEvent>`, a `CancelToken` → `ScanSummary`), `unreadable_files`; `ScanHandle::spawn` runs a scan on its own thread |
+| Details | `track_details` (a `TrackDetails`: path, tags, audio properties, kind, added and missing times), `roots`, `totals` (`LibraryTotals`), `most_played` (`PlayedTrack`s); `read_file_details` reads a file's tags, audio properties and loudness values in this process (`src/details.rs`) |
 | Watching | `Watcher::spawn` (`WatchOptions` → `WatchEvent`s), `Watcher::rescan`, `Watcher::stop` |
+| Browsing | `albums` (`AlbumQuery`: `AlbumFilter`, `AlbumSort`, `Page` → `Paged<AlbumSummary>`), `album` / `album_including_masked` (`AlbumDetail` with `Disc`s of `TrackSummary`s), `artists` (`ArtistQuery` by `ArtistRole` → `ArtistSummary`s), `genres` (`GenreQuery` → `GenreSummary`s), `tracks` (`TrackQuery`: `TrackFilter` of an album, a person or a genre → `TrackSummary`s) |
+| Library folders | `root_states` (`RootState`: masked, since when, `mask_when_missing`, polled), `set_root_masked`, `set_mask_when_missing` |
 
 Errors are `DbError`; an error from SQLite is the opaque `SqliteError`. A scan fails with `ScanError` only when the database fails or no worker can be started; a file that cannot be read is an event, not an error.
 
@@ -35,19 +38,21 @@ The module `raw` gives direct SQL access below `Library`: `raw::Database` with i
 
 `migrations/` holds one numbered SQL file per schema change, and `MIGRATIONS` in `src/db/migrations.rs` lists them. A migration that has been released is never edited; a change is a new file. A unit test checks that every file is listed once and in order.
 
+Migration 5 clears the modification time of every file that was read, so the next scan reads the files again and fills in the new tag fields, chapters and albums.
+
 - The `schema_migrations` table records the applied migrations. The schema version is the highest one.
 - Each migration runs in its own `BEGIN IMMEDIATE` transaction together with its record, so it is applied completely or not at all. Foreign keys are off while it runs, so that a table can be rebuilt, and `PRAGMA foreign_key_check` must pass before it commits.
 - `Database::open` refuses a database with a newer schema (`DbError::NewerSchema`). `Database::open_read_only` opens such a database without migrating it; writes then fail with `DbError::ReadOnly`.
 
 ### Schema
 
-Version 4 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fingerprint.sql`, `0004_search_support.sql`):
+Version 5 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fingerprint.sql`, `0004_search_support.sql`, `0005_album_model.sql`):
 
 | Area | Tables |
 |---|---|
 | Files | `roots`, `dirs`, `files` |
 | Tracks and identity | `identities`, `tracks`, `track_tags` |
-| Catalogue | `albums`, `people`, `track_people`, `genres`, `track_genres`, `covers` |
+| Catalogue | `albums`, `album_people`, `people`, `track_people`, `genres`, `track_genres`, `covers` |
 | Use | `stats`, `history`, `analysis` |
 | Playlists and state | `playlists`, `playlist_items`, `session`, `undo_journal`, `db_meta` |
 | Search | `tracks_fts` (words), `tracks_tri` (trigrams) |
@@ -58,6 +63,10 @@ Version 4 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fi
 - **`tracks.artists_fold`** holds the folded artist and album artist names, separated by U+001F, for short-query scans and ranking. The library writes it with `track_people`.
 - **Folded columns** (`title_fold`, `people.fold`, `genres.fold`) hold `hk_fold()` of the text.
 - **Sort columns** (`tracks.title_sort`, `albums.title_sort`, `people.sort_name`) are declared `COLLATE HK_LOCALE`, and `genres` has an index on `name COLLATE HK_LOCALE`. No unique constraint uses the collation, so rebuilding the indexes for another locale cannot fail.
+- **Albums** are formed from album tags stored on each track (`album_title`, `album_fold`, `album_artist`, `main_artist`, `compilation`, `release_mbid`, the years) by the rules under "Albums and artists" below. `tracks.album_group` is the track's group key and `tracks.album_dir_id` its album folder. `album_people` holds an album's artists as the library decided them; `track_people.instrument` a performer's instrument.
+- **Orphans.** Triggers remove an album when its last track leaves it (removed, or regrouped), and a person or genre when no track or album refers to it any more. The rows of a track's people and genres are changed only where they differ, so a person who stays is never removed and created again.
+- **Sections.** `tracks.section` is 0 for a whole file, 1 for a CUE sheet track, 2 for a container chapter; `sub_index` is the track or chapter number.
+- **Masking.** `roots.masked` and `roots.masked_since` are set by the watcher while a library folder is gone; `roots.watch_mode` records whether it is polled. The browsing queries hide the tracks of a masked folder whose `mask_when_missing` is set (the default).
 - **Search tables** are contentless with `contentless_delete=1`, so a track's row can be deleted and inserted again when its tags change. Their rowid is `tracks.id`, and they are filled with folded text. The library refills a track's rows whenever it writes the track or moves its file; a trigger removes them when the track row is deleted, including by `ON DELETE CASCADE`.
 
 ### SQL functions and the collation
@@ -83,6 +92,23 @@ A track's statistics, rating and history belong to its identity (`identities`), 
 - A re-encoded or re-ripped file has another fingerprint and gets a new identity.
 - The tracks of a CUE sheet or the subsongs of a file each have their own identity.
 - The rating found in a file's tags is taken only when a new identity is created. From then on the database wins, also over a cleared rating.
+
+### Albums and artists
+
+`src/catalog/albums.rs` decides which tracks form an album; `src/catalog/browse/` lists them.
+
+- **Album identity.** Every track with an album title or a MusicBrainz release ID gets a group key:
+  1. the MusicBrainz release ID (`MUSICBRAINZ_ALBUMID`), when the track has one, whatever its album title says;
+  2. otherwise the folded album artist, the folded album title and the year (the original year when known, else the year; within an album folder the year most of its tracks with that title and album artist have).
+- **The album artist** of the key is the folded `ALBUMARTIST` (as credited, or the album artists joined). `Various Artists`, `VA`, `V.A.` and their spellings in a few languages count as "various artists". Without an album artist, a track with the compilation flag is by "various artists"; the other tracks with the same album title in the same album folder decide together: the artist on more than half of them (the first track artist, without `feat.`, `ft.` or `featuring` and what follows) is the album artist, and without such an artist the album is by "various artists".
+- **The album folder** is the track's folder, or the folder above when its name is a disc (`CD1`, `cd 02`, `Disc 2`, `Disk_3`, `Disc 2 - Live`), so discs in folders of their own form one album. A disc folder that is itself a library folder is its own album folder.
+- **The split by folder.** The tracks with one key form one album, unless two of them in different album folders have the same disc and track number: then each album folder is an album of its own (two copies or two editions of a release). Its `album_key` is the group key and the folder.
+- **Discs.** The disc number is the tag's, or else the one in the folder name (`CD2`, also `Album (CD2)`, `Album [Disc 1]`); the disc subtitle is the tag's, or the text after the number in a disc folder. An album's disc total is the largest disc total or disc number of its tracks. Tracks without a disc number are on disc 1.
+- **The album row** takes from its tracks the most frequent title, sort title, album artist credit and sort name, year, original year, release type and IDs. A compilation (the flag on a track, or "various artists") without an album artist has none: `artist` is NULL, which the interface shows in its own language, and `album_people` is empty. A compilation with a real album artist (a DJ mix) keeps it.
+- **People and roles.** One person per folded name, so `ABBA` and `Abba` are one; a MusicBrainz artist ID tells apart two people with one name. Roles (`ArtistRole`): artist, album artist, composer, performer (with an instrument), conductor, lyricist, writer, arranger, remixer, producer, engineer, mixer, DJ mixer. The sort tags (`ARTISTSORT`, `ALBUMARTISTSORT`, `COMPOSERSORT`) name a person's sort name when the role has one person; without one, the name sorts. The album artists of an album are its tagged album artists, or the artist taken from the track artists; `ArtistRole::AlbumArtist` in the queries means these.
+- **Regrouping.** Writing, moving or removing tracks regroups what they were and are in: the album folder and folded album title (for the "various artists" decision), and the group keys. So retitling a track splits it off, retitling it back merges it again, a third artist in a folder without album artists makes the album a compilation, and removing one of two copies merges the split albums back into one. An album keeps its id while its key stays; one that splits or merges may get a new one.
+- **Queries.** Typed and paged (`Page`, at most 1000 items; `Paged` carries the total). Albums by title (the sort title in the locale order, through its index), by artist (compilations last), by year, or newest first; all, by album artist, the ones an artist appears on (a track artist but not an album artist), by credit in any role, compilations, or by genre. An album's detail has its artists, genres, IDs and discs with their tracks in order (disc, track number, path, position in the file). People by role in the order of their sort names, with album and track counts; genres by name; the tracks of an album, a person (in one role or any) or a genre. Every query leaves out the tracks of masked library folders unless asked (`include_masked`, `album_including_masked`).
+- **CUE sheets and chapters.** The tracks of a CUE sheet are parts of their file (`TrackSection::CueSheet`) and form one album from the sheet's `TITLE` and `PERFORMER`. A file with two chapters or more and no sheet becomes one track per chapter (`TrackSection::Chapter`); an audiobook's chapters form one album from its title and author. Each part has its own identity.
 
 ### Statistics rules
 
@@ -111,7 +137,7 @@ A track's statistics, rating and history belong to its identity (`identities`), 
 - **Symbolic links** (`SymlinkPolicy`): `WithinRoots` (the default) follows a link whose target is inside a library folder, `Follow` every link, `Ignore` none. Real folders are walked before links, and every folder and file is taken once by its device and inode, so a link loop ends at once and a file reachable through a link (or a hard link) is recorded under one path.
 - **Compare** (`compare.rs`). A file is read when it is new, when its size, modification time (ns) or inode changed, or when a CUE sheet in its folder appeared, changed or went away. A file that disappeared is marked missing (`missing_since`); its tracks stay until the grace period ends, which the watcher handles. A file that comes back is unmarked; a missing file that turns up under another path with the same size and quick hash is moved there with its tracks. A library folder that cannot be read (not mounted, gone) marks nothing missing, and neither does a subfolder that cannot be read.
 - **Read** (`pool.rs`). A pool of worker processes (one per processor, at most 8, by default) reads one file per worker at a time. Each worker limits its address space (1 GiB by default) and turns core dumps off. A worker that does not answer within the time limit (30 s by default) is killed; one that dies (a crash, or the memory limit) is noticed when its output ends. Either way the file is recorded as unreadable with the reason (`files.scan_state` 1, `scan_error`), a `ScanEvent::FileFailed` is sent, and the next file goes to a new worker. An unreadable file is not read again until it changes, unless `retry_unreadable` is set. The worker program is `WorkerOptions::program`, or `helikodu-scan-worker` beside the running program or in `../libexec/helikodu/` from it.
-- **Records** (`records.rs`). A file described by a CUE sheet becomes one track per sheet track (`sub_index` is the track number, the frame range at the file's sample rate); otherwise it is one whole-file track. A sheet track that starts after the end of the file is left out. Chapters are read by the worker but not stored yet. CUE sheets are recorded as file rows with `scan_state` 2 and no tracks, so that a changed sheet is noticed.
+- **Records** (`records.rs`). A file described by a CUE sheet becomes one track per sheet track (`sub_index` is the track number, the frame range at the file's sample rate); otherwise it is one whole-file track. A sheet track that starts after the end of the file is left out. A file without a sheet but with two chapters or more (MP4/M4B, Matroska, Ogg, ID3v2 `CHAP`) becomes one track per chapter, numbered from 1. CUE sheets are recorded as file rows with `scan_state` 2 and no tracks, so that a changed sheet is noticed.
 - **Write** (`store.rs`). Each file is one write job: its tracks through the same upsert as `upsert_track`, then the removal of the file's tracks that are no longer in it (a sheet replaced the whole-file track, or lost tracks). The jobs go to the writer without waiting, so it commits them in batches of up to 512; one job that fails is rolled back alone.
 - **Events** (`ScanEvent`): `Walking`, `RootUnavailable`, `Compared` (found, to read, missing), `Progress` (at most every 100 ms), `FileFailed`, `Finished` with the `ScanSummary`. `CancelToken::cancel` stops a scan within a fraction of a second: the workers are killed and what was read is kept.
 
@@ -126,7 +152,7 @@ A track's statistics, rating and history belong to its identity (`identities`), 
 - **Overflow.** When the kernel's event queue overflows (`IN_Q_OVERFLOW`, `notify`'s rescan flag), the library folder is rescanned whole (`WatchEvent::Overflow`).
 - **Watch limit.** When adding a watch fails because `fs.inotify.max_user_watches` is reached, at the start or for a new folder later, the library folder is rescanned whole and then every `poll_interval` (15 minutes by default) instead. `WatchEvent::Watching` reports `PollReason::WatchLimit` with the limit read from `/proc/sys/fs/inotify/max_user_watches`. Since Linux 5.11 the default limit is 1 % of memory, clamped to 8 192–1 048 576 watches.
 - **File systems inotify cannot see** (`mounts.rs`). The file system of each library folder is looked up in `/proc/self/mountinfo` (`WatchOptions::mountinfo`): the mount with the longest mount point above the folder's real path. Network file systems (NFS, SMB/CIFS and others), FUSE mounts (`fuse`, `fuse.*`, among them the Flatpak document portal `fuse.portal`) and virtual-machine shared folders are polled every `poll_interval` instead of watched (`PollReason::FileSystem`). `fuseblk` (NTFS or exFAT through FUSE on a local disk) is watched: every change to it goes through this kernel.
-- **Masking.** Every `check_interval` (2 s), and when an event says the library folder itself was removed or renamed, and before every rescan, the watcher checks that each folder is there. A folder is gone when it cannot be read, or when it is empty and the file system it was on is no longer mounted there (a mount point left behind); without a mount table, an empty folder in which the library has files counts as gone too. A gone folder is masked (`WatchEvent::RootMasked`): its watch is dropped, its pending changes are discarded, nothing in it is scanned or marked missing, and its missing files are not removed. When it is back it is unmasked, watched again and rescanned (`RescanReason::Remounted`); so is a folder on which another file system was mounted.
+- **Masking.** Every `check_interval` (2 s), and when an event says the library folder itself was removed or renamed, and before every rescan, the watcher checks that each folder is there. A folder is gone when it cannot be read, or when it is empty and the file system it was on is no longer mounted there (a mount point left behind); without a mount table, an empty folder in which the library has files counts as gone too. A gone folder is masked (`WatchEvent::RootMasked`): its watch is dropped, its pending changes are discarded, nothing in it is scanned or marked missing, and its missing files are not removed. When it is back it is unmasked, watched again and rescanned (`RescanReason::Remounted`); so is a folder on which another file system was mounted. The mask is recorded in the database (`roots.masked`), where the browsing queries see it, and cleared when the watcher finds the folder at start; whether a folder is polled is recorded too (`roots.watch_mode`).
 - **Grace period.** The scanner marks files that disappeared as missing; their tracks stay. Every quarter of `grace_period` (30 days by default; at least every second, at most every hour) the watcher removes, in the folders that are not masked, the files that have been missing for the grace period, with their tracks (`Library::remove_missing_files`, `WatchEvent::MissingRemoved`). Their identities and statistics stay for when they come back. Missing times are whole seconds.
 - **Events** (`WatchEvent`): `Watching` (with the `WatchMode`), `RootMasked`, `RootUnmasked`, `Overflow`, `Moved`, `RescanStarted` (with the `RescanReason`), `Scan` (the `ScanEvent`s of the running rescan), `RescanFinished` with the `ScanSummary`, `MissingRemoved`, `Error`. `Watcher::rescan` asks for a rescan of a folder or of everything.
 
@@ -170,7 +196,7 @@ Median of seven runs, Zen 5, one thread, bundled SQLite 3.54:
 | `a`, `o`, `e` (one letter, nearly every track) | 86 472–87 876 | 59–65 ms | 437 416 | 325 ms |
 | `a b c` (three short terms) | 15 304 | 47 ms | 76 425 | 240 ms |
 
-Writing 100 000 tracks with both indexes through `upsert_tracks` takes 15 s (154 µs per track, including people, albums and genres); rebuilding both indexes takes 0.44 s at 100 000 tracks and 2.6 s at 500 000. Every query meets the 100 ms budget at 100 000 tracks. At 500 000, queries of three characters or more stay well inside it, while one- and two-character queries, which scan, take up to a third of a second.
+Writing 100 000 tracks with both indexes through `upsert_tracks` takes 14 s (143 µs per track, including people, albums and genres); rebuilding both indexes takes 0.44 s at 100 000 tracks and 2.6 s at 500 000. Every query meets the 100 ms budget at 100 000 tracks. At 500 000, queries of three characters or more stay well inside it, while one- and two-character queries, which scan, take up to a third of a second.
 
 A collation comparison costs about 12 times a byte comparison. Through the index, ordered reads cost the same as code-point order, because the index is already sorted; the collation's cost falls on writes and on a locale switch. Creating a collator takes well under a millisecond.
 
@@ -187,15 +213,32 @@ cargo bench -p helikodu-library --bench search -- 500000 a 我的心   # 500 000
 
 | 100 000 tracks, Zen 5, NVMe SSD, warm cache | Time | Files per second |
 |---|---|---|
-| First scan, 8 workers (the default on 32 threads) | 27.8 s | 3 600 |
-| First scan, 2 or 16 workers | 26.9–27.4 s | 3 650–3 700 |
+| First scan, 8 workers (the default on 32 threads) | 25.4 s | 3 900 |
 | Rescan without changes | 0.25 s | |
 
-The budget is 500 files per second (100 000 files in under 4 minutes). The writer is the limit, not the workers: the time hardly changes between 2 and 16 workers.
+The budget is 500 files per second (100 000 files in under 4 minutes). The writer is the limit, not the workers: the time hardly changes between 2 and 16 workers. The first scan includes forming the albums; a track costs the writer about 140 µs with the album model, measured by `benches/search.rs`. The writer keeps 256 prepared statements per connection: with SQLite's default of 16, writing a track prepared most of its statements again, which cost more than running them.
+
+After the scan, the bench measures the browsing queries on the same database (8 543 albums, 777 of them compilations, 1 338 album artists; median of 15 runs, 50 per page, release build, Zen 5, file database, warm cache):
+
+| Query at 100 000 tracks | Median | With a masked library folder |
+|---|---|---|
+| Albums by title, first or middle page | 0.2 ms | 7–13 ms |
+| Albums by artist, first / middle page | 1.3 / 6.6 ms | |
+| Albums by year, middle page | 7.8 ms | |
+| Albums newest first, first page | 0.2 ms | |
+| Compilations, first page | 0.4 ms | |
+| Albums of an album artist; albums an artist appears on | 0.03 ms; 0.07 ms | |
+| Album detail with discs and tracks (200 albums) | 0.05 ms (slowest 0.2 ms) | 0.07 ms |
+| Artists, first page; album artists, middle page; composers | 0.9 ms; 0.6 ms; 1.3 ms | 3.2 ms (album artists) |
+| Genres with counts | 14 ms | |
+| Tracks of a genre, first page; of an album artist | 1.8 ms; 0.05 ms | |
+
+Sorting by title follows the index on `albums.title_sort`; by artist and by year the albums are sorted for each query, which stays under 10 ms at 8 500 albums. While a folder is masked, every query looks up the folder of each track it considers.
 
 ```sh
 cargo bench -p helikodu-library --bench scan                   # 100 000 tracks
 cargo bench -p helikodu-library --bench scan -- 10k --workers 4 --keep
+cargo bench -p helikodu-library --bench scan -- 100k --reuse   # the queries on a kept database
 ```
 
 ## Tests
@@ -209,5 +252,7 @@ cargo test -p helikodu-library --features bundled-sqlite
 - `tests/search.rs`: search through `Library` in Latin with diacritics, Cyrillic, Greek, Chinese, Japanese (kana and kanji), Thai and Korean, with queries of one to four characters; short queries; every term must match; FTS5 syntax as plain text; genre, composer, album artist and path through the word index; ranking and paging; the indexes after tag changes, moves and removals, and after a rebuild; `regexp()`.
 - `tests/stats.rs`: plays, skips and partial listens; ratings from 0 to 10 and not rated; the rating from the tags taken once; statistics after a watched move, after a file that disappears and reappears elsewhere, and after a track that leaves and comes back; a re-encoded file; CUE tracks; the history and its filters; resume positions.
 - `tests/scan.rs`: a small library made with the `ffmpeg` tool and scanned by real worker processes: a folder and a file name in Latin-1 bytes, a CUE album, an excluded folder, a hidden folder, a link loop, a picture and a fake video; rescans after a tag change, a removal, a move into a new folder, an addition, a file that comes back and a sheet that appears; a library folder that disappeared; a missing worker program. In debug builds, files that make the worker crash, hang or exhaust its memory limit (see `apps/scan-worker`) are reported and recorded while the scan goes on, are not read again until asked, and a scan stuck on hanging files is cancelled. The tests build `helikodu-scan-worker` themselves; without `ffmpeg` they print `SKIPPED:` and pass.
-- `tests/watch.rs`: the watcher over real folders with real workers: a created, rewritten, moved and deleted file each appear within 2 s (the latencies are printed); 1 000 files copied in at once become at most a few rescans; folder renames keep the tracks' identities, and folders moved in, out and back in; a folder on a fake `nfs4` mount is polled; a library folder that is renamed away, and a mount point that is left empty, are masked without marking anything missing and rescanned when they return; missing files are removed after the grace period. Without `ffmpeg` they print `SKIPPED:` and pass. The unit tests in `src/watch/` feed a queue overflow, the watch-limit error and other errors to a running watcher, and cover the debouncing, rename pairing and mount-table parsing on their own.
+- `tests/watch.rs`: the watcher over real folders with real workers: a created, rewritten, moved and deleted file each appear within 2 s (the latencies are printed); 1 000 files copied in at once become at most a few rescans; folder renames keep the tracks' identities, and folders moved in, out and back in; a folder on a fake `nfs4` mount is polled; a library folder that is renamed away, and a mount point that is left empty, are masked without marking anything missing (the mask is in the database and hides the tracks from the browsing queries) and rescanned when they return; missing files are removed after the grace period. Without `ffmpeg` they print `SKIPPED:` and pass. The unit tests in `src/watch/` feed a queue overflow, the watch-limit error and other errors to a running watcher, and cover the debouncing, rename pairing and mount-table parsing on their own.
+- `tests/albums.rs`: album identity through `Library`: compilations without album artist, by flag and by a "Various Artists" album artist, a DJ mix with the flag and an artist; the main artist of an album without album artist (`feat.`); discs in `CD1`, `CD2` and `Disc 3 - Live` folders, and tagged discs with subtitles and totals; classical credits (composer with a sort name, conductor, performer with an instrument) and the people by role; one title by two artists, one artist's title in two years; two copies of an album in two folders split, and `Album (CD1)`/`Album (CD2)` merged; MusicBrainz release IDs over the tags; tag changes that split and merge albums and change their artist; a compilation that forms and dissolves as artists come and go; a removed copy merging the split albums; orphaned albums, people and genres removed, and people's rows kept across rewrites; a move into a disc folder; the album list in Swedish, English and Estonian order; the sorts and paging; genres and their tracks; the tracks of an album and of a person; masked library folders hidden from every query, and shown with `include_masked` or without `mask_when_missing`.
+- `tests/catalog_scan.rs`: albums from real files through the scanner: a FLAC file with a CUE sheet as one album of three virtual tracks with their own identities and a guest performer; an M4B audiobook made by `ffmpeg` with three chapters stored as chapter tracks of one album; discs in `CD1`/`CD2` folders with composer and conductor tags. Without `ffmpeg` they print `SKIPPED:` and pass.
 - `tests/writer.rs`: batching, a failed job rolled back alone, a batch that cannot commit rolled back whole, a panicking job, and the writes queued at shutdown.

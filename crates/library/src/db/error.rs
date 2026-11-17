@@ -10,6 +10,8 @@ use std::sync::Arc;
 use helikodu_model::library::TrackId;
 use thiserror::Error;
 
+use crate::catalog::RootId;
+
 /// An error from the library database.
 #[derive(Debug, Error)]
 #[non_exhaustive]
@@ -80,6 +82,10 @@ pub enum DbError {
     /// The track is not in the library.
     #[error("there is no track {0} in the library")]
     UnknownTrack(TrackId),
+
+    /// The library folder is not in the library.
+    #[error("there is no library folder {} in the library", .0.get())]
+    UnknownRoot(RootId),
 
     /// No file at this path is in the library.
     #[error("there is no file {} in the library", .0.display())]

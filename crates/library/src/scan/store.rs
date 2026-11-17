@@ -17,7 +17,8 @@ use std::path::{Path, PathBuf};
 use rusqlite::{Connection, params};
 
 use super::walk::Stamp;
-use crate::catalog::write::{ensure_dir, file_at, upsert_track};
+use crate::catalog::albums::Regroup;
+use crate::catalog::write::{Written, ensure_dir, file_at, finish_tracks, write_track};
 use crate::catalog::{RootId, TrackChange, TrackRecord};
 use crate::db::{display_text, path_from_blob, path_to_blob};
 
@@ -121,14 +122,17 @@ pub(crate) fn write_file_tracks(
     records: &[TrackRecord],
     now: i64,
 ) -> rusqlite::Result<Vec<TrackChange>> {
-    let mut changes = Vec::with_capacity(records.len());
+    let mut regroup = Regroup::default();
+    let mut written: Vec<Written> = Vec::with_capacity(records.len());
     for record in records {
-        changes.push(upsert_track(c, record, now)?.change);
+        written.push(write_track(c, record, now, &mut regroup)?);
     }
+    let changes = written.iter().map(|w| w.write.change).collect();
     let Some(path) = records.first().map(|r| r.path.as_path()) else {
         return Ok(changes);
     };
     let Some(file) = file_at(c, path)? else {
+        finish_tracks(c, regroup, &written)?;
         return Ok(changes);
     };
     let stale: Vec<(i64, u32)> = c
@@ -138,9 +142,11 @@ pub(crate) fn write_file_tracks(
     let mut delete = c.prepare_cached("DELETE FROM tracks WHERE id = ?1")?;
     for (track, sub_index) in stale {
         if !records.iter().any(|r| r.sub_index == sub_index) {
+            regroup.add_tracks_where(c, "id = ?1", track)?;
             delete.execute([track])?;
         }
     }
+    finish_tracks(c, regroup, &written)?;
     c.prepare_cached("UPDATE files SET scan_state = ?2, scan_error = NULL WHERE id = ?1")?
         .execute(params![file, STATE_READ])?;
     Ok(changes)
@@ -223,13 +229,23 @@ pub(crate) fn remove_missing_files(
     root: RootId,
     cutoff: i64,
 ) -> rusqlite::Result<usize> {
-    // The tracks go with their files (ON DELETE CASCADE), and a trigger takes them
-    // out of the search indexes.
-    c.prepare_cached(
-        "DELETE FROM files WHERE missing_since IS NOT NULL AND missing_since <= ?2
-         AND dir_id IN (SELECT id FROM dirs WHERE root_id = ?1)",
-    )?
-    .execute(params![root.0, cutoff])
+    let gone: Vec<i64> = c
+        .prepare_cached(
+            "SELECT id FROM files WHERE missing_since IS NOT NULL AND missing_since <= ?2
+             AND dir_id IN (SELECT id FROM dirs WHERE root_id = ?1)",
+        )?
+        .query_map(params![root.0, cutoff], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut regroup = Regroup::default();
+    let mut delete = c.prepare_cached("DELETE FROM files WHERE id = ?1")?;
+    for file in &gone {
+        regroup.add_tracks_where(c, "file_id = ?1", *file)?;
+        // The tracks go with their files (ON DELETE CASCADE); triggers take them out
+        // of the search indexes and remove what no track refers to any more.
+        delete.execute([file])?;
+    }
+    finish_tracks(c, regroup, &[])?;
+    Ok(gone.len())
 }
 
 /// Whether the library has files in `root` that are not missing.

@@ -10,13 +10,28 @@
 //! A track that left the library and comes back with the same fingerprint gets its old
 //! identity back, with its statistics, rating and history.
 
+pub(crate) mod albums;
+mod browse;
 mod fingerprint;
+mod folders;
 mod ids;
+mod people;
+pub(crate) mod roots;
 mod track_record;
 pub(crate) mod write;
 
+pub use browse::{
+    AlbumDetail, AlbumFilter, AlbumQuery, AlbumSort, AlbumSummary, ArtistQuery, ArtistRef,
+    ArtistSummary, Disc, GenreQuery, GenreRef, GenreSummary, MAX_PAGE, Page, Paged, TrackFilter,
+    TrackQuery, TrackSummary,
+};
+pub(crate) use browse::{album, albums, artists, genres, tracks};
 pub use fingerprint::TrackFingerprint;
-pub use ids::{IdentityId, RootId};
+pub use ids::{AlbumId, GenreId, IdentityId, PersonId, RootId};
 pub(crate) use ids::{sql_track_id, track_id_from_sql};
-pub use track_record::{AudioProperties, FileStamp, TrackKind, TrackRecord, TrackTags};
+pub use roots::RootState;
+pub use track_record::{
+    ArtistRole, AudioProperties, CatalogTags, Credit, FileStamp, TrackKind, TrackRecord,
+    TrackSection, TrackTags,
+};
 pub use write::{TrackChange, TrackWrite};
