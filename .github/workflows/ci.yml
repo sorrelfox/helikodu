@@ -42,7 +42,8 @@ jobs:
               dnf install -y reuse
               rustup toolchain install
               cargo install --locked --root /opt/tools cargo-deny
-              PATH=/opt/tools/bin:$PATH cargo xtask ci
+              # The offline audit has its own job below.
+              PATH=/opt/tools/bin:$PATH cargo xtask ci --no-offline-audit
             '
 
   build-and-test:
@@ -72,6 +73,42 @@ jobs:
             "helikodu-ci:${{ matrix.distro }}" sh -euxc '
               rustup toolchain install
               cargo xtask ci --tests-only
+            '
+
+  offline-audit:
+    name: Offline audit (no network namespace, no Internet sockets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/ci-cache
+          key: offline-audit-${{ hashFiles('ci/containers/fedora.Containerfile', 'rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: offline-audit-
+      - name: Build container
+        run: docker build -t helikodu-ci:fedora -f ci/containers/fedora.Containerfile ci/containers
+      # The audit makes an unprivileged user and network namespace inside the
+      # container. Ubuntu runners restrict unprivileged user namespaces through
+      # AppArmor, and Docker's default seccomp and AppArmor profiles refuse to
+      # create them; lift both. No capabilities and no --privileged are added.
+      - name: Allow unprivileged user namespaces
+        run: |
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+      - name: cargo xtask offline-audit
+        run: |
+          mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target
+          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+            --security-opt seccomp=unconfined \
+            --security-opt apparmor=unconfined \
+            -v "$PWD:/src" \
+            -v ~/ci-cache/registry:/usr/local/cargo/registry \
+            -v ~/ci-cache/git:/usr/local/cargo/git \
+            -v ~/ci-cache/target:/src/target \
+            helikodu-ci:fedora sh -euxc '
+              rustup toolchain install
+              cargo xtask offline-audit
             '
 
   msrv:

@@ -26,3 +26,14 @@ podman run --rm -it -e CI=true -v "$PWD:/src:Z" helikodu-ci:fedora \
 ```
 
 The lint job also installs `reuse` and `cargo-deny`, which `cargo xtask ci` requires when `CI` is set.
+
+## Offline audit
+
+The `offline-audit` job runs `cargo xtask offline-audit` in the Fedora container. The audit makes an unprivileged user and network namespace inside the container, which Docker's default seccomp profile refuses and which Ubuntu runners restrict through AppArmor. The job therefore sets `kernel.apparmor_restrict_unprivileged_userns=0` on the runner and starts the container with `--security-opt seccomp=unconfined --security-opt apparmor=unconfined`. It adds no capabilities and does not use `--privileged`. The container needs `unshare` from util-linux, which every image here has. The lint job runs `cargo xtask ci --no-offline-audit`, since the audit has its own job. Details are in [tests/system/README.md](../tests/system/README.md#offline-audit).
+
+To run the audit locally in a container (Podman's default profiles allow it):
+
+```sh
+podman run --rm -it -e CI=true -v "$PWD:/src:Z" helikodu-ci:fedora \
+    sh -c 'rustup toolchain install && cargo xtask offline-audit'
+```

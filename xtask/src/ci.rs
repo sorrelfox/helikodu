@@ -10,6 +10,11 @@
 //!
 //! `--tests-only` builds and tests the workspace and checks the dependency
 //! rules, leaving out the lint tools. The distribution build matrix uses it.
+//!
+//! The last step is the offline audit (`cargo xtask offline-audit`). It needs
+//! unprivileged user namespaces; where they are not available it is skipped
+//! with a notice outside CI and is an error in CI. `--no-offline-audit` leaves
+//! it out: the lint job uses it because the audit has its own CI job.
 
 use std::env;
 use std::path::Path;
@@ -19,9 +24,11 @@ use anyhow::{Context, Result, bail};
 
 pub(crate) fn run(args: &[String]) -> Result<()> {
     let mut tests_only = false;
+    let mut offline_audit = true;
     for arg in args {
         match arg.as_str() {
             "--tests-only" => tests_only = true,
+            "--no-offline-audit" => offline_audit = false,
             other => bail!("unknown option `{other}` for `ci`"),
         }
     }
@@ -96,6 +103,22 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
         step(&root, "REUSE", "reuse", &["lint"])?;
     } else {
         missing("reuse", "see https://reuse.software", in_ci)?;
+    }
+
+    if offline_audit {
+        match crate::offline_audit::availability() {
+            Ok(()) => {
+                println!("==> offline audit");
+                crate::offline_audit::run(&[])?;
+            }
+            Err(reason) if in_ci => {
+                bail!("the offline audit cannot run: {reason} (see tests/system/README.md)")
+            }
+            Err(reason) => println!(
+                "==> offline audit: skipped, no unprivileged network namespace here ({reason}); \
+                 see tests/system/README.md"
+            ),
+        }
     }
 
     println!("==> all checks passed");

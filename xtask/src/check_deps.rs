@@ -80,6 +80,7 @@ const RULES: &[(&str, &[&str])] = &[
             "helikodu-extra-decoders",
         ],
     ),
+    ("helikodu-offline-launcher", &[]),
     ("xtask", &[]),
 ];
 

@@ -11,6 +11,7 @@
 mod check_deps;
 mod ci;
 mod corpus;
+mod offline_audit;
 
 use std::env;
 use std::path::PathBuf;
@@ -22,10 +23,13 @@ const USAGE: &str = "\
 usage: cargo xtask <command>
 
 commands:
-  ci            run every check that CI runs, in the same order (--tests-only)
-  check-deps    check the crate dependency rules and the unsafe-code policy
-  corpus        generate the test corpus into target/corpus (--check, --strict)
-  help          print this message
+  ci              run every check that CI runs, in the same order
+                  (--tests-only, --no-offline-audit)
+  check-deps      check the crate dependency rules and the unsafe-code policy
+  corpus          generate the test corpus into target/corpus (--check, --strict)
+  offline-audit   run every test program without a network and fail on any
+                  Internet socket (--self-test)
+  help            print this message
 ";
 
 fn main() -> ExitCode {
@@ -34,6 +38,7 @@ fn main() -> ExitCode {
         Some("ci") => ci::run(&args[1..]),
         Some("check-deps") => check_deps::run(),
         Some("corpus") => corpus::run(&args[1..]),
+        Some("offline-audit") => offline_audit::run(&args[1..]),
         Some("help" | "--help" | "-h") | None => {
             print!("{USAGE}");
             return ExitCode::SUCCESS;
