@@ -1,13 +1,10 @@
 # Publishes docs/site to GitHub Pages at https://sorrelfox.github.io/helikodu/.
 name: Pages
 
+# Runs for release tags and when started by hand, to save shared CI resources.
 on:
   push:
-    branches: [main]
-    paths:
-      - "docs/site/**"
-      - "data/icons/hicolor/scalable/apps/io.github.sorrelfox.Helikodu.svg"
-      - ".github/workflows/pages.yml"
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:

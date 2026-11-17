@@ -11,6 +11,6 @@ The site uses no JavaScript, no external fonts, no CDNs and no trackers. The app
 
 ## Publishing
 
-`.github/workflows/pages.yml` runs on every push to `main` that changes `docs/site/` or the app icon, and can be started by hand. It assembles the folder `_site` from this folder plus the icon and deploys it with GitHub Pages. In the repository settings, Pages must use "GitHub Actions" as its source.
+`.github/workflows/pages.yml` runs when a release is tagged and can be started by hand from the Actions tab. It assembles the folder `_site` from this folder plus the icon and deploys it with GitHub Pages. In the repository settings, Pages must use "GitHub Actions" as its source.
 
 HTML and CSS are licensed under CC-BY-SA-4.0.

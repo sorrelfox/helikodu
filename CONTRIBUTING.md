@@ -59,7 +59,7 @@ Add yourself to [AUTHORS](AUTHORS) with your first contribution, if you like.
 - Write commit subjects in the imperative mood ("Add the ALSA device list"), at most about 72 characters, followed by a blank line and a body that explains why the change is needed.
 - Add tests for new behaviour and for bugs you fix.
 - Update [CHANGELOG.md](CHANGELOG.md) under "Unreleased" for changes users will notice.
-- CI must be green before a pull request is merged.
+- `cargo xtask ci` must pass before a pull request is merged. The GitHub workflows run only for releases and when started by a maintainer, to save shared CI resources, so the local run is the check that counts.
 
 ## Translations
 

@@ -2,7 +2,7 @@
 
 Container definitions for the build matrix, and the headless PipeWire, ALSA and seccomp configurations the tests use.
 
-The workflows in `.github/` only start `cargo xtask ci` inside these containers, so every CI check can also be run locally.
+The workflows in `.github/` only start `cargo xtask ci` inside these containers, so every CI check can also be run locally. They run only for release tags and when started by hand from the Actions tab; day-to-day changes are checked locally.
 
 ## Containers
 

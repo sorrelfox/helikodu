@@ -13,7 +13,7 @@ The name is Estonian: *heli* means "sound" and *kodu* means "home". It is a home
 - **You choose the output:** pick the audio backend (PipeWire, PulseAudio, ALSA or JACK), the device and the mode in the settings, or switch them quickly while playing.
 - **A library built for large collections** of 100,000 tracks and more, with fast search, one query language for searches and smart playlists, and play statistics that survive moving your files.
 - **At home on every desktop:** GNOME, KDE Plasma and others, on Wayland and X11. Helikodu has its own design and integrates through freedesktop standards (MPRIS, notifications, XDG portals), so it depends on no particular desktop.
-- **Entirely offline:** no internet access, no online services and no telemetry. This is enforced in the code and checked in CI.
+- **Entirely offline:** no internet access, no online services and no telemetry. This is enforced in the code and checked by an offline test audit.
 - **Free software** under the GPL-3.0-or-later.
 
 ## Building

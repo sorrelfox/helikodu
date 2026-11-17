@@ -1,10 +1,9 @@
-# Scheduled run of the full check set. Longer suites (full corpus, fuzzing,
-# benchmarks, hardware tests) will be added here.
-name: Nightly
+# The extended check set: started by hand, for example before a release.
+# Longer suites (full corpus, fuzzing, benchmarks, hardware tests) will be
+# added here. It has no schedule, to save shared CI resources.
+name: Extended checks
 
 on:
-  schedule:
-    - cron: "17 2 * * *"
   workflow_dispatch:
 
 permissions:

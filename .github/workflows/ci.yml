@@ -1,10 +1,14 @@
 # Every check runs inside the containers in ci/containers and is started
 # through `cargo xtask ci`, so the same checks run locally.
+#
+# To save shared CI resources this runs only for release tags and when started
+# by hand. Day-to-day changes are checked locally with `cargo xtask ci`.
 name: CI
 
 on:
   push:
-  pull_request:
+    tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
