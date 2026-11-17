@@ -1,0 +1,24 @@
+[package]
+name = "helikodu-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+# Outside the main workspace: fuzzing needs a nightly toolchain.
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+helikodu-ffmpeg-bridge = { path = "../crates/ffmpeg-bridge" }
+helikodu-model = { path = "../crates/model" }
+
+[[bin]]
+name = "ffmpeg_bridge_open"
+path = "fuzz_targets/ffmpeg_bridge_open.rs"
+test = false
+doc = false
+bench = false

@@ -9,5 +9,11 @@ authors.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[dependencies]
+ffmpeg-sys-next.workspace = true
+helikodu-model.workspace = true
+libc.workspace = true
+thiserror.workspace = true
+
 [lints]
 workspace = true
