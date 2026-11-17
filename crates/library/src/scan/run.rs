@@ -5,9 +5,11 @@
 
 use std::collections::VecDeque;
 use std::ffi::OsString;
+use std::path::Path;
 use std::sync::mpsc::{RecvTimeoutError, Sender};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
+use std::{fs, io};
 
 use helikodu_meta::worker::{Request, RequestOptions};
 
@@ -17,8 +19,9 @@ use super::pool::{Job, Outcome, Pool, WorkerCommand};
 use super::program::find_worker_program;
 use super::progress::{CancelToken, FailureKind, FileFailure, ScanError, ScanEvent, ScanSummary};
 use super::records::tracks_of;
+use super::scope::{ScanTarget, Scope, normalize};
 use super::store::{self, STATE_CUE_SHEET, STATE_UNREADABLE};
-use super::walk::Walker;
+use super::walk::{Walk, Walker};
 use crate::catalog::{self, TrackChange};
 use crate::db::unix_time::to_unix_seconds;
 use crate::db::{Database, DbError, WriteTicket, Writer};
@@ -35,6 +38,27 @@ pub(crate) fn run(
     events: Option<&Sender<ScanEvent>>,
     cancel: &CancelToken,
 ) -> Result<ScanSummary, ScanError> {
+    let targets: Vec<ScanTarget> = options
+        .roots
+        .iter()
+        .map(|root| ScanTarget {
+            root: root.clone(),
+            scopes: vec![Scope::Root],
+        })
+        .collect();
+    run_targets(db, options, &targets, events, cancel)
+}
+
+/// Runs a scan of the parts `targets` of library folders into `db`, with the rules
+/// of `options`. Files that disappeared from one part and turned up in another are
+/// moved, as in a full scan.
+pub(crate) fn run_targets(
+    db: &Database,
+    options: &ScanOptions,
+    targets: &[ScanTarget],
+    events: Option<&Sender<ScanEvent>>,
+    cancel: &CancelToken,
+) -> Result<ScanSummary, ScanError> {
     let started = Instant::now();
     let emit = |event: ScanEvent| {
         if let Some(events) = events {
@@ -46,31 +70,71 @@ pub(crate) fn run(
     let mut summary = ScanSummary::default();
     let mut plan = Plan::default();
 
-    for root in &options.roots {
+    'roots: for target in targets {
         if cancel.is_cancelled() {
             break;
         }
-        let root = std::path::absolute(root).unwrap_or_else(|_| root.clone());
+        let root = std::path::absolute(&target.root).unwrap_or_else(|_| target.root.clone());
         emit(ScanEvent::Walking { root: root.clone() });
         summary.roots += 1;
         let root_for_writer = root.clone();
         let root_id = writer.write(move |c| catalog::write::add_root(c, &root_for_writer))?;
-        let walk = match walker.walk(&root, &|| cancel.is_cancelled()) {
-            Ok(walk) => walk,
-            Err(e) => {
-                summary.unavailable_roots += 1;
-                emit(ScanEvent::RootUnavailable {
-                    root,
-                    error: e.to_string(),
-                });
-                continue;
-            }
+        let scopes = normalize(&root, target.scopes.iter().cloned());
+        let unavailable = |error: io::Error, summary: &mut ScanSummary| {
+            summary.unavailable_roots += 1;
+            emit(ScanEvent::RootUnavailable {
+                root: root.clone(),
+                error: error.to_string(),
+            });
         };
-        if cancel.is_cancelled() {
-            break;
+        if scopes.first() != Some(&Scope::Root)
+            && let Err(e) = readable_folder(&root)
+        {
+            unavailable(e, &mut summary);
+            continue;
         }
-        let known = db.read(|c| store::known_files(c, root_id))?;
-        plan.add_root(root_id, walk, known, options.retry_unreadable);
+        for scope in scopes {
+            if cancel.is_cancelled() {
+                break 'roots;
+            }
+            let (walk, known) = match &scope {
+                Scope::Root => match walker.walk(&root, &|| cancel.is_cancelled()) {
+                    Ok(walk) => (walk, db.read(|c| store::known_files(c, root_id))?),
+                    Err(e) => {
+                        unavailable(e, &mut summary);
+                        continue 'roots;
+                    }
+                },
+                Scope::Subtree(dir) => {
+                    let walk = if walker.admits(&root, dir) {
+                        match walker.walk(dir, &|| cancel.is_cancelled()) {
+                            Ok(walk) => walk,
+                            Err(e) => gone_or_unreadable(&root, dir, &e),
+                        }
+                    } else {
+                        Walk::default()
+                    };
+                    let known = db.read(|c| store::known_files_under(c, root_id, dir, true))?;
+                    (walk, known)
+                }
+                Scope::Folder(dir) => {
+                    let walk = if !walker.admits(&root, dir) {
+                        Walk::default()
+                    } else {
+                        match readable_folder(dir) {
+                            Ok(()) => walker.walk_folder(dir),
+                            Err(e) => gone_or_unreadable(&root, dir, &e),
+                        }
+                    };
+                    let known = db.read(|c| store::known_files_under(c, root_id, dir, false))?;
+                    (walk, known)
+                }
+            };
+            if cancel.is_cancelled() {
+                break 'roots;
+            }
+            plan.add_root(root_id, walk, known, options.retry_unreadable);
+        }
     }
     if cancel.is_cancelled() {
         return Ok(finish(summary, started, cancel, &emit));
@@ -103,6 +167,35 @@ pub(crate) fn run(
         })?;
     }
     Ok(finish(summary, started, cancel, &emit))
+}
+
+/// Fails unless `dir` is a folder that can be listed.
+fn readable_folder(dir: &Path) -> io::Result<()> {
+    if !fs::metadata(dir)?.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotADirectory,
+            "the library folder is not a folder",
+        ));
+    }
+    fs::read_dir(dir).map(drop)
+}
+
+/// The walk of the folder `dir` of `root` that could not be walked because of `error`:
+/// empty when it is gone, so what the library had in it is missing, but nothing
+/// when it cannot be read, or when `root` itself has gone meanwhile.
+fn gone_or_unreadable(root: &Path, dir: &Path, error: &io::Error) -> Walk {
+    let gone = matches!(
+        error.kind(),
+        io::ErrorKind::NotFound | io::ErrorKind::NotADirectory
+    );
+    if gone && readable_folder(root).is_ok() {
+        Walk::default()
+    } else {
+        Walk {
+            files: Vec::new(),
+            unreadable: vec![dir.to_path_buf()],
+        }
+    }
 }
 
 fn finish(

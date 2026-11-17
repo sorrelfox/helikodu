@@ -21,13 +21,14 @@
 //!   [`CancelToken`] stops it.
 
 mod compare;
-mod filter;
+pub(crate) mod filter;
 mod options;
 mod pool;
 mod program;
 mod progress;
 mod records;
 mod run;
+pub(crate) mod scope;
 pub(crate) mod store;
 mod walk;
 
@@ -38,7 +39,8 @@ use std::thread::{self, JoinHandle};
 pub use options::{ExcludeRule, ScanOptions, SymlinkPolicy, WorkerOptions};
 pub use program::{WORKER_PROGRAM, find_worker_program};
 pub use progress::{CancelToken, FailureKind, FileFailure, ScanError, ScanEvent, ScanSummary};
-pub(crate) use run::run;
+pub(crate) use run::{run, run_targets};
+pub(crate) use scope::{ScanTarget, Scope};
 
 use crate::Library;
 

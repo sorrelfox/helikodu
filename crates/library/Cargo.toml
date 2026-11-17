@@ -20,6 +20,7 @@ helikodu-model.workspace = true
 icu_collator.workspace = true
 icu_locale_core.workspace = true
 icu_normalizer.workspace = true
+notify.workspace = true
 regex.workspace = true
 rusqlite.workspace = true
 thiserror.workspace = true

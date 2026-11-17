@@ -6,7 +6,7 @@
 //!
 //! Every function runs on the writer's connection inside the writer's transaction.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use helikodu_model::library::TrackId;
 use rusqlite::{Connection, OptionalExtension, params};
@@ -14,7 +14,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use super::fingerprint::TrackFingerprint;
 use super::ids::{IdentityId, RootId, sql_track_id, track_id_from_sql};
 use super::track_record::{TrackRecord, TrackTags};
-use crate::db::{display_text, path_to_blob, unix_time};
+use crate::db::{display_text, path_from_blob, path_to_blob, unix_time};
 use crate::search::{fold, index};
 use crate::stats::store as stats_store;
 
@@ -510,6 +510,42 @@ pub(crate) fn move_file(
     ])?;
     index::reindex_file(c, file)?;
     Ok(true)
+}
+
+/// Moves every file in the folder `from` and the folders below it to the same place
+/// below `to`, in the folder of `root`, as when a watched folder is renamed. Their
+/// tracks keep their ids and identities. Returns the number of files moved.
+pub(crate) fn move_folder(
+    c: &Connection,
+    root: RootId,
+    from: &Path,
+    to: &Path,
+) -> rusqlite::Result<usize> {
+    let exact = path_to_blob(from);
+    // The paths below `from` sort between `from/` and `from0`, as '0' follows '/'.
+    let mut below = exact.to_vec();
+    below.push(b'/');
+    let mut end = exact.to_vec();
+    end.push(b'0');
+    let files: Vec<PathBuf> = c
+        .prepare_cached(
+            "SELECT d.path, f.name FROM files f JOIN dirs d ON d.id = f.dir_id
+             WHERE d.path = ?1 OR (d.path >= ?2 AND d.path < ?3)",
+        )?
+        .query_map(params![exact, below, end], |row| {
+            Ok(path_from_blob(row.get(0)?).join(path_from_blob(row.get(1)?)))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut moved = 0;
+    for file in files {
+        let Ok(relative) = file.strip_prefix(from) else {
+            continue;
+        };
+        if move_file(c, root, &file, &to.join(relative))? {
+            moved += 1;
+        }
+    }
+    Ok(moved)
 }
 
 /// Records that the file at `path` disappeared at `since` (seconds since the epoch).

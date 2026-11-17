@@ -15,6 +15,7 @@ mod library;
 mod scan;
 mod search;
 mod stats;
+mod watch;
 
 pub use catalog::{
     AudioProperties, FileStamp, IdentityId, RootId, TrackChange, TrackFingerprint, TrackKind,
@@ -33,6 +34,7 @@ pub use search::{MatchRank, SearchHit, SearchRequest, SearchResults, fold};
 pub use stats::{
     HistoryEntry, HistoryQuery, Listen, ListenEnd, ListenOutcome, PlayRules, Rating, TrackStats,
 };
+pub use watch::{PollReason, RescanReason, WatchEvent, WatchMode, WatchOptions, Watcher};
 
 /// Direct SQL access to the database, below [`Library`].
 ///

@@ -38,45 +38,79 @@ pub(crate) struct KnownFile {
     pub(crate) has_tracks: bool,
 }
 
+/// The columns that [`known_file`] reads.
+const KNOWN_FILE_COLUMNS: &str = "f.id, d.path, f.name, f.size, f.mtime_ns, f.inode,
+    f.scan_state, f.missing_since IS NOT NULL,
+    EXISTS (SELECT 1 FROM tracks t WHERE t.file_id = f.id)";
+
 /// Every file row in the folders of `root`, by path.
 pub(crate) fn known_files(
     c: &Connection,
     root: RootId,
 ) -> rusqlite::Result<HashMap<PathBuf, KnownFile>> {
-    let mut statement = c.prepare(
-        "SELECT f.id, d.path, f.name, f.size, f.mtime_ns, f.inode, f.scan_state,
-                f.missing_since IS NOT NULL,
-                EXISTS (SELECT 1 FROM tracks t WHERE t.file_id = f.id)
-         FROM files f JOIN dirs d ON d.id = f.dir_id
-         WHERE d.root_id = ?1",
-    )?;
-    let rows = statement.query_map([root.0], |row| {
-        let dir = path_from_blob(row.get(1)?);
-        let name = path_from_blob(row.get(2)?);
-        let size: Option<i64> = row.get(3)?;
-        let mtime_ns: Option<i64> = row.get(4)?;
-        let inode: Option<i64> = row.get(5)?;
-        let stamp = match (size, mtime_ns, inode) {
-            (Some(size), Some(mtime_ns), Some(inode)) => Some(Stamp {
-                size: u64::try_from(size).unwrap_or(0),
-                mtime_ns,
-                inode: inode.cast_unsigned(),
-            }),
-            _ => None,
-        };
-        let state: Option<i64> = row.get(6)?;
-        Ok((
-            dir.join(name),
-            KnownFile {
-                id: row.get(0)?,
-                stamp,
-                state: state.unwrap_or(STATE_READ),
-                missing: row.get(7)?,
-                has_tracks: row.get(8)?,
-            },
-        ))
-    })?;
+    let mut statement = c.prepare(&format!(
+        "SELECT {KNOWN_FILE_COLUMNS} FROM files f JOIN dirs d ON d.id = f.dir_id
+         WHERE d.root_id = ?1"
+    ))?;
+    let rows = statement.query_map([root.0], known_file)?;
     rows.collect()
+}
+
+/// The file rows of `root` in the folder `dir`, and with `recursive` also in the
+/// folders below it, by path.
+pub(crate) fn known_files_under(
+    c: &Connection,
+    root: RootId,
+    dir: &Path,
+    recursive: bool,
+) -> rusqlite::Result<HashMap<PathBuf, KnownFile>> {
+    let exact = path_to_blob(dir);
+    if !recursive {
+        let mut statement = c.prepare_cached(&format!(
+            "SELECT {KNOWN_FILE_COLUMNS} FROM files f JOIN dirs d ON d.id = f.dir_id
+             WHERE d.root_id = ?1 AND d.path = ?2"
+        ))?;
+        let rows = statement.query_map(params![root.0, exact], known_file)?;
+        return rows.collect();
+    }
+    // The paths below `dir` sort between `dir/` and `dir0`, as '0' follows '/'.
+    let mut below = exact.to_vec();
+    below.push(b'/');
+    let mut end = exact.to_vec();
+    end.push(b'0');
+    let mut statement = c.prepare_cached(&format!(
+        "SELECT {KNOWN_FILE_COLUMNS} FROM files f JOIN dirs d ON d.id = f.dir_id
+         WHERE d.root_id = ?1 AND (d.path = ?2 OR (d.path >= ?3 AND d.path < ?4))"
+    ))?;
+    let rows = statement.query_map(params![root.0, exact, below, end], known_file)?;
+    rows.collect()
+}
+
+fn known_file(row: &rusqlite::Row<'_>) -> rusqlite::Result<(PathBuf, KnownFile)> {
+    let dir = path_from_blob(row.get(1)?);
+    let name = path_from_blob(row.get(2)?);
+    let size: Option<i64> = row.get(3)?;
+    let mtime_ns: Option<i64> = row.get(4)?;
+    let inode: Option<i64> = row.get(5)?;
+    let stamp = match (size, mtime_ns, inode) {
+        (Some(size), Some(mtime_ns), Some(inode)) => Some(Stamp {
+            size: u64::try_from(size).unwrap_or(0),
+            mtime_ns,
+            inode: inode.cast_unsigned(),
+        }),
+        _ => None,
+    };
+    let state: Option<i64> = row.get(6)?;
+    Ok((
+        dir.join(name),
+        KnownFile {
+            id: row.get(0)?,
+            stamp,
+            state: state.unwrap_or(STATE_READ),
+            missing: row.get(7)?,
+            has_tracks: row.get(8)?,
+        },
+    ))
 }
 
 /// Writes the tracks read from one file and removes the file's tracks that are no
@@ -179,6 +213,32 @@ pub(crate) fn forget_files(c: &Connection, ids: &[i64]) -> rusqlite::Result<()> 
         delete.execute([id])?;
     }
     Ok(())
+}
+
+/// Removes the files of `root` that have been missing since `cutoff` (seconds since
+/// the epoch) or longer, with their tracks; their identities and statistics stay.
+/// Returns the number of files removed.
+pub(crate) fn remove_missing_files(
+    c: &Connection,
+    root: RootId,
+    cutoff: i64,
+) -> rusqlite::Result<usize> {
+    // The tracks go with their files (ON DELETE CASCADE), and a trigger takes them
+    // out of the search indexes.
+    c.prepare_cached(
+        "DELETE FROM files WHERE missing_since IS NOT NULL AND missing_since <= ?2
+         AND dir_id IN (SELECT id FROM dirs WHERE root_id = ?1)",
+    )?
+    .execute(params![root.0, cutoff])
+}
+
+/// Whether the library has files in `root` that are not missing.
+pub(crate) fn has_present_files(c: &Connection, root: RootId) -> rusqlite::Result<bool> {
+    c.prepare_cached(
+        "SELECT EXISTS (SELECT 1 FROM files f JOIN dirs d ON d.id = f.dir_id
+                        WHERE d.root_id = ?1 AND f.missing_since IS NULL)",
+    )?
+    .query_row([root.0], |row| row.get(0))
 }
 
 /// The files recorded as unreadable, with the reason, in path order.

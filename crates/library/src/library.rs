@@ -151,6 +151,33 @@ impl Library {
         self.write(move |c| catalog::write::remove_file(c, &path))
     }
 
+    /// Moves every file in the folder `from` and below it to the same place below `to`
+    /// inside the library folder `root`, as when a watched folder is renamed. Their
+    /// tracks keep their ids, identities and statistics. Returns the number of files
+    /// moved.
+    pub fn move_folder(
+        &self,
+        root: RootId,
+        from: impl Into<PathBuf>,
+        to: impl Into<PathBuf>,
+    ) -> Result<usize, DbError> {
+        let (from, to) = (from.into(), to.into());
+        self.write(move |c| catalog::write::move_folder(c, root, &from, &to))
+    }
+
+    /// Removes the files in the library folder `root` that have been missing since
+    /// `missing_before` or longer, with their tracks: the end of the grace period for
+    /// missing files. Their identities and statistics stay for when the tracks come
+    /// back. Returns the number of files removed.
+    pub fn remove_missing_files(
+        &self,
+        root: RootId,
+        missing_before: SystemTime,
+    ) -> Result<usize, DbError> {
+        let cutoff = to_unix_seconds(missing_before);
+        self.write(move |c| scan::store::remove_missing_files(c, root, cutoff))
+    }
+
     /// Removes `track`, and its file if no other track uses it. Its identity and
     /// statistics stay for when it comes back.
     pub fn remove_track(&self, track: TrackId) -> Result<(), DbError> {

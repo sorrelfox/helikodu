@@ -136,6 +136,46 @@ impl Walker {
         Ok(state.walk)
     }
 
+    /// Walks the files directly in `dir`, without its subfolders; links to files are
+    /// followed as the policy allows. A folder that cannot be read is reported in
+    /// [`Walk::unreadable`].
+    pub(crate) fn walk_folder(&self, dir: &Path) -> Walk {
+        let mut state = State::default();
+        let (mut folders, mut links) = (Vec::new(), Vec::new());
+        self.read_folder(dir, &mut state, &mut folders, &mut links);
+        for link in links {
+            // Linked folders are left out like the real ones.
+            self.follow(&link, &mut state, &mut Vec::new());
+        }
+        state.walk
+    }
+
+    /// Whether a walk of all of `root` would enter `dir`, a folder at or below it:
+    /// no folder on the way, nor `dir` itself, is hidden, excluded or holds the
+    /// ignore marker. The marker in `dir` itself is checked by the walk.
+    pub(crate) fn admits(&self, root: &Path, dir: &Path) -> bool {
+        let Ok(relative) = dir.strip_prefix(root) else {
+            return false;
+        };
+        let mut current = root.to_path_buf();
+        for component in relative.components() {
+            if self.holds_marker(&current) {
+                return false;
+            }
+            current.push(component);
+            if !self.takes_name(component.as_os_str().as_bytes()) || self.excluded_path(&current) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn holds_marker(&self, dir: &Path) -> bool {
+        self.ignore_marker
+            .as_ref()
+            .is_some_and(|marker| fs::symlink_metadata(dir.join(marker)).is_ok())
+    }
+
     fn read_folder(
         &self,
         dir: &Path,
@@ -352,6 +392,38 @@ mod tests {
         options.symlinks = SymlinkPolicy::Ignore;
         let walk = Walker::new(&options).walk(&root, &|| false).unwrap();
         assert_eq!(names(&walk, &root), ["real/a.flac"]);
+    }
+
+    #[test]
+    fn single_folders_and_admitted_subtrees() {
+        let root = tree("parts");
+        for name in [
+            "a/1.flac",
+            "a/sub/2.flac",
+            ".hidden/h.flac",
+            "skip/s.flac",
+            "marked/.nomedia",
+            "marked/deep/m.flac",
+        ] {
+            touch(&root.join(name));
+        }
+        let mut options = ScanOptions::new([&root]);
+        options.exclude = vec![ExcludeRule::Path(root.join("skip"))];
+        let walker = Walker::new(&options);
+        assert_eq!(
+            names(&walker.walk_folder(&root.join("a")), &root),
+            ["a/1.flac"]
+        );
+        assert!(walker.walk_folder(&root.join("marked")).files.is_empty());
+        let gone = walker.walk_folder(&root.join("gone"));
+        assert_eq!(gone.unreadable, [root.join("gone")]);
+
+        assert!(walker.admits(&root, &root));
+        assert!(walker.admits(&root, &root.join("a/sub")));
+        assert!(!walker.admits(&root, &root.join(".hidden")));
+        assert!(!walker.admits(&root, &root.join("skip/inner")));
+        assert!(!walker.admits(&root, &root.join("marked/deep")));
+        assert!(!walker.admits(&root, Path::new("/elsewhere")));
     }
 
     #[test]
