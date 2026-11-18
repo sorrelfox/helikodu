@@ -135,9 +135,23 @@ impl MainWindow {
             "dsp" => settings::Page::Dsp,
             "appearance" => settings::Page::Appearance,
             "advanced" => settings::Page::Advanced,
+            "shortcuts" => settings::Page::Shortcuts,
             _ => settings::Page::Library,
         };
         settings::open(self, Some(page))
+    }
+
+    /// Records `accelerator` for `action` on Settings › Shortcuts, as if the
+    /// row were activated and the keys pressed (for tests).
+    #[doc(hidden)]
+    pub fn demo_record_shortcut(&self, action: &str, accelerator: &str) -> bool {
+        settings::demo_record_shortcut(action, accelerator)
+    }
+
+    /// Resets every shortcut from Settings › Shortcuts (for tests).
+    #[doc(hidden)]
+    pub fn demo_reset_shortcuts(&self) {
+        settings::demo_reset_shortcuts();
     }
 
     /// Opens Settings › DSP and EQ at the editor of `stage` (`equalizer`,

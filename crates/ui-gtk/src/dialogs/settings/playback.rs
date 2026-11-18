@@ -278,20 +278,35 @@ fn power(context: &Rc<Context>) -> gtk::Box {
         }
     });
     column.append(&awake);
-    // Applied from a later version: shown with their values, not sensitive.
-    for (title, value) in [
+    for (title, value, name, set) in [
         (
             tr("Pause when the screen locks"),
             settings.playback.pause_on_lock,
+            "pause-on-lock",
+            (|s: &mut Settings, on| s.playback.pause_on_lock = on) as fn(&mut Settings, bool),
         ),
         (
             tr("Pause before the computer goes to sleep"),
             settings.playback.pause_before_sleep,
+            "pause-before-sleep",
+            |s: &mut Settings, on| s.playback.pause_before_sleep = on,
         ),
     ] {
         let (line, switch) = switch_row(&title, None);
         switch.set_active(value);
-        line.set_sensitive(false);
+        switch.set_widget_name(name);
+        let weak = Rc::downgrade(context);
+        switch.connect_active_notify(move |switch| {
+            let Some(context) = weak.upgrade() else {
+                return;
+            };
+            let on = switch.is_active();
+            if !context.update(|s| set(s, on)) {
+                switch.set_active(!on);
+            } else if let Some(main) = context.main.upgrade() {
+                main.apply_power_settings();
+            }
+        });
         column.append(&line);
     }
     column

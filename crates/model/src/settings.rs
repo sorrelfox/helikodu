@@ -16,6 +16,7 @@ mod library;
 mod loudness;
 mod output;
 mod playback;
+mod shortcuts;
 mod transitions;
 mod ui_state;
 
@@ -40,8 +41,9 @@ pub use output::{
     VolumeControl,
 };
 pub use playback::{ContextAction, PlaybackSettings, StartAction};
+pub use shortcuts::{MAX_KEYS_PER_ACTION, ShortcutSettings};
 pub use transitions::TransitionSettings;
-pub use ui_state::{PaneState, UiState, WindowState};
+pub use ui_state::{MiniPlayerState, PaneState, UiState, WindowState};
 
 /// All settings: the contents of `settings.toml`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -65,6 +67,8 @@ pub struct Settings {
     pub appearance: AppearanceSettings,
     /// The `[advanced]` table.
     pub advanced: AdvancedSettings,
+    /// The `[shortcuts]` table: keyboard shortcuts changed by the user.
+    pub shortcuts: ShortcutSettings,
 }
 
 impl Settings {
@@ -78,7 +82,8 @@ impl Settings {
         self.output.validate()?;
         self.loudness.validate()?;
         self.dsp.validate()?;
-        self.advanced.validate()
+        self.advanced.validate()?;
+        self.shortcuts.validate()
     }
 
     /// The groups whose values differ between `self` and `other`.
@@ -105,6 +110,9 @@ impl Settings {
         if self.advanced != other.advanced {
             groups.push(SettingsGroup::Advanced);
         }
+        if self.shortcuts != other.shortcuts {
+            groups.push(SettingsGroup::Shortcuts);
+        }
         groups
     }
 }
@@ -120,6 +128,7 @@ impl Default for Settings {
             dsp: DspSettings::default(),
             appearance: AppearanceSettings::default(),
             advanced: AdvancedSettings::default(),
+            shortcuts: ShortcutSettings::default(),
         }
     }
 }
@@ -142,6 +151,8 @@ pub enum SettingsGroup {
     Appearance,
     /// `[advanced]`.
     Advanced,
+    /// `[shortcuts]`.
+    Shortcuts,
 }
 
 /// When a changed setting takes effect.

@@ -8,8 +8,10 @@
 //! drag it and hold the desktop's window buttons. In the classic style the
 //! desktop draws its title bar, and the menu bar can be shown (Ctrl+M).
 
+pub(crate) mod desktop;
 pub(crate) mod dialog_hooks;
 pub(crate) mod history;
+pub(crate) mod home;
 pub(crate) mod now_playing;
 pub(crate) mod pages;
 pub(crate) mod pane_handle;
@@ -177,6 +179,10 @@ mod imp {
         pub(super) device_lost: Cell<bool>,
         /// Set while the queue panel's selection follows the player.
         pub(super) queue_selecting: Cell<bool>,
+        /// The mini player, the tray and the other desktop services.
+        pub(super) desktop: RefCell<Option<Rc<desktop::Integration>>>,
+        /// The Home page.
+        pub(super) home_view: RefCell<Option<Rc<crate::views::home::HomeView>>>,
     }
 
     #[glib::object_subclass]
@@ -280,6 +286,14 @@ impl MainWindow {
         imp.handles.replace(vec![left, right]);
         self.connect_close_request(|window| {
             window.save_ui_state();
+            // With a tray, closing the window keeps playing there.
+            if window.close_to_tray() {
+                window.set_visible(false);
+                return glib::Propagation::Stop;
+            }
+            if let Some(mini) = window.mini_player() {
+                mini.window().destroy();
+            }
             glib::Propagation::Proceed
         });
 
@@ -300,6 +314,7 @@ impl MainWindow {
         imp.album.replace(Some(album));
         self.setup_pages(backend, &playback, &covers);
         self.setup_history(backend, &playback, &covers);
+        self.setup_home(backend, &playback, &covers);
 
         imp.deck.bind(backend, &playback, &covers);
         self.setup_dialogs(backend, &playback);
@@ -307,6 +322,7 @@ impl MainWindow {
         let lyrics = crate::models::lyrics::LyricsModel::follow(&playback);
         imp.panel.bind_lyrics(backend, &playback, &lyrics, &covers);
         self.setup_now_playing(backend, &playback, &lyrics, &covers);
+        self.setup_desktop(backend, &playback, &lyrics, &covers);
         let toasts = ToastOverlay::new(&imp.toast_overlay);
         imp.toasts.replace(Some(toasts));
         let weak = self.downgrade();
@@ -329,6 +345,7 @@ impl MainWindow {
                     }
                     window.load_counts();
                     window.library_changed();
+                    window.home_changed();
                     // Edited tags show on the open album page too.
                     if let Some(album) = window.imp().album.borrow().as_ref()
                         && let Some(key) = album.album()
@@ -362,12 +379,7 @@ impl MainWindow {
         ));
         self.add_controller(space);
         // The position is drawn only while the window can be seen.
-        let follow = |window: &Self| {
-            let shown = window.is_visible() && !window.is_suspended();
-            if let Some(backend) = window.imp().backend.borrow().as_ref() {
-                backend.follow_position(shown);
-            }
-        };
+        let follow = |window: &Self| window.update_position_following();
         self.connect_visible_notify(follow);
         self.connect_suspended_notify(follow);
         if let Some(menu) = imp.menu_button.menu_model() {
@@ -613,6 +625,7 @@ impl MainWindow {
         }
         let selected: String = match page {
             Page::Library(history::PAGE) => self.show_history(),
+            Page::Library(home::PAGE) => self.show_home(),
             Page::Library(name) if self.has_page(name) => self.show_page(page),
             Page::Artist(_) | Page::Genre(_) | Page::Playlist(_) | Page::Search => {
                 self.show_page(page)
@@ -651,7 +664,8 @@ impl MainWindow {
             Page::Library("tracks" | "artists" | "genres" | "composers" | "years")
                 | Page::Artist(_)
                 | Page::Genre(_)
-        ) || page == Page::Library(history::PAGE);
+        ) || page == Page::Library(history::PAGE)
+            || page == Page::Library(home::PAGE);
         let shown = imp.panel_wanted.get() && (imp.panel_chosen.get() || !wide);
         if imp.panel_revealer.reveals_child() != shown {
             imp.panel_revealer.set_reveal_child(shown);

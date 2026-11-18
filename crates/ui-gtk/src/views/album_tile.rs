@@ -112,6 +112,13 @@ impl AlbumTile {
             .unwrap_or_default()
     }
 
+    /// Leaves out the format line under the artist (Home's tiles).
+    pub(crate) fn hide_meta(&self) {
+        if let Some(meta) = self.imp().meta.borrow().as_ref() {
+            meta.set_visible(false);
+        }
+    }
+
     /// The cover widget.
     pub(crate) fn cover(&self) -> &CoverArt {
         &self.imp().cover

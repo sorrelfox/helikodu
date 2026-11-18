@@ -35,6 +35,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Ratings can also be written into the files (**Settings → Advanced**, off by default).
 - Album page: a selected track shows its own facts (composer, format, gain, plays, last played, lyrics, copies, size, file and more) below the album's details; **Open folder** then opens the track's folder.
 
+- Home: the albums added and played lately, the most played tracks and albums to rediscover.
+- Mini player (Ctrl+Shift+M): a small window with the cover, the track, the seek bar and the controls, and a drawer with the queue and the lyrics.
+- Tray icon (StatusNotifierItem): the playing track, the playback controls, showing and hiding the window, the mini player and Quit; closing the window can keep playing in the tray.
+- Keyboard shortcuts can be changed in **Settings ▸ Shortcuts**, with a warning when keys are in use; Shuffle and Repeat can have shortcuts.
+- Shortcuts in other applications (play or pause, next, previous, show the window) through the desktop's GlobalShortcuts portal.
+- Settings can be searched: the settings found are shown, working, in groups by page.
+- Playback pauses when the screen locks (off by default) and before the computer goes to sleep (on by default).
+
 ### Changed
 
 - The player deck at the bottom of the window follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.

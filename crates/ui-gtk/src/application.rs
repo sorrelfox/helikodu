@@ -151,34 +151,9 @@ pub fn install_actions(application: &gtk::Application, backend: &Backend) {
     application.add_action(&quit);
     crate::dialogs::install_actions(application, backend);
     crate::play_modes::install_actions(application, backend);
-    for (action, accels) in [
-        ("app.next", &["<Control>Right"][..]),
-        ("app.previous", &["<Control>Left"]),
-        ("app.seek-forward", &["<Control><Shift>Right"]),
-        ("app.seek-back", &["<Control><Shift>Left"]),
-        ("app.quit", &["<Control>q"]),
-        ("win.volume-up", &["<Control>Up"]),
-        ("win.volume-down", &["<Control>Down"]),
-        ("win.toggle-sidebar", &["F9"]),
-        ("win.now-playing", &["F11"]),
-        ("win.show-menubar", &["<Control>m"]),
-        ("win.cycle-pane", &["F6"]),
-        ("win.back", &["<Alt>Left"]),
-        ("win.forward", &["<Alt>Right"]),
-        ("win.jump-to-playing", &["<Control>j"]),
-        ("win.search", &["<Control>f"]),
-        ("win.track-properties", &["<Alt>Return"]),
-        ("win.track-copies", &["<Alt>c"]),
-        ("win.undo", &["<Control>z"]),
-        ("win.redo", &["<Control><Shift>z", "<Control>y"]),
-        ("win.select-all", &["<Control>a"]),
-        ("app.new-playlist", &["<Control>n"]),
-        ("app.loop-start", &["<Control>bracketleft"]),
-        ("app.loop-end", &["<Control>bracketright"]),
-        ("app.loop-clear", &["<Control>backslash"]),
-    ] {
-        application.set_accels_for_action(action, accels);
-    }
+    crate::shortcuts::install_actions(application, backend);
+    crate::mini_player::install_actions(application);
+    crate::shortcuts::apply(application, &backend.services().settings().shortcuts);
 }
 
 /// Runs the application. `connect` starts the core when the application starts
@@ -255,4 +230,5 @@ fn present(
     let window = MainWindow::new(application, &backend, style);
     window.set_notifications(options.notifications);
     window.present();
+    window.start_desktop_services();
 }

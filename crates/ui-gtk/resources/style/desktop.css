@@ -1,0 +1,105 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * Home, the mini player with its drawer, Settings › Shortcuts and the
+ * settings search.
+ */
+
+/* ---- Home --------------------------------------------------------------- */
+
+.hk-home { padding: 18px 24px 24px; }
+.hk-home-title { margin-bottom: 14px; }
+.hk-home-head { min-height: 30px; }
+.hk-home-head.list { border-bottom: 1px solid var(--hk-line); margin-bottom: 4px; }
+.hk-home-tiles { margin: 6px 0 22px; }
+button.hk-home-link { min-height: 0; padding: 0; border: none; background: none; background-image: none; box-shadow: none; color: var(--hk-t3); font-size: 12px; font-weight: 400; }
+button.hk-home-link:hover { color: var(--hk-t2); }
+list.hk-home-list { background: none; color: var(--hk-t1); }
+list.hk-home-list > row { min-height: 32px; padding: 0 8px; border-radius: 6px; background: none; }
+list.hk-home-list > row:hover { background-color: var(--hk-hover); }
+list.hk-home-list > row:selected { background-color: var(--hk-sel); }
+.hk-home-rank { min-width: 16px; }
+.hk-home-bar { min-height: 3px; border-radius: 2px; background-color: var(--hk-line); }
+.hk-home-bar-fill { min-height: 3px; border-radius: 2px; background-color: var(--hk-accent-fill); }
+.hk-home-plays { min-width: 28px; }
+
+/* ---- Mini player -------------------------------------------------------- */
+
+/* Like the deck: glass in the dark scheme, the window's surfaces in the
+   light one, where the glass colours are the light scheme's. */
+window.hk-mini-window { background: none; border-radius: 14px; }
+.hk-mini { border-radius: 14px; background-color: var(--hk-glass-bg); color: var(--hk-glass-t1); }
+.hk-light .hk-mini {
+  background-color: var(--hk-win); color: var(--hk-t1);
+  border: 1px solid var(--hk-line);
+  --hk-glass-bg: var(--hk-win);
+  --hk-glass-border-top: var(--hk-line);
+  --hk-glass-button-border: var(--hk-line2);
+  --hk-glass-hover: var(--hk-hover);
+  --hk-glass-idle-button: var(--hk-seg);
+  --hk-glass-line: var(--hk-line);
+  --hk-glass-line2: var(--hk-line2);
+  --hk-glass-t1: var(--hk-t1);
+  --hk-glass-t1-strong: var(--hk-t1);
+  --hk-glass-t2: var(--hk-t2);
+  --hk-glass-t2-strong: var(--hk-t2);
+  --hk-glass-t3: var(--hk-t3);
+  --hk-glass-t4: var(--hk-t3);
+  --hk-glass-lyric-upcoming: var(--hk-t2);
+  --hk-glass-wave-rest: var(--hk-line2);
+  --hk-signal-idle-text: var(--hk-t3);
+}
+button.hk-mini-cover { padding: 0; border: none; border-radius: 14px 0 0 14px; background: none; background-image: none; box-shadow: none; }
+.hk-mini-side { padding: 12px 10px 12px 16px; }
+.hk-mini-title { font-size: 14px; font-weight: 600; }
+.hk-mini-artist { font-size: 12px; color: var(--hk-glass-t2); }
+button.hk-mini-button { min-width: 28px; min-height: 28px; color: var(--hk-glass-t2); }
+button.hk-mini-button:hover { background-color: var(--hk-glass-hover); color: var(--hk-glass-t1); }
+button.hk-mini-button:checked { background-color: var(--hk-glass-hover); color: var(--hk-glass-t1); }
+.hk-mini-time { margin-top: 2px; font-weight: 600; }
+button.hk-mini-transport { min-width: 32px; min-height: 32px; border-radius: 16px; }
+button.hk-mini-play { min-width: 38px; min-height: 38px; border-radius: 19px; }
+.hk-mini-drawer-head { min-height: 36px; padding: 0 16px; border-top: 1px solid var(--hk-glass-line); border-bottom: 1px solid var(--hk-glass-line); }
+.hk-mini-tabs > button { min-height: 35px; color: var(--hk-glass-t2); }
+.hk-mini-tabs > button:checked { color: var(--hk-glass-t1); }
+.hk-mini-note { font-size: 12px; color: var(--hk-glass-t2); }
+list.hk-mini-queue { padding: 6px 10px; }
+list.hk-mini-queue > row:hover { background-color: var(--hk-glass-hover); }
+list.hk-mini-queue > row:selected { background-color: var(--hk-glass-hover); }
+list.hk-mini-queue > row.current { background-color: var(--hk-glass-hover); font-weight: 600; }
+list.hk-mini-queue > row.section { padding: 10px 8px 4px; }
+.hk-mini-length { font-size: 12px; color: var(--hk-glass-t2); }
+.hk-lyrics-glass.hk-mini-lyrics .hk-lyrics { padding: 12px 0; }
+.hk-lyrics-glass.hk-mini-lyrics .hk-lyric { font-size: 14px; font-weight: 500; }
+.hk-lyrics-glass.hk-mini-lyrics button.hk-lyric { padding: 5px 16px; }
+.hk-lyrics-glass.hk-mini-lyrics label.hk-lyric.plain { padding: 5px 16px; }
+.hk-mini-none { color: var(--hk-glass-t2); }
+
+/* ---- Settings › Shortcuts ----------------------------------------------- */
+
+.hk-shortcuts-page { padding: 18px 28px 24px; }
+.hk-shortcut-edit { min-height: 30px; padding: 0 8px; border-radius: 6px; }
+.hk-shortcut-edit:hover { background-color: var(--hk-hover); }
+.hk-shortcut-edit.recording { background-color: var(--hk-sel); font-weight: 600; }
+.hk-keys-recording { padding: 2px 3px; border: 1px solid var(--hk-accent-text); border-radius: 6px; }
+.hk-caret { min-width: 1px; min-height: 14px; margin: 0 2px; background-color: var(--hk-t1); }
+.hk-changed-dot { min-width: 6px; min-height: 6px; border-radius: 3px; background-color: var(--hk-accent-fill); }
+button.hk-reset { min-width: 24px; min-height: 24px; }
+.hk-conflict { margin: 4px 0; padding: 8px 12px; border: 1px solid var(--hk-line2); border-radius: 6px; background-color: var(--hk-win); }
+button.hk-text-button { min-height: 26px; padding: 0 8px; border: none; border-radius: 6px; background: none; background-image: none; box-shadow: none; color: var(--hk-t2); font-weight: 500; }
+button.hk-text-button:hover { background-color: var(--hk-hover); color: var(--hk-t1); }
+button.hk-text-button.accent { color: var(--hk-accent-text); font-weight: 600; }
+.hk-global-box { margin-top: 18px; border: 1px solid var(--hk-line2); border-radius: 8px; }
+.hk-global-head { padding: 10px 14px; border-bottom: 1px solid var(--hk-line2); border-radius: 8px 8px 0 0; background-color: var(--hk-win); }
+.hk-global-cell { padding: 10px 14px; }
+.hk-global-cell + .hk-global-cell { border-left: 1px solid var(--hk-line2); }
+
+/* ---- Settings search ---------------------------------------------------- */
+
+.hk-settings-count { font-size: 11.5px; color: var(--hk-t3); font-feature-settings: "tnum"; }
+list.hk-list > row.hk-nav-none { color: var(--hk-t3); }
+list.hk-list > row.hk-nav-found { color: var(--hk-t1); }
+.hk-search-group-head { min-height: 22px; }
+button.hk-open-page { min-height: 22px; padding: 0 4px; border: none; background: none; background-image: none; box-shadow: none; color: var(--hk-t2); font-size: 12px; }
+button.hk-open-page:hover { color: var(--hk-t1); }

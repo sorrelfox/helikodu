@@ -6,9 +6,8 @@
 //! applies its change at once; a value the store refuses is named in a notice
 //! under the header and the control returns to the stored value.
 //!
-//! Pages for later versions (Shortcuts) are listed but not sensitive;
-//! controls for later versions on the other pages are shown insensitive or
-//! left out.
+//! The search entry in the navigation finds settings on every page and shows
+//! them, working, in place of a page (`search.rs`).
 
 mod advanced;
 mod appearance;
@@ -17,6 +16,8 @@ pub(crate) mod library;
 mod loudness;
 mod output;
 mod playback;
+mod search;
+mod shortcuts;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -51,7 +52,7 @@ pub(crate) enum Page {
     Dsp,
     /// Colours, window style, language, notifications.
     Appearance,
-    /// Keyboard shortcuts (a later version).
+    /// Keyboard shortcuts.
     Shortcuts,
     /// Tags, the database, logs, developer mode, reset.
     Advanced,
@@ -93,10 +94,6 @@ impl Page {
             Self::Shortcuts => tr("Shortcuts"),
             Self::Advanced => tr("Advanced"),
         }
-    }
-
-    fn available(self) -> bool {
-        !matches!(self, Self::Shortcuts)
     }
 }
 
@@ -177,7 +174,7 @@ fn build_page(page: Page, context: &Rc<Context>) -> gtk::Widget {
         Page::Appearance => appearance::page(context),
         Page::Advanced => advanced::page(context),
         Page::Dsp => dsp::page(context),
-        Page::Shortcuts => gtk::Box::new(gtk::Orientation::Vertical, 0).upcast(),
+        Page::Shortcuts => shortcuts::page(context),
     }
 }
 
@@ -218,8 +215,6 @@ pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
     search.set_margin_start(8);
     search.set_margin_end(8);
     search.set_margin_bottom(8);
-    // Searching the settings comes in a later version.
-    search.set_sensitive(false);
     nav.append(&search);
     let list = gtk::ListBox::new();
     list.add_css_class("hk-list");
@@ -229,9 +224,15 @@ pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
     for page in Page::ALL {
         let row = gtk::ListBoxRow::new();
         row.set_widget_name(page.id());
-        row.set_child(Some(&label(&page.title(), &[])));
+        let line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let title = label(&page.title(), &[]);
+        title.set_hexpand(true);
+        line.append(&title);
+        let count = label("", &["hk-settings-count"]);
+        count.set_visible(false);
+        line.append(&count);
+        row.set_child(Some(&line));
         row.update_property(&[gtk::accessible::Property::Label(&page.title())]);
-        row.set_sensitive(page.available());
         list.append(&row);
     }
     nav.append(&list);
@@ -316,11 +317,19 @@ pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
         }
     });
     let weak_stack = stack.downgrade();
+    let weak_search = search.downgrade();
     list.connect_row_selected(move |_, row| {
         if let (Some(stack), Some(row)) = (weak_stack.upgrade(), row) {
+            // Choosing a page ends a search.
+            if let Some(search) = weak_search.upgrade()
+                && !search.text().is_empty()
+            {
+                search.set_text("");
+            }
             stack.set_visible_child_name(row.widget_name().as_str());
         }
     });
+    setup_search(&context, &search, &list, &stack, &strip);
     // The context lives as long as the window.
     let keep = RefCell::new(Some(context));
     window.connect_destroy(move |_| {
@@ -336,6 +345,148 @@ pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
     window
 }
 
+/// The settings search: the entry in the navigation, the results in place
+/// of a page.
+fn setup_search(
+    context: &Rc<Context>,
+    entry: &gtk::SearchEntry,
+    list: &gtk::ListBox,
+    stack: &gtk::Stack,
+    strip: &gtk::Box,
+) {
+    let state = Rc::new(search::SearchState::default());
+    let results = gtk::Box::new(gtk::Orientation::Vertical, 18);
+    results.add_css_class("hk-settings-page");
+    let scroller = gtk::ScrolledWindow::new();
+    scroller.set_hscrollbar_policy(gtk::PolicyType::Never);
+    scroller.set_vexpand(true);
+    scroller.set_child(Some(&results));
+    let title = strip
+        .first_child()
+        .and_downcast::<gtk::Label>()
+        .unwrap_or_default();
+    let note = title
+        .next_sibling()
+        .and_downcast::<gtk::Label>()
+        .unwrap_or_default();
+    let note_text = note.text().to_string();
+    let weak_entry = entry.downgrade();
+    let weak_stack = stack.downgrade();
+    let open_page: Rc<dyn Fn(Page)> = Rc::new(move |page| {
+        if let Some(entry) = weak_entry.upgrade() {
+            entry.set_text("");
+        }
+        if let Some(stack) = weak_stack.upgrade() {
+            stack.set_visible_child_name(page.id());
+        }
+    });
+    let nav_rows = |list: &gtk::ListBox, found: Option<&search::Found>| {
+        let mut child = list.first_child();
+        while let Some(row) = child.and_downcast::<gtk::ListBoxRow>() {
+            child = row.next_sibling();
+            let count = Page::ALL
+                .iter()
+                .find(|p| p.id() == row.widget_name().as_str())
+                .and_then(|page| {
+                    found.map(|f| f.iter().find(|(p, _)| p == page).map_or(0, |(_, n)| *n))
+                });
+            row.remove_css_class("hk-nav-found");
+            row.remove_css_class("hk-nav-none");
+            let count_label = row
+                .child()
+                .and_then(|line| line.last_child())
+                .and_downcast::<gtk::Label>();
+            match count {
+                Some(n) => {
+                    row.add_css_class(if n > 0 { "hk-nav-found" } else { "hk-nav-none" });
+                    if let Some(label) = &count_label {
+                        label.set_text(&n.to_string());
+                        label.set_visible(n > 0);
+                    }
+                }
+                None => {
+                    if let Some(label) = &count_label {
+                        label.set_visible(false);
+                    }
+                }
+            }
+        }
+    };
+    let weak_context = Rc::downgrade(context);
+    let weak_list = list.downgrade();
+    let weak_stack = stack.downgrade();
+    let search_state = state.clone();
+    entry.connect_search_changed(move |entry| {
+        let (Some(context), Some(list), Some(stack)) = (
+            weak_context.upgrade(),
+            weak_list.upgrade(),
+            weak_stack.upgrade(),
+        ) else {
+            return;
+        };
+        let text = entry.text().trim().to_owned();
+        let state = &search_state;
+        if text.is_empty() {
+            let Some(search) = state.search.take() else {
+                return;
+            };
+            while let Some(child) = results.first_child() {
+                results.remove(&child);
+            }
+            nav_rows(&list, None);
+            note.set_text(&note_text);
+            let before = state
+                .before
+                .take()
+                .unwrap_or_else(|| Page::Library.id().to_owned());
+            stack.set_visible_child_name(&before);
+            if before == Page::Library.id() {
+                stack.notify("visible-child-name");
+            }
+            if search.changed(&context) {
+                context.rebuild();
+            }
+            return;
+        }
+        if state.search.borrow().is_none() {
+            state
+                .before
+                .replace(stack.visible_child_name().map(|s| s.to_string()));
+            state.search.replace(Some(search::Search::start(&context)));
+        }
+        if stack.child_by_name("search").is_none() {
+            stack.add_named(&scroller, Some("search"));
+        }
+        let found = state
+            .search
+            .borrow()
+            .as_ref()
+            .map(|search| search.show(&text, &results, &open_page))
+            .unwrap_or_default();
+        stack.set_visible_child_name("search");
+        list.unselect_all();
+        title.set_text(&fill(&tr("Results for “{}”"), &[&text]));
+        note.set_text(&search::summary(&found));
+        nav_rows(&list, Some(&found));
+    });
+    entry.connect_stop_search(|entry| entry.set_text(""));
+    // Esc goes back from the results wherever the focus is.
+    let keys = gtk::EventControllerKey::new();
+    keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let weak_entry = entry.downgrade();
+    keys.connect_key_pressed(move |_, key, _, _| {
+        if key == gtk::gdk::Key::Escape
+            && state.search.borrow().is_some()
+            && let Some(entry) = weak_entry.upgrade()
+        {
+            entry.set_text("");
+            return glib::Propagation::Stop;
+        }
+        glib::Propagation::Proceed
+    });
+    context.window.add_controller(keys);
+}
+
 fn find_stack(window: &gtk::Window) -> Option<gtk::Stack> {
     let mut pending = vec![window.child()?];
     while let Some(widget) = pending.pop() {
@@ -349,6 +500,17 @@ fn find_stack(window: &gtk::Window) -> Option<gtk::Stack> {
         }
     }
     None
+}
+
+/// Records keys for an action on the Shortcuts page, as if pressed there
+/// (for tests); whether they were taken.
+pub(crate) fn demo_record_shortcut(action: &str, accelerator: &str) -> bool {
+    shortcuts::demo_record(action, accelerator)
+}
+
+/// Resets every shortcut from the Shortcuts page (for tests).
+pub(crate) fn demo_reset_shortcuts() {
+    shortcuts::demo_reset_all();
 }
 
 /// The page shown in the Settings window over `main`, if it is open.

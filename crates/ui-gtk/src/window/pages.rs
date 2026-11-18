@@ -284,6 +284,11 @@ impl MainWindow {
             };
             let typing = gtk::prelude::GtkWindowExt::focus(window)
                 .is_some_and(|w| w.is::<gtk::Text>() || w.is::<gtk::TextView>());
+            // The keys come back as the settings give them.
+            let settings = window
+                .backend()
+                .map(|b| b.services().settings().shortcuts.clone())
+                .unwrap_or_default();
             for (action, key) in KEYS {
                 let accels = application.accels_for_action(action);
                 let has = accels.iter().any(|a| a == key);
@@ -294,10 +299,8 @@ impl MainWindow {
                         .filter(|a| a != key)
                         .collect();
                     application.set_accels_for_action(action, &rest);
-                } else if !typing && !has {
-                    let mut all: Vec<&str> = accels.iter().map(|a| a.as_str()).collect();
-                    all.push(key);
-                    application.set_accels_for_action(action, &all);
+                } else if !typing {
+                    crate::shortcuts::apply_action(&application, action, &settings);
                 }
             }
         });
@@ -442,6 +445,7 @@ impl MainWindow {
             "smart-playlist" => pages.smart.focus_target(),
             "search" => pages.search_entry.clone().upcast(),
             "history" => self.history_view()?.focus_target(),
+            "home" => self.home_focus_target()?,
             _ => return None,
         })
     }

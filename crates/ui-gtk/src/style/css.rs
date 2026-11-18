@@ -29,6 +29,7 @@ impl Providers {
             "tags.css",
             "browse.css",
             "playlists.css",
+            "desktop.css",
         ] {
             let provider = gtk::CssProvider::new();
             provider.load_from_resource(&format!("{}/style/{file}", crate::RESOURCE_BASE));

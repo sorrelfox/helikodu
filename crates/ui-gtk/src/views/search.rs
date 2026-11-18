@@ -126,7 +126,7 @@ impl std::fmt::Debug for SearchView {
 }
 
 /// `text` with the parts that match a word of `words` in the accent and bold.
-fn highlighted(text: &str, words: &[String]) -> pango::AttrList {
+pub(crate) fn highlighted(text: &str, words: &[String]) -> pango::AttrList {
     let attributes = pango::AttrList::new();
     let lower = text.to_lowercase();
     // Byte offsets carry over only where lower-casing keeps the lengths.

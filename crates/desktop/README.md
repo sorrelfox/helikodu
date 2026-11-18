@@ -5,7 +5,7 @@ MPRIS2, the application D-Bus API, notifications, suspend inhibition, the Settin
 - **May depend on:** `model`, `service`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
 
-Everything here talks D-Bus through zbus with its own small executor (`default-rt`), not tokio; the XDG portals go through `ashpd` built the same way (`async-io`, only the Settings, Inhibit and OpenURI portals). Every connection is to the session bus's Unix socket, or to the system bus for the logind fallback.
+Everything here talks D-Bus through zbus with its own small executor (`default-rt`), not tokio; the XDG portals go through `ashpd` built the same way (`async-io`, only the Settings, Inhibit, OpenURI and GlobalShortcuts portals). Every connection is to the session bus's Unix socket, or to the system bus for the logind fallback.
 
 | Module | What it does |
 |---|---|
@@ -14,6 +14,9 @@ Everything here talks D-Bus through zbus with its own small executor (`default-r
 | `portals.rs` | Colour scheme, accent colour, contrast and reduced motion from the Settings portal |
 | `open_folder.rs` | "Open containing folder": `org.freedesktop.FileManager1.ShowItems`, or the OpenURI portal |
 | `reservation.rs`, `reservation/` | Audio device reservation (`org.freedesktop.ReserveDevice1`) |
+| `tray.rs`, `tray/` | The tray icon: `org.kde.StatusNotifierItem` and its menu as `com.canonical.dbusmenu` |
+| `global_shortcuts.rs` | Shortcuts in other applications through the GlobalShortcuts portal |
+| `session_watch.rs` | The screen lock and sleep: the Inhibit portal's session monitor and logind |
 
 ## MPRIS
 
@@ -52,6 +55,20 @@ Served only with `MprisHooks::with_playlists(source)`, where `source: PlaylistSo
 
 `AppearanceMonitor::start(on_change)` reads `color-scheme`, `accent-color`, `contrast` and `reduced-motion` from the Settings portal and returns them as an `Appearance`; afterwards `on_change` gets the whole appearance after each change, on the monitor's thread. An accent colour outside 0–1 counts as none; `Rgb::to_hex` gives the CSS form. Without a portal it fails, and the front end keeps `Appearance::default()`. GTK 4.20 and newer follow the colour scheme on their own (4.24 also the accent colour); this reader covers older GTK and the parts that use the values directly.
 
+## Tray icon
+
+`Tray::start(TrayConfig, TrayHooks)` serves `org.kde.StatusNotifierItem` at `/StatusNotifierItem` under `org.kde.StatusNotifierItem-<pid>-<n>` and its menu as `com.canonical.dbusmenu` (version 3) at `/MenuBar`, and registers with `org.kde.StatusNotifierWatcher`. It registers again whenever a watcher appears (`NameOwnerChanged`), and `TrayHooks::with_host` is told after each change whether a host shows the icon (`IsStatusNotifierHostRegistered`, `StatusNotifierHost(Un)Registered`); with no watcher it reports `false`. The icon is `TrayConfig::icon_name` (the application's symbolic icon by default).
+
+The front end gives everything shown with `set_content(TrayContent { tooltip, menu })`, so all text stays translated on its side: `TrayMenuItem::Text` (a line that cannot be chosen), `Action` (with `enabled` and an optional check state) and `Separator`. The menu is one level under the root (id 0); items are numbered from 1. A change of the menu sends `LayoutUpdated` with a new revision; a change of the tooltip sends `NewToolTip`; the same content again sends nothing. `Event(id, "clicked")` and `EventGroup` on an enabled action call `TrayHooks::new`'s hook with its `TrayAction`; `Activate` calls `with_activate`, vertical `Scroll` calls `with_scroll` with the host's delta. Underscores in labels are doubled, as dbusmenu reads one as an access key.
+
+## Shortcuts in other applications
+
+`GlobalShortcuts::start(on_event)` opens a session with the GlobalShortcuts portal (`CreateSession`) without asking anything; it fails where there is no portal. `bind(Vec<ShortcutSpec>)` hands over the shortcuts (`BindShortcuts`), which on most desktops asks the user once; the result is `ShortcutEvent::Bound(Vec<BoundShortcut>)` with the keys the desktop describes (`trigger_description`), or `Failed`. Presses arrive as `Activated(id)`, later changes made in the desktop's settings as `Bound`. `configure(activation_token)` opens the desktop's dialog again (`ConfigureShortcuts`, portal version 2, `can_configure()`). Everything runs on the session's own thread; dropping it closes the session.
+
+## Screen lock and sleep
+
+`SessionWatch::start(on_change)` reports `SessionChange::Locked`, `Unlocked`, `GoingToSleep` and `Woke`. The lock comes from the Inhibit portal's session monitor (`CreateMonitor`, `screensaver-active` in `StateChanged`; `QueryEndResponse` is answered) and from logind's session on the system bus (`Lock`, `Unlock` and the `LockedHint` property; the session is `GetSessionByPID`, else `GetSession("auto")`); both may report one lock, and only changes are passed on. Sleep comes from logind's `PrepareForSleep`. While `set_delay_sleep(true)`, a logind `delay` inhibitor lock on sleep is held, so that the system waits `SLEEP_GRACE` (400 ms) after `GoingToSleep` for the front end to pause; it is taken again after waking. A missing source is left out; the watch always starts. Inside the Flatpak the logind parts need `--system-talk-name=org.freedesktop.login1`.
+
 ## Open containing folder
 
 `show_in_folder(path, activation_token)` asks the file manager to show the file selected (`org.freedesktop.FileManager1.ShowItems`), and falls back to the OpenURI portal's `OpenDirectory` (always inside a sandbox, where it needs no permission). It blocks while the file manager starts; `show_in_folder_later` runs it on a thread and reports the result to a callback. Pass the Wayland activation token so the file manager's window can take focus.
@@ -63,6 +80,7 @@ The single instance, "Open With", the desktop actions and notifications belong t
 - The `.desktop` file sets `DBusActivatable=true`, and the D-Bus service file starts `helikodu --gapplication-service`, which `GApplication` handles itself. Files arrive through `GApplication::open` (`HANDLES_OPEN`).
 - The quick actions call the application actions `app.play-pause`, `app.next` and `app.previous`. Launchers activate them over D-Bus (`ActivateAction`), which may start the program without `activate`, so the actions must be added in `startup`.
 - Notifications use `GNotification` (`GApplication::send_notification`), which picks the portal inside a sandbox.
+- The GUI starts the tray icon (where the settings want it), the shortcuts in other applications and the lock and sleep watch for the window it shows, feeding their callbacks to the main context.
 - The GUI starts `Mpris` with hooks whose `raise` and `quit` forward to the main context (they run on zbus's thread), feeds it the player's events and the now-playing details with the thumbnail file it shows in the deck, and starts `SuspendInhibition` and `AppearanceMonitor`.
 
 ## Device reservation
@@ -79,7 +97,7 @@ The single instance, "Open With", the desktop actions and notifications belong t
 cargo test -p helikodu-desktop
 ```
 
-The unit tests cover the MPRIS mapping (metadata, capabilities, loop status, which changes are announced, seek detection), the cover export, file URIs, the appearance values and the suspend inhibition with a fake inhibitor. `tests/bus.rs` starts a private bus (`dbus-daemon --session`) for each test, and skips with a note where that is not possible: MPRIS is introspected, read and called by a client while a fake player drives it, and the appearance monitor reads and follows a fake Settings portal. `tests/data_files.rs` checks the files in `data/` against the code and runs `desktop-file-validate` and `appstreamcli validate --no-net` when they are installed.
+The unit tests cover the MPRIS mapping (metadata, capabilities, loop status, which changes are announced, seek detection), the cover export, file URIs, the appearance values and the suspend inhibition with a fake inhibitor. `tests/bus.rs` starts a private bus (`dbus-daemon --session`) for each test, and skips with a note where that is not possible: MPRIS is introspected, read and called by a client while a fake player drives it, the appearance monitor reads and follows a fake Settings portal, the tray icon registers with a fake watcher (also one that appears later and goes away) and its menu is read and clicked as a host does, the global shortcuts bind, report presses and open the configuration with a fake portal that answers through Request objects, and the lock and sleep watch follows a fake logind (Lock, LockedHint, PrepareForSleep, the delay lock taken again after waking) and a fake Inhibit portal's monitor. `tests/data_files.rs` checks the files in `data/` against the code and runs `desktop-file-validate` and `appstreamcli validate --no-net` when they are installed.
 
 The reservation test against the real session bus is ignored by default. It takes a card from WirePlumber, opens its `hw:` device and writes 150 ms of digital silence, then checks that WirePlumber owns the card again and that all PipeWire nodes are back under their names. Taking a card removes all its nodes, inputs included, for that moment, so choose one nothing is using:
 

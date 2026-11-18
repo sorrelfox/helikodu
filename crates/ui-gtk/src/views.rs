@@ -13,6 +13,7 @@ pub(crate) mod drag;
 pub(crate) mod folders;
 pub(crate) mod genres;
 pub(crate) mod history;
+pub(crate) mod home;
 pub(crate) mod now_playing;
 pub(crate) mod placeholder;
 pub(crate) mod playlist;

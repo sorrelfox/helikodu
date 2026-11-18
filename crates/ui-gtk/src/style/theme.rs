@@ -434,7 +434,7 @@ pub(crate) fn look_css(look: &Look) -> String {
     // glass, are darkened until they read on its surface.
     let surface = super::color::palette(false, look.high_contrast).win;
     css.push_str(&format!(
-        ".hk-light .hk-deck {{ --hk-signal-bit-perfect-text: {}; --hk-signal-processed-text: {}; }}\n",
+        ".hk-light .hk-deck, .hk-light .hk-mini {{ --hk-signal-bit-perfect-text: {}; --hk-signal-processed-text: {}; }}\n",
         tokens::signal::bit_perfect::TEXT.ensure(surface, 4.5).hex(),
         tokens::signal::processed::TEXT.ensure(surface, 4.5).hex(),
     ));

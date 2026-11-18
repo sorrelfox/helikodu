@@ -78,6 +78,14 @@ A track counts as played once you have listened to half of it or four minutes of
 
 **Library ▸ Export History…** writes the whole history to a file on your computer; nothing is sent anywhere. Name the file with `.jsonl` for ListenBrainz listens (one JSON object per line, in the listen format of the ListenBrainz API, plays only), or with `.log` for a `.scrobbler.log` (the Audioscrobbler portable format that Last.fm tools read; plays are marked `L` and skips `S`). You can submit such a file to a listening service later with a tool of your choice.
 
+## The mini player
+
+**Ctrl+Shift+M**, or **Mini player** in the tray menu, puts a small player in place of the main window: the cover, the track, the seek bar, the play controls and the output's format. A click on the cover opens Now Playing in the main window; **Back to the full window** returns to it. The button with the window icon opens a drawer underneath with the **Queue** (double-click a track to play it, **Delete** removes it) and the **Lyrics** (click a line to play from there); the mini player remembers whether the drawer was open and which tab it showed. Like the deck, it is dark in the dark colour scheme and light in the light one. Its close button closes it; with the main window hidden as well, that closes Helikodu, or keeps it playing in the tray where the settings say so.
+
+## Pausing when the screen locks or the computer sleeps
+
+In **Settings ▸ Playback ▸ Power**, **Pause when the screen locks** (off by default) and **Pause before the computer goes to sleep** (on by default) pause playback at those moments; it stays paused afterwards.
+
 ## Media keys and desktop controls
 
 Helikodu works with your keyboard's media keys, the media controls of GNOME and KDE Plasma, and other MPRIS remote controls. Remote controls that show a track list see the queue (for a very long queue, the part around the playing track) and can jump to a track in it; those that list playlists can start one of your playlists. It keeps the computer from going to sleep while music plays (the screen can still lock); turn this off with **Keep the computer awake while music plays** in the **Playback** settings.

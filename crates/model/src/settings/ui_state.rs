@@ -25,6 +25,8 @@ pub struct UiState {
     /// The view shown last, by the name the interface gives it (`albums`); empty for
     /// the default view.
     pub last_view: String,
+    /// The mini player.
+    pub mini_player: MiniPlayerState,
 }
 
 impl UiState {
@@ -58,8 +60,20 @@ impl Default for UiState {
             window: WindowState::default(),
             panes: PaneState::default(),
             last_view: String::new(),
+            mini_player: MiniPlayerState::default(),
         }
     }
+}
+
+/// What the mini player remembers: whether its drawer is open and which tab
+/// it shows.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MiniPlayerState {
+    /// Whether the drawer under it is open.
+    pub drawer: bool,
+    /// The drawer's tab: `queue` (also when empty) or `lyrics`.
+    pub tab: String,
 }
 
 /// The main window's size, in logical pixels.

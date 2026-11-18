@@ -15,79 +15,18 @@ use gtk::prelude::*;
 
 use super::common::{dialog_window, find_open, header_strip, key_caps};
 use crate::i18n::tr;
+use crate::shortcuts::Group;
 use crate::widgets::label;
 
 /// The name the window is known by among the toplevels.
 pub(crate) const NAME: &str = "shortcuts";
 
-/// A group of the window.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Group {
-    Playback,
-    Library,
-    Window,
-}
-
 /// The actions shown, by group, with their names.
 fn actions() -> Vec<(Group, &'static str, String)> {
-    vec![
-        (Group::Playback, "app.play-pause", tr("Play or pause")),
-        (Group::Playback, "app.stop", tr("Stop")),
-        (Group::Playback, "app.next", tr("Next track")),
-        (Group::Playback, "app.previous", tr("Previous track")),
-        (Group::Playback, "app.seek-forward", tr("Seek forward")),
-        (Group::Playback, "app.seek-back", tr("Seek back")),
-        (Group::Playback, "win.volume-up", tr("Volume up")),
-        (Group::Playback, "win.volume-down", tr("Volume down")),
-        (
-            Group::Playback,
-            "app.stop-after",
-            tr("Stop after this track"),
-        ),
-        (
-            Group::Playback,
-            "app.loop-start",
-            tr("Set the loop's start here"),
-        ),
-        (
-            Group::Playback,
-            "app.loop-end",
-            tr("Set the loop's end here"),
-        ),
-        (Group::Playback, "app.loop-clear", tr("Clear the loop")),
-        (Group::Playback, "app.previous-album", tr("Previous album")),
-        (Group::Playback, "app.next-album", tr("Next album")),
-        (Group::Playback, "app.random-album", tr("Random album")),
-        (Group::Playback, "win.sleep-timer", tr("Sleep timer")),
-        (Group::Library, "win.search", tr("Search")),
-        (
-            Group::Library,
-            "win.jump-to-playing",
-            tr("Jump to the playing track"),
-        ),
-        (
-            Group::Library,
-            "win.track-properties",
-            tr("Track properties"),
-        ),
-        (
-            Group::Library,
-            "win.track-copies",
-            tr("Copies of the track's file"),
-        ),
-        (Group::Library, "win.select-all", tr("Select all")),
-        (Group::Library, "win.undo", tr("Undo")),
-        (Group::Library, "app.new-playlist", tr("New playlist")),
-        (Group::Window, "win.toggle-sidebar", tr("Sidebar")),
-        (Group::Window, "win.now-playing", tr("Now Playing")),
-        (Group::Window, "win.show-menubar", tr("Menu bar")),
-        (Group::Window, "win.cycle-pane", tr("Next pane")),
-        (Group::Window, "win.back", tr("Back")),
-        (Group::Window, "win.forward", tr("Forward")),
-        (Group::Window, "app.preferences", tr("Settings")),
-        (Group::Window, "app.shortcuts", tr("Keyboard shortcuts")),
-        (Group::Window, "app.quit", tr("Quit")),
-    ]
+    crate::shortcuts::bindings()
+        .into_iter()
+        .map(|b| (b.group, b.action, b.name))
+        .collect()
 }
 
 /// The key caps of an accelerator such as `<Control><Shift>Right`: the
@@ -216,11 +155,12 @@ pub(crate) fn open(parent: &gtk::Window) -> gtk::Window {
 
     let mut rows = Vec::new();
     let mut heads = Vec::new();
-    for (group, title, column) in [
-        (Group::Playback, tr("Playback"), &left),
-        (Group::Library, tr("Library and lists"), &right),
-        (Group::Window, tr("Window"), &right),
-    ] {
+    for (group, title) in Group::all() {
+        let column = if group == Group::Playback {
+            &left
+        } else {
+            &right
+        };
         let head = label(&title, &["hk-section-label", "hk-list-section"]);
         head.set_xalign(0.0);
         column.append(&head);

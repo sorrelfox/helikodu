@@ -13,14 +13,21 @@
 //! - [`open_folder`]: showing a file in the file manager.
 //! - [`reservation`]: taking a sound card from the sound server for exclusive
 //!   ALSA output (`org.freedesktop.ReserveDevice1`).
+//! - [`tray`]: the tray icon and its menu (StatusNotifierItem and dbusmenu).
+//! - [`global_shortcuts`]: shortcuts that work in other applications, through
+//!   the GlobalShortcuts portal.
+//! - [`session_watch`]: the screen lock and sleep, so that playback can pause.
 
 #![forbid(unsafe_code)]
 
+pub mod global_shortcuts;
 pub mod mpris;
 pub mod open_folder;
 pub mod portals;
 pub mod power;
 pub mod reservation;
+pub mod session_watch;
+pub mod tray;
 
 /// The application ID: the `.desktop` file, the AppStream metainfo, the icon and
 /// the application's own bus name are named after it.

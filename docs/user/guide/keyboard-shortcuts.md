@@ -14,7 +14,7 @@
 | Ctrl+Up | Volume up |
 | Ctrl+Down | Volume down |
 
-**Stop** and **Stop after this track** have no shortcut; they are in the **Playback** menu and in the play button's menu.
+**Stop**, **Stop after this track**, **Shuffle** and **Repeat** have no shortcut until you give them one; they are in the **Playback** menu and in the play button's menu.
 
 ## Library and lists
 
@@ -39,6 +39,7 @@ While you type in a text field, Space, Ctrl+A and Ctrl+Z work in the field inste
 |---|---|
 | F9 | Hide or show the sidebar |
 | Ctrl+M | Show or hide the menu bar (Classic window style) |
+| Ctrl+Shift+M | Open or close the [mini player](playing.md#the-mini-player) |
 | F6 | Move the focus to the next part of the window |
 | Alt+Left | Back to the previous page |
 | Alt+Right | Forward |
@@ -48,4 +49,12 @@ While you type in a text field, Space, Ctrl+A and Ctrl+Z work in the field inste
 
 Media keys (Play/Pause, Next, Previous) work through your desktop's media controls.
 
-Changing the shortcuts comes in a later version.
+## Changing the shortcuts
+
+**Settings ▸ Shortcuts** lists every action with its keys. Click an action, or select it and press **Enter**, then press the new keys; **Esc** cancels and **Backspace** removes the shortcut. When the keys already belong to another action, a notice says which; **Use it here** moves them. A changed shortcut has a dot before its keys and a button after them that puts the original keys back; **Reset all…** does that for every action. To find an action, type its name in the field at the top, or press keys there to see what they do.
+
+Space plays and pauses outside text fields, whatever else is set.
+
+## In other applications
+
+Play or pause, Next track, Previous track and Show Helikodu can also work while another window is in front, where the desktop offers this through its global shortcuts service (the XDG GlobalShortcuts portal). The desktop chooses the keys: **Set up in the desktop…** at the bottom of **Settings ▸ Shortcuts** asks it, and the keys it gives are shown there. The box is hidden where the desktop has no such service.

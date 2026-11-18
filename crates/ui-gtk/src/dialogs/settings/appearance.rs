@@ -3,7 +3,8 @@
 
 //! Settings › Appearance: colour scheme and accent (applied at once), window
 //! style (from the next start), the menu bar, striped tables, the language
-//! and notifications. The tray rows come in a later version and are left out.
+//! and notifications; the tray icon and what closing the window does, shown
+//! only where the desktop has a tray.
 
 use std::rc::Rc;
 
@@ -398,5 +399,66 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
             },
         ),
     ));
+    tray_rows(context, &body);
     scroller.upcast()
+}
+
+/// "System tray" and "Closing the window", hidden while no tray shows the
+/// icon.
+fn tray_rows(context: &Rc<Context>, body: &gtk::Box) {
+    let settings = context.settings();
+    let tray = row(
+        &tr("System tray"),
+        None,
+        &switch_setting(
+            context,
+            &tr("Show an icon in the tray"),
+            &tr("Click it to show or hide the window. Scroll over it to change the volume."),
+            settings.appearance.tray_icon,
+            |s, on| s.appearance.tray_icon = on,
+            |context, _| {
+                if let Some(main) = context.main.upgrade() {
+                    main.apply_tray_setting();
+                }
+            },
+        ),
+    );
+    let closing = dropdown(
+        &[tr("Keeps playing in the tray"), tr("Quits Helikodu")],
+        usize::from(!settings.appearance.close_to_tray),
+        240,
+    );
+    closing.set_widget_name("close-to-tray");
+    let weak = Rc::downgrade(context);
+    crate::dialogs::common::on_selected(&closing, move |index| {
+        if let Some(context) = weak.upgrade() {
+            context.update(|s| s.appearance.close_to_tray = index == 0);
+        }
+    });
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    line.append(&closing);
+    let always = label(&tr("Ctrl+Q always quits."), &["hk-t3", "hk-secondary"]);
+    always.set_valign(gtk::Align::Center);
+    line.append(&always);
+    let close_row = row(&tr("Closing the window"), None, &line);
+    let shown = |main: Option<crate::window::MainWindow>| main.is_some_and(|m| m.tray_available());
+    let visible = shown(context.main.upgrade());
+    tray.set_visible(visible);
+    close_row.set_visible(visible);
+    body.append(&tray);
+    body.append(&close_row);
+    if let Some(main) = context.main.upgrade() {
+        let tray = tray.downgrade();
+        let close_row = close_row.downgrade();
+        let owner = body.clone();
+        main.connect_desktop_changed(&owner, move |main| {
+            let visible = main.tray_available();
+            if let Some(tray) = tray.upgrade() {
+                tray.set_visible(visible);
+            }
+            if let Some(close_row) = close_row.upgrade() {
+                close_row.set_visible(visible);
+            }
+        });
+    }
 }

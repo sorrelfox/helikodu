@@ -2,7 +2,11 @@
 
 The main window has three parts: the **sidebar** on the left, the **content** in the middle and the **panel** on the right, which shows the queue. Drag the borders between them to change their widths. **F9** hides or shows the sidebar, the **Show the queue** button in the header shows or hides the panel, and **F6** moves the keyboard focus from one part to the next. The **View** submenu of the main menu has the same switches: **Sidebar**, **Queue Panel** and **Menu Bar**.
 
-The sidebar lists the views of your library (**Albums**, **Artists**, **Tracks**, **Genres**, **Composers**, **Years** and **Folders**) and your playlists. **Alt+Left** and **Alt+Right**, or the **Back** and **Forward** buttons in the header, go back and forward between the pages you visited.
+The sidebar lists the views of your library (**Home**, **Albums**, **Artists**, **Tracks**, **Genres**, **Composers**, **Years** and **Folders**) and your playlists. **Alt+Left** and **Alt+Right**, or the **Back** and **Forward** buttons in the header, go back and forward between the pages you visited.
+
+## Home
+
+**Home** shows the albums added most recently and those played most recently, each in one row of covers (as many as fit the window); **Show all** opens Albums sorted by date added, and **History** opens the play history. Below, **Most played** lists the five tracks played most often (double-click one to play the list from there), and **Rediscover** lists albums you have not played for three months, or never, with when you played them last; click one to open it.
 
 ## Search
 

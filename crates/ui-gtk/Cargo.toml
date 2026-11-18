@@ -62,6 +62,12 @@ name = "play_modes"
 harness = false
 
 [[test]]
+# Home, the mini player, the tray menu, Settings › Shortcuts and the settings
+# search against the sample backend; GTK needs its own main function.
+name = "desktop"
+harness = false
+
+[[test]]
 # Composers, Years, the audiobook page and folders outside the library against the
 # sample backend; GTK needs its own main function.
 name = "browse"

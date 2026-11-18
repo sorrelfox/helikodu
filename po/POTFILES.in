@@ -91,3 +91,9 @@ crates/ui-gtk/src/views/smart_rules.rs
 crates/ui-gtk/src/window/playlists.rs
 crates/ui-gtk/src/widgets/spectrum_view.rs
 crates/ui-gtk/src/widgets/level_meter.rs
+crates/ui-gtk/src/shortcuts.rs
+crates/ui-gtk/src/mini_player.rs
+crates/ui-gtk/src/views/home.rs
+crates/ui-gtk/src/window/desktop.rs
+crates/ui-gtk/src/dialogs/settings/shortcuts.rs
+crates/ui-gtk/src/dialogs/settings/search.rs
