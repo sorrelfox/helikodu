@@ -248,7 +248,9 @@ fn parse(data: &[u8]) -> Result<(MidiFile, SongInfo, Duration), SongError> {
     let midi = panic::catch_unwind(AssertUnwindSafe(|| MidiFile::new(&mut &smf[..])))
         .map_err(|_| SongError::Unsupported("the MIDI file is damaged".into()))?
         .map_err(|e| SongError::Unsupported(format!("cannot read the MIDI file: {e}")))?;
-    let seconds = midi.get_length();
+    // The library panics on some damaged files here too (a file without tracks).
+    let seconds = panic::catch_unwind(AssertUnwindSafe(|| midi.get_length()))
+        .map_err(|_| SongError::Unsupported("the MIDI file is damaged".into()))?;
     let length = if seconds.is_finite() && seconds > 0.0 {
         Duration::from_secs_f64(seconds)
     } else {
@@ -390,6 +392,22 @@ impl SongDecoder for MidiDecoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A header with no tracks made the library panic while measuring the
+    /// length; found by fuzzing.
+    #[test]
+    fn a_file_without_tracks_is_refused() {
+        let data = [
+            0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x55, 0x60,
+            0x4d, 0x54, 0x72, 0x6b, 0x00, 0x00, 0x00, 0x5a, 0x00, 0xff, 0x03, 0x11, 0x48, 0x65,
+            0x6c, 0x69, 0x6b, 0x6f, 0x6d, 0x00, 0x20, 0x41, 0x72, 0x70, 0x65, 0x67, 0x67, 0x69,
+            0x6f, 0x00, 0x5a, 0x00, 0xff, 0x03, 0x11, 0x48, 0x65, 0x6c, 0x69, 0x6b, 0x6f, 0x6d,
+            0x00, 0x20, 0x41, 0x72, 0x70, 0x06, 0x00, 0x00, 0x00, 0x01, 0x00, 0x60, 0x4d, 0x54,
+            0x72, 0x6b, 0x00, 0x00, 0x00, 0x5a, 0x64, 0x60, 0x90, 0x48, 0x00, 0x00, 0xff, 0x2f,
+            0x00,
+        ];
+        assert!(read_info(&data).is_err());
+    }
 
     #[test]
     fn reads_text_events() {

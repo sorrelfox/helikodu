@@ -17,7 +17,7 @@ mod output_io;
 use std::ffi::{CStr, c_int};
 use std::ptr;
 
-pub use audio_encoder::AudioEncoder;
+pub use audio_encoder::{AudioEncoder, MAX_FLOAT_SAMPLE};
 
 use crate::ffi::ff;
 

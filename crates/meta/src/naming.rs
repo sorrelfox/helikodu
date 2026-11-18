@@ -39,6 +39,10 @@ use helikodu_model::query::Field;
 /// The longest name of one file or folder, in bytes, on the file systems of Linux.
 pub const MAX_NAME_BYTES: usize = 255;
 
+/// The deepest square brackets may nest. Deeper nesting is refused, so that a
+/// pattern (from a hand-edited file, say) cannot exhaust the stack.
+pub const MAX_BRACKET_DEPTH: usize = 16;
+
 /// The character that stands in for one that a name may not hold.
 const REPLACEMENT: char = '_';
 
@@ -224,6 +228,8 @@ pub enum PatternProblem {
     /// The pattern starts or ends with `/`, or has two in a row: a folder name
     /// would be empty.
     EmptyFolder,
+    /// Square brackets nested deeper than [`MAX_BRACKET_DEPTH`].
+    TooDeep,
 }
 
 /// A pattern that cannot be read: what is wrong and where, in characters from the
@@ -249,6 +255,7 @@ impl fmt::Display for PatternError {
             PatternProblem::UnexpectedClose(c) => write!(f, "{c} closes nothing"),
             PatternProblem::NestedField => write!(f, "a field name cannot hold {{"),
             PatternProblem::EmptyFolder => write!(f, "a folder name would be empty"),
+            PatternProblem::TooDeep => write!(f, "square brackets are nested too deeply"),
         }?;
         write!(f, " (at character {})", self.start + 1)
     }
@@ -271,7 +278,7 @@ impl NamingPattern {
             });
         }
         let mut position = 0;
-        let parts = parse_parts(&chars, &mut position, None)?;
+        let parts = parse_parts(&chars, &mut position, None, 0)?;
         check_folders(&chars)?;
         Ok(Self {
             text: text.to_owned(),
@@ -322,7 +329,18 @@ impl NamingPattern {
                 } else {
                     cleaned
                 };
-                shorten(&cleaned, MAX_NAME_BYTES.saturating_sub(reserve).max(1))
+                let short = shorten(&cleaned, MAX_NAME_BYTES.saturating_sub(reserve).max(1));
+                if short == cleaned {
+                    return short;
+                }
+                // Cutting can leave a dot or a space at the end of a folder name,
+                // or a name of dots: clean it again.
+                let again = clean_name(&short, set, !last);
+                if again.is_empty() {
+                    REPLACEMENT.to_string()
+                } else {
+                    again
+                }
             })
             .collect()
     }
@@ -376,6 +394,7 @@ fn parse_parts(
     chars: &[char],
     position: &mut usize,
     open: Option<usize>,
+    depth: usize,
 ) -> Result<Vec<Part>, PatternError> {
     let mut parts = Vec::new();
     let mut text = String::new();
@@ -433,8 +452,15 @@ fn parse_parts(
             '[' => {
                 flush(&mut text, &mut parts);
                 let start = *position;
+                if depth >= MAX_BRACKET_DEPTH {
+                    return Err(PatternError {
+                        problem: PatternProblem::TooDeep,
+                        start,
+                        end: start + 1,
+                    });
+                }
                 *position += 1;
-                let inner = parse_parts(chars, position, Some(start))?;
+                let inner = parse_parts(chars, position, Some(start), depth + 1)?;
                 parts.push(Part::Optional(inner));
             }
             ']' => {
@@ -974,5 +1000,36 @@ mod tests {
         );
         assert_eq!(clean_file_name("a:b", CharacterSet::AsIs), "a:b");
         assert_eq!(clean_file_name("..", CharacterSet::AsIs), "");
+    }
+
+    #[test]
+    fn deep_brackets_are_refused_not_followed() {
+        let deep = format!("{}{{title}}{}", "[".repeat(100_000), "]".repeat(100_000));
+        let error = NamingPattern::parse(&deep).unwrap_err();
+        assert_eq!(error.problem, PatternProblem::TooDeep);
+        assert_eq!(error.start, MAX_BRACKET_DEPTH);
+        let fine = format!(
+            "{}{{title}}{}",
+            "[".repeat(MAX_BRACKET_DEPTH),
+            "]".repeat(MAX_BRACKET_DEPTH)
+        );
+        assert!(NamingPattern::parse(&fine).is_ok());
+    }
+
+    #[test]
+    fn a_long_folder_name_cut_short_keeps_the_folder_rules() {
+        let title = format!("{}.... b", "a".repeat(252));
+        let values = |field: &Field| match field {
+            Field::Title => Some(title.clone()),
+            _ => None,
+        };
+        let names = NamingPattern::parse("{title}/{title}").unwrap().render(
+            &values,
+            CharacterSet::Windows,
+            "Unknown",
+            ".flac",
+        );
+        assert_eq!(names[0], "a".repeat(252));
+        assert!(names[1].len() + ".flac".len() <= MAX_NAME_BYTES);
     }
 }

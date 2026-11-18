@@ -3,11 +3,12 @@
 
 //! Opens arbitrary bytes as a media file through the FFmpeg bridge, with every
 //! offline lock on, then reads the metadata, decodes a little, seeks and decodes
-//! again. Any crash, sanitizer report or leak is a bug in the bridge or in FFmpeg.
+//! again, and seeks to extreme positions. Any crash, sanitizer report or leak is a bug in the bridge or in FFmpeg.
 
 #![no_main]
 
 use std::io::{Seek, SeekFrom, Write};
+use std::time::Duration;
 
 use helikodu_ffmpeg_bridge::{LogLevel, MediaFile, PictureLimits, StreamChoice};
 use helikodu_model::audio::MediaTime;
@@ -36,7 +37,9 @@ fn input_file(data: &[u8]) -> Option<std::fs::File> {
 fuzz_target!(|data: &[u8]| {
     helikodu_ffmpeg_bridge::set_log_level(LogLevel::Quiet);
     let Some(file) = input_file(data) else { return };
-    let Ok(media) = MediaFile::open_file(file) else { return };
+    let Ok(media) = MediaFile::open_file(file) else {
+        return;
+    };
     let _ = media.tags();
     let _ = media.chapters();
     let _ = media.duration();
@@ -44,7 +47,9 @@ fuzz_target!(|data: &[u8]| {
         max_bytes: 1 << 20,
         max_count: 4,
     });
-    let Ok(mut decoder) = media.into_decoder(StreamChoice::Auto) else { return };
+    let Ok(mut decoder) = media.into_decoder(StreamChoice::Auto) else {
+        return;
+    };
     for _ in 0..BLOCKS {
         match decoder.read() {
             Ok(Some(_)) => {}
@@ -57,6 +62,17 @@ fuzz_target!(|data: &[u8]| {
                 Ok(Some(_)) => {}
                 _ => break,
             }
+        }
+    }
+    // Positions a remote control can ask for: far past the end, and back to the
+    // start. Each must fail or land somewhere, never overflow.
+    for to in [
+        MediaTime::from_duration(Duration::MAX),
+        MediaTime::from_millis(u64::MAX),
+        MediaTime::from_millis(0),
+    ] {
+        if decoder.seek(to).is_ok() {
+            let _ = decoder.read();
         }
     }
 });

@@ -143,7 +143,9 @@ fn parse<F: AudioFile, R: Read + Seek>(reader: &mut R) -> Result<F, TagError> {
     let options = ParseOptions::new()
         .read_cover_art(false)
         .parsing_mode(ParsingMode::BestAttempt);
-    F::read_from(reader, options).map_err(|e| TagError::Parse(e.to_string()))
+    crate::tags::guard_parse(|| F::read_from(reader, options))
+        .map_err(TagError::Parse)?
+        .map_err(|e| TagError::Parse(e.to_string()))
 }
 
 /// The generic properties of any lofty file type.

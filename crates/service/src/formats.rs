@@ -94,7 +94,7 @@ pub enum FormatFamily {
     Dsd,
     /// MOD, S3M, XM, IT, MPTM and more.
     TrackerModules,
-    /// NSF, SPC, GBS, VGM, AY, HES, KSS, SAP.
+    /// NSF, SPC, GBS, VGM, AY, KSS, SAP.
     GameMusic,
     /// PSID and RSID.
     Sid,
@@ -118,7 +118,7 @@ impl FormatFamily {
             Self::VideoAudio => &["MP4", "MKV", "WebM", "AVI", "MOV", "MPEG-TS"],
             Self::Dsd => &["DSF", "DFF"],
             Self::TrackerModules => &["MOD", "S3M", "XM", "IT", "MPTM"],
-            Self::GameMusic => &["NSF", "SPC", "GBS", "VGM", "AY", "HES", "KSS", "SAP"],
+            Self::GameMusic => &["NSF", "SPC", "GBS", "VGM", "AY", "KSS", "SAP"],
             Self::Sid => &["PSID", "RSID"],
             Self::GameAudioStreams => &["ADX", "HCA", "BRSTM", "WEM", "FSB", "VAG"],
             Self::Midi => &["MID", "MIDI", "KAR", "RMI"],

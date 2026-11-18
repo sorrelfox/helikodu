@@ -83,7 +83,8 @@ fn parse<F: AudioFile>(file: &mut File) -> Result<F, WriteError> {
     let options = ParseOptions::new()
         .read_cover_art(true)
         .parsing_mode(ParsingMode::BestAttempt);
-    F::read_from(&mut BufReader::new(&mut *file), options)
+    crate::tags::guard_parse(|| F::read_from(&mut BufReader::new(&mut *file), options))
+        .map_err(WriteError::Parse)?
         .map_err(|e| WriteError::Parse(e.to_string()))
 }
 
@@ -363,7 +364,8 @@ fn parse_light<F: AudioFile>(file: &mut File) -> Result<F, WriteError> {
         .read_cover_art(false)
         .read_properties(false)
         .parsing_mode(ParsingMode::BestAttempt);
-    F::read_from(&mut BufReader::new(&mut *file), options)
+    crate::tags::guard_parse(|| F::read_from(&mut BufReader::new(&mut *file), options))
+        .map_err(WriteError::Parse)?
         .map_err(|e| WriteError::Parse(e.to_string()))
 }
 

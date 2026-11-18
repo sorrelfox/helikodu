@@ -17,6 +17,12 @@ use crate::io::deny_io_open;
 /// The number of frames per encoder call for encoders that take any number.
 const VARIABLE_CHUNK: usize = 4096;
 
+/// The shortest last frame FFmpeg's ALAC encoder takes with three or more
+/// channels. With one or two frames of four, five or six channels it aborts the
+/// process (FFmpeg 9.0; found by fuzzing), so a shorter end is padded with
+/// silence: at most 0.4 ms, only in that case.
+const ALAC_MIN_LAST_FRAME: usize = 16;
+
 /// The sample formats the bridge can fill a frame with.
 const FILLABLE: [c_int; 6] = [sf::S16, sf::S16P, sf::S32, sf::S32P, sf::FLT, sf::FLTP];
 
@@ -121,6 +127,8 @@ pub struct AudioEncoder {
     channels: usize,
     frame_size: usize,
     pad_last: bool,
+    /// The fewest frames the last frame may hold; shorter ones are padded.
+    min_last: usize,
     fifo: Fifo,
     pts: i64,
     stream_time_base: ff::AVRational,
@@ -358,6 +366,11 @@ impl AudioEncoder {
         let pad_last = !variable
             && capabilities as u32 & ff::AV_CODEC_CAP_SMALL_LAST_FRAME == 0
             && frame_size != VARIABLE_CHUNK;
+        let min_last = if encoder == "alac" && channels >= 3 {
+            ALAC_MIN_LAST_FRAME.min(frame_size)
+        } else {
+            0
+        };
         let fifo = if matches!(sample_format, sf::FLT | sf::FLTP) {
             Fifo::Float(Vec::new())
         } else {
@@ -375,6 +388,7 @@ impl AudioEncoder {
             channels,
             frame_size,
             pad_last,
+            min_last,
             fifo,
             pts: 0,
             stream_time_base,
@@ -388,10 +402,12 @@ impl AudioEncoder {
     }
 
     /// Encodes interleaved float samples, full scale at ±1.0, in WAVE channel
-    /// order. Any number of whole frames.
+    /// order. Any number of whole frames. Samples that are not numbers become
+    /// silence, and samples beyond ±[`MAX_FLOAT_SAMPLE`] are clipped there: some
+    /// encoders (LAME) abort the process on such input.
     pub fn write_f32(&mut self, interleaved: &[f32]) -> Result<(), Error> {
         match &mut self.fifo {
-            Fifo::Float(fifo) => fifo.extend_from_slice(interleaved),
+            Fifo::Float(fifo) => fifo.extend(interleaved.iter().map(|&x| float_sample(x))),
             Fifo::Int(fifo) => fifo.extend(interleaved.iter().map(|&x| f32_to_i32(x))),
         }
         self.encode_whole_frames()
@@ -416,13 +432,18 @@ impl AudioEncoder {
     pub fn finish(mut self) -> Result<u64, Error> {
         let left = self.fifo_frames();
         if left > 0 {
-            let frames = if self.pad_last {
-                let missing = (self.frame_size - left) * self.channels;
+            let padded = if self.pad_last {
+                self.frame_size
+            } else {
+                left.max(self.min_last)
+            };
+            let frames = if padded > left {
+                let missing = (padded - left) * self.channels;
                 match &mut self.fifo {
                     Fifo::Int(f) => f.extend(std::iter::repeat_n(0, missing)),
                     Fifo::Float(f) => f.extend(std::iter::repeat_n(0.0, missing)),
                 }
-                self.frame_size
+                padded
             } else {
                 left
             };
@@ -553,6 +574,20 @@ impl AudioEncoder {
     }
 }
 
+/// The largest float sample the encoder passes on, 24 dB above full scale: room
+/// for the overs of any real source.
+pub const MAX_FLOAT_SAMPLE: f32 = 16.0;
+
+/// A float sample an encoder can take: NaN as silence, the rest clipped to
+/// ±[`MAX_FLOAT_SAMPLE`].
+fn float_sample(x: f32) -> f32 {
+    if x.is_nan() {
+        0.0
+    } else {
+        x.clamp(-MAX_FLOAT_SAMPLE, MAX_FLOAT_SAMPLE)
+    }
+}
+
 /// A float sample as a full-scale 32-bit integer, clipped.
 fn f32_to_i32(x: f32) -> i32 {
     let scaled = (f64::from(x) * 2_147_483_648.0).round();
@@ -591,6 +626,15 @@ mod tests {
         assert_eq!(i32_to_i16(0x1234_0000), 0x1234);
         assert_eq!(i32_to_i16(i32::MAX), i16::MAX);
         assert_eq!(i32_to_i16(i32::MIN), i16::MIN);
+    }
+
+    #[test]
+    fn float_samples_are_numbers_within_range() {
+        assert_eq!(float_sample(f32::NAN), 0.0);
+        assert_eq!(float_sample(f32::INFINITY), MAX_FLOAT_SAMPLE);
+        assert_eq!(float_sample(-1e30), -MAX_FLOAT_SAMPLE);
+        assert_eq!(float_sample(0.5), 0.5);
+        assert_eq!(f32_to_i32(f32::NAN), 0);
     }
 
     #[test]

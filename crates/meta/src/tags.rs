@@ -26,6 +26,21 @@ mod record;
 pub mod writing;
 
 pub(crate) use builder::trim_text;
+
+/// Runs `parse`, a call into the tag library, and turns a panic inside it into an
+/// error. The library is safe Rust, but some damaged files make it panic (an
+/// arithmetic overflow in a header, for one), and a reader must refuse such a file
+/// instead of taking the program down.
+pub(crate) fn guard_parse<T>(parse: impl FnOnce() -> T) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(parse)).map_err(|payload| {
+        let what = payload
+            .downcast_ref::<&str>()
+            .map(|s| (*s).to_owned())
+            .or_else(|| payload.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        format!("the tag library failed on this file: {what}")
+    })
+}
 pub use rating::Rating;
 pub use reading::{
     FfmpegReader, LoftyReader, ReadOptions, TagError, TagReader, read_tags, read_tags_from_file,

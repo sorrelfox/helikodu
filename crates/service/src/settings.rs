@@ -287,15 +287,23 @@ pub fn applies(key: &str) -> Applies {
 fn load(path: &Path) -> (Settings, Option<LoadNotice>) {
     let unreadable =
         |reason: String| (Settings::default(), Some(LoadNotice::Unreadable { reason }));
-    let bytes = match read_if_exists(path) {
-        Ok(Some(bytes)) => bytes,
-        Ok(None) => return (Settings::default(), None),
-        Err(error) => return unreadable(error.to_string()),
-    };
-    let Ok(text) = String::from_utf8(bytes) else {
+    match read_if_exists(path) {
+        Ok(Some(bytes)) => read_settings(&bytes),
+        Ok(None) => (Settings::default(), None),
+        Err(error) => unreadable(error.to_string()),
+    }
+}
+
+/// The settings in `bytes`, the contents of a settings file, and what was wrong
+/// with them: what [`SettingsStore::open`] reads. The result always passes
+/// [`Settings::validate`] unless the notice is [`LoadNotice::Newer`].
+pub fn read_settings(bytes: &[u8]) -> (Settings, Option<LoadNotice>) {
+    let unreadable =
+        |reason: String| (Settings::default(), Some(LoadNotice::Unreadable { reason }));
+    let Ok(text) = std::str::from_utf8(bytes) else {
         return unreadable("the file is not UTF-8 text".into());
     };
-    let mut table: toml::Table = match toml::from_str(&text) {
+    let mut table: toml::Table = match toml::from_str(text) {
         Ok(table) => table,
         Err(error) => return unreadable(error.message().to_owned()),
     };

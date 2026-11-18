@@ -106,7 +106,9 @@ fn properties(file: &File, prop: Chunk) -> Result<Properties, DsdError> {
         return Err(DsdError::malformed("the PROP chunk is not of type SND"));
     }
     let mut props = Properties::default();
-    for chunk in chunks(file, prop.data + 4, prop.data + prop.size) {
+    // The size comes from the file: it may claim more than any file holds.
+    let end = prop.data.saturating_add(prop.size);
+    for chunk in chunks(file, prop.data.saturating_add(4), end) {
         let chunk = chunk?;
         match &chunk.id {
             b"FS  " => {
@@ -204,5 +206,22 @@ mod tests {
         let (layout, order) = layout_of(&[*b"C001", *b"C002", *b"C003"]).unwrap();
         assert_eq!(layout.channel_count(), 3);
         assert_eq!(order, [0, 1, 2]);
+    }
+
+    /// A `PROP` chunk whose size reaches past the largest file; found by fuzzing.
+    #[test]
+    fn a_prop_chunk_of_any_size_is_refused_not_overflowed() {
+        let mut bytes = b"FRM8".to_vec();
+        bytes.extend_from_slice(&u64::MAX.to_be_bytes());
+        bytes.extend_from_slice(b"DSD PROP");
+        bytes.extend_from_slice(&(u64::MAX - 8).to_be_bytes());
+        bytes.extend_from_slice(b"SND FS  ");
+        bytes.extend_from_slice(&4u64.to_be_bytes());
+        bytes.extend_from_slice(&2_822_400u32.to_be_bytes());
+        let path = std::env::temp_dir().join(format!("helikodu-dff-prop-{}", std::process::id()));
+        std::fs::write(&path, &bytes).unwrap();
+        let file = File::open(&path).unwrap();
+        let _ = std::fs::remove_file(&path);
+        assert!(parse(&file, bytes.len() as u64).is_err());
     }
 }

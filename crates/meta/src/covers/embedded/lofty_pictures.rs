@@ -107,7 +107,7 @@ fn parse<F: AudioFile, R: Read + Seek>(reader: &mut R) -> Result<F, String> {
     let options = ParseOptions::new()
         .read_cover_art(true)
         .parsing_mode(ParsingMode::BestAttempt);
-    F::read_from(reader, options)
+    crate::tags::guard_parse(|| F::read_from(reader, options))?
         .map_err(|e| format!("the tag library cannot parse this file: {e}"))
 }
 

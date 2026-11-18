@@ -541,6 +541,87 @@ mod tests {
         assert!(read_call("Seek", &("x",).to_variant()).is_err());
     }
 
+    /// Any caller on the session bus can send anything: extreme numbers, the
+    /// wrong types, strange text. Each call is read or refused, never a panic.
+    #[test]
+    fn hostile_arguments_are_read_or_refused() {
+        let methods = [
+            "GetStatus",
+            "GetQueue",
+            "ListPlaylists",
+            "PlayPause",
+            "Play",
+            "Pause",
+            "Stop",
+            "Next",
+            "Previous",
+            "Seek",
+            "SetPosition",
+            "SetVolume",
+            "SetShuffle",
+            "SetRepeat",
+            "Enqueue",
+            "EnqueueQuery",
+            "PlayQuery",
+            "Rate",
+            "ExportPlaylist",
+            "",
+            "seek",
+        ];
+        let strings = [
+            "",
+            "\u{7}",
+            "file://",
+            "file:///",
+            "file://host/x",
+            "file:///%00",
+            "file:///%zz",
+            "file:///../../etc",
+            "/../../etc/passwd",
+            "relative",
+            "http://example.invalid/a",
+            "\u{202e}",
+            "/a\nb",
+        ];
+        let mut args: Vec<glib::Variant> = vec![
+            ().to_variant(),
+            (i64::MIN,).to_variant(),
+            (i64::MAX,).to_variant(),
+            (u64::MAX,).to_variant(),
+            (0u64,).to_variant(),
+            (f64::NAN,).to_variant(),
+            (f64::INFINITY,).to_variant(),
+            (-0.0f64,).to_variant(),
+            (u64::MAX, i32::MIN).to_variant(),
+            (u64::MAX, i32::MAX).to_variant(),
+            (true,).to_variant(),
+            (vec![String::new()], true).to_variant(),
+        ];
+        for text in strings {
+            args.push((text,).to_variant());
+            args.push((text, true).to_variant());
+            args.push((text, text).to_variant());
+            args.push((vec![text.to_owned(); 3], false).to_variant());
+        }
+        for method in methods {
+            for arg in &args {
+                if let Ok(Call::Enqueue(files, _)) = read_call(method, arg) {
+                    assert!(files.iter().all(|f| f.is_absolute()), "{files:?}");
+                }
+                if let Ok(Call::Export(_, path)) = read_call(method, arg) {
+                    assert!(path.is_absolute(), "{path:?}");
+                }
+                if let Ok(Call::Request(PlayerRequest::SetVolume(v))) = read_call(method, arg) {
+                    assert!((0.0..=1.0).contains(&v), "{v}");
+                }
+                if let Ok(Call::Request(PlayerRequest::SeekBy(by))) = read_call(method, arg) {
+                    assert!(by.is_finite());
+                    let _ = Duration::from_secs_f64(by.abs());
+                }
+            }
+        }
+    }
+
     #[test]
     fn the_status_is_json() {
         let view = PlayerView::default();

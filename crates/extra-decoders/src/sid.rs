@@ -37,9 +37,31 @@ pub fn probe(header: &[u8]) -> bool {
     header.len() >= 0x76 && (header.starts_with(b"PSID") || header.starts_with(b"RSID"))
 }
 
+/// Whether the PSID or RSID header of `data` is one libsidplayfp can be given:
+/// the data offset its version prescribes (0x76 for version 1, 0x7C later), and
+/// tune data after it (with the two-byte load address when the header has none).
+/// libsidplayfp reads past its buffer on some headers that break these rules
+/// (found by fuzzing), so they are refused first.
+fn header_is_sane(data: &[u8]) -> bool {
+    if !probe(data) {
+        return false;
+    }
+    let word = |at: usize| u16::from_be_bytes([data[at], data[at + 1]]);
+    let offset = match (word(4), word(6)) {
+        (1, 0x76) => 0x76,
+        (2..=4, 0x7C) if data.len() >= 0x7C => 0x7C,
+        _ => return false,
+    };
+    let load_in_data = word(8) == 0;
+    data.len() > offset + if load_in_data { 2 } else { 0 }
+}
+
 /// The MD5 of the tune in `data` as the HVSC song-length database lists it (32
 /// lower-case hex digits), or `None` when it is not a tune libsidplayfp reads.
 pub fn tune_md5(data: &[u8]) -> Option<String> {
+    if !header_is_sane(data) {
+        return None;
+    }
     let options = SongOptions::default();
     let length = u32::try_from(data.len()).ok()?;
     let mut error = [0 as c_char; 256];
@@ -306,6 +328,9 @@ impl SidDecoder {
         rate: u32,
         roms: Option<&[Option<Vec<u8>>; 3]>,
     ) -> Result<Tune, SongError> {
+        if !header_is_sane(data) {
+            return Err(SongError::Unsupported("the SID header is damaged".into()));
+        }
         let length = u32::try_from(data.len())
             .map_err(|_| SongError::Unsupported("the file is too large".into()))?;
         let mut error = [0 as c_char; 256];
@@ -402,5 +427,46 @@ impl SongDecoder for SidDecoder {
             self.position += frames as u64;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A PSID header whose data offset lies past the end of the file; libsidplayfp
+    /// read outside its buffer on it. Found by fuzzing.
+    const BAD_OFFSET: &[u8] = &[
+        0x50, 0x53, 0x49, 0x44, 0x00, 0x02, 0x9f, 0x7c, 0x08, 0x00, 0x10, 0xff, 0x48, 0x65, 0x6c,
+        0x69, 0x6b, 0x6f, 0x64, 0x75, 0x20, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74,
+        0x6f, 0x72, 0x73, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x35, 0x20, 0x48, 0x65, 0x6c, 0x69, 0x6b, 0x6f, 0x64, 0x75, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0xaa, 0xa9, 0x0f, 0x8d,
+        0x18, 0xd4, 0xa9, 0x32, 0x36, 0x20, 0x48, 0x65, 0x6c, 0x69, 0x6b, 0x6f, 0x64, 0x75, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0xea, 0xea, 0xea, 0xea, 0xea, 0x60, 0xea, 0xea,
+        0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0x11, 0x16,
+    ];
+
+    fn psid(version: u16, offset: u16, load: u16, data: usize) -> Vec<u8> {
+        let mut b = b"PSID".to_vec();
+        b.extend_from_slice(&version.to_be_bytes());
+        b.extend_from_slice(&offset.to_be_bytes());
+        b.extend_from_slice(&load.to_be_bytes());
+        b.resize(usize::from(offset) + data, 0);
+        b
+    }
+
+    #[test]
+    fn damaged_headers_are_refused_before_the_library_sees_them() {
+        assert!(!header_is_sane(BAD_OFFSET));
+        assert!(SidDecoder::open(BAD_OFFSET, None, &SongOptions::default()).is_err());
+        assert!(tune_md5(BAD_OFFSET).is_none());
+        assert!(header_is_sane(&psid(2, 0x7C, 0x1000, 16)));
+        assert!(header_is_sane(&psid(1, 0x76, 0, 4)));
+        assert!(!header_is_sane(&psid(2, 0x7C, 0, 2)));
+        assert!(!header_is_sane(&psid(2, 0x76, 0x1000, 16)));
+        assert!(!header_is_sane(&psid(9, 0x7C, 0x1000, 16)));
     }
 }

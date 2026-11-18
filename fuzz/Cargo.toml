@@ -14,11 +14,13 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 helikodu-engine = { path = "../crates/engine", default-features = false }
-helikodu-extra-decoders = { path = "../crates/extra-decoders", default-features = false, features = ["openmpt", "gme", "sid", "midi"] }
+helikodu-extra-decoders = { path = "../crates/extra-decoders", default-features = false, features = ["dsd", "openmpt", "gme", "sid", "midi"] }
 helikodu-ffmpeg-bridge = { path = "../crates/ffmpeg-bridge" }
 helikodu-library = { path = "../crates/library" }
 helikodu-meta = { path = "../crates/meta" }
 helikodu-model = { path = "../crates/model" }
+helikodu-service = { path = "../crates/service", default-features = false, features = ["dsd"] }
+toml = "1"
 
 [[bin]]
 name = "ffmpeg_bridge_open"
@@ -107,6 +109,76 @@ bench = false
 [[bin]]
 name = "lyrics_parse"
 path = "fuzz_targets/lyrics_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "naming_pattern"
+path = "fuzz_targets/naming_pattern.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "playlist_sniff"
+path = "fuzz_targets/playlist_sniff.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tags_read"
+path = "fuzz_targets/tags_read.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "worker_message"
+path = "fuzz_targets/worker_message.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "settings_toml"
+path = "fuzz_targets/settings_toml.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ui_state_toml"
+path = "fuzz_targets/ui_state_toml.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "export_toml"
+path = "fuzz_targets/export_toml.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sync_manifest"
+path = "fuzz_targets/sync_manifest.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "dsd_open"
+path = "fuzz_targets/dsd_open.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ffmpeg_encode"
+path = "fuzz_targets/ffmpeg_encode.rs"
 test = false
 doc = false
 bench = false

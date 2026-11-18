@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Leaks inside system libraries that the fuzz targets reach but Helikodu cannot
+# free. Each was checked: the bridge frees everything FFmpeg hands back.
+
+# libvorbisenc keeps its setup when FFmpeg's libvorbis wrapper fails to open an
+# encoder for settings it refuses (six channels at some qualities); a few KiB per
+# refused conversion.
+leak:vorbis_encode_setup_init

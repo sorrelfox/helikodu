@@ -328,9 +328,18 @@ impl Manifest {
     /// The manifest of the destination at `folder`; empty when it has none.
     pub fn load(folder: &Path) -> Self {
         fs::read(folder.join(MANIFEST_FILE))
-            .ok()
-            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+            .map(|bytes| Self::from_json(&bytes))
             .unwrap_or_default()
+    }
+
+    /// The manifest in `bytes`; empty when they are not one. The file lies on the
+    /// destination, where anyone may have written it, so entries whose path could
+    /// lead out of the destination folder (absolute, with `..` or `.`, or empty)
+    /// and the manifest itself are dropped: a sync never touches them.
+    pub fn from_json(bytes: &[u8]) -> Self {
+        let mut manifest: Self = serde_json::from_slice(bytes).unwrap_or_default();
+        manifest.files.retain(|e| is_inside(&e.path));
+        manifest
     }
 
     /// Writes the manifest into `folder`.
@@ -338,6 +347,33 @@ impl Manifest {
         let text = serde_json::to_vec_pretty(self).map_err(io::Error::other)?;
         write_atomic(&folder.join(MANIFEST_FILE), &text)
     }
+}
+
+/// Whether `relative` names a file inside a destination folder: it is not empty,
+/// every part of it is a plain name, and it is not the manifest.
+pub fn is_inside(relative: &Path) -> bool {
+    relative.components().next().is_some()
+        && relative
+            .components()
+            .all(|c| matches!(c, std::path::Component::Normal(_)))
+        && relative != Path::new(MANIFEST_FILE)
+}
+
+/// Whether a folder between `root` and `root/relative` is a symbolic link, which
+/// could lead a removal out of the destination.
+fn through_link(root: &Path, relative: &Path) -> bool {
+    let mut folder = root.to_path_buf();
+    let mut parts = relative.components().peekable();
+    while let Some(part) = parts.next() {
+        if parts.peek().is_none() {
+            return false;
+        }
+        folder.push(part);
+        if fs::symlink_metadata(&folder).is_ok_and(|m| m.file_type().is_symlink()) {
+            return true;
+        }
+    }
+    false
 }
 
 /// What a sync does with one path on the destination.
@@ -532,7 +568,10 @@ pub fn plan_sync(
     }
     if destination.remove_unchosen {
         for entry in &manifest.files {
-            if wanted.contains(&entry.path) {
+            if wanted.contains(&entry.path)
+                || !is_inside(&entry.path)
+                || through_link(&destination.path, &entry.path)
+            {
                 continue;
             }
             let Ok(meta) = fs::metadata(destination.path.join(&entry.path)) else {
@@ -848,6 +887,39 @@ mod tests {
         d.files = SyncFiles::ConvertAll;
         let json = serde_json::to_string(&d).unwrap();
         assert_eq!(serde_json::from_str::<SyncDestination>(&json).unwrap(), d);
+    }
+
+    #[test]
+    fn a_manifest_cannot_point_out_of_the_destination() {
+        let json = br#"{"files":[
+            {"path":"A/01 x.opus","source":"/m/x.flac","source_size":1,"source_mtime":2},
+            {"path":"/home/someone/notes.txt","source":"","source_size":0,"source_mtime":0},
+            {"path":"../outside.txt","source":"","source_size":0,"source_mtime":0},
+            {"path":"A/../../outside.txt","source":"","source_size":0,"source_mtime":0},
+            {"path":"./A/x","source":"","source_size":0,"source_mtime":0},
+            {"path":"","source":"","source_size":0,"source_mtime":0},
+            {"path":".helikodu-sync.json","source":"","source_size":0,"source_mtime":0}
+        ]}"#;
+        let manifest = Manifest::from_json(json);
+        let paths: Vec<&Path> = manifest.files.iter().map(|e| e.path.as_path()).collect();
+        assert_eq!(paths, [Path::new("A/01 x.opus")]);
+        assert_eq!(Manifest::from_json(b"not json"), Manifest::default());
+        assert_eq!(
+            Manifest::from_json(br#"{"files":[{"path":1}]}"#),
+            Manifest::default()
+        );
+    }
+
+    #[test]
+    fn removals_do_not_follow_linked_folders() {
+        let root = std::env::temp_dir().join(format!("helikodu-sync-link-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("real")).unwrap();
+        std::os::unix::fs::symlink("/", root.join("link")).unwrap();
+        assert!(through_link(&root, Path::new("link/etc/hostname")));
+        assert!(!through_link(&root, Path::new("real/x.opus")));
+        assert!(!through_link(&root, Path::new("link")));
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]

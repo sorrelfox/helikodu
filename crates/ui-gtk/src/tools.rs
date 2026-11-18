@@ -38,6 +38,7 @@ pub(crate) fn naming_problem(error: &PatternError) -> String {
         PatternProblem::UnexpectedClose(c) => fill(&tr("{} closes nothing."), &[&c.to_string()]),
         PatternProblem::NestedField => tr("A field name cannot hold {."),
         PatternProblem::EmptyFolder => tr("A folder name would be empty."),
+        PatternProblem::TooDeep => tr("Square brackets are nested too deeply."),
     };
     fill(
         &tr("{} At character {}."),

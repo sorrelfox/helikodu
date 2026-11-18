@@ -131,7 +131,8 @@ fn parse<F: AudioFile>(file: &mut File) -> Result<F, LyricsError> {
         .read_cover_art(false)
         .read_properties(false)
         .parsing_mode(ParsingMode::BestAttempt);
-    F::read_from(&mut BufReader::new(&mut *file), options)
+    crate::tags::guard_parse(|| F::read_from(&mut BufReader::new(&mut *file), options))
+        .map_err(LyricsError::Tags)?
         .map_err(|e| LyricsError::Tags(e.to_string()))
 }
 

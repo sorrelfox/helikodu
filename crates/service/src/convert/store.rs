@@ -84,10 +84,10 @@ impl ExportState {
         let n = self
             .presets
             .iter()
-            .filter_map(|p| p.id.strip_prefix("own-")?.parse::<u32>().ok())
+            .filter_map(|p| p.id.strip_prefix("own-")?.parse::<u64>().ok())
             .max()
             .unwrap_or(0);
-        format!("own-{}", n + 1)
+        format!("own-{}", n.saturating_add(1))
     }
 
     /// A free identifier for a new destination.
@@ -95,10 +95,10 @@ impl ExportState {
         let n = self
             .destinations
             .iter()
-            .filter_map(|d| d.id.strip_prefix("dest-")?.parse::<u32>().ok())
+            .filter_map(|d| d.id.strip_prefix("dest-")?.parse::<u64>().ok())
             .max()
             .unwrap_or(0);
-        format!("dest-{}", n + 1)
+        format!("dest-{}", n.saturating_add(1))
     }
 }
 
@@ -142,6 +142,17 @@ impl ExportStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn new_identifiers_follow_even_the_largest_numbers() {
+        let mut state = ExportState::default();
+        let mut preset = Preset::builtins().remove(0);
+        preset.id = format!("own-{}", u32::MAX);
+        state.presets.push(preset);
+        assert_eq!(state.new_preset_id(), "own-4294967296");
+        state.presets[0].id = format!("own-{}", u64::MAX);
+        assert_eq!(state.new_preset_id(), format!("own-{}", u64::MAX));
+    }
 
     #[test]
     fn round_trip_and_defaults() {

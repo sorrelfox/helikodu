@@ -200,7 +200,7 @@ impl Preset {
         }
         match (self.quality.approximate_kbps(), kbps) {
             (None, _) => format != EncodeFormat::Wav || self.bits.is_none(),
-            (Some(target), Some(source)) => source <= target + target / 10,
+            (Some(target), Some(source)) => source <= target.saturating_add(target / 10),
             (Some(_), None) => false,
         }
     }
@@ -209,6 +209,14 @@ impl Preset {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_largest_bit_rate_does_not_overflow() {
+        let mut preset = Preset::builtins().remove(0);
+        preset.quality = PresetQuality::Bitrate { kbps: u32::MAX };
+        assert!(preset.takes_as_is("opus", Some(u32::MAX), None));
+        assert!(preset.expected_bytes(f64::MAX, u32::MAX, u16::MAX, u32::MAX) > 0);
+    }
 
     #[test]
     fn builtins_round_trip_through_toml() {

@@ -3,6 +3,7 @@
 
 //! Opening and probing a file, its streams, and the choice of the audio stream.
 
+mod header_guard;
 mod media_file;
 mod stream_info;
 

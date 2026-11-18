@@ -36,8 +36,10 @@ pub fn exercise<D: SongDecoder>(open: impl Fn(Option<u32>) -> Result<D, SongErro
                 Ok(frames) => assert_eq!(block.len(), frames * channels),
             }
         }
+        // Seeking renders from the start, so its cost grows with the position; a
+        // file may claim hours. The seek goes at most a minute in.
         if let Some(frames) = decoder.frames()
-            && decoder.seek(frames / 2).is_ok()
+            && decoder.seek((frames / 2).min(60 * 48_000)).is_ok()
         {
             let _ = decoder.read(FRAMES, &mut block);
         }

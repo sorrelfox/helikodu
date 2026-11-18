@@ -134,9 +134,10 @@ impl MediaFile {
     }
 
     pub(crate) fn open_source(
-        source: Box<dyn ByteSource>,
+        mut source: Box<dyn ByteSource>,
         size: Option<u64>,
     ) -> Result<Self, Error> {
+        super::header_guard::check_head(source.as_mut())?;
         let mut input = Input {
             fmt: ptr::null_mut(),
             io: CustomIo::new(source, size)?,

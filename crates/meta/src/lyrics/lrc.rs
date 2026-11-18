@@ -99,9 +99,13 @@ pub fn parse_lrc(text: &str) -> ParsedLrc {
         }
         let (stamps, rest) = leading_stamps(line);
         if !stamps.is_empty() {
-            let (clean, words) = take_word_tags(rest.trim());
+            let (clean, mut words) = take_word_tags(rest.trim());
             let (clean, cut) = bounded(clean);
             out.truncated |= cut;
+            // Words that started in the part cut off start at the end.
+            for word in &mut words {
+                word.start = word.start.min(clean.len());
+            }
             for time in stamps {
                 entries.push(Entry {
                     time,
@@ -496,6 +500,22 @@ mod tests {
         );
         let verses: Vec<_> = parsed.plain.iter().map(|l| l.verse_start).collect();
         assert_eq!(verses, [false, false, true]);
+    }
+
+    /// A line cut to its bound kept word offsets past its end; found by fuzzing.
+    #[test]
+    fn words_of_a_cut_line_stay_inside_it() {
+        let long = format!(
+            "[00:01.00]{} <00:02.00>tail  <00:03.00>end",
+            "x".repeat(MAX_LINE_CHARS)
+        );
+        let parsed = parse_lrc(&long);
+        let line = &parsed.timed[0];
+        assert!(!line.words.is_empty());
+        for word in &line.words {
+            assert!(word.start <= line.text.len());
+            let _ = &line.text[word.start..];
+        }
     }
 
     #[test]

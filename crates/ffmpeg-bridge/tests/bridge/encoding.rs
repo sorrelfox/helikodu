@@ -133,3 +133,79 @@ fn a_rate_the_encoder_does_not_take_is_refused() {
     };
     assert!(AudioEncoder::create(File::create(&path).expect("create"), &config).is_err());
 }
+
+/// Samples that are not numbers, or far beyond full scale, once made LAME abort the
+/// whole process (an assertion in its psychoacoustic model); fuzzing found it.
+/// Every encoder must take them.
+#[test]
+fn encoders_take_samples_that_are_not_numbers() {
+    for format in EncodeFormat::ALL {
+        if !encoder_availability(format).is_available() {
+            continue;
+        }
+        let rate = nearest_rate(supported_sample_rates(format).as_deref(), 44_100);
+        let path = dir().join(format!("encoded-wild.{}", format.extension()));
+        let config = EncoderConfig {
+            format,
+            sample_rate: rate,
+            channels: 2,
+            bits: 16,
+            quality: if format.is_lossless() {
+                EncodeQuality::Lossless(None)
+            } else {
+                EncodeQuality::Bitrate(128)
+            },
+        };
+        let mut encoder =
+            AudioEncoder::create(File::create(&path).expect("create"), &config).expect("encoder");
+        let wild = [
+            f32::NAN,
+            f32::INFINITY,
+            -1.97e27,
+            5.3e20,
+            f32::NEG_INFINITY,
+            -5.4e32,
+            0.5,
+            -0.5,
+        ];
+        let samples: Vec<f32> = wild.iter().copied().cycle().take(2 * 4_800).collect();
+        encoder.write_f32(&samples).expect("encode");
+        encoder.finish().expect("finish");
+    }
+}
+
+/// FFmpeg's ALAC encoder aborted the process on a last frame of one or two
+/// frames with four to six channels; fuzzing found it. Every length must encode.
+#[test]
+fn alac_takes_any_length_with_many_channels() {
+    if !encoder_availability(EncodeFormat::Alac).is_available() {
+        return;
+    }
+    for channels in [3u16, 4, 5, 6, 8] {
+        for frames in [1usize, 2, 3, 4097, 4098] {
+            let path = dir().join(format!("encoded-alac-{channels}-{frames}.m4a"));
+            let config = EncoderConfig {
+                format: EncodeFormat::Alac,
+                sample_rate: 44_100,
+                channels,
+                bits: 16,
+                quality: EncodeQuality::Lossless(None),
+            };
+            // Layouts the encoder does not take are refused; that is fine.
+            let Ok(mut encoder) =
+                AudioEncoder::create(File::create(&path).expect("create"), &config)
+            else {
+                assert!(
+                    channels != 4 && channels != 6,
+                    "{channels} channels refused"
+                );
+                continue;
+            };
+            let samples: Vec<i32> = (0..frames * usize::from(channels))
+                .map(|i| ((i as f64 * 0.01).sin() * 1e9) as i32)
+                .collect();
+            encoder.write_i32(&samples).expect("encode");
+            encoder.finish().expect("finish");
+        }
+    }
+}

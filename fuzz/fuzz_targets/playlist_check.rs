@@ -25,6 +25,43 @@ const LIMITS: PlaylistLimits = PlaylistLimits {
     max_line_bytes: 4096,
 };
 
+/// Parses `data` (after the charset byte) without saying its format, as the
+/// automatic import does, then writes it back in the format it was read as.
+#[allow(dead_code)]
+pub(crate) fn run_sniffed(data: &[u8]) {
+    let Some((&choice, body)) = data.split_first() else {
+        return;
+    };
+    let options = options(choice);
+    let Ok(parsed) = parse_playlist(body, None, &options) else {
+        return;
+    };
+    check(&parsed);
+    let kind = PlaylistKind::sniff(body);
+    let written = write_playlist(
+        &parsed.playlist,
+        kind,
+        &WriteOptions {
+            path_style: PathStyle::Absolute,
+            base_dir: Some(Path::new(BASE).to_owned()),
+        },
+    );
+    if let Ok(again) = parse_playlist(&written.bytes, Some(kind), &options) {
+        check(&again);
+    }
+}
+
+const BASE: &str = "/music/lists";
+
+fn options(choice: u8) -> ParseOptions {
+    ParseOptions {
+        base_dir: Some(Path::new(BASE).to_owned()),
+        legacy_charset: CHARSETS[usize::from(choice >> 1) % CHARSETS.len()].map(str::to_owned),
+        limits: LIMITS,
+    }
+}
+
+#[allow(dead_code)]
 pub(crate) fn run(kind: PlaylistKind, data: &[u8]) {
     let Some((&choice, body)) = data.split_first() else {
         return;
@@ -34,12 +71,8 @@ pub(crate) fn run(kind: PlaylistKind, data: &[u8]) {
         PlaylistKind::M3u if choice & 1 == 1 => PlaylistKind::M3u8,
         other => other,
     };
-    let base = Path::new("/music/lists");
-    let options = ParseOptions {
-        base_dir: Some(base.to_owned()),
-        legacy_charset: CHARSETS[usize::from(choice >> 1) % CHARSETS.len()].map(str::to_owned),
-        limits: LIMITS,
-    };
+    let base = Path::new(BASE);
+    let options = options(choice);
     let Ok(parsed) = parse_playlist(body, Some(kind), &options) else {
         return;
     };

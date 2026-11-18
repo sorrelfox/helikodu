@@ -39,7 +39,7 @@ pub use decode::{AudioDecoder, PcmBuffer, PcmSamples};
 pub use demux::{Disposition, MediaFile, StreamChoice, StreamInfo, StreamKind};
 pub use encode::{
     AudioEncoder, EncodeFormat, EncodeQuality, EncoderAvailability, EncoderConfig,
-    encoder_availability, nearest_rate, supported_sample_rates,
+    MAX_FLOAT_SAMPLE, encoder_availability, nearest_rate, supported_sample_rates,
 };
 pub use error::{AvError, AvErrorKind, Error};
 pub use metadata::{AttachedPicture, Chapter, PictureLimits, PictureSource, Tags};

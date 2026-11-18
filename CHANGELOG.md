@@ -99,6 +99,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Convert no longer makes a new preset when the arrow keys reach **New preset**, and Sync and export no longer opens the folder chooser when its window opens or the arrow keys reach **New destination**: both act on Enter or a click.
 - Screen readers: the rows of Supported formats, the tag editor's files, the history, the playlists and smart playlists, the Folders tree and the new-item rows of Convert and Sync and export have names; the search fields of Keyboard shortcuts and Supported formats have labels; Home's albums and the rows of Settings › Shortcuts are read as buttons; the output button is no longer described with every device's capabilities.
 - Reduced motion also stops the slide of the notices in Settings and the tag editor, the sleep timer's minutes row and the mini player's drawer when the desktop asks for it through its settings portal.
+- Folder sync no longer trusts the list of its files on the destination (`.helikodu-sync.json`) blindly: entries that point outside the destination folder, and files reached through a linked folder, are never removed.
+- An ADX file with a header FFmpeg cannot play no longer crashes Helikodu (FFmpeg's ADX reader divided by zero); such files are refused.
+- Converting a file of four to six channels to ALAC no longer ends Helikodu when its length leaves a last block of one or two samples (FFmpeg's ALAC encoder stopped the program); that end is padded with a fraction of a millisecond of silence.
+- Converting to MP3 no longer ends Helikodu when the source holds floating-point samples that are not numbers or far beyond full scale; such samples are cleaned before they reach the encoder.
+- Damaged Opus, MP4 and other files whose headers made the tag reader fail inside its library are refused (or read by FFmpeg) instead of stopping the program.
+- Synced lyrics with word timings on a line longer than the line limit no longer keep timings past the end of the cut line.
+- SID tunes whose header points past the end of the file are refused before libsidplayfp reads outside its buffer.
+- NSF tunes whose header asks for the play routine thousands of times a second no longer make playback and seeking take many seconds per second of music.
+- HES (PC Engine) game music is no longer played: libgme's HES emulator reads outside its memory on damaged files.
+- A MIDI file without tracks is refused instead of stopping the program.
+- DSDIFF files whose property chunk claims an impossible size are refused cleanly.
+- Naming patterns with square brackets nested more than 16 deep are refused with a message instead of crashing; folder names cut short to fit the file system no longer end in a dot or a space under the portable rules.
 
 ## [0.2.0] - 2026-11-18
 
