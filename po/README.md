@@ -3,7 +3,7 @@
 Translations, managed with GNU gettext.
 
 - `LINGUAS` lists the languages, one code per line.
-- `POTFILES.in` lists the source files that contain translatable strings.
+- `POTFILES.in` lists the source files that contain translatable strings, among them the desktop entry and the metainfo in `data/`, whose translations Meson merges into the installed files (`i18n.merge_file`).
 - Each language has one `<code>.po` file.
 
 To add a language, add its `.po` file and a line in `LINGUAS`.

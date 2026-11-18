@@ -519,7 +519,9 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     ) -> Result<(), BackendError>;
     /// Imports a playlist file; returns the new playlist and its name.
     fn import_playlist(&self, path: &Path) -> Result<(PlaylistKey, String), BackendError>;
-    /// Exports a playlist to a file; returns the number of entries written.
+    /// Exports a playlist to a file in the format its extension names (M3U8,
+    /// M3U, PLS or XSPF; M3U8 for any other); returns the number of entries
+    /// written.
     fn export_playlist(&self, key: PlaylistKey, path: &Path) -> Result<usize, BackendError>;
     /// The library folders.
     fn folder_roots(&self) -> Result<Vec<FolderRow>, BackendError>;
@@ -624,6 +626,8 @@ pub enum PlayerRequest {
     SetStopAfter(bool),
     /// Play or pause.
     PlayPause,
+    /// Play, or go on playing; nothing changes while playing.
+    Play,
     /// Stop.
     Stop,
     /// The next track.
@@ -790,6 +794,10 @@ pub enum Update {
     LibraryChanged,
     /// A library scan made progress or ended.
     Scan(services::ScanStatus),
+    /// Another program asked the player for this (MPRIS `Play`, `PlayPause`,
+    /// `OpenUri`). It is sent with [`Backend::send`], so it passes the same gate
+    /// as the window's own requests.
+    Request(PlayerRequest),
     /// Another program asked to show the window (MPRIS `Raise`).
     Raise,
     /// Another program asked to quit (MPRIS `Quit`).

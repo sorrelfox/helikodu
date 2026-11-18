@@ -3,8 +3,9 @@
 
 //! The library facade over a database file filled through the library crate:
 //! search with paths, a track's details and statistics, a library file that cannot
-//! be read any more, totals and the most played tracks, and the errors of a missing
-//! library and of a scan without folders.
+//! be read any more, totals and the most played tracks, the errors of a missing
+//! library and of a scan without folders, sorted track lists, playlist export in
+//! each format, and tags written into a file generated with `ffmpeg`.
 
 #![forbid(unsafe_code)]
 #![allow(clippy::unwrap_used)]
@@ -196,4 +197,180 @@ fn missing_library_and_scan_without_folders() {
     let overview = library.overview(10).unwrap();
     assert_eq!(overview.totals, Default::default());
     assert!(overview.roots.is_empty());
+}
+
+#[test]
+fn sorted_tracks_and_playlist_formats() {
+    use helikodu_service::library::{TrackFilter, TrackOrder, TrackSortKey};
+
+    let path = database("sorted");
+    drop(MusicLibrary::open(&path).unwrap());
+    let (river, rain) = {
+        let library = Library::open(&DatabaseConfig::file(&path)).unwrap();
+        let river = record(
+            &library,
+            "/nonexistent-music/a/river.flac",
+            "River",
+            "Water",
+        );
+        let rain = record(&library, "/nonexistent-music/a/rain.flac", "Rain", "Water");
+        play(&library, river, 2);
+        (river, rain)
+    };
+    let library = MusicLibrary::open_existing(&path).unwrap();
+    let ids = |sort: &[TrackOrder]| -> Vec<TrackId> {
+        library
+            .sorted_tracks(TrackFilter::All, sort)
+            .unwrap()
+            .iter()
+            .map(|t| t.id)
+            .collect()
+    };
+    assert_eq!(
+        ids(&[TrackOrder::descending(TrackSortKey::Plays)]),
+        [river, rain]
+    );
+    assert_eq!(
+        ids(&[TrackOrder::ascending(TrackSortKey::Plays)]),
+        [rain, river]
+    );
+    assert_eq!(
+        ids(&[TrackOrder::ascending(TrackSortKey::Title)]),
+        [rain, river]
+    );
+
+    let playlist = library.create_playlist("Mix").unwrap();
+    library
+        .add_to_playlist(playlist, vec![river, rain], None)
+        .unwrap();
+    let dir = path.parent().unwrap();
+    for (name, start) in [
+        ("mix.m3u8", "#EXTM3U"),
+        ("mix.m3u", "#EXTM3U"),
+        ("mix.pls", "[playlist]"),
+        ("mix.xspf", "<?xml"),
+        ("mix.txt", "#EXTM3U"),
+    ] {
+        let file = dir.join(name);
+        let report = library.export_playlist(playlist, &file).unwrap();
+        assert_eq!(report.entries, 2, "{name}");
+        let text = fs::read_to_string(&file).unwrap();
+        assert!(text.starts_with(start), "{name}: {text}");
+        assert!(text.contains("river.flac"), "{name}: {text}");
+    }
+}
+
+#[test]
+fn tags_written_through_the_library() {
+    use helikodu_model::settings::Settings;
+    use helikodu_service::library::tag_editing::{
+        BatchItem, ReadOptions, TagChanges, TagField, load_for_editing,
+    };
+    use std::process::Command;
+
+    let have_ffmpeg = Command::new("ffmpeg")
+        .arg("-version")
+        .output()
+        .is_ok_and(|o| o.status.success());
+    if !have_ffmpeg {
+        eprintln!("SKIPPED: ffmpeg is not installed");
+        return;
+    }
+    let path = database("tags");
+    let music = path.parent().unwrap().join("music");
+    fs::create_dir_all(&music).unwrap();
+    let file = music.join("one.flac");
+    let output = Command::new("ffmpeg")
+        .args([
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+        ])
+        .arg("sine=frequency=440:duration=1:sample_rate=44100")
+        .args(["-metadata", "title=One", "-metadata", "album=Old"])
+        .args(["-c:a", "flac"])
+        .arg(&file)
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let worker = worker_program();
+    let library = MusicLibrary::open(&path).unwrap();
+    library
+        .scan(ScanRequest {
+            folders: vec![music.clone()],
+            worker_program: Some(worker.clone()),
+            ..ScanRequest::default()
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+    let track = library.track_at(&file).unwrap().unwrap();
+
+    let opened = load_for_editing(&file, &ReadOptions::default()).unwrap();
+    assert!(opened.writable);
+    let mut changes = TagChanges::new();
+    changes.set_one(TagField::Album, "New");
+    let mut settings = Settings::default();
+    settings.library.folders = vec![music.clone()];
+    let mut seen = 0;
+    let report = library
+        .write_tags(
+            &[BatchItem::for_file(&opened, changes.clone())],
+            &settings.library,
+            &settings.advanced,
+            Some(&worker),
+            &mut |_| seen += 1,
+        )
+        .unwrap();
+    assert_eq!(seen, 1);
+    assert!(report.batch.results[0].1.is_ok());
+    assert!(report.refresh.is_some(), "the file was read again");
+    let details = library.track_details(track).unwrap().unwrap();
+    assert_eq!(details.tags.album.as_deref(), Some("New"));
+    // The stamp of the first opening no longer matches: the file is refused.
+    let report = library
+        .write_tags(
+            &[BatchItem::for_file(&opened, changes)],
+            &settings.library,
+            &settings.advanced,
+            Some(&worker),
+            &mut |_| {},
+        )
+        .unwrap();
+    assert!(report.batch.results[0].1.is_err());
+}
+
+/// The `helikodu-scan-worker` program of this build, built on first use.
+fn worker_program() -> PathBuf {
+    let target = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    let release = !cfg!(debug_assertions);
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let mut command = std::process::Command::new(cargo);
+    command
+        .args([
+            "build",
+            "--quiet",
+            "-p",
+            "helikodu-scan-worker",
+            "--target-dir",
+        ])
+        .arg(&target)
+        .current_dir(env!("CARGO_MANIFEST_DIR"));
+    if release {
+        command.arg("--release");
+    }
+    assert!(
+        command.status().unwrap().success(),
+        "building the scan worker"
+    );
+    target
+        .join(if release { "release" } else { "debug" })
+        .join("helikodu-scan-worker")
 }

@@ -99,13 +99,23 @@ custom_target(
 
 # --- Data files -------------------------------------------------------------
 
-install_data(
-  'data' / app_id + '.desktop',
+# The desktop entry and the metainfo get the translations of po/ (both are
+# listed in po/POTFILES.in).
+desktop_file = i18n.merge_file(
+  input: 'data' / app_id + '.desktop',
+  output: app_id + '.desktop',
+  type: 'desktop',
+  po_dir: 'po',
+  install: true,
   install_dir: datadir / 'applications',
 )
 
-install_data(
-  'data' / app_id + '.metainfo.xml',
+metainfo_file = i18n.merge_file(
+  input: 'data' / app_id + '.metainfo.xml',
+  output: app_id + '.metainfo.xml',
+  type: 'xml',
+  po_dir: 'po',
+  install: true,
   install_dir: datadir / 'metainfo',
 )
 
@@ -131,14 +141,14 @@ install_man('data/man/helikodu.1', 'data/man/helikodu-cli.1')
 
 desktop_file_validate = find_program('desktop-file-validate', required: false)
 if desktop_file_validate.found()
-  test('desktop file', desktop_file_validate, args: [files('data' / app_id + '.desktop')])
+  test('desktop file', desktop_file_validate, args: [desktop_file])
 endif
 appstreamcli = find_program('appstreamcli', required: false)
 if appstreamcli.found()
   test(
     'metainfo',
     appstreamcli,
-    args: ['validate', '--no-net', files('data' / app_id + '.metainfo.xml')],
+    args: ['validate', '--no-net', metainfo_file],
   )
 endif
 

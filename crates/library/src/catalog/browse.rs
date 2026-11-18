@@ -314,8 +314,59 @@ pub enum TrackFilter {
     Genre(GenreId),
 }
 
+/// A key a list of tracks can be sorted by.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum TrackSortKey {
+    /// Disc and track number.
+    Number,
+    /// The title, by its sort form.
+    Title,
+    /// The artist as credited.
+    Artist,
+    /// The album title, by its sort form.
+    Album,
+    /// The year of the track.
+    Year,
+    /// The length.
+    Length,
+    /// The audio format: the codec, then the sample rate, bit depth and bit rate.
+    Format,
+    /// The rating; tracks without one come last.
+    Rating,
+    /// How often the track was played.
+    Plays,
+}
+
+/// One key of a track list's order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TrackOrder {
+    /// The key.
+    pub key: TrackSortKey,
+    /// Largest first.
+    pub descending: bool,
+}
+
+impl TrackOrder {
+    /// `key`, smallest first.
+    pub fn ascending(key: TrackSortKey) -> Self {
+        Self {
+            key,
+            descending: false,
+        }
+    }
+
+    /// `key`, largest first.
+    pub fn descending(key: TrackSortKey) -> Self {
+        Self {
+            key,
+            descending: true,
+        }
+    }
+}
+
 /// A request for a list of tracks.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct TrackQuery {
     /// Which tracks.
     pub filter: TrackFilter,
@@ -323,6 +374,10 @@ pub struct TrackQuery {
     pub page: Page,
     /// Whether the tracks of masked library folders count.
     pub include_masked: bool,
+    /// The order, most significant key first. Empty keeps the filter's own order
+    /// (see [`TrackFilter`]); its order also breaks the ties of these keys. Missing
+    /// values come last in either direction.
+    pub sort: Vec<TrackOrder>,
 }
 
 /// A track in a list.

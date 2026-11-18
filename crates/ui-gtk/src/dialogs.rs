@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The dialogs: Settings, the full-output confirmation, the tag editor, the
-//! first run, Supported formats and About, with the application actions that
-//! open them.
+//! first run, Keyboard shortcuts, Supported formats and About, with the
+//! application actions that open them.
 
 pub(crate) mod about;
 pub(crate) mod common;
 pub(crate) mod first_run;
 pub(crate) mod formats;
 pub(crate) mod settings;
+pub(crate) mod shortcuts;
 pub(crate) mod tag_editor;
 pub(crate) mod volume_confirm;
 
@@ -50,6 +51,9 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
         if let Some(backend) = main.backend() {
             formats::open(main.upcast_ref(), backend.services().formats());
         }
+    });
+    add(application, "shortcuts", |main| {
+        shortcuts::open(main.upcast_ref());
     });
     add(application, "about", |main| {
         if let Some(backend) = main.backend() {
@@ -94,4 +98,5 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
         application.add_action(&action);
     }
     application.set_accels_for_action("app.preferences", &["<Control>comma"]);
+    application.set_accels_for_action("app.shortcuts", &["<Control>question"]);
 }

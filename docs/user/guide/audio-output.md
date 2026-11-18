@@ -4,7 +4,7 @@ Helikodu lets you decide exactly where your music goes.
 
 ## The quick switcher
 
-The output button in the player deck shows the device in use. Click it to see the devices you can play to, with the system default marked, and pick one. Playback moves to the new device at the same position, without stopping. The same popover switches between **Shared** and **Exclusive** mode.
+The output button in the player deck shows the device in use. Click it to see the devices you can play to, with the system default marked, and pick one. Playback moves to the new device at the same position, without stopping. The same popover switches between **Shared** and **Exclusive** mode, and **Audio output settings** opens the full settings.
 
 ## The Audio output settings
 
@@ -21,7 +21,6 @@ The output button in the player deck shows the device in use. Click it to see th
 | **If the device disappears** | **Pause** (the default), **Continue on the default device** or **Stop** |
 | **Buffer** | How much audio is prepared ahead, 50 to 2000 ms (default 200 ms) |
 | **DAC warm-up** | Milliseconds of silence after the device opens, for converters that need a moment to lock on (default 0) |
-| **Release the device** | When an exclusively held device is given back: by default on stop and after a 30 s pause |
 
 Changes apply while music plays, at the same position. Helikodu remembers the device by a stable name (a PipeWire node name such as `alsa_output.usb-Topping_D10s-00.analog-stereo`, or an ALSA name such as `hw:CARD=D10s,DEV=0`), so it finds it again after a restart or when you plug it into another USB port. If the chosen device is missing when Helikodu starts, it pauses and tells you; choose another device or plug it in.
 
@@ -33,14 +32,16 @@ In **Shared** mode, Helikodu plays through the sound server like every other pro
 
 In **Exclusive** mode, Helikodu takes the device for itself:
 
-- With an ALSA hardware device (`hw:…`), Helikodu asks PipeWire to hand over the sound card and plays to it directly. Other programs cannot use that card while Helikodu holds it, and the card's other inputs and outputs disappear from the sound settings for that time. Helikodu gives the card back when playback stops and after 30 seconds of pause (see **Release the device**).
+- With an ALSA hardware device (`hw:…`), Helikodu asks PipeWire to hand over the sound card and plays to it directly. Other programs cannot use that card while Helikodu holds it, and the card's other inputs and outputs disappear from the sound settings for that time. Helikodu gives the card back when playback stops and after 30 seconds of pause.
 - With a PipeWire device, Helikodu asks PipeWire for exclusive use and for the track's sample rate, which switches the device to that rate.
 
 When nothing in the way changes the sound (no loudness gain, no resampling, volume at 100 % or outside Helikodu), playback is **bit-perfect**: the samples reach the device exactly as they are in the file. The deck shows **Bit-perfect** when this is the case.
 
 ## Volume
 
-With **System volume** the volume control changes the volume of the system's mixer. With **Software volume in Helikodu** it scales the samples itself. With **Fixed at 100 %** the output is always at full level, for amplifiers and DACs with their own volume knob. Because full level can be very loud, Helikodu asks once for each device before it plays at full output (**Play at full output level?**) and stays paused until you answer.
+With **System volume** the volume control changes the volume of the system's mixer. With **Software volume in Helikodu** it scales the samples itself. With **Fixed at 100 % (bit-perfect)** the output is always at full level, for amplifiers and DACs with their own volume knob.
+
+Because full level can be very loud, Helikodu asks before it first plays at full output on a device it has not asked about yet: **Play at full output level?** names the device and shows the volume now and after. Playback stays paused until you answer, and no sound reaches the device before you choose **Play at full output**; **Cancel** (or Escape) leaves it paused. You are asked once for each device. The question also comes when playback is started from outside the window, with media keys or your desktop's media controls, or by opening files with Helikodu, and when you switch to fixed volume or to such a device while music plays.
 
 ## Sample rates
 

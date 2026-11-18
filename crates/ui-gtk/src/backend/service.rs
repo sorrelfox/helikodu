@@ -8,11 +8,12 @@
 //! Library queries run on the front end's worker threads through
 //! `MusicLibrary`; thumbnails come from the library service's artwork pool. The
 //! service's events are read on a thread of this adapter, which turns them into
-//! [`Update`]s for the main loop and feeds MPRIS.
+//! [`Update`]s for the main loop and feeds MPRIS. MPRIS calls that would start
+//! playback come back to the window as [`Update::Request`], so they pass the
+//! full-output gate.
 
 mod services;
 
-use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -37,7 +38,8 @@ use helikodu_service::library::{
     AlbumFilter as ServiceAlbumFilter, AlbumId, AlbumQuality, AlbumQuery as ServiceAlbumQuery,
     AlbumSort as ServiceAlbumSort, AlbumSummary, ArtistQuery, ArtistRole, ArtistSummary, CoverHash,
     GenreId, GenreQuery, ItemContent, LibraryEvent, MAX_PAGE, MusicLibrary, Page, PersonId,
-    PlaylistId, QueueItemInfo, Thumbnail, ThumbnailSize, TrackFilter, TrackSummary,
+    PlaylistId, QueueItemInfo, Thumbnail, ThumbnailSize, TrackFilter, TrackOrder, TrackSortKey,
+    TrackSummary,
 };
 use helikodu_service::player::{
     ContextRequest, EndReason, Notice, PlayerCommand, PlayerEvent, QueueSnapshot as Snapshot,
@@ -179,17 +181,18 @@ fn has_subfolders(path: &Path) -> bool {
     })
 }
 
-/// Compares two track summaries by one column, smallest first.
-fn compare(a: &TrackSummary, b: &TrackSummary, column: TrackColumn) -> Ordering {
-    let text = |s: &Option<String>| s.as_deref().unwrap_or_default().to_lowercase();
+/// The library's sort key for a column of the track table.
+fn sort_key(column: TrackColumn) -> TrackSortKey {
     match column {
-        TrackColumn::Number => (a.disc_no, a.track_no).cmp(&(b.disc_no, b.track_no)),
-        TrackColumn::Title => text(&a.title).cmp(&text(&b.title)),
-        TrackColumn::Artist => text(&a.artist).cmp(&text(&b.artist)),
-        TrackColumn::Album => text(&a.album_title).cmp(&text(&b.album_title)),
-        TrackColumn::Year => a.year.cmp(&b.year),
-        TrackColumn::Length => a.duration.cmp(&b.duration),
-        TrackColumn::Format | TrackColumn::Rating | TrackColumn::Plays => Ordering::Equal,
+        TrackColumn::Number => TrackSortKey::Number,
+        TrackColumn::Title => TrackSortKey::Title,
+        TrackColumn::Artist => TrackSortKey::Artist,
+        TrackColumn::Album => TrackSortKey::Album,
+        TrackColumn::Year => TrackSortKey::Year,
+        TrackColumn::Format => TrackSortKey::Format,
+        TrackColumn::Rating => TrackSortKey::Rating,
+        TrackColumn::Plays => TrackSortKey::Plays,
+        TrackColumn::Length => TrackSortKey::Length,
     }
 }
 
@@ -637,7 +640,15 @@ impl LibrarySource for ServiceLibrary {
             TrackScope::Artist(key) => TrackFilter::Artist(person(key), None),
             TrackScope::Genre(key) => TrackFilter::Genre(genre_id(key)),
         };
-        let mut tracks = music.all_tracks(filter).map_err(error)?;
+        let sort: Vec<TrackOrder> = query
+            .sort
+            .iter()
+            .map(|key| TrackOrder {
+                key: sort_key(key.column),
+                descending: key.descending,
+            })
+            .collect();
+        let mut tracks = music.sorted_tracks(filter, &sort).map_err(error)?;
         if let Some(found) = found {
             let found: HashSet<TrackKey> = found.into_iter().collect();
             tracks.retain(|t| found.contains(&TrackKey(t.id.get())));
@@ -648,23 +659,6 @@ impl LibrarySource for ServiceLibrary {
                 albums.insert(TrackKey(t.id.get()), t.album.map_or(AlbumKey(0), album_key));
             }
         }
-        if !query.sort.is_empty() {
-            tracks.sort_by(|a, b| {
-                query
-                    .sort
-                    .iter()
-                    .map(|key| {
-                        let order = compare(a, b, key.column);
-                        if key.descending {
-                            order.reverse()
-                        } else {
-                            order
-                        }
-                    })
-                    .find(|o| *o != Ordering::Equal)
-                    .unwrap_or(Ordering::Equal)
-            });
-        }
         Ok(tracks.iter().map(|t| TrackKey(t.id.get())).collect())
     }
 
@@ -674,13 +668,6 @@ impl LibrarySource for ServiceLibrary {
             .iter()
             .filter_map(|key| self.track_row(music, *key))
             .collect())
-    }
-
-    fn sortable(&self, column: TrackColumn) -> bool {
-        !matches!(
-            column,
-            TrackColumn::Format | TrackColumn::Rating | TrackColumn::Plays
-        )
     }
 
     fn search(&self, text: &str) -> Result<SearchResults, BackendError> {
@@ -880,6 +867,9 @@ impl LibrarySource for ServiceLibrary {
             .collect())
     }
 
+    // The tree is read from the file system: the library's folder table holds
+    // only folders with scanned files, not the folders between them, nor the
+    // other files the status bar counts.
     fn subfolders(&self, path: &Path) -> Result<Vec<FolderRow>, BackendError> {
         let entries = std::fs::read_dir(path).map_err(error)?;
         let mut rows: Vec<FolderRow> = entries
@@ -1113,6 +1103,7 @@ impl PlayerControl for ServicePlayer {
                 }));
             }
             PlayerRequest::PlayPause => self.command(PlayerCommand::PlayPause),
+            PlayerRequest::Play => self.command(PlayerCommand::Play),
             PlayerRequest::Stop => self.command(PlayerCommand::Stop),
             PlayerRequest::Next => self.command(PlayerCommand::Next),
             PlayerRequest::Previous => self.command(PlayerCommand::Previous),
@@ -1576,13 +1567,32 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
     let mpris = if options.mpris {
         let raise = sender.clone();
         let quit = sender.clone();
-        let hooks = MprisHooks::for_player(service.player().sender())
-            .with_raise(move || {
-                let _ = raise.try_send(Update::Raise);
-            })
-            .with_quit(move || {
-                let _ = quit.try_send(Update::Quit);
-            });
+        let requests = sender.clone();
+        let commands = service.player().sender();
+        // What would start playback goes to the window, through the full-output
+        // gate; the rest goes straight to the player.
+        let hooks = MprisHooks::new(move |command| {
+            let request = match command {
+                PlayerCommand::Play => PlayerRequest::Play,
+                PlayerCommand::PlayPause => PlayerRequest::PlayPause,
+                PlayerCommand::PlayFiles { files, .. } => PlayerRequest::PlayFiles {
+                    files,
+                    enqueue: false,
+                },
+                other => {
+                    // A player that has ended takes no commands.
+                    let _ = commands.send(other);
+                    return;
+                }
+            };
+            let _ = requests.try_send(Update::Request(request));
+        })
+        .with_raise(move || {
+            let _ = raise.try_send(Update::Raise);
+        })
+        .with_quit(move || {
+            let _ = quit.try_send(Update::Quit);
+        });
         match Mpris::start(MprisConfig::default(), hooks) {
             Ok(mpris) => Some(Arc::new(mpris)),
             Err(e) => {
@@ -1642,6 +1652,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
     services::follow_folders(&service, true);
     let services = Arc::new(services::ServiceServices {
         service: Arc::clone(&service),
+        opened: Mutex::new(HashMap::new()),
     });
     Ok(Backend::new(library, player, receiver)
         .with_ui_state(Rc::new(ServiceUiState(service)))

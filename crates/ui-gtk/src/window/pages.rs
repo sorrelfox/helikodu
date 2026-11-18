@@ -619,11 +619,19 @@ impl MainWindow {
             .find(|p| p.key == key)
             .map(|p| p.name)
             .unwrap_or_default();
-        let filter = gtk::FileFilter::new();
-        filter.set_name(Some(&tr("M3U8 playlists")));
-        filter.add_suffix("m3u8");
+        // The extension of the name chooses the format; M3U8 when it names none.
         let filters = gio::ListStore::new::<gtk::FileFilter>();
-        filters.append(&filter);
+        for (title, suffix) in [
+            (tr("M3U8 playlists"), "m3u8"),
+            (tr("M3U playlists"), "m3u"),
+            (tr("PLS playlists"), "pls"),
+            (tr("XSPF playlists"), "xspf"),
+        ] {
+            let filter = gtk::FileFilter::new();
+            filter.set_name(Some(&title));
+            filter.add_suffix(suffix);
+            filters.append(&filter);
+        }
         let dialog = gtk::FileDialog::builder()
             .title(tr("Export playlist"))
             .initial_name(format!("{name}.m3u8"))

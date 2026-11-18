@@ -43,7 +43,7 @@ In **exclusive** mode, Helikodu takes the device for itself:
 - On an **ALSA hardware device** (`hw:CARD=…`), Helikodu asks PipeWire's session manager to hand over the whole sound card and plays to it directly, at each track's own rate. Other programs cannot play on that card meanwhile. Helikodu gives the card back when you stop and after 30 seconds of pause.
 - On a **PipeWire device**, Helikodu asks PipeWire for exclusive use and forces the track's rate, whatever `allowed-rates` says.
 
-Exclusive mode with the volume set to **Fixed at 100 %** and loudness normalization **Off** gives bit-perfect playback: the deck shows **Bit-perfect** when the samples reach the device unchanged.
+Exclusive mode with the volume set to **Fixed at 100 %** and **Even out loudness** set to **Off** gives bit-perfect playback: the deck shows **Bit-perfect** when the samples reach the device unchanged.
 
 ## Why do the colours look different on KDE Plasma and GNOME?
 
@@ -62,7 +62,7 @@ Settings are in `~/.config/helikodu/settings.toml`, the library (with ratings, p
 
 ## Does Helikodu change my music files?
 
-No. It reads your files and keeps everything it learns, including your ratings and play counts, in its own library database. It does not move, rename, copy or retag files.
+Only when you ask it to. It reads your files and keeps everything it learns, including your ratings and play counts, in its own library database. It does not move, rename or copy files. The files change only when you save tags in the [tag editor](guide/tags.md); ratings are not written into the files.
 
 ## How do I report a bug?
 

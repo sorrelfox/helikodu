@@ -11,7 +11,7 @@ Helikodu follows the XDG base directory rules. The folders below are the default
 | `~/.local/state/helikodu/ui-state.toml` | The window size and the widths of its panes |
 | `~/.cache/helikodu/thumbnails/` | Cover thumbnails, up to 2 GiB by default. Safe to delete; they are made again when needed |
 
-Helikodu never changes your music files on its own, and never copies them.
+Helikodu never copies your music files, and changes them only when you save tags in the [tag editor](tags.md). Ratings, play counts and playlists stay in the library database, not in the files.
 
 ## Backing up
 

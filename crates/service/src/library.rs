@@ -34,8 +34,13 @@ use std::sync::Arc;
 
 use std::time::Duration;
 
-use helikodu_library::{DatabaseConfig, DbError, Library, ScanError, SearchRequest};
+use helikodu_library::tag_editing::{BatchItem, BatchProgress};
+use helikodu_library::{
+    CancelToken, DatabaseConfig, DbError, Library, ScanError, ScanOptions, SearchRequest,
+    SymlinkPolicy, TagWriteSettings,
+};
 use helikodu_model::library::TrackId;
+use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
 
 pub use self::info::{LibraryEntry, TagOrigin, TrackInfo, read_file_info};
 pub use self::location::{DATA_FOLDER, DATABASE_FILE, default_database_path};
@@ -43,6 +48,10 @@ pub use self::service::{
     LibraryEvent, LibraryService, LibraryServiceOptions, QueueItemInfo, WatchSettings,
 };
 pub use self::source::TrackSource;
+/// What a tag editor needs: the files as they are opened for editing, the values a
+/// selection shares, and the changes written by [`MusicLibrary::write_tags`] and
+/// [`LibraryService::write_tags`].
+pub use helikodu_library::tag_editing;
 pub use helikodu_library::{
     AlbumDetail, AlbumFilter, AlbumId, AlbumQuery, AlbumSort, AlbumSummary, ArtistQuery, ArtistRef,
     ArtistRole, ArtistSummary, AudioProperties, CoverHash, Disc, ExcludeRule, FailureKind,
@@ -50,12 +59,13 @@ pub use helikodu_library::{
     IdentityId, LibraryTotals, Listen, ListenEnd, ListenOutcome, MAX_PAGE, MatchRank, Page, Paged,
     PersonId, PlayRules, PlayedTrack, PollReason, Rating, RescanReason, RootState, ScanEvent,
     ScanHandle, ScanSummary, SearchHit, Thumbnail, ThumbnailSize, TrackFilter, TrackKind,
-    TrackQuery, TrackSection, TrackStats, TrackSummary, TrackTags, WatchEvent, WatchMode,
+    TrackOrder, TrackQuery, TrackSection, TrackSortKey, TrackStats, TrackSummary, TrackTags,
+    WatchEvent, WatchMode,
 };
 pub use helikodu_library::{
     AlbumFormat, AlbumQuality, DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions,
     ImportReport, ItemContent, PlaylistError, PlaylistId, PlaylistItem, PlaylistItemId,
-    PlaylistSummary, TrackDetails,
+    PlaylistKind, PlaylistSummary, TagWriteReport, TrackDetails,
 };
 
 /// Why a library operation failed.
@@ -315,12 +325,23 @@ impl MusicLibrary {
 
     /// Every track `filter` selects, in its order (page after page).
     pub fn all_tracks(&self, filter: TrackFilter) -> Result<Vec<TrackSummary>, LibraryError> {
+        self.sorted_tracks(filter, &[])
+    }
+
+    /// Every track `filter` selects, sorted by `sort` (most significant key first)
+    /// and then in the filter's own order.
+    pub fn sorted_tracks(
+        &self,
+        filter: TrackFilter,
+        sort: &[TrackOrder],
+    ) -> Result<Vec<TrackSummary>, LibraryError> {
         let mut tracks = Vec::new();
         loop {
             let page = self.library.tracks(&TrackQuery {
                 filter,
                 page: Page::new(tracks.len(), MAX_PAGE),
                 include_masked: false,
+                sort: sort.to_vec(),
             })?;
             let done = page.items.is_empty() || tracks.len() + page.items.len() >= page.total;
             tracks.extend(page.items);
@@ -478,16 +499,57 @@ impl MusicLibrary {
             .import_playlist(path, &ImportOptions::default())?)
     }
 
-    /// Exports `playlist` to `path` as M3U8 with relative paths, replacing the file
-    /// atomically.
+    /// Exports `playlist` to `path` with relative paths, replacing the file
+    /// atomically. The extension of `path` picks the format: `.m3u`, `.pls` and
+    /// `.xspf` write M3U, PLS and XSPF; any other writes M3U8.
     pub fn export_playlist(
         &self,
         playlist: PlaylistId,
         path: &Path,
     ) -> Result<ExportReport, LibraryError> {
-        Ok(self
-            .library
-            .export_playlist(playlist, path, ExportOptions::default())?)
+        let kind = PlaylistKind::from_path(path).unwrap_or(PlaylistKind::M3u8);
+        self.export_playlist_as(playlist, path, kind)
+    }
+
+    /// Exports `playlist` to `path` as `kind` with relative paths, replacing the
+    /// file atomically.
+    pub fn export_playlist_as(
+        &self,
+        playlist: PlaylistId,
+        path: &Path,
+        kind: PlaylistKind,
+    ) -> Result<ExportReport, LibraryError> {
+        let options = ExportOptions {
+            kind,
+            ..ExportOptions::default()
+        };
+        Ok(self.library.export_playlist(playlist, path, options)?)
+    }
+
+    /// Writes each item's changes into its file, one file after the other, and then
+    /// reads the files written again so that the library has their new tags at once.
+    ///
+    /// `advanced` gives the ID3v2 version of new tags and the size above which files
+    /// are changed in place; `library` the rules the re-read follows, as a scan does;
+    /// `worker_program` the scan worker when it is not beside the running program.
+    /// A file that fails does not stop the others: each file's result is in the
+    /// report. `progress` is called after each file. Blocks until all are done.
+    pub fn write_tags(
+        &self,
+        items: &[BatchItem],
+        library: &LibrarySettings,
+        advanced: &AdvancedSettings,
+        worker_program: Option<&Path>,
+        progress: &mut dyn FnMut(&BatchProgress),
+    ) -> Result<TagWriteReport, LibraryError> {
+        let scan = scan_options(library, worker_program)?;
+        Ok(self.library.write_tags(
+            items,
+            &TagWriteSettings::from_settings(advanced),
+            &scan,
+            progress,
+            &CancelToken::new(),
+        )?)
     }
 
     /// The library folders and whether each is masked or polled.
@@ -507,6 +569,33 @@ impl MusicLibrary {
 
 fn config(path: &Path) -> DatabaseConfig {
     DatabaseConfig::file(path).with_collation(location::collation())
+}
+
+/// How a scan of the folders of `settings` reads them, with the worker program.
+pub(crate) fn scan_options(
+    settings: &LibrarySettings,
+    worker_program: Option<&Path>,
+) -> Result<ScanOptions, LibraryError> {
+    let mut scan = ScanOptions::new(settings.folders.clone());
+    scan.exclude = settings
+        .skip
+        .iter()
+        .map(|p| {
+            if p.contains('/') {
+                ExcludeRule::Path(PathBuf::from(p))
+            } else {
+                ExcludeRule::Name(p.clone())
+            }
+        })
+        .collect();
+    scan.include_video = settings.include_video;
+    scan.symlinks = if settings.follow_symlinks {
+        SymlinkPolicy::Follow
+    } else {
+        SymlinkPolicy::WithinRoots
+    };
+    scan.workers.program = Some(helikodu_library::find_worker_program(worker_program)?);
+    Ok(scan)
 }
 
 /// The rule for an `--exclude` pattern (see [`ScanRequest::exclude`]).

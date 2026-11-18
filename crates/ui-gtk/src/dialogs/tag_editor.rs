@@ -257,8 +257,24 @@ impl std::fmt::Debug for Editor {
 }
 
 impl Editor {
+    /// Why nothing can be changed: no file of the selection can be written.
     fn read_only(&self) -> Option<&str> {
-        self.tracks.iter().find_map(|t| t.read_only.as_deref())
+        if self.tracks.iter().all(|t| t.read_only.is_some()) {
+            self.tracks.iter().find_map(|t| t.read_only.as_deref())
+        } else {
+            None
+        }
+    }
+
+    /// The files of a selection that cannot be written, when others can.
+    fn some_read_only(&self) -> Vec<&EditTrack> {
+        if self.read_only().is_some() {
+            return Vec::new();
+        }
+        self.tracks
+            .iter()
+            .filter(|t| t.read_only.is_some())
+            .collect()
     }
 
     /// The changes made so far.
@@ -657,6 +673,31 @@ fn tags_tab(editor: &Rc<Editor>) -> gtk::Widget {
         ));
         let why = note(reason);
         text.append(&why);
+        notice.append(&text);
+        body.append(&notice);
+    }
+    let fixed = editor.some_read_only();
+    if let Some(first) = fixed.first() {
+        let notice = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+        notice.add_css_class("hk-notice");
+        notice.append(&gtk::Image::from_icon_name("dialog-information-symbolic"));
+        let text = gtk::Box::new(gtk::Orientation::Vertical, 2);
+        text.append(&label(
+            &fill(
+                &ntr(
+                    "{} file keeps its tags",
+                    "{} files keep their tags",
+                    fixed.len(),
+                ),
+                &[&fixed.len().to_string()],
+            ),
+            &["hk-medium"],
+        ));
+        text.append(&note(&format!(
+            "{}: {}",
+            first.file_name(),
+            first.read_only.as_deref().unwrap_or_default()
+        )));
         notice.append(&text);
         body.append(&notice);
     }

@@ -1170,6 +1170,16 @@ impl PlayerControl for FakePlayer {
                 };
                 self.emit(Update::State(state));
             }
+            PlayerRequest::Play => {
+                let state = {
+                    let mut s = self.state.borrow_mut();
+                    if s.state == PlaybackState::Paused {
+                        s.state = PlaybackState::Playing;
+                    }
+                    s.state
+                };
+                self.emit(Update::State(state));
+            }
             PlayerRequest::Stop => {
                 {
                     let mut s = self.state.borrow_mut();
@@ -1259,15 +1269,21 @@ impl PlayerControl for FakePlayer {
 
 /// A backend over a [`SampleLibrary`] and a [`FakePlayer`].
 pub fn backend(options: &SampleOptions) -> Backend {
-    build(options, false)
+    build(options, false).0
 }
 
 /// The same backend before the first run: no library folder is chosen yet.
 pub fn first_run_backend(options: &SampleOptions) -> Backend {
-    build(options, true)
+    build(options, true).0
 }
 
-fn build(options: &SampleOptions, first_run: bool) -> Backend {
+/// The backend of [`backend`] and the sender of its updates, through which a
+/// test can play the part of another program (MPRIS, for example).
+pub fn backend_with_updates(options: &SampleOptions) -> (Backend, async_channel::Sender<Update>) {
+    build(options, false)
+}
+
+fn build(options: &SampleOptions, first_run: bool) -> (Backend, async_channel::Sender<Update>) {
     let library = Arc::new(SampleLibrary::new(options.albums));
     let (sender, receiver) = async_channel::unbounded();
     let mut services = MemoryServices::for_library(library.clone(), sender.clone());
@@ -1277,7 +1293,7 @@ fn build(options: &SampleOptions, first_run: bool) -> Backend {
     let player = Rc::new(FakePlayer {
         library: library.clone(),
         state: RefCell::new(FakeState::default()),
-        updates: sender,
+        updates: sender.clone(),
     });
     player.emit(Update::Volume(0.8));
     player.emit(Update::Output(player.output(SignalState::Idle)));
@@ -1292,7 +1308,10 @@ fn build(options: &SampleOptions, first_run: bool) -> Backend {
             player.send(PlayerRequest::Seek(Duration::from_secs(elapsed)));
         }
     }
-    Backend::new(library, player, receiver).with_services(Arc::new(services))
+    (
+        Backend::new(library, player, receiver).with_services(Arc::new(services)),
+        sender,
+    )
 }
 
 #[cfg(test)]

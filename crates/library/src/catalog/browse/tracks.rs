@@ -6,7 +6,7 @@
 use rusqlite::types::Value;
 use rusqlite::{Connection, Row, params_from_iter};
 
-use super::{Paged, Params, TrackFilter, TrackQuery, TrackSummary};
+use super::{Paged, Params, TrackFilter, TrackOrder, TrackQuery, TrackSortKey, TrackSummary};
 use crate::catalog::ids::{AlbumId, track_id_from_sql};
 use crate::catalog::roots::visibility;
 use crate::catalog::track_record::{ArtistRole, TrackKind, TrackSection};
@@ -89,6 +89,7 @@ pub(crate) fn tracks(c: &Connection, query: &TrackQuery) -> rusqlite::Result<Pag
             )
         }
     };
+    let (join, order) = sorted(&query.sort, order);
     let total: i64 = c
         .prepare_cached(&format!(
             "SELECT count(*) FROM tracks t WHERE {filter} AND {visible}"
@@ -100,7 +101,7 @@ pub(crate) fn tracks(c: &Connection, query: &TrackQuery) -> rusqlite::Result<Pag
     params.push(Value::Integer(offset));
     let items = c
         .prepare_cached(&format!(
-            "SELECT {COLUMNS} {FROM} WHERE {filter} AND {visible}
+            "SELECT {COLUMNS} {FROM} {join} WHERE {filter} AND {visible}
              ORDER BY {order} LIMIT ?{} OFFSET ?{}",
             n + 1,
             n + 2
@@ -124,3 +125,46 @@ const BY_ALBUM_ARTIST: &str = "t.album_id IS NULL, a.artist_sort IS NULL, a.arti
     coalesce(a.original_year, a.year), a.title_sort, t.album_id,
     coalesce(t.disc_no, 1), t.track_no IS NULL, t.track_no, d.path, f.name, t.sub_index,
     t.title_sort, t.id";
+
+/// The order of `sort` in front of the filter's own `order`, and the join it needs.
+fn sorted(sort: &[TrackOrder], order: &str) -> (&'static str, String) {
+    if sort.is_empty() {
+        return ("", order.to_owned());
+    }
+    let mut terms = Vec::new();
+    let mut stats = false;
+    for key in sort {
+        let d = if key.descending { " DESC" } else { "" };
+        terms.push(match key.key {
+            TrackSortKey::Number => {
+                format!("coalesce(t.disc_no, 1){d}, t.track_no IS NULL, t.track_no{d}")
+            }
+            TrackSortKey::Title => format!("t.title_sort IS NULL, t.title_sort{d}"),
+            TrackSortKey::Artist => {
+                format!("t.artist IS NULL, t.artist COLLATE HK_LOCALE{d}")
+            }
+            TrackSortKey::Album => format!("a.title_sort IS NULL, a.title_sort{d}"),
+            TrackSortKey::Year => format!("t.year IS NULL, t.year{d}"),
+            TrackSortKey::Length => format!("t.duration_ms IS NULL, t.duration_ms{d}"),
+            TrackSortKey::Format => format!(
+                "t.codec IS NULL, lower(t.codec){d}, t.sample_rate{d}, t.bit_depth{d}, \
+                 t.bitrate{d}"
+            ),
+            TrackSortKey::Rating => {
+                stats = true;
+                format!("s.rating IS NULL, s.rating{d}")
+            }
+            TrackSortKey::Plays => {
+                stats = true;
+                format!("coalesce(s.play_count, 0){d}")
+            }
+        });
+    }
+    terms.push(order.to_owned());
+    let join = if stats {
+        "LEFT JOIN stats s ON s.identity_id = t.identity_id"
+    } else {
+        ""
+    };
+    (join, terms.join(", "))
+}

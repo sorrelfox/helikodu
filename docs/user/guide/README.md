@@ -6,15 +6,16 @@ This guide describes the current version. Helikodu is young: some menu entries a
 
 1. [Installing Helikodu](installing.md)
 2. [First run and music folders](first-run.md)
-3. [Browsing albums](browsing.md)
+3. [Browsing and searching the library](browsing.md)
 4. [Playing music and the queue](playing.md)
 5. [Choosing the audio output](audio-output.md)
 6. [Loudness and ReplayGain](loudness.md)
 7. [Playlists and ratings](playlists-and-ratings.md)
-8. [Settings](settings.md)
-9. [Keyboard shortcuts](keyboard-shortcuts.md)
-10. [The command line](command-line.md)
-11. [Where Helikodu keeps its files](files.md)
-12. [Troubleshooting](troubleshooting.md)
+8. [Editing tags](tags.md)
+9. [Settings](settings.md)
+10. [Keyboard shortcuts](keyboard-shortcuts.md)
+11. [The command line](command-line.md)
+12. [Where Helikodu keeps its files](files.md)
+13. [Troubleshooting](troubleshooting.md)
 
 See also the [FAQ](../faq.md) and the manual pages `helikodu(1)` and `helikodu-cli(1)`.

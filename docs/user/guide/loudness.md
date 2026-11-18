@@ -8,11 +8,10 @@ The **Loudness** page of the settings has:
 
 | Setting | What it does |
 |---|---|
-| Mode | **Off**; **Track** (every track at the same loudness); **Album** (whole albums at the same loudness, keeping the differences between their tracks); **Automatic** (the default: the album gain while an album plays in order, the track gain otherwise) |
-| Preamp | Added to the gain of tagged files, −12 to +12 dB (default 0) |
-| Gain of untagged files | The gain for untagged files, −12 to +12 dB (default −6 dB, so they are not much louder than normalized ones) |
-| Clipping prevention | Lowering the gain so that the loudest peak stays below full scale (the default) |
+| **Even out loudness** | **Off**; **Track** (every track at the same loudness); **Album** (whole albums at the same loudness, keeping the differences between their tracks); **Automatic** (the default: the album gain while an album plays in order, the track gain otherwise, for example in shuffle) |
+| **Preamp** | Two sliders, −12 to +12 dB: **Files with loudness values** (added to their gain, default 0 dB) and **Files without loudness values** (their gain, default −6 dB, so they are not much louder than normalized ones) |
+| **Prevent clipping** | **Lower the gain**: the gain is reduced until the loudest peak fits below full scale |
 
 Gains follow the ReplayGain 2.0 reference of −18 LUFS; Opus R128 gains are converted to it. A change takes effect at once, also on the playing track.
 
-When a gain is applied, playback is no longer bit-perfect. Set the mode to **Off** if bit-perfect output matters more to you.
+When a gain is applied, playback is no longer bit-perfect. Set **Even out loudness** to **Off** if bit-perfect output matters more to you.

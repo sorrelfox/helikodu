@@ -12,13 +12,15 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
+use helikodu_library::TagWriteReport;
+use helikodu_library::tag_editing::{BatchItem, BatchProgress};
 use helikodu_library::{
-    ArtworkOptions, ArtworkPool, CoverHash, CoverLocator, ExcludeRule, ScanEvent, ScanHandle,
-    ScanSummary, SymlinkPolicy, Thumbnail, ThumbnailCache, ThumbnailCacheOptions, ThumbnailSize,
-    WatchEvent, WatchOptions, Watcher, read_file_details,
+    ArtworkOptions, ArtworkPool, CoverHash, CoverLocator, ScanEvent, ScanHandle, ScanSummary,
+    Thumbnail, ThumbnailCache, ThumbnailCacheOptions, ThumbnailSize, WatchEvent, WatchOptions,
+    Watcher, read_file_details,
 };
 use helikodu_model::library::{TrackId, TrackRef};
-use helikodu_model::settings::LibrarySettings;
+use helikodu_model::settings::{LibrarySettings, Settings};
 
 use super::{
     AlbumDetail, AlbumId, AlbumQuery, AlbumSummary, ArtistQuery, ArtistSummary, GenreQuery,
@@ -343,6 +345,29 @@ impl LibraryService {
         )
     }
 
+    /// Writes tags into files and reads them again, as [`MusicLibrary::write_tags`]
+    /// does with this service's worker program and the `[library]` and `[advanced]`
+    /// settings of `settings`; announces [`LibraryEvent::Changed`] when a file was
+    /// read again. Blocks until all files are done: call it off a window's thread.
+    pub fn write_tags(
+        &self,
+        items: &[BatchItem],
+        settings: &Settings,
+        progress: &mut dyn FnMut(&BatchProgress),
+    ) -> Result<TagWriteReport, LibraryError> {
+        let report = self.library.write_tags(
+            items,
+            &settings.library,
+            &settings.advanced,
+            self.worker_program.as_deref(),
+            progress,
+        )?;
+        if report.refresh.is_some() {
+            self.bus.publish(&Event::Library(LibraryEvent::Changed));
+        }
+        Ok(report)
+    }
+
     /// The thumbnail of a cover: the file when it is cached, or else scheduled
     /// (newest first) and announced with [`LibraryEvent::ThumbnailReady`]. Does no
     /// file I/O on the calling thread. Without a thumbnail cache, `Unavailable`.
@@ -435,17 +460,7 @@ impl LibraryService {
 
     fn watch_options(&self, settings: &WatchSettings) -> Result<WatchOptions, LibraryError> {
         let library = &settings.library;
-        let mut scan = helikodu_library::ScanOptions::new(library.folders.clone());
-        scan.exclude = library.skip.iter().map(|p| exclude_rule(p)).collect();
-        scan.include_video = library.include_video;
-        scan.symlinks = if library.follow_symlinks {
-            SymlinkPolicy::Follow
-        } else {
-            SymlinkPolicy::WithinRoots
-        };
-        scan.workers.program = Some(helikodu_library::find_worker_program(
-            self.worker_program.as_deref(),
-        )?);
+        let scan = super::scan_options(library, self.worker_program.as_deref())?;
         let mut options = WatchOptions::new(scan);
         options.initial_scan = settings.initial_scan;
         options.poll_interval = Duration::from_secs(u64::from(library.rescan_interval_min) * 60);
@@ -468,14 +483,6 @@ impl Drop for LibraryService {
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-fn exclude_rule(pattern: &str) -> ExcludeRule {
-    if pattern.contains('/') {
-        ExcludeRule::Path(PathBuf::from(pattern))
-    } else {
-        ExcludeRule::Name(pattern.to_owned())
-    }
 }
 
 fn forward_scan(handle: ScanHandle, cancel: &AtomicBool, bus: &EventBus<Event>) {

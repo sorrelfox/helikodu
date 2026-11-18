@@ -279,9 +279,11 @@ impl MainWindow {
         imp.toasts.replace(Some(toasts));
         let weak = self.downgrade();
         let cache = Rc::downgrade(&covers);
+        let requests = backend.clone();
         playback.connect_event(move |update| {
             let Some(window) = weak.upgrade() else { return };
             match update {
+                Update::Request(request) => requests.send(request.clone()),
                 Update::Problem { message } => window.toast(message, true),
                 Update::Notice { message } => window.toast(message, false),
                 Update::Thumbnail { cover, size, path } => {

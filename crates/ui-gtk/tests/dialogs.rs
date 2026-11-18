@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The dialogs against the sample backend: settings that round-trip through
-//! the store, the full-output confirmation, the tag editor with mixed values,
-//! the first run, the output switcher, Supported formats and About.
+//! the store, the full-output confirmation (also for requests from other
+//! programs), the tag editor with mixed values, the first run, the output
+//! switcher, Supported formats, About and Keyboard shortcuts.
 //!
 //! Like `widgets.rs`, this program runs only under the headless compositor:
 //!
@@ -24,7 +25,7 @@ use std::time::{Duration, Instant};
 use gtk::prelude::*;
 use gtk::{gio, glib};
 use helikodu_model::settings::VolumeControl;
-use helikodu_ui_gtk::backend::{AlbumQuery, Backend, PlayerRequest, TrackKey, sample};
+use helikodu_ui_gtk::backend::{AlbumQuery, Backend, PlayerRequest, TrackKey, Update, sample};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
 
@@ -219,6 +220,41 @@ fn the_full_output_confirmation(app: &gtk::Application) {
     window.destroy();
 }
 
+fn outside_requests_pass_the_gate(app: &gtk::Application) {
+    let (backend, updates) = sample::backend_with_updates(&sample::SampleOptions {
+        albums: 40,
+        playing: Some((0, 0, 10)),
+    });
+    let (window, backend) = window_over(app, backend);
+    wait_for("playback", || window.is_playing());
+    backend.send(PlayerRequest::PlayPause);
+    wait_for("the pause", || !window.is_playing());
+    backend
+        .services()
+        .update_settings(&mut |s| s.output.volume = VolumeControl::Fixed)
+        .unwrap();
+    // Another program (MPRIS) asks to play: the window asks first.
+    updates
+        .try_send(Update::Request(PlayerRequest::Play))
+        .unwrap();
+    wait_for("the question", || toplevel("volume-confirm").is_some());
+    spin(50);
+    assert!(!window.is_playing(), "nothing plays before the answer");
+    button(&toplevel("volume-confirm").unwrap(), "Cancel").emit_clicked();
+    spin(50);
+    assert!(!window.is_playing());
+    // The same for PlayPause.
+    updates
+        .try_send(Update::Request(PlayerRequest::PlayPause))
+        .unwrap();
+    wait_for("the question again", || {
+        toplevel("volume-confirm").is_some()
+    });
+    button(&toplevel("volume-confirm").unwrap(), "Play at full output").emit_clicked();
+    wait_for("playback", || window.is_playing());
+    window.destroy();
+}
+
 fn the_tag_editor_shows_mixed_values(app: &gtk::Application) {
     let (window, backend) = window(app);
     let tracks = first_album_tracks(&backend, 3);
@@ -333,11 +369,64 @@ fn formats_and_about(app: &gtk::Application) {
     window.destroy();
 }
 
+fn keyboard_shortcuts(app: &gtk::Application) {
+    let (window, _) = window(app);
+    assert_eq!(
+        app.accels_for_action("app.shortcuts")
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>(),
+        ["<Control>question"]
+    );
+    gio::prelude::ActionGroupExt::activate_action(app, "shortcuts", None);
+    wait_for("Keyboard shortcuts", || toplevel("shortcuts").is_some());
+    let dialog = toplevel("shortcuts").unwrap();
+    let texts = |root: &gtk::Window| -> Vec<String> {
+        descendants(root.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::Label>().ok())
+            .filter(|l| l.is_mapped())
+            .map(|l| l.text().to_string())
+            .collect()
+    };
+    spin(50);
+    let shown = texts(&dialog);
+    for expected in [
+        "Next track",
+        "Search",
+        "Sidebar",
+        "Ctrl",
+        "→",
+        "F9",
+        "Not set",
+    ] {
+        assert!(
+            shown.iter().any(|t| t == expected),
+            "{expected} is shown: {shown:?}"
+        );
+    }
+    let filter = descendants(dialog.upcast_ref())
+        .into_iter()
+        .find_map(|w| w.downcast::<gtk::SearchEntry>().ok())
+        .unwrap();
+    filter.set_text("f9");
+    spin(400);
+    let shown = texts(&dialog);
+    assert!(shown.iter().any(|t| t == "Sidebar"));
+    assert!(!shown.iter().any(|t| t == "Next track"), "{shown:?}");
+    dialog.close();
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
     ("settings_round_trip", settings_round_trip),
     ("the_full_output_confirmation", the_full_output_confirmation),
+    (
+        "outside_requests_pass_the_gate",
+        outside_requests_pass_the_gate,
+    ),
     (
         "the_tag_editor_shows_mixed_values",
         the_tag_editor_shows_mixed_values,
@@ -345,6 +434,7 @@ const TESTS: &[Test] = &[
     ("the_first_run", the_first_run),
     ("the_output_switcher", the_output_switcher),
     ("formats_and_about", formats_and_about),
+    ("keyboard_shortcuts", keyboard_shortcuts),
 ];
 
 fn main() -> ExitCode {

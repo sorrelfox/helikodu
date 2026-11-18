@@ -44,5 +44,11 @@ harness = false
 [[example]]
 name = "views"
 
+[[test]]
+# The tag editor over the running service and a generated library; GTK needs its
+# own main function.
+name = "tag_editing"
+harness = false
+
 [lints]
 workspace = true

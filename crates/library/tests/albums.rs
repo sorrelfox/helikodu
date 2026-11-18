@@ -15,7 +15,7 @@ mod support;
 use helikodu_library::{
     AlbumDetail, AlbumFilter, AlbumId, AlbumQuality, AlbumQuery, AlbumSort, AlbumSummary,
     ArtistQuery, ArtistRole, Credit, DatabaseConfig, GenreQuery, Library, LocaleCollation, Page,
-    PersonId, RootId, TrackFilter, TrackQuery, TrackRecord,
+    PersonId, RootId, TrackFilter, TrackOrder, TrackQuery, TrackRecord, TrackSortKey,
 };
 use support::{library, record};
 
@@ -937,6 +937,95 @@ fn genres_and_their_tracks() {
     assert_eq!(albums.len(), 1);
     let detail = detail(&library, albums[0].id);
     assert_eq!(detail.genres[0].name, "Rock");
+}
+
+#[test]
+fn tracks_sort_by_format_rating_and_plays() {
+    use std::time::{Duration, SystemTime};
+
+    use helikodu_library::{Listen, ListenEnd, PlayRules, Rating};
+
+    let (library, root) = library();
+    /// Path, title, codec, rate, depth, half stars, plays.
+    type Row<'a> = (&'a str, &'a str, &'a str, u32, Option<u16>, Option<u8>, u32);
+    let rows: [Row<'_>; 4] = [
+        ("/music/s/1.flac", "A", "flac", 96_000, Some(24), Some(6), 1),
+        ("/music/s/2.mp3", "B", "mp3", 44_100, None, None, 3),
+        (
+            "/music/s/3.flac",
+            "C",
+            "flac",
+            44_100,
+            Some(16),
+            Some(10),
+            0,
+        ),
+        ("/music/s/4.opus", "D", "opus", 48_000, None, Some(2), 2),
+    ];
+    for (path, title, codec, rate, depth, stars, plays) in rows {
+        let mut record = T::new(path, title, "Ann", "Mixed").by("Ann").record(root);
+        record.audio.codec = Some(codec.to_owned());
+        record.audio.sample_rate = Some(rate);
+        record.audio.bit_depth = depth;
+        let track = library.upsert_track(record).unwrap().track;
+        library
+            .set_rating(track, stars.and_then(Rating::from_half_stars))
+            .unwrap();
+        for _ in 0..plays {
+            let listen = Listen {
+                started_at: SystemTime::UNIX_EPOCH + Duration::from_secs(1000),
+                played: Duration::from_secs(200),
+                end: ListenEnd::Finished,
+                position: None,
+                context: None,
+            };
+            library
+                .record_listen(track, listen, PlayRules::default())
+                .unwrap();
+        }
+    }
+    let titles = |sort: Vec<TrackOrder>| -> Vec<String> {
+        library
+            .tracks(&TrackQuery {
+                sort,
+                ..TrackQuery::default()
+            })
+            .unwrap()
+            .items
+            .into_iter()
+            .map(|t| t.title.unwrap())
+            .collect()
+    };
+    assert_eq!(
+        titles(vec![TrackOrder::ascending(TrackSortKey::Format)]),
+        ["C", "A", "B", "D"],
+        "by codec, then sample rate"
+    );
+    assert_eq!(
+        titles(vec![TrackOrder::descending(TrackSortKey::Rating)]),
+        ["C", "A", "D", "B"],
+        "unrated last"
+    );
+    assert_eq!(
+        titles(vec![TrackOrder::ascending(TrackSortKey::Rating)]),
+        ["D", "A", "C", "B"],
+        "unrated last in either direction"
+    );
+    assert_eq!(
+        titles(vec![TrackOrder::descending(TrackSortKey::Plays)]),
+        ["B", "D", "A", "C"]
+    );
+    assert_eq!(
+        titles(vec![
+            TrackOrder::ascending(TrackSortKey::Format),
+            TrackOrder::descending(TrackSortKey::Title),
+        ]),
+        ["C", "A", "B", "D"]
+    );
+    assert_eq!(
+        titles(vec![TrackOrder::descending(TrackSortKey::Title)]),
+        ["D", "C", "B", "A"]
+    );
 }
 
 #[test]

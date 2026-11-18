@@ -1,4 +1,6 @@
 # Source files with translatable strings, one path per line, relative to the repository root.
+data/io.github.sorrelfox.Helikodu.desktop
+data/io.github.sorrelfox.Helikodu.metainfo.xml
 crates/ui-gtk/resources/ui/albums.ui
 crates/ui-gtk/resources/ui/album.ui
 crates/ui-gtk/resources/ui/deck.ui
@@ -32,6 +34,7 @@ crates/ui-gtk/src/dialogs/settings/library.rs
 crates/ui-gtk/src/dialogs/settings/loudness.rs
 crates/ui-gtk/src/dialogs/settings/output.rs
 crates/ui-gtk/src/dialogs/settings/playback.rs
+crates/ui-gtk/src/dialogs/shortcuts.rs
 crates/ui-gtk/src/dialogs/tag_editor.rs
 crates/ui-gtk/src/dialogs/volume_confirm.rs
 crates/ui-gtk/src/popovers/output_switcher.rs

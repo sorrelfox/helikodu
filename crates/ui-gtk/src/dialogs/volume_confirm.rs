@@ -10,7 +10,11 @@
 //! Requests that would start playback pass a gate on the backend; while the
 //! question is open nothing is sent to the player, so no sample reaches the
 //! device until "Play at full output" is chosen. Cancel is the default and
-//! Escape cancels.
+//! Escape cancels. Playback asked for from outside the window passes the same
+//! gate: files opened with the application (`GApplication` open) are sent with
+//! [`Backend::send`], and the service backend hands MPRIS `Play`, `PlayPause`
+//! and `OpenUri` to the window as [`Update::Request`](crate::backend::Update)
+//! instead of to the player.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -63,7 +67,7 @@ pub(crate) fn needs_confirmation(settings: &Settings, key: &DeviceKey) -> bool {
 pub(crate) fn starts_playback(request: &PlayerRequest, state: PlaybackState) -> bool {
     let playing = state == PlaybackState::Playing;
     match request {
-        PlayerRequest::PlayPause => !playing,
+        PlayerRequest::PlayPause | PlayerRequest::Play => !playing,
         PlayerRequest::PlayFiles { enqueue, .. } => !enqueue,
         PlayerRequest::PlayAlbum { .. }
         | PlayerRequest::PlayTracks { .. }

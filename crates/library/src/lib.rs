@@ -26,7 +26,7 @@ pub use catalog::{
     AlbumDetail, AlbumFilter, AlbumFormat, AlbumId, AlbumQuality, AlbumQuery, AlbumSort,
     AlbumSummary, ArtistQuery, ArtistRef, ArtistRole, ArtistSummary, CatalogTags, Credit, Disc,
     GenreId, GenreQuery, GenreRef, GenreSummary, MAX_PAGE, Page, Paged, PersonId, RootState,
-    TrackFilter, TrackQuery, TrackSection, TrackSummary,
+    TrackFilter, TrackOrder, TrackQuery, TrackSection, TrackSortKey, TrackSummary,
 };
 pub use catalog::{
     AudioProperties, CoverInfo, CoverLocation, FileStamp, IdentityId, ReplayGain, RootId,
@@ -46,6 +46,8 @@ pub use details::{
 };
 /// The content hash of a cover, the key of the thumbnail cache.
 pub use helikodu_meta::covers::CoverHash;
+/// The playlist file formats an export can write and an import reads.
+pub use helikodu_meta::playlists::{PathStyle, PlaylistKind};
 /// A cover found by a scan worker, as a [`TrackCovers`] holds it.
 pub use helikodu_meta::worker::{CoverOrigin, CoverReport};
 pub use library::Library;
@@ -64,6 +66,25 @@ pub use stats::{
 pub use tag_writes::{RateError, RatingOutcome, TagWriteReport, TagWriteSettings};
 pub use track_source::TrackSource;
 pub use watch::{PollReason, RescanReason, WatchEvent, WatchMode, WatchOptions, Watcher};
+
+/// What a tag editor needs to open files and write their tags: the types of
+/// `meta`'s tag writer, so that front ends need not depend on `meta`.
+///
+/// Open each file with [`load_for_editing`](tag_editing::load_for_editing), show
+/// the values a selection shares with [`SelectionView`](tag_editing::SelectionView),
+/// collect the edits in [`TagChanges`](tag_editing::TagChanges) and write them with
+/// [`Library::write_tags`] as one [`BatchItem`](tag_editing::BatchItem) per file.
+pub mod tag_editing {
+    /// A rating as tags hold it: 0 to 10 half stars.
+    pub use helikodu_meta::tags::Rating as TagRating;
+    pub use helikodu_meta::tags::writing::{
+        BatchItem, BatchProgress, BatchReport, CoverChange, EditStamp, EditableFile, FieldChange,
+        FieldKey, Id3Version, InPlaceReason, SelectionView, Shared, SkippedChange, TagChanges,
+        TagField, WriteError, WriteMode, WriteOptions, WriteOutcome, field_values, is_writable,
+        load_for_editing, read_lyrics,
+    };
+    pub use helikodu_meta::tags::{ReadOptions, TagError};
+}
 
 /// Direct SQL access to the database, below [`Library`].
 ///

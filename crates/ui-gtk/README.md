@@ -18,7 +18,7 @@ The desktop user interface, built with GTK 4 without libadwaita. It talks to the
 | `src/views/` | Albums (the grid), the album page, Artists, Genres, Tracks (the column view), Folders, the playlist page and search; the one context menu and its window actions (`actions.rs`), drag and drop (`drag.rs`), the table cell (`table.rs`), and stand-ins for the views that come later |
 | `src/models/` | ID-backed list models: the album and track lists fetch their rows in batches on worker threads; cover thumbnails load newest first into a texture cache |
 | `src/widgets/` | Drawn widgets: cover art with the generated placeholder, the waveform seek bar, the signal lamp, rating stars, the playing indicator, the brand mark, the bipolar scale of the preamps, the artist avatar with initials |
-| `src/dialogs/` | Settings (Library, Playback, Audio output, Loudness, Appearance, Advanced), the full-output confirmation, the tag editor, the first run with the scan footer, Supported formats, About; the application actions that open them |
+| `src/dialogs/` | Settings (Library, Playback, Audio output, Loudness, Appearance, Advanced), the full-output confirmation, the tag editor, the first run with the scan footer, Keyboard shortcuts (Ctrl+?), Supported formats, About; the application actions that open them |
 | `src/popovers/` | The output quick switcher above the deck's output button |
 | `resources/` | Compiled into the resource bundle by `build.rs`: `style/helikodu.css`, `style/tokens.css` (generated), the templates in `ui/` and the bundled symbolic icons |
 
@@ -39,11 +39,11 @@ Widgets see only the types of `backend.rs`. `backend/service.rs` maps them onto 
 - **Covers:** `LibraryService::thumbnail` (the artwork pool and thumbnail cache, newest request first). Files are decoded on worker threads into a texture cache; the grid's visibility pass asks again for visible covers once per frame after scrolling and drops the requests of recycled tiles.
 - **Player:** commands, and the service's events read on a thread of the adapter, which also feeds MPRIS (`helikodu-desktop`) and keeps the system from suspending while playing.
 - **Window state:** pane widths, visible panes and the window size in `ui-state.toml`.
-- **Browsing:** album artists, genres and their albums, an artist's releases (albums, EPs and singles by release type, appears on) and most played tracks, through `MusicLibrary`. The album list carries each album's format summary, so the tiles show it and the Lossless and Hi-res filters run in the library. The track table's keys come from `all_tracks` (or `search` while filtered); the library has no track sort yet, so the adapter sorts the keys on the worker thread by the columns the summaries carry (number, title, artist, album, year, length) and reports Format, Rating and Plays as not sortable. Rows are fetched by key with `track_details` and `stats`.
-- **Playlists:** the static playlists through `MusicLibrary` (list, entries with dead ones, create, rename, delete, add, move, remove, import, and export as M3U8).
-- **Folders:** the library folders and their states from `root_states`; their subfolders and files are read from the file system on the worker threads, and each audio file is matched to its track with `track_at`.
-- **Dialogs** (`backend/services.rs`, `Backend::services`): the settings store (every change validated and saved at once), the output backends and their devices, the library folders with scans and the folder watcher (started at launch when the settings ask for it, and after each scan), the tags of tracks for the editor, ratings, and the decoders for Supported formats. The library's tag writer is not offered by the service yet, so in the running program the tag editor opens files read only and saves ratings; the sample backend keeps edits in memory.
-- **Full output:** a gate on `Backend::send` holds requests that would start playback while the output's volume is fixed at 100 % on a device the user has not confirmed, and asks first. Playback started from outside the window (MPRIS) does not pass the gate.
+- **Browsing:** album artists, genres and their albums, an artist's releases (albums, EPs and singles by release type, appears on) and most played tracks, through `MusicLibrary`. The album list carries each album's format summary, so the tiles show it and the Lossless and Hi-res filters run in the library. The track table's keys come from `sorted_tracks` (filtered by `search` while there is text): the library sorts by every column, Format, Rating and Plays included, several keys at once. Rows are fetched by key with `track_details` and `stats`.
+- **Playlists:** the static playlists through `MusicLibrary` (list, entries with dead ones, create, rename, delete, add, move, remove, import, and export as M3U8, M3U, PLS or XSPF, chosen by the extension of the file name).
+- **Folders:** the library folders and their states from `root_states`; their subfolders and files are read from the file system on the worker threads, and each audio file is matched to its track with `track_at`. The library's folder table holds only folders with scanned files, not the folders between them nor the other files the status bar counts, and the view is to show folders outside the library later; so the tree stays on the file system.
+- **Dialogs** (`backend/services.rs`, `Backend::services`): the settings store (every change validated and saved at once), the output backends and their devices, the library folders with scans and the folder watcher (started at launch when the settings ask for it, and after each scan), tag editing, ratings, and the decoders for Supported formats. The tag editor opens each file with the library's tag reader (`tag_editing::load_for_editing`) and keeps its stamp; saving writes the files one by one through `LibraryService::write_tags`, which refuses a file changed since it was opened and reads the written files again, and each file's result reaches the editor and its toast. A CUE sheet track, a file of a format whose tags cannot be written and a file that cannot be read open read only. Ratings are kept in the library. The sample backend keeps edits in memory.
+- **Full output:** a gate on `Backend::send` holds requests that would start playback while the output's volume is fixed at 100 % on a device the user has not confirmed, and asks first. Playback asked for from outside the window passes the same gate: files opened with the application go through `Backend::send`, and MPRIS `Play`, `PlayPause` and `OpenUri` reach the window as `Update::Request` instead of the player.
 
 When the service's interface changes, only `service.rs` follows it.
 
@@ -59,10 +59,16 @@ The unit tests check the accent maths against the design's worked examples, the 
 crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test widgets
 ```
 
-Without it they report that they were skipped. `tests/dialogs.rs` does the same for the dialogs: settings that round-trip through the store, the full-output confirmation, the tag editor with mixed values, the first run, the output switcher, Supported formats and About:
+Without it they report that they were skipped. `tests/dialogs.rs` does the same for the dialogs: settings that round-trip through the store, the full-output confirmation (also for requests from other programs), the tag editor with mixed values, the first run, the output switcher, Supported formats, About and Keyboard shortcuts:
 
 ```sh
 crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test dialogs
+```
+
+`tests/tag_editing.rs` runs the tag editor over the running service: it generates FLAC and Matroska files with the `ffmpeg` tool, scans them (building the scan worker first), renames an album through the dialog and checks the files and the library, and that the Matroska file keeps its tags with a per-file error. Without `ffmpeg` it prints `SKIPPED:`:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test tag_editing
 ```
 
 `tests/views.rs` covers the library views: the track table loading lazily and sorting by several keys, Artists, Genres and Folders, playlist edits with Undo, the context menu's actions, search with and without results, the menus, the empty library, and the frame times of the track table scrolling 100,000 tracks (slowly, fast, and jumping at random), which it prints:
