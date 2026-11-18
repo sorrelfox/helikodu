@@ -41,6 +41,40 @@ Multiple values are NUL-separated values in ID3v2 and APEv2, repeated Vorbis com
 
 `POPM` (by player e-mail: range table, linear for Quod Libet and Picard, MusicBee's half-star values), `FMPS_RATING`, `RATING` (0–5 or 0–100) and ASF `WM/SharedUserRating` are read onto the half-star scale. The table is in `src/tags/rating.rs`.
 
+## Writing tags
+
+```rust
+use helikodu_meta::tags::writing::{
+    BatchItem, SelectionView, TagChanges, TagField, WriteOptions, load_for_editing, write_batch,
+};
+
+let files: Vec<_> = paths.iter().map(|p| load_for_editing(p, &ReadOptions::default())).collect::<Result<_, _>>()?;
+let view = SelectionView::of(&files);             // per field: Shared::Same(values) or Shared::Mixed(counts)
+let mut changes = TagChanges::new();
+changes.set_one(TagField::Album, "Kid A").set(TagField::Genre, ["Electronic", "Art Rock"]);
+let items: Vec<_> = files.iter().map(|f| BatchItem::for_file(f, changes.clone())).collect();
+let report = write_batch(&items, &WriteOptions::default(), &mut |progress| {}, &|| false);
+```
+
+| Type | What it is |
+|---|---|
+| `write_tags` | Write a `TagChanges` into one file, refusing it if its `EditStamp` no longer matches; returns a `WriteOutcome` (`WriteMode`, the new stamp, the ID3v2 version written, changes the tag could not take) or a `WriteError` |
+| `TagChanges` | Per field `FieldChange::Set(values)` or `Clear` (`TagField` by Picard name, or `FieldKey::Custom` for "Add field"), `CoverChange` (`SetFront` with a JPEG or PNG, `RemoveFront`, `RemoveAll`), lyrics (set or remove) and rating (set or remove). Values are checked before the file is touched: numbers, dates (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`, optional time), the compilation flag, one value for a single-valued field, custom names a format can carry |
+| `WriteOptions` | The ID3v2 version of new tags (`Id3Version::V2_4` by default; an existing tag keeps its version) and the size above which files are changed in place (2 GiB by default) |
+| `load_for_editing`, `EditableFile` | A file as the editor opens it: stamp, tags, audio, whether it can be written, its tag formats (`ID3v2.4`, `APEv2`, …), lyrics and front cover hash |
+| `SelectionView`, `Shared` | The values a selection shares, field by field, cover, lyrics and rating: `Same(value)` or `Mixed` with each value and how many files have it |
+| `write_batch`, `BatchItem`, `BatchProgress`, `BatchReport` | Many files in turn: one result each, progress after each file, cancellation between files (`WriteError::Cancelled` for the rest); a failure does not stop the others |
+| `field_values`, `read_lyrics`, `planned_mode`, `is_writable` | A field's values as the editor shows them; the lyrics of a file; whether a write would replace the file or change it in place; whether a file's tags can be written |
+| `remove_stale_temporaries`, `is_temporary_name` | Clean-up of the temporary copies a crash left behind (hidden files ending in `.helikodu-tmp`) |
+
+**Formats.** The main tag gets every change and is created when missing: ID3v2 in MP3, ADTS AAC, WAV and AIFF; Vorbis comments in FLAC, Ogg Vorbis, Opus and Speex; `ilst` in MP4; APEv2 in WavPack, Monkey's Audio and Musepack. The other tags a file already has (APEv2 and ID3v1 on MP3, RIFF `INFO` in WAV, AIFF text chunks) get the changes they can hold, so no stale value in them reads back. Matroska, ASF, DSF, DFF, TAK, TTA and files lofty cannot parse but FFmpeg can are `WriteError::ReadOnlyFormat`. Unknown frames, keys, atoms and pictures stay as they are.
+
+**Keys.** Each field is written under the key Picard writes (`src/tags/writing/` has one module per format: `id3v2.rs`, `vorbis.rs`, `ape.rs`, `mp4.rs`, `secondary.rs`), and every key the reading tables map to the same field is removed first, so `ALBUM ARTIST` and `ALBUMARTIST` never disagree. A unit test checks each written key against the reading table. Several values are NUL-separated in ID3v2 and APEv2, repeated comments in Vorbis, several data atoms in MP4, and `; `-joined where a tag holds one string (RIFF, AIFF, ID3v1). Track, disc and movement numbers are written with their totals (`TRCK 3/12`, `trkn`, `TRACKNUMBER` and `TRACKTOTAL`). Dates go to ID3v2 timestamp frames. Performers with an instrument go to `TMCL`; arrangers, producers, engineers, mixers and DJ mixers to `TIPL`; the MusicBrainz recording to `UFID`. In ID3v2.3, which lacks them, `TSOT`, `TSOP`, `TSOA`, `TSST`, `TMOO`, `TDRL` and `TMCL` become `TXXX` frames under the Vorbis names, and several genres are written as one `; ` list.
+
+**Ratings.** A rating is written as ID3v2 `POPM` with the e-mail field `Helikodu` (1, 64, 128, 196 and 255 for one to five stars, a half star rounded up; no frame for zero stars) and `TXXX:FMPS_Rating`; as `FMPS_RATING` (0.0 to 1.0) and `RATING` (0 to 100; none for zero stars) in Vorbis comments and APEv2; and as freeform `FMPS_Rating` and `RATING` atoms in MP4. Removing a rating removes these and leaves other players' `POPM` frames alone. The reader prefers `FMPS_RATING`, so the exact half-star value reads back.
+
+**Safe saving.** The file is copied to a hidden temporary file in its folder (same permissions and, where allowed, owner), edited there, read back and checked (the same sample rate, channels, codec and length; every change as written; the cover by its hash), flushed, checked against the stamp once more, and renamed over the original; then the folder is flushed. Any failure removes the copy and leaves the original as it was. A symbolic link is followed and stays a link. Files above the in-place limit, and files with several hard links, are changed in place (`WriteMode::InPlace`), reported so that a player can wait for the end of a playing track; a check that fails then says `in_place: true`. A write always gives the file a new modification time, as any change does, so a rescan sees it.
+
 ## CUE sheets and chapters
 
 ```rust
@@ -155,6 +189,8 @@ cargo test -p helikodu-meta
 The integration tests in `tests/cue/` write sheets shaped like those found in the wild (EAC single-file rips with pregaps and `REM` lines, multi-file rips, CRLF, byte order marks, UTF-16, cp1251, Shift-JIS, malformed lines, hostile paths) and generate audio with the `ffmpeg` tool: FLAC and WavPack files with a `CUESHEET` tag, a FLAC file given a cue sheet block by `metaflac`, and Matroska and M4B files with chapters from an FFMETADATA file. A test whose tool is missing prints `SKIPPED:` and passes.
 
 The integration tests in `tests/tags/` generate their media at test time in Cargo's temporary directory: a WAV file written by the tests, encoded with the `ffmpeg` tool with `-metadata`, then edited with lofty where a test needs frames FFmpeg cannot write (`POPM`, `UFID`, `TMCL`, `TIPL`, multi-valued fields, Latin-1 frames holding cp1251, Shift-JIS and GBK bytes). A test whose tool or encoder is missing prints `SKIPPED:` and passes.
+
+The integration tests in `tests/writing/` encode a file per format with the `ffmpeg` tool (MP3, ADTS AAC, FLAC, Ogg Vorbis, Opus, MP4, WavPack, WAV, AIFF, and Matroska as a read-only format) and write and read back fields with several values, custom fields, numbers, dates, credits, lyrics, covers and ratings, then clear them; they check the ID3v2 version of new and existing tags, the refusal of a file changed since it was read, in-place writes above a small limit, hard and symbolic links, the rating frames, and a batch over a selection with mixed values, a stale file and a cancellation. Unit tests in `src/tags/writing/tests.rs` check that a failed verification leaves the original untouched and no temporary file behind.
 
 The integration tests in `tests/covers/` encode pictures with the `image` crate and write hostile ones byte by byte (a PNG header claiming 100000 × 100000 pixels, a JPEG claiming 65535 × 65535, a 4096 × 4096 PNG of a few kilobytes against a smaller limit, truncated and corrupted JPEG, PNG and WebP). Audio files get their pictures from the `ffmpeg` tool (`-disposition attached_pic` for MP3, FLAC and M4A; `-attach` for Matroska) or from lofty (several `APIC` types, two FLAC `PICTURE` blocks, an Opus `METADATA_BLOCK_PICTURE`, APEv2 cover items in WavPack). Folder tests build album folders with disc subfolders, mixed-case names and non-UTF-8 names.
 
