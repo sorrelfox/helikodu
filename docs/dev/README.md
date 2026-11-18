@@ -10,4 +10,5 @@ Guides for contributors: the architecture overview, the testing and test-corpus 
 | [threat-model.md](threat-model.md) | What can harm a user, where it enters, and how Helikodu defends against it |
 | [performance.md](performance.md) | The performance budgets, how they are measured over the synthetic libraries, and the latest results |
 | [bug-severity.md](bug-severity.md) | The four severity levels and how each is handled |
+| [flatpak.md](flatpak.md) | The Flatpak: building it, updating its crates and libraries, its permissions and the way to Flathub |
 | [releasing.md](releasing.md) | How a release is made: the version, the checklist, and what the Release workflow builds and publishes |

@@ -266,7 +266,6 @@ impl Tray {
             content: Mutex::new((TrayContent::default(), 1)),
         });
         let number = ITEMS.fetch_add(1, Ordering::Relaxed) + 1;
-        let bus_name = format!("org.kde.StatusNotifierItem-{}-{number}", std::process::id());
         let connection = zbus::block_on(
             builder
                 .serve_at(
@@ -281,9 +280,20 @@ impl Tray {
                         shared: Arc::clone(&shared),
                     },
                 )
-                .name(bus_name.as_str())
                 .build(),
         )?;
+        // The specification's well-known name. A sandbox may not own it (a
+        // Flatpak may own only names it was granted), so the item then
+        // registers with the connection's unique name, which watchers accept
+        // as well.
+        let wanted = format!("org.kde.StatusNotifierItem-{}-{number}", std::process::id());
+        let bus_name = match zbus::block_on(connection.request_name(wanted.as_str())) {
+            Ok(()) => wanted,
+            Err(_) => connection
+                .unique_name()
+                .map(ToString::to_string)
+                .unwrap_or(wanted),
+        };
         let (stop, stopped) = async_channel::bounded::<()>(1);
         let watch = connection.clone();
         let watched = Arc::clone(&shared);

@@ -1,0 +1,199 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The Flatpak of Helikodu. How to build it, update it and why each permission
+# is here: docs/dev/flatpak.md.
+#
+#   flatpak-builder --user --install --force-clean _flatpak \
+#       packaging/flatpak/io.github.sorrelfox.Helikodu.yml
+
+id: io.github.sorrelfox.Helikodu
+runtime: org.gnome.Platform
+runtime-version: '51'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  # The branch follows the runtime's base (GNOME 51 is on 26.08).
+  - org.freedesktop.Sdk.Extension.rust-stable
+  # libclang for bindgen (the FFmpeg and PipeWire bindings); build time only.
+  - org.freedesktop.Sdk.Extension.llvm22
+command: helikodu
+# All translations stay in the application: Helikodu can show a language other
+# than the desktop's, which a .Locale extension would not have installed.
+separate-locales: false
+
+finish-args:
+  # Display: Wayland, X11 only where there is no Wayland, and the GPU.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  # Sound: the PulseAudio protocol (PulseAudio output; also gives /dev/snd for
+  # the ALSA output), and PipeWire's own socket for the native PipeWire
+  # output and for JACK through PipeWire.
+  - --socket=pulseaudio
+  - --filesystem=xdg-run/pipewire-0:ro
+  # The music folder: the library, the tag editor, the file organizer and
+  # live updates (inotify does not work through the document portal). Other
+  # folders are added through the file chooser.
+  - --filesystem=xdg-music
+  # The tray icon.
+  - --talk-name=org.kde.StatusNotifierWatcher
+  # Exclusive ALSA output: asking PipeWire or PulseAudio to hand over a sound
+  # card (org.freedesktop.ReserveDevice1.Audio<N>). Owning includes talking
+  # to the current owner; a separate --talk-name would replace this policy.
+  - --own-name=org.freedesktop.ReserveDevice1.*
+  # Pausing before the computer sleeps (logind's PrepareForSleep and a short
+  # delay lock) and the screen lock where no portal reports it.
+  - --system-talk-name=org.freedesktop.login1
+  # No --share=network: Helikodu works offline, and the sandbox enforces it.
+  # The application ID's own bus name (the single instance and the D-Bus
+  # control interface) and its MPRIS name are granted by Flatpak; the file
+  # chooser, Inhibit, Settings, GlobalShortcuts, OpenURI, Notification and
+  # Realtime portals need no permission.
+
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - '*.la'
+  - '*.a'
+  - /share/doc
+  - /share/man/man3
+
+modules:
+  # Tracker modules (MOD, XM, S3M, IT, MPTM and more).
+  - name: libopenmpt
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --disable-openmpt123
+      - --disable-examples
+      - --disable-tests
+      - --disable-doxygen-doc
+      - --without-portaudio
+      - --without-portaudiocpp
+      - --without-sndfile
+      - --without-flac
+    sources:
+      - type: archive
+        url: https://lib.openmpt.org/files/libopenmpt/src/libopenmpt-0.8.10+release.autotools.tar.gz
+        sha256: 976d259288c40cd285771f77d09eff3d02514511d5677ecfcfb53be5013317e2
+        x-checker-data:
+          type: anitya
+          project-id: 141468
+          url-template: https://lib.openmpt.org/files/libopenmpt/src/libopenmpt-$version+release.autotools.tar.gz
+
+  # Game console music (NSF, SPC, GBS, VGM, HES, KSS, AY, SAP, GYM).
+  - name: libgme
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DGME_BUILD_SHARED=ON
+      - -DGME_BUILD_STATIC=OFF
+      - -DGME_BUILD_TESTING=OFF
+      - -DGME_BUILD_EXAMPLES=OFF
+      - -DGME_ENABLE_UBSAN=OFF
+    sources:
+      - type: archive
+        url: https://github.com/libgme/game-music-emu/releases/download/0.6.5/libgme-0.6.5-src.tar.gz
+        sha256: a133f19278222136ba0d8c27b64a07987ba05fec9d2e6d293ccd8cabdd97ddbb
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/libgme/game-music-emu/releases/latest
+          version-query: .tag_name
+          url-query: .assets[] | select(.name == "libgme-" + $version + "-src.tar.gz") | .browser_download_url
+
+  # The reSIDfp SID chip emulation, a library of its own since libsidplayfp 3.
+  - name: libresidfp
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --disable-tests
+    sources:
+      - type: archive
+        url: https://github.com/libsidplayfp/libresidfp/releases/download/v1.2.3/libresidfp-1.2.3.tar.gz
+        sha256: e9b53a984ca708c3e8d9139eb6aad6141f73ffc22d70a020f7966803f4e2f76d
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/libsidplayfp/libresidfp/releases/latest
+          version-query: .tag_name | sub("^v"; "")
+          url-query: .assets[] | select(.name == "libresidfp-" + $version + ".tar.gz") | .browser_download_url
+
+  # Commodore 64 SID tunes, with the reSIDfp emulation Helikodu uses. No
+  # hardware SID devices (USBSID, exSID).
+  - name: libsidplayfp
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --without-usbsid
+      - --without-exsid
+    sources:
+      - type: archive
+        url: https://github.com/libsidplayfp/libsidplayfp/releases/download/v3.1.2/libsidplayfp-3.1.2.tar.gz
+        sha256: 6d16c20e523ac4d3e385531dafe247a830b59bcb4eb73a557f15cf4e7ae6da84
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/libsidplayfp/libsidplayfp/releases/latest
+          version-query: .tag_name | sub("^v"; "")
+          url-query: .assets[] | select(.name == "libsidplayfp-" + $version + ".tar.gz") | .browser_download_url
+
+  # Game audio streams (ADX, HCA, BRSTM, WEM, FSB, XWB, AT3, VAG and
+  # hundreds more): only the shared library with the public libvgmstream API.
+  # MPEG, Vorbis, Speex and FFmpeg come from the runtime. CELT is off: its
+  # CMake script downloads the CELT sources during the build, which an offline
+  # build cannot do (it is used only by a few old FSB files).
+  - name: vgmstream
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DBUILD_CLI=OFF
+      - -DBUILD_V123=OFF
+      - -DBUILD_AUDACIOUS=OFF
+      - -DUSE_CELT=OFF
+    sources:
+      - type: archive
+        url: https://github.com/vgmstream/vgmstream/archive/refs/tags/r2168.tar.gz
+        sha256: 6390ac616c4a248616f1b9bf6352fe949fcf2350a84844ba9416feac94f02225
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/vgmstream/vgmstream/releases/latest
+          version-query: .tag_name
+          url-query: '"https://github.com/vgmstream/vgmstream/archive/refs/tags/" + $version + ".tar.gz"'
+
+  # Helikodu: Cargo builds the programs offline from the crates listed in
+  # cargo-sources.json, Meson installs them with the data files, the
+  # translations and the user guide.
+  - name: helikodu
+    buildsystem: meson
+    config-opts:
+      - --buildtype=release
+      - -Doffline=true
+      - -Dbundled_sqlite=true
+      - -Dvgmstream=true
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm22/bin
+      prepend-ld-library-path: /usr/lib/sdk/llvm22/lib
+      env:
+        CARGO_HOME: /run/build/helikodu/cargo
+        CARGO_NET_OFFLINE: 'true'
+        LIBCLANG_PATH: /usr/lib/sdk/llvm22/lib
+        # The vgmstream module installs no pkg-config file.
+        VGMSTREAM_LIB_DIR: /app/lib
+    sources:
+      # A local build takes the working tree. For Flathub this becomes the
+      # release's tag and commit (docs/dev/flatpak.md).
+      - type: dir
+        path: ../..
+        skip:
+          - .git
+          - .flatpak-builder
+          - _build
+          - _flatpak
+          - flatpak-build
+          - repo
+          - target
+          - docs/site
+          - fuzz
+          - spikes
+      - cargo-sources.json

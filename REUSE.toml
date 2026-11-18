@@ -8,6 +8,7 @@ SPDX-PackageDownloadLocation = "https://github.com/sorrelfox/helikodu"
 path = [
     "**/Cargo.toml",
     "**/Cargo.lock",
+    "packaging/flatpak/cargo-sources.json",
     "rust-toolchain.toml",
     "rustfmt.toml",
     "clippy.toml",

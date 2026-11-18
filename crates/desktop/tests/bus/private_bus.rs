@@ -23,8 +23,36 @@ impl PrivateBus {
     /// Starts one, or returns `None` (and says why) when `dbus-daemon` cannot
     /// be run here.
     pub(crate) fn start() -> Option<Self> {
-        let daemon = Command::new("dbus-daemon")
-            .args(["--session", "--nofork", "--nopidfile", "--print-address"])
+        Self::spawn(Command::new("dbus-daemon").args(["--session"]))
+    }
+
+    /// Starts one on which connections may own only the name `allowed`, as a
+    /// sandbox's bus allows only the names it was granted.
+    pub(crate) fn start_owning_only(allowed: &str, config_dir: &std::path::Path) -> Option<Self> {
+        let config = config_dir.join("bus.conf");
+        let text = format!(
+            "<busconfig>\
+             <type>session</type>\
+             <listen>unix:tmpdir={}</listen>\
+             <auth>EXTERNAL</auth>\
+             <policy context=\"default\">\
+             <allow send_destination=\"*\" eavesdrop=\"true\"/>\
+             <allow eavesdrop=\"true\"/>\
+             <allow own=\"{allowed}\"/>\
+             </policy>\
+             </busconfig>\n",
+            config_dir.display()
+        );
+        if let Err(error) = std::fs::write(&config, text) {
+            eprintln!("skipped: the bus configuration cannot be written: {error}");
+            return None;
+        }
+        Self::spawn(Command::new("dbus-daemon").arg(format!("--config-file={}", config.display())))
+    }
+
+    fn spawn(command: &mut Command) -> Option<Self> {
+        let daemon = command
+            .args(["--nofork", "--nopidfile", "--print-address"])
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())

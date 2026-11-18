@@ -84,6 +84,10 @@ The release candidate. This version brings everything planned for 1.0: smart pla
 - Translations into German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, Russian, Ukrainian and Simplified Chinese.
 - **Settings ▸ Appearance ▸ Language** chooses the language of the interface, or keeps the desktop's. A new language is used from the next start (**Restart now**); the library is sorted for it at once, in the background, and `helikodu-cli` sorts the same way. Numbers are written with the language's decimal separator.
 
+#### Packaging
+
+- A Flatpak manifest (`packaging/flatpak/`) to build Helikodu as a Flatpak yourself, with vgmstream, libopenmpt, libgme and libsidplayfp built in and no network access; see **Installing** in the user guide.
+
 ### Changed
 
 - The player deck follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.

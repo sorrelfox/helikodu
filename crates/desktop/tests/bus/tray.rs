@@ -135,6 +135,47 @@ fn a_host_is_found_without_registering() {
 }
 
 #[test]
+fn registers_with_the_unique_name_where_the_item_name_is_refused() {
+    let dir = std::env::temp_dir().join(format!("helikodu-tray-bus-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let Some(bus) = PrivateBus::start_owning_only("org.kde.StatusNotifierWatcher", &dir) else {
+        return;
+    };
+    let items = Arc::new(Mutex::new(Vec::new()));
+    let _watcher = zbus::block_on(
+        zbus::connection::Builder::address(bus.address.as_str())
+            .serve_at(
+                "/StatusNotifierWatcher",
+                FakeWatcher {
+                    items: Arc::clone(&items),
+                },
+            )
+            .name("org.kde.StatusNotifierWatcher")
+            .build(),
+    )
+    .unwrap();
+    let (tray, seen) = start(&bus);
+    assert_eq!(seen.recv_timeout(WAIT).unwrap(), Seen::Host(true));
+    assert!(tray.bus_name().starts_with(':'), "{}", tray.bus_name());
+    assert_eq!(*items.lock().unwrap(), [tray.bus_name().to_owned()]);
+
+    // A host reads the item through that name.
+    let client = bus.connect();
+    let reply = call(
+        &client,
+        tray.bus_name(),
+        ITEM_PATH,
+        "org.freedesktop.DBus.Properties",
+        "Get",
+        &(ITEM_INTERFACE, "Status"),
+    );
+    let status: OwnedVariant = reply.body().deserialize().unwrap();
+    assert!(status.downcast_ref::<&str>().is_ok());
+    drop(tray);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn registers_when_a_watcher_appears_and_serves_the_menu() {
     let Some(bus) = PrivateBus::start() else {
         return;

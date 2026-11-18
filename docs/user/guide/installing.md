@@ -52,3 +52,20 @@ sudo meson install -C _build --no-rebuild
 `-Doffline=true` builds from the Rust libraries included in the archive, so no network connection is needed. Add `-Dbundled_sqlite=true` to build SQLite in instead of using your system's copy.
 
 This installs two programs: `helikodu`, the desktop application, and `helikodu-cli`, the command-line tool.
+
+## Building the Flatpak yourself
+
+Helikodu is not on Flathub yet. Until it is, you can build the Flatpak from the source code yourself. It brings its own decoder libraries (vgmstream included) and uses the FFmpeg of the Flatpak runtime, so it does not depend on what your distribution has installed. You need `flatpak` and `flatpak-builder`, and the Flathub remote for the runtime:
+
+```sh
+flatpak install --user flathub org.gnome.Sdk//51 \
+    org.freedesktop.Sdk.Extension.rust-stable//26.08 \
+    org.freedesktop.Sdk.Extension.llvm22//26.08
+cd helikodu-<version>
+flatpak-builder --user --install --force-clean ~/.cache/helikodu-flatpak \
+    packaging/flatpak/io.github.sorrelfox.Helikodu.yml
+```
+
+The build takes a while and downloads its sources first. Helikodu then appears in your application list; from a terminal, start it with `flatpak run io.github.sorrelfox.Helikodu`, and the command-line tool with `flatpak run --command=helikodu-cli io.github.sorrelfox.Helikodu`.
+
+The Flatpak has no network access at all, and sees only your `Music` folder. Folders elsewhere are added through the folder dialog in **Settings ▸ Library**; Helikodu then rescans them now and then instead of noticing changes at once. To have such a folder watched like `Music`, grant it with `flatpak override --user --filesystem=/path/to/folder io.github.sorrelfox.Helikodu`. The Flatpak keeps its library and settings apart from a native installation, in `~/.var/app/io.github.sorrelfox.Helikodu/`. It comes without a SoundFont: to play MIDI files, choose one under **MIDI files** in the **Playback** settings.

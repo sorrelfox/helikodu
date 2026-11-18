@@ -11,7 +11,7 @@ Helikodu is published as GitHub Releases. Pushing a version tag (`v0.1.0`) start
 
 The release notes are the version's section of `CHANGELOG.md`. Every 0.x version, and every version with a suffix such as `-rc1`, is marked as a pre-release.
 
-Flatpak, Flathub and distribution packages come later; the files in `packaging/` are not used yet.
+Flathub and distribution packages come later. The Flatpak manifest in `packaging/flatpak/` can be built locally ([flatpak.md](flatpak.md)); its `cargo-sources.json` must be regenerated in the change that updates `Cargo.lock`.
 
 ## The version
 

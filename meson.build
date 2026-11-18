@@ -65,12 +65,20 @@ if get_option('bundled_sqlite')
   # Feature unification passes it on to the library crate of every program.
   features += 'helikodu-cli/bundled-sqlite'
 endif
+if get_option('vgmstream')
+  # Every program that decodes or scans gets the decoder; a build that cannot
+  # find libvgmstream fails instead of leaving it out.
+  features += ['helikodu/vgmstream', 'helikodu-cli/vgmstream', 'helikodu-scan-worker/vgmstream']
+endif
 if features.length() > 0
   cargo_args += ['--features', ','.join(features)]
 endif
 
 cargo_env = environment()
 cargo_env.set('CARGO_TARGET_DIR', meson.current_build_dir() / 'cargo-target')
+if get_option('vgmstream')
+  cargo_env.set('HELIKODU_REQUIRE_VGMSTREAM', '1')
+endif
 # Where the GTK front end looks for the compiled translations.
 cargo_env.set('HELIKODU_LOCALEDIR', localedir)
 # Where the GTK front end finds the user guide for the Help menu.
@@ -216,6 +224,7 @@ summary(
   {
     'Offline Cargo build': get_option('offline'),
     'Bundled SQLite': get_option('bundled_sqlite'),
+    'vgmstream decoder': get_option('vgmstream'),
   },
   section: 'Build',
   bool_yn: true,

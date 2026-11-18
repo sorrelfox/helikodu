@@ -13,3 +13,9 @@ option(
   value: false,
   description: 'Build the SQLite copy bundled with rusqlite instead of linking the system SQLite (3.43 or newer, with FTS5)',
 )
+option(
+  'vgmstream',
+  type: 'boolean',
+  value: false,
+  description: 'Build the vgmstream decoder for game audio streams; needs libvgmstream (public API 1.1), found through pkg-config or VGMSTREAM_LIB_DIR',
+)

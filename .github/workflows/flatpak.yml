@@ -1,0 +1,42 @@
+# Builds the Flatpak from packaging/flatpak/ and keeps a single-file bundle
+# (helikodu.flatpak) as a workflow artifact. Started by hand only; nothing is
+# published. See docs/dev/flatpak.md.
+name: Flatpak
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flatpak:
+    name: Flatpak bundle (x86_64)
+    runs-on: ubuntu-latest
+    # flatpak-builder needs bubblewrap, hence the privileged container. The
+    # memory cap keeps the build under the runner's 12 GB limit (ci/README.md);
+    # the runner's four CPUs keep Cargo at four jobs.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged --memory 12g --memory-swap 12g
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          flatpak-builder --user --force-clean --disable-rofiles-fuse \
+            --install-deps-from=flathub --jobs=4 \
+            --state-dir="$RUNNER_TEMP/state" --repo="$RUNNER_TEMP/repo" \
+            "$RUNNER_TEMP/build" packaging/flatpak/io.github.sorrelfox.Helikodu.yml
+      - name: Lint
+        run: |
+          flatpak install --user --noninteractive flathub org.flatpak.Builder
+          flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo "$RUNNER_TEMP/repo" || true
+      - name: Bundle
+        run: |
+          flatpak build-bundle "$RUNNER_TEMP/repo" helikodu.flatpak io.github.sorrelfox.Helikodu \
+            --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helikodu-flatpak
+          path: helikodu.flatpak
+          if-no-files-found: error
