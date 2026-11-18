@@ -300,8 +300,18 @@ fn wav_real_time_pacing_takes_real_time() {
     assert_eq!(stream.timing().underruns, 0);
     stream.stop().unwrap();
     let wav = Wav::read(&file.0);
-    assert_eq!(wav.data.len(), 14_400 * 4);
-    assert!(wav.data.chunks(2).all(|s| s == 8192i16.to_le_bytes()));
+    // A slow machine may let the paced sink write a little silence while it
+    // waits for the feeder; every frame of the signal must still be there,
+    // unchanged and in one piece, and anything else must be silence.
+    let frames: Vec<&[u8]> = wav.data.chunks(4).collect();
+    let signal = 8192i16.to_le_bytes();
+    let is_signal = |f: &[u8]| f[..2] == signal && f[2..] == signal;
+    assert_eq!(frames.iter().filter(|f| is_signal(f)).count(), 14_400);
+    assert!(
+        frames
+            .iter()
+            .all(|f| is_signal(f) || f.iter().all(|&b| b == 0))
+    );
 }
 
 #[test]

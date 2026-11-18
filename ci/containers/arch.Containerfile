@@ -19,3 +19,7 @@ RUN curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs \
     && chmod -R a+rwX /usr/local/rustup /usr/local/cargo
 
 WORKDIR /src
+
+# The checkout is mounted from the host and owned by another user; let git
+# (and tools that ask git, such as reuse) work in it.
+RUN git config --system --add safe.directory "*"
