@@ -1,4 +1,4 @@
-# Publishes docs/site to GitHub Pages at https://sorrelfox.github.io/helikodu/.
+# Publishes the website (docs/site) to GitHub Pages at https://sorrelfox.github.io/helikodu/.
 name: Pages
 
 # Runs for release tags and when started by hand, to save shared CI resources.
@@ -26,15 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - name: Assemble the site
-        run: |
-          mkdir _site
-          cp docs/site/index.html docs/site/style.css _site/
-          cp data/icons/hicolor/scalable/apps/io.github.sorrelfox.Helikodu.svg _site/
-          # The user guide, the same page the application installs for Help.
-          mkdir _site/guide
-          python3 docs/user/build-guide.py --out _site/guide/index.html \
-            --version "$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)"
+      - name: Build the site
+        # The pages, the user guide, the release notes and the pictures. The
+        # script names the version of Cargo.toml and fails on a broken link.
+        run: python3 docs/site/build.py --out _site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

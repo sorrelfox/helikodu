@@ -1,0 +1,539 @@
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+title: Helikodu – offline audio player and music library for Linux
+description: Helikodu plays the music on your own computer: practically every format, gapless and bit-perfect, with a library built for large collections. It never connects to the internet. Free software for Linux.
+class: home
+
+{{cover-defs}}
+<section class="hero wrap">
+  <div class="name-row">
+    <h1 class="name" aria-label="Helikodu"><span class="name-part"><span class="name-word" lang="et">Heli</span><span class="name-gloss">sound</span></span><span class="name-part"><span class="name-word" lang="et">kodu</span><span class="name-gloss">home</span></span></h1>
+    <p class="name-note">The name is Estonian: <i lang="et">heli</i> is sound, <i lang="et">kodu</i> is home. Say it HE-li-ko-du.</p>
+  </div>
+  <div class="hero-grid">
+    <div>
+      <p class="lead">A home for the music you own. Helikodu is an offline audio player and music library manager for Linux. It plays practically every audio format, plays it correctly, keeps up with very large collections, and never connects to the internet.</p>
+      <p class="actions"><a class="button primary" href="#get">Get Helikodu {{version}}</a> <a class="button" href="guide/">Read the user guide</a></p>
+    </div>
+    <dl class="facts">
+      <div><dt>Version</dt><dd>{{version}}</dd></div>
+      <div><dt>Released</dt><dd>{{released}}</dd></div>
+      <div><dt>Runs on</dt><dd>Linux, x86_64 and 64-bit ARM</dd></div>
+      <div><dt>Desktops</dt><dd>GNOME, KDE Plasma and others, Wayland and X11</dd></div>
+      <div><dt>Languages</dt><dd>{{languages}}</dd></div>
+      <div><dt>Licence</dt><dd>GPL-3.0-or-later</dd></div>
+      <div><dt>Written in</dt><dd>Rust</dd></div>
+    </dl>
+  </div>
+  <figure class="hero-shot">
+    {{hero-shot albums | The Helikodu window. At the left, the sidebar with the library views and the playlists. In the middle, a grid of album covers. At the right, the play queue. Along the bottom, the player deck with the seek bar, the controls and the output device, which reads bit-perfect, 96 kHz, 24 bits.}}
+  </figure>
+</section>
+
+<section class="wrap shelf-part" id="features" aria-labelledby="features-title">
+  <h2 id="features-title">Everything under one roof</h2>
+  <p class="shelf-say">Helikodu draws a cover for every album that has none. Here it has drawn one for each part of what it does. Pick one, or read on from the top.</p>
+  <ul class="shelf">
+    <li><a href="#formats">{{cover formats}}<b>Formats</b><span>Practically every kind of audio file</span></a></li>
+    <li><a href="#playback">{{cover playback}}<b>Playback</b><span>Gapless and exact, with lyrics and play modes</span></a></li>
+    <li><a href="#output">{{cover output}}<b>Output</b><span>Your device, shared or bit-perfect</span></a></li>
+    <li><a href="#sound">{{cover sound}}<b>Sound</b><span>Equalizers, crossfeed and loudness</span></a></li>
+    <li><a href="#library">{{cover library}}<b>Library</b><span>Built for 100,000 tracks and more</span></a></li>
+    <li><a href="#browse">{{cover browse}}<b>Browsing</b><span>Albums, artists, composers, folders</span></a></li>
+    <li><a href="#search">{{cover search}}<b>Search</b><span>Instant, with a query language</span></a></li>
+    <li><a href="#playlists">{{cover playlists}}<b>Playlists</b><span>Smart playlists, favourites, history</span></a></li>
+    <li><a href="#files">{{cover files}}<b>Tags and files</b><span>Edit, convert, organize, sync, repair</span></a></li>
+    <li><a href="#desktop">{{cover desktop}}<b>Desktop</b><span>At home on GNOME, KDE and others</span></a></li>
+    <li><a href="#cli">{{cover cli}}<b>Command line</b><span>Play and control from a terminal</span></a></li>
+    <li><a href="#offline">{{cover offline}}<b>Offline</b><span>No network code at all</span></a></li>
+  </ul>
+</section>
+
+<div class="parts">
+<nav class="strip" aria-label="Parts of this page">
+  <div class="strip-in">
+    <a href="#formats">Formats</a>
+    <a href="#playback">Playback</a>
+    <a href="#output">Output</a>
+    <a href="#sound">Sound</a>
+    <a href="#library">Library</a>
+    <a href="#browse">Browsing</a>
+    <a href="#search">Search</a>
+    <a href="#playlists">Playlists</a>
+    <a href="#files">Tags and files</a>
+    <a href="#desktop">Desktop</a>
+    <a href="#cli">Command line</a>
+    <a href="#offline">Offline</a>
+    <a href="#get">Get it</a>
+  </div>
+  <div class="seek" aria-hidden="true"></div>
+</nav>
+
+<section class="part wrap" id="formats" aria-labelledby="formats-title">
+  <header class="part-head">
+    {{cover formats}}
+    <div>
+      <h2 id="formats-title">It plays practically everything</h2>
+      <p>Helikodu plays practically every audio format there is on Linux, and the sound track of video files. It never shows video. Files are recognised by what is in them, not by their names, so a file with the wrong extension still plays.</p>
+    </div>
+  </header>
+  <dl class="formats">
+    <div><dt>Lossless</dt><dd>FLAC ALAC WAV AIFF WavPack APE TAK TTA Wave64 CAF</dd></div>
+    <div><dt>Lossy</dt><dd>MP3 AAC Vorbis Opus Musepack WMA AC-3 E-AC-3 DTS MP2 Speex AMR</dd></div>
+    <div><dt>DSD</dt><dd>DSF DFF <small>Converted to high-resolution PCM, or sent to the DAC as DoP in exclusive mode.</small></dd></div>
+    <div><dt>Tracker modules</dt><dd>MOD S3M XM IT <small>And more, through libopenmpt.</small></dd></div>
+    <div><dt>Game music</dt><dd>NSF SPC GBS VGM <small>And more, through libgme. Looping tunes play their loop twice and fade out.</small></dd></div>
+    <div><dt>Commodore 64</dt><dd>SID <small>Through libsidplayfp. With the song lengths of the High Voltage SID Collection, every tune plays for its real length.</small></dd></div>
+    <div><dt>MIDI</dt><dd>MID <small>With a SoundFont you choose, or one your distribution installs.</small></dd></div>
+    <div><dt>Whole albums and books in one file</dt><dd>CUE M4B MKA WebM <small>CUE sheets, separate, embedded or in a FLAC CUESHEET block, and chapters split a file into tracks of their own.</small></dd></div>
+    <div><dt>The sound of video files</dt><dd>MP4 MKV WebM AVI MOV <small>Only the sound is decoded. No picture is ever shown.</small></dd></div>
+  </dl>
+  <dl class="points">
+    <div><dt>One track for each song</dt><dd>Modules, game music files and SID tunes that hold several songs become one track per song in the library.</dd></div>
+    <div><dt>Chapters</dt><dd>Files with chapters play chapter by chapter, and the seek bar shows where each chapter starts.</dd></div>
+    <div><dt>More than one audio stream</dt><dd>A file with several audio streams can play another one.</dd></div>
+    <div><dt>Tags of every kind</dt><dd>ID3v2, ID3v1, APEv2, Vorbis comments, MP4 atoms, RIFF INFO and others, with several artists and genres per track. Text in old character sets, such as Windows-1251 or Shift-JIS, is repaired.</dd></div>
+    <div><dt>What this computer can play</dt><dd>Supported formats, opened from About, lists every family of formats, the decoder behind it and whether your build has it.</dd></div>
+    <div><dt>Two limits, said plainly</dt><dd>Game audio streams play only in builds made with vgmstream, which the ready-built programs leave out. No SoundFont is included.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="playback" aria-labelledby="playback-title">
+  <header class="part-head">
+    {{cover playback}}
+    <div>
+      <h2 id="playback-title">Playback that gets the details right</h2>
+      <p>Tracks of one format follow each other without a gap, so live albums and DJ mixes play as they were recorded, and seeking lands on the exact frame. Around that sits what a player for every day needs: lyrics, a queue with a memory, and a play mode for every habit.</p>
+    </div>
+  </header>
+  {{viewer view-playback | Pictures of playback}}
+  {{tab Now Playing | now-playing | Now Playing: a large cover at the left with the title and the artist under it, and the lyrics at the right with the line being sung in white. A row at the bottom shows the signal path from the file to the device. | Now Playing (F11) with synced lyrics. The line being sung stays in the middle, and a click on any line plays from there.}}
+  {{tab Analyzer | analyzer | Now Playing with the analyzer: a spectrum of amber bars with a line over each bar, and a level meter for the left and the right channel. | The analyzer: a spectrum with peak lines, and an RMS and peak meter for each channel. The sound is measured after the last processing stage, just before it goes to the device.}}
+  {{tab Lyrics | lyrics | The main window with the Lyrics tab open in the right panel beside the album grid. | The Lyrics tab of the right panel, with this track's offset at the bottom. Lyrics come from a .lrc or .txt file beside the track or from its tags, never from the internet.}}
+  {{tab Loop and timer | play-modes | The player deck. The seek bar has two flags, A and B, around a lit section. A chip reads A 1:00 to B 2:30, another shows a moon and 45:00, and the shuffle and repeat buttons are lit. | The deck with albums shuffled, an A-B loop and a sleep timer of 45 minutes. The loop repeats without a gap.}}
+  {{tab Audiobook | audiobook | An audiobook's page: its chapters in a list with where each starts and how long it is, a check mark on the chapters heard, and the buttons Play and Start again. | An audiobook: its chapters, which of them you have heard, and how much is left. Play continues where you stopped.}}
+  {{end}}
+  <dl class="points">
+    <div><dt>Gapless</dt><dd>Tracks that share a format join sample-exactly. Tracks of one album stay gapless even when crossfade is on.</dd></div>
+    <div><dt>Exact seeking</dt><dd>A seek lands on the exact frame wherever the format allows it.</dd></div>
+    <div><dt>Crossfades and fades</dt><dd>Crossfade between tracks and when you skip, with equal-power gains, exact to the frame. Short fades for pause, stop, seek and skip, so nothing clicks.</dd></div>
+    <div><dt>A seek bar that shows the music</dt><dd>Its bars follow the loudness of the track. They are worked out in the background, never while the library is being scanned.</dd></div>
+    <div><dt>Lyrics</dt><dd>Synced and plain, from a file beside the track or from its tags. Each track's timing can be moved in steps of 0.1 s.</dd></div>
+    <div><dt>Play modes</dt><dd>Shuffle by tracks, albums, folders or groupings, or within each album. Repeat a track, an album or the queue. Stop after this track, this album or the queue. Play only this artist or this album.</dd></div>
+    <div><dt>Previous means previous</dt><dd>With shuffle on, Previous retraces the tracks in the order they actually played.</dd></div>
+    <div><dt>A queue with a memory</dt><dd>What played, what plays and what comes next. When Helikodu starts again, the queue, the position and the modes are as you left them, paused.</dd></div>
+    <div><dt>Long tracks resume</dt><dd>Audiobooks and tracks over 20 minutes continue where you stopped, even after you played something else.</dd></div>
+    <div><dt>Settings of a track's own</dt><dd>Leave a track out of shuffle, play it only when you start it yourself, or give it its own volume.</dd></div>
+    <div><dt>Honest play counts</dt><dd>A track counts as played after half of it or four minutes, whichever comes first. Skipping ahead does not count as listening.</dd></div>
+    <div><dt>Slow drives</dt><dd>A track can be read into memory whole before it plays, for drives that are slow or go to sleep.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="output" aria-labelledby="output-title">
+  <header class="part-head">
+    {{cover output}}
+    <div>
+      <h2 id="output-title">You choose where the sound goes</h2>
+      <p>Pick the sound system, the device and the mode. Change any of them while music plays, and playback moves to the new device at the same position.</p>
+    </div>
+  </header>
+  <div class="beside">
+    <dl class="points narrow">
+      <div><dt>Four sound systems</dt><dd>PipeWire, PulseAudio, ALSA and JACK. Left on Automatic, Helikodu uses PipeWire when it is running and ALSA otherwise.</dd></div>
+      <div><dt>Shared or exclusive</dt><dd>In shared mode you hear other programs as well. In exclusive mode Helikodu takes an ALSA hardware device from PipeWire and gives it back when playback stops, or asks PipeWire for exclusive use at the track's own sample rate.</dd></div>
+      <div><dt>Bit-perfect</dt><dd>When nothing on the way changes the sound, the samples reach the device exactly as they are in the file: 16, 24 and 32 bits, the last without passing through floating point. The deck says when this is so.</dd></div>
+      <div><dt>The rate follows the music</dt><dd>The device opens at the track's own rate when it can, so a 44.1 kHz album and a 96 kHz album both play unconverted. When a rate has to be converted, you choose the quality of the resampler.</dd></div>
+      <div><dt>DSD to the DAC</dt><dd>DSF and DFF files go out as DoP when the device can take it, with DSD silence in pauses so the DAC stays in DSD mode. Otherwise they are converted to PCM.</dd></div>
+      <div><dt>It asks before it is loud</dt><dd>Before Helikodu first plays at full output level on a device, it asks. No sound reaches the device until you answer.</dd></div>
+      <div><dt>Devices are remembered</dt><dd>By a stable name, so a DAC is found again after a restart or in another USB port. If it disappears, playback pauses, moves to the default device or stops, as you choose.</dd></div>
+      <div><dt>Four ways to set the volume</dt><dd>The system's volume, Helikodu's own, the device's hardware mixer, or fixed at 100 % for amplifiers with a knob of their own.</dd></div>
+    </dl>
+    <figure class="pop">
+      {{shot output-switcher | The output switcher: System default, then the PipeWire devices Built-in Audio, Studio Interface and HDMI, each with the rates and formats it can take; a switch between Shared and Exclusive; and a readout that says bit-perfect, FLAC at 96 kHz and 24 bits to Studio Interface, no processing.}}
+      <figcaption>The output switcher on the deck: every device with what it can take, the mode, and what reaches the device right now.</figcaption>
+    </figure>
+  </div>
+  {{viewer view-output | Pictures of the audio output}}
+  {{tab Signal path | signal-path | The main window with the Signal path tab in the right panel: a green lamp labelled bit-perfect, the sentence The samples reach the device unchanged, the stages from the source to the device, and counters for the buffer, underruns and silence inserted. | The signal path while a FLAC file at 96 kHz and 24 bits plays to an interface held exclusively through ALSA. Every stage in between is off, bypassed or not needed, and the lamp says bit-perfect.}}
+  {{tab With processing | signal-path-dsp | The Signal path tab with a blue lamp labelled DSP active. Five stages are at work: loudness, equalizer, limiter, volume and the output format with dither. | The same file with ReplayGain, the equalizer and the limiter at work and the volume at 85 %. The lamp changes to DSP active, and each stage says what it does to the sound.}}
+  {{tab Settings | settings-output | Settings, Audio output: the backend, the list of devices, the mode, the sample rate, sample format and resampler quality, the volume control, DSD files, what happens if the device disappears, the buffer and the DAC warm-up. | Every choice of the audio output on one page. Changes apply while music plays, at the same position.}}
+  {{tab Full output | volume-confirm | A question: Play at full output level? Studio Interface will receive the sound at a fixed 100 %. It shows the volume now and after, with the buttons Cancel and Play at full output. | Asked once for each device, also when playback is started with media keys or by opening a file.}}
+  {{end}}
+</section>
+
+<section class="part wrap" id="sound" aria-labelledby="sound-title">
+  <header class="part-head">
+    {{cover sound}}
+    <div>
+      <h2 id="sound-title">Shape the sound, or leave it untouched</h2>
+      <p>Between the file and the device sits a chain of stages. Each is switched on by itself and heard at once, without a click. With every stage off, the samples pass untouched and bit-perfect playback stays bit-perfect.</p>
+    </div>
+  </header>
+  {{viewer view-sound | Pictures of the sound processing}}
+  {{tab Parametric | eq-parametric | Settings, DSP and EQ: the chain of stages across the top, a graph of the equalizer's response with five numbered handles, and the list of filters with their type, frequency, gain and Q. | The parametric equalizer: up to 64 peaking, shelf and pass filters, with the resulting response drawn above them. It reads and writes the ParametricEQ.txt files that AutoEQ gives for many headphones.}}
+  {{tab 10 bands | eq-graphic-10 | The graphic equalizer with ten bands, drawn as a curve with a handle on each band. | The graphic equalizer with 10 bands. The preamp lowers the level by itself, so that boosts do not clip.}}
+  {{tab 31 bands | eq-graphic-31 | The graphic equalizer with thirty-one bands. | The same with 31 bands. Settings can be kept as presets under names of your own.}}
+  {{tab Crossfeed | crossfeed | The crossfeed stage: three presets and a custom setting, with sliders for the cut-off frequency and the level of the mixed-in channel. | Crossfeed mixes a little of each channel into the other, so that music made for loudspeakers is less tiring on headphones.}}
+  {{tab Channel mix | channel-mix | The channel mix stage: stereo, mono or swapped channels, a balance slider and the LFE channel. | Stereo, mono or swapped channels, the balance, and what becomes of the LFE channel of surround files.}}
+  {{tab Limiter | limiter | The limiter stage: a lookahead slider, and an activity readout with the gain reduction now, the largest in this track and how often it limited. | A true-peak limiter as a safety net. While music plays, it shows how much it does, which is usually nothing.}}
+  {{tab Loudness | settings-loudness | Settings, Loudness: Even out loudness with the choices Off, Track, Album and Automatic, two preamp sliders, two ways to prevent clipping, and how many tracks have loudness values. | Loudness normalization, and the measuring of tracks that have no loudness values yet.}}
+  {{end}}
+  <dl class="points">
+    <div><dt>Loudness, evened out</dt><dd>ReplayGain 2.0 and Opus R128 values even out albums mastered at different levels: by track, by album, or automatically, with the album's gain while an album plays in order and the track's otherwise.</dd></div>
+    <div><dt>It measures what has no values</dt><dd>Tracks and albums are measured following EBU R128: loudness, loudness range, sample peak and true peak. In the background, CUE tracks included, and written to the tags if you like.</dd></div>
+    <div><dt>Clipping, prevented your way</dt><dd>Lower the gain until the loudest peak fits, or keep the full gain and let the limiter catch the peaks.</dd></div>
+    <div><dt>Dither where it is needed</dt><dd>Added by itself when processed sound goes to a device with fewer bits.</dd></div>
+    <div><dt>Always visible</dt><dd>A readout on the page, and the lamp on the deck, say whether the samples pass unchanged or are processed.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="library" aria-labelledby="library-title">
+  <header class="part-head">
+    {{cover library}}
+    <div>
+      <h2 id="library-title">A library built for large collections</h2>
+      <p>Point Helikodu at your music folders. Your files are played where they are: nothing is copied, nothing is moved, and the library keeps up with them on its own.</p>
+    </div>
+  </header>
+  <div class="table measured">
+    <table>
+      <caption>Measured with large libraries</caption>
+      <thead><tr><th scope="col">What</th><th scope="col" class="num">100,000 tracks</th><th scope="col" class="num">500,000 tracks</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">From start to the album grid</th><td class="num">0.34 s</td><td class="num">1.0 s</td></tr>
+        <tr><th scope="row">A search for three letters</th><td class="num">2.1 ms</td><td class="num">7.7 ms</td></tr>
+        <tr><th scope="row">First scan, files a second</th><td class="num">5,990</td><td class="num">4,910</td></tr>
+        <tr><th scope="row">Memory at the height of the first scan</th><td class="num">125 MB</td><td class="num">337 MB</td></tr>
+        <tr><th scope="row">Scrolling the album grid and the track table</th><td class="num" colspan="2">at the refresh rate of the display</td></tr>
+        <tr><th scope="row">While paused or stopped</th><td class="num" colspan="2">no periodic work, nothing drawn</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Measured on 18 November 2026 on a computer with 32 threads and an NVMe SSD, with a warm cache, over generated libraries of short FLAC files. The method and every result are in the <a href="{{repository}}/blob/main/docs/dev/performance.md">performance notes</a>.</p>
+  </div>
+  {{viewer view-library | Pictures of the library}}
+  {{tab Statistics | statistics | Library statistics: tracks, albums, artists, playing time and size across the top, the formats and their quality with bars, the listening of this year, and the most played artists and albums. | Library ▸ Statistics counts the collection and your listening. A row under Formats or Quality opens Tracks with those tracks.}}
+  {{tab Settings | settings-library | Settings, Library: the music folders, name patterns to skip, scanning options, what to do with copies of the same file, and storage limits for covers, analysis data, logs and the undo history. | The library's folders and rules. A folder can be watched, scanned again or removed; removing it never removes anything from your disk.}}
+  {{tab Copies | copies | A window titled Identical copies that lists four files of one track with their paths, sizes and dates. One is marked as the main copy. | Files whose bytes are identical are recognised as copies of one track. They share one set of play counts, ratings and playlist entries, and the spare ones can go to the desktop trash.}}
+  {{tab First run | first-run | The first run: Where is your music? The music folder is ticked, there are switches for watching the folders and for video files, a line names the output device, and a button says Scan and start. | The first start asks where the music is, and tells you where the sound will go.}}
+  {{end}}
+  <dl class="points">
+    <div><dt>Scanned in separate processes</dt><dd>Tags are read by worker processes with time and memory limits, so a damaged file cannot take the player down.</dd></div>
+    <div><dt>It keeps itself up to date</dt><dd>New, changed, moved and deleted files show up within about a second. Network shares and FUSE mounts, which cannot be watched, are scanned again every 30 minutes.</dd></div>
+    <div><dt>Drives that come and go</dt><dd>Tracks on a drive that is not connected are hidden, not forgotten. When the drive is back, they return with their ratings and play counts.</dd></div>
+    <div><dt>Your statistics survive a tidy-up</dt><dd>Play counts, skips, ratings, resume positions and places in playlists stay with a track when its file is moved or renamed.</dd></div>
+    <div><dt>Albums as they are</dt><dd>Albums of several discs, compilations, several artists and genres per track, credits by role, sort names and MusicBrainz identifiers are all understood.</dd></div>
+    <div><dt>Covers from your own files</dt><dd>Pictures inside the files and image files in the album folder, stored once and cached as thumbnails. Nothing is downloaded.</dd></div>
+    <div><dt>Backups</dt><dd>The library is backed up once a day and the last seven backups are kept. A damaged database is replaced by the newest good backup at the next start.</dd></div>
+    <div><dt>You say what is scanned</dt><dd>Patterns to skip, <code>.nomedia</code> files and hidden folders are respected. The sound of video files joins the library only if you ask for it.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="browse" aria-labelledby="browse-title">
+  <header class="part-head">
+    {{cover browse}}
+    <div>
+      <h2 id="browse-title">Many ways into your collection</h2>
+      <p>Start from Home, wander through covers, or go straight to a composer, a decade or a folder. Everywhere, a double click plays and a single click selects.</p>
+    </div>
+  </header>
+  {{viewer view-browse | Pictures of the library views}}
+  {{tab Home | home | Home: a row of the covers added lately, a row of the covers played lately, the most played tracks, and albums to rediscover with when each was played last. | Home: what was added and played lately, the most played tracks, and albums you have not played for three months, or never.}}
+  {{tab Album | album | An album's page: the cover, the title, artist, year and format, the buttons Play, Shuffle and Add to queue, the tracks with their plays, ratings and lengths, and a Details column with the genre, release date, size, folder and kind. | An album's page. Select a track to see its own facts under the album's: its format, gain, plays, lyrics, copies and file.}}
+  {{tab Artists | artists | Artists: the album artists in a list under letter headings, and one artist's page with their albums and the albums they appear on. | An artist's releases, the albums they appear on and their most played tracks. Photos come from an artist.jpg in the artist's folder or from a picture you choose.}}
+  {{tab Composers | composers | Composers: a list of composers, and the albums with music by the chosen one as a grid of covers. | Composers are listed by their sort names, so Maurice Ravel is under R. The second line of a cover names the performer.}}
+  {{tab Years | years | Years: decades and their years in a list with the number of albums of each, and the albums of the chosen decade. | Years and decades, by the original release year where the tags give one.}}
+  {{tab Folders | folders | Folders: a tree of the library folders at the left, and the audio files of one folder with file name, title, length and size. | The folders as they are on disk. Under This computer the tree also reaches your home folder, connected drives and the whole file system, to play what is not in the library.}}
+  {{tab Tracks | tracks | Tracks: a table of every track with number, title, artist, album, year, format, rating and length. Three rows are selected. | Every track in one table. Sort by up to four columns at once, move and resize the columns, and press F2 to edit a cell for all selected rows.}}
+  {{tab Browse | facets | Tracks with three linked lists above the table: Genre, Album artist and Album, each with the number of tracks of every value. A genre is chosen, and the other lists and the table show only what belongs to it. | The facet browser: linked lists that narrow each other and the table. The field of each list can be changed to artist, composer, year or format.}}
+  {{end}}
+  <dl class="points">
+    <div><dt>Lossless and hi-res at a glance</dt><dd>The Albums grid can show only lossless or only hi-res albums, and every tile names its format.</dd></div>
+    <div><dt>Audiobooks keep to themselves</dt><dd>An album can be music, an audiobook or audio from a video. The last two stay out of shuffle and out of Play all.</dd></div>
+    <div><dt>Pins</dt><dd>Pin albums, artists and playlists to the top of the sidebar.</dd></div>
+    <div><dt>The same menu everywhere</dt><dd>Play, Play next, Add to queue, Add to playlist, Go to album, Go to artist, Edit tags, Rate and Open containing folder, on every track and on many at once.</dd></div>
+    <div><dt>Back and forward</dt><dd>Alt+Left and Alt+Right move between the pages you visited, as in a web browser.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="search" aria-labelledby="search-title">
+  <header class="part-head">
+    {{cover search}}
+    <div>
+      <h2 id="search-title">Search that understands questions</h2>
+      <p>Type a word and the results appear while you type. Write a field and an operator, and the same box becomes a query language. That language also builds smart playlists, filters the track table and tells a sync what to copy.</p>
+    </div>
+  </header>
+  <div class="table queries">
+    <table>
+      <thead><tr><th scope="col">Type this</th><th scope="col">To find</th></tr></thead>
+      <tbody>
+        <tr><td><code>genre:jazz -genre:fusion</code></td><td>Jazz, but no fusion</td></tr>
+        <tr><td><code>artist:kask year:2018..2021</code></td><td>One artist, within a range of years</td></tr>
+        <tr><td><code>rating&gt;=4 -genre:ambient</code></td><td>Four stars and more, without ambient</td></tr>
+        <tr><td><code>added&lt;30d sort:added desc</code></td><td>What was added in the last 30 days, the newest first</td></tr>
+        <tr><td><code>title~"^Intro" OR duration&lt;30s</code></td><td>Titles that match a regular expression, or anything shorter than half a minute</td></tr>
+        <tr><td><code>is:lossless has:lyrics limit:50</code></td><td>The first 50 lossless tracks that have lyrics</td></tr>
+        <tr><td><code>tag:mood=calm</code></td><td>Any other tag that is in your files</td></tr>
+        <tr><td><code>plays=0</code></td><td>What you have never played</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {{viewer view-search | Pictures of the search}}
+  {{tab A query | query | Search with the query genre:jazz -genre:fusion: a table of the 682 tracks it selects, and at the right a column of example queries and saved searches. | A query lists the tracks it selects. The column at the right holds example queries and your saved searches, each with the number of tracks it finds now.}}
+  {{tab Completion | query-completion | While the query is typed, a list under the search field offers the fields added, album, albumartist, albumgain and artist, each with an explanation and an example. | While you type, a list offers the fields that fit, with an example of each. Tab completes.}}
+  {{tab Plain words | search | Search results for the word harbour: artists, albums and tracks, each group with the number found. | Plain words search titles, artists, albums, genres, composers and file paths, and show artists, albums and tracks apart.}}
+  {{end}}
+  <dl class="points">
+    <div><dt>Fields</dt><dd><code>title</code> <code>artist</code> <code>albumartist</code> <code>album</code> <code>composer</code> <code>performer</code> <code>conductor</code> <code>genre</code> <code>year</code> <code>codec</code> <code>samplerate</code> <code>bitdepth</code> <code>plays</code> <code>skips</code> <code>rating</code> <code>duration</code> <code>added</code> <code>lastplayed</code> <code>path</code> <code>folder</code> <code>kind</code> and more.</dd></div>
+    <div><dt>Operators</dt><dd>A colon for contains, <code>=</code> and <code>!=</code>, <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code>, and <code>~</code> for a regular expression. Ranges such as <code>year:1970..1979</code>, and relative dates in days, weeks, months and years.</dd></div>
+    <div><dt>Combining</dt><dd>Words next to each other must all hold. <code>OR</code> gives either, a minus or <code>NOT</code> excludes, and parentheses group.</dd></div>
+    <div><dt>Helpful when you slip</dt><dd>The part of a query that cannot be read is underlined, and a notice says what is wrong, with an example that works.</dd></div>
+    <div><dt>Saved searches</dt><dd>Keep a search under a name and run it again with one click.</dd></div>
+    <div><dt>Every script</dt><dd>Search also finds words in scripts that are written without spaces.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="playlists" aria-labelledby="playlists-title">
+  <header class="part-head">
+    {{cover playlists}}
+    <div>
+      <h2 id="playlists-title">Playlists that follow your library</h2>
+      <p>Playlists remember tracks, not file paths. Move or rename your files and they stay in their playlists. A track whose file is gone is shown as missing, and comes back when the file does.</p>
+    </div>
+  </header>
+  {{viewer view-playlists | Pictures of playlists}}
+  {{tab Rule builder | smart-playlist | The rule builder of a smart playlist: rules made of a field, a condition and a value, a group of rules, a limit, the same rules as query text below, and at the right the tracks that match. | The rule builder of a smart playlist shows the same rules as query text, and either can be edited. The matching tracks are counted and listed as you edit.}}
+  {{tab Smart playlist | smart-playlist-view | A smart playlist: its rules in words above its tracks. | A smart playlist holds the tracks that match its rules and follows the library: tracks that start to match come in, and tracks that stop matching leave.}}
+  {{tab Playlist | playlist | A playlist grouped by album: a header with cover, album, artist and year above the tracks that follow each other on one album. | A playlist with Group by album on. Drag entries to reorder them; the lock protects a finished playlist against changes.}}
+  {{tab History | history | The play history by day: the time each track started, its title, artist and album, where it was played from and how long was listened. | The play history: every listen by day, with where it was played from, and the skipped ones dimmed. Save what is shown as a playlist.}}
+  {{end}}
+  <dl class="points">
+    <div><dt>Smart playlists</dt><dd>All or any of the rules, groups of rules, a limit by tracks, minutes, hours or gigabytes, and an order of their own.</dd></div>
+    <div><dt>Favourites</dt><dd>The heart on the deck adds the playing track to Favourites, always the first playlist.</dd></div>
+    <div><dt>Undo for every change</dt><dd>Every change of a playlist can be undone and done again with Ctrl+Z and Ctrl+Shift+Z. Only deleting a playlist asks first.</dd></div>
+    <div><dt>Folders and tidying</dt><dd>Playlists go into folders. One command removes duplicates, another the missing tracks, a third shuffles the order for good.</dd></div>
+    <div><dt>In and out</dt><dd>Import and export M3U, M3U8, PLS and XSPF. Playlist files in your library folders can become playlists that follow their files.</dd></div>
+    <div><dt>Ratings</dt><dd>One to five stars, kept in the library and safe across moves. Ratings that other players wrote into the tags are taken over, and Helikodu writes its own into the files if you turn that on.</dd></div>
+    <div><dt>Your history is yours</dt><dd>Export it as ListenBrainz listens or as a <code>.scrobbler.log</code>. It is written to a file on your computer; nothing is sent.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="files" aria-labelledby="files-title">
+  <header class="part-head">
+    {{cover files}}
+    <div>
+      <h2 id="files-title">Careful tools for your files</h2>
+      <p>The tools that change your files are careful ones. A tag is written to a copy, verified, and only then swapped in. A move is written down before it happens. Almost everything can be undone, and nothing is ever downloaded.</p>
+    </div>
+  </header>
+  {{viewer view-files | Pictures of the tag editor and the tools}}
+  {{tab Tag editor | tag-editor | The tag editor for three tracks: title, artist, album artist, album, track and disc numbers, year, genre, composer, comment and rating. Fields whose files differ show the word keep. | The tag editor, here for three tracks at once. A field whose files have different values shows &lt;keep&gt;: leave it, and every file keeps its own value.}}
+  {{tab Tag tools | tag-tools | Tag tools, Fill tags from file names: a pattern, and a table of the three files with the track number and the title each would get. | Tag tools show every file with the value it would get: tags from file names, numbering, capital letters, find and replace with regular expressions, repair of garbled text, and sort names.}}
+  {{tab Convert | converter | Convert: presets at the left; format, quality, sample rate and channels; the folder and the naming pattern; and a table of the tracks with their format now and after. | Convert tracks to Opus, MP3, AAC, Vorbis, FLAC, ALAC or WAV, with presets of your own, several files at a time in the background. Tags and covers are copied.}}
+  {{tab Sync | sync-export | Sync and export: destinations at the left, playlists to copy with ticks, a choice to convert lossless files, figures for what will be copied, converted and removed and the space needed, and the list of what will happen. | Keep a phone or a memory stick in step with chosen playlists, searches, albums and artists. Lossless files can be converted on the way, and Helikodu removes only files it put there itself.}}
+  {{tab Organize | organizer | Organize files: saved naming patterns at the left, the pattern in use, and a table with each file's path now and after the move and what will happen to it: move, rename, already in place or name taken. | Organize Files moves and renames by a naming pattern and shows every file before anything moves. A file is never replaced, and a run can be undone, even after a restart.}}
+  {{tab Covers | cover-manager | Cover manager: the albums without a cover, each with the picture found in its folder and a button to use it or to choose an image. | The cover manager finds albums with no cover, a small cover or covers that differ between files, and uses pictures that are already on your computer.}}
+  {{tab Verify | verify-files | Verify files: six files with problems, each with a sentence on what was found, such as a file that ends early or audio that does not match its checksum. | Verify Files decodes every file from start to end and says what it found: damaged parts, a file that stops early, a wrong length, FLAC audio that does not match its checksum. It changes nothing.}}
+  {{tab Missing | missing-files | Missing files: tracks whose files have gone, how long they have been missing, and where each was found again in the library folders. | Missing Files finds moved files by their size and content and links them again, with their ratings, play counts and places in playlists.}}
+  {{tab Duplicates | duplicates | Find duplicates, Identical files: groups of files with the same content, with their paths, formats, sizes and plays, and the spare ones ticked. | Find duplicates by recording, by album and track, or byte for byte. What you tick goes to the desktop trash, never further.}}
+  {{end}}
+  <dl class="points">
+    <div><dt>One undo history</dt><dd>Tag edits and file moves share it. Ctrl+Z undoes whichever came last, and each file gets back the tags, cover and lyrics it had. The last 100 changes are kept for 90 days.</dd></div>
+    <div><dt>One naming pattern everywhere</dt><dd><code>{albumartist}/{album}/[{disc}-]{track} {title}</code> names a track the same in the organizer, the converter and sync. Text in square brackets is left out when a field in it is empty.</dd></div>
+    <div><dt>Editing in the table</dt><dd>F2 edits a cell of the track table, for all selected rows at once.</dd></div>
+    <div><dt>Safe across drives</dt><dd>Moved to another drive, a file is copied, checked byte for byte, and only then removed from its old place.</dd></div>
+    <div><dt>Safe across crashes</dt><dd>A run of the organizer that was cut short is finished at the next start.</dd></div>
+    <div><dt>Your originals stay</dt><dd>Converting and syncing write new files. They never change the files in your library.</dd></div>
+    <div><dt>The trash, not the void</dt><dd>Files leave only for the desktop trash, after you confirm, and your file manager can bring them back.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="desktop" aria-labelledby="desktop-title">
+  <header class="part-head">
+    {{cover desktop}}
+    <div>
+      <h2 id="desktop-title">At home on every desktop</h2>
+      <p>Helikodu has its own design, so it looks the same everywhere. From your desktop it takes your preferences: light or dark, the accent colour, high contrast and reduced motion. It talks to the desktop through freedesktop standards only, and depends on none in particular.</p>
+    </div>
+  </header>
+  <figure class="split">
+    <div class="split-pair">
+      <img src="assets/shots/albums-light.webp" alt="The Helikodu window, its left half in the light colour scheme and its right half in the dark one." width="1440" height="900" loading="lazy" decoding="async">
+      <img class="split-over" src="assets/shots/albums-dark.webp" alt="" width="1440" height="900" loading="lazy" decoding="async">
+    </div>
+    <figcaption>Light and dark. Helikodu follows the desktop, or the scheme you choose. The pictures on this page do the same.</figcaption>
+  </figure>
+  <div class="accents">
+    <figure>{{shot accent-amber | The middle of the player deck with the seek bar and the play button in amber.}}<figcaption>Amber</figcaption></figure>
+    <figure>{{shot accent-blue | The same in blue.}}<figcaption>Blue</figcaption></figure>
+    <figure>{{shot accent-green | The same in green.}}<figcaption>Green</figcaption></figure>
+    <figure>{{shot accent-violet | The same in violet.}}<figcaption>Violet</figcaption></figure>
+  </div>
+  <p class="note">The accent is the colour of your desktop where the desktop has one, or one of these four.</p>
+  {{viewer view-desktop | Pictures of the mini player, the narrow window and the settings}}
+  {{tab Mini player | mini-player | The mini player: the cover, the title and artist, the seek bar, the play controls and the rate and bits of the output, in a small window. | The mini player (Ctrl+Shift+M) takes the place of the main window.}}
+  {{tab Its queue | mini-player-queue | The mini player with a drawer open below it that lists the queue. | A drawer underneath holds the queue.}}
+  {{tab Its lyrics | mini-player-lyrics | The mini player with the lyrics in its drawer and the line being sung in white. | The drawer also holds the lyrics. A click on a line plays from there.}}
+  {{tab Narrow window | narrow | The window at 640 pixels wide: the album grid alone, with a compact deck below it. | In a narrow window the sidebar and the queue leave the row and open over the content, and the deck becomes compact.}}
+  {{tab Sidebar over it | narrow-sidebar | The narrow window with the sidebar opened over the album grid, which is dimmed. | The sidebar opened over the content. A click beside it, or Esc, closes it.}}
+  {{tab Appearance | settings-appearance | Settings, Appearance: colour scheme, accent colour, window style with Integrated and Classic, menu bar, striped tables, language and notifications. | Integrated draws its own header with the window buttons in it, as on GNOME. Classic uses the desktop's title bar and can show a menu bar.}}
+  {{tab Shortcuts | settings-shortcuts | Settings, Shortcuts: every action with its keys, in groups for playback, the library and lists, and the window. | Every shortcut can be changed, with a warning when the keys are in use.}}
+  {{end}}
+  <p class="say">Helikodu speaks {{language-count}} languages: {{languages}}. It follows the language of your desktop, or the one you choose in the settings.</p>
+  {{viewer view-languages | Pictures of Helikodu in other languages}}
+  {{tab <span lang="de">Deutsch</span> | home-de | The Home view in German: the sidebar, the headings of the rows of covers and the lists of tracks are in German. | Home in German. The names of albums, artists and tracks stay as they are in your files.}}
+  {{tab <span lang="ru">Русский</span> | home-ru | The Home view in Russian. | Home in Russian. Numbers are written the way the language writes them.}}
+  {{tab <span lang="ja">日本語</span> | home-ja | The Home view in Japanese. | Home in Japanese. The library is sorted as the language sorts its letters.}}
+  {{tab <span lang="ko">한국어</span> | home-ko | The Home view in Korean. | Home in Korean. A translation is a text file, and a new one is welcome as a pull request.}}
+  {{end}}
+  <dl class="points">
+    <div><dt>Media keys and desktop controls</dt><dd>Through MPRIS: the media keys of your keyboard, the media controls of GNOME and KDE Plasma, and remote controls that show the queue and your playlists.</dd></div>
+    <div><dt>Shortcuts that reach further</dt><dd>Play or pause, next and previous can work while another window is in front, through the desktop's global shortcuts service.</dd></div>
+    <div><dt>Good manners</dt><dd>A notification when the track changes, unless the window is in front. The computer stays awake while music plays, and playback pauses before the computer goes to sleep.</dd></div>
+    <div><dt>A tray icon, if you want one</dt><dd>Off by default. With it, closing the window can leave the music playing.</dd></div>
+    <div><dt>Keyboard and screen readers</dt><dd>Every part can be used from the keyboard, and every control has a name and a role for screen readers such as Orca.</dd></div>
+    <div><dt>Settings without a Save button</dt><dd>Changes apply at once. A search field finds a setting by its name or its explanation.</dd></div>
+    <div><dt>It opens what you give it</dt><dd>Files from your file manager's Open With menu, files and folders dropped on the window, files named on the command line.</dd></div>
+    <div><dt>Help without a network</dt><dd>F1 opens the user guide that is installed with Helikodu.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap" id="cli" aria-labelledby="cli-title">
+  <header class="part-head">
+    {{cover cli}}
+    <div>
+      <h2 id="cli-title">A player for the terminal, too</h2>
+      <p><code>helikodu-cli</code> plays files in a terminal, works with the library without opening a window, and controls the running application. Most commands can print JSON for scripts.</p>
+    </div>
+  </header>
+  <div class="terms">
+    <figure>
+      <pre class="term"><code><span class="c"># Play an album to a USB DAC, exclusively, with album gain</span>
+helikodu-cli list-outputs --backend alsa
+helikodu-cli play ~/Music/Album/*.flac --backend alsa \
+    --device 'hw:CARD=D10s,DEV=0' --mode exclusive \
+    --replaygain album
+
+<span class="c"># Scan a folder, leaving out partial downloads</span>
+helikodu-cli scan ~/Music --exclude '*.part'
+
+<span class="c"># The ten best matches as JSON</span>
+helikodu-cli search miles davis --limit 10 --json</code></pre>
+      <figcaption>Without the application: play, list the devices, scan, search, show a file's tags, the library's totals, measure loudness, list copies. While <code>play</code> runs, Space pauses, the arrow keys seek and <code>o</code> moves playback to the next device.</figcaption>
+    </figure>
+    <figure>
+      <pre class="term"><code><span class="c"># What plays, as JSON</span>
+helikodu-cli status --json
+
+<span class="c"># Replace the queue with what a query finds, shuffled</span>
+helikodu-cli play-query --shuffle 'genre:jazz rating>=4'
+
+<span class="c"># Put this month's additions after the playing track</span>
+helikodu-cli enqueue --next --query 'added&lt;30d'
+
+helikodu-cli seek +10
+helikodu-cli volume -5
+helikodu-cli rate 4
+helikodu-cli export-playlist 'Late evening' late-evening.m3u8</code></pre>
+      <figcaption>With the application running: the same control that the window has, over D-Bus. Other programs can use the interface too; it is <a href="{{repository}}/blob/main/docs/dev/dbus-api.md">documented</a>.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="part wrap" id="offline" aria-labelledby="offline-title">
+  <header class="part-head">
+    {{cover offline}}
+    <div>
+      <h2 id="offline-title">Offline, by construction</h2>
+      <p>Helikodu contains no network code at all. That is a deliberate rule, not a missing feature, and it will not change. It starts and works the same with or without a network, it never waits for a server, and nothing about your listening leaves your computer.</p>
+    </div>
+  </header>
+  <div class="pair">
+    <div>
+      <h3>What that rules out</h3>
+      <ul class="plain">
+        <li>Internet radio and streaming services</li>
+        <li>Looking up covers, artist photos or lyrics online</li>
+        <li>Scrobbling</li>
+        <li>Checking for updates</li>
+        <li>Telemetry, accounts and crash reporting</li>
+      </ul>
+    </div>
+    <div>
+      <h3>How the rule is kept</h3>
+      <ul class="plain">
+        <li>No network, TLS or DNS library may enter the build: the dependency check rejects them.</li>
+        <li>The decoder opens local files only, and refuses to open anything a file points to.</li>
+        <li>Every release is tested where there is no network, and the tests fail if anything tries to open an internet connection.</li>
+        <li>A playlist entry with a web address is shown as unavailable and never fetched.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">The only connections Helikodu makes are local ones on your computer: D-Bus, for media keys and desktop integration, and the sound server.</p>
+  <dl class="points">
+    <div><dt>What it knows about you</dt><dd>Only what is on your computer, and it keeps it there. Your library, play history and settings are in your home folder. Logs are off by default, and a crash report is written to a file and never sent.</dd></div>
+    <div><dt>Your files change only when you ask</dt><dd>When you save tags, write loudness values, organize files or move copies to the trash. Everything else Helikodu learns stays in its own database.</dd></div>
+    <div><dt>Careful with broken files</dt><dd>Every parser is fuzzed. A file that fails is skipped, and a track that made the player crash twice is passed over until you play it yourself.</dd></div>
+  </dl>
+</section>
+
+<section class="part wrap get" id="get" aria-labelledby="get-title">
+  <header class="part-head plain">
+    <div>
+      <h2 id="get-title">Get Helikodu {{version}}</h2>
+      <p>Helikodu is published on GitHub, as ready-built programs and as source code. Version {{version}} is the release candidate for 1.0: the features are frozen, and only fixes, translations and documentation follow.</p>
+    </div>
+  </header>
+  <div class="get-grid">
+    <div>
+      <div class="table">
+        <table>
+          <thead><tr><th scope="col">File</th><th scope="col">What it is</th></tr></thead>
+          <tbody>
+            <tr><td><code>helikodu-{{version}}-x86_64-linux.tar.xz</code></td><td>The ready-built programs for 64-bit PCs</td></tr>
+            <tr><td><code>helikodu-{{version}}-aarch64-linux.tar.xz</code></td><td>The ready-built programs for 64-bit ARM computers</td></tr>
+            <tr><td><code>helikodu-{{version}}.tar.xz</code></td><td>The source code, with everything needed to build it without a network</td></tr>
+            <tr><td><code>SHA256SUMS</code></td><td>Checksums of the files</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="actions"><a class="button primary" href="{{repository}}/releases">Download from GitHub</a> <a class="button" href="changelog/">Read the release notes</a></p>
+      <p class="note">The ready-built programs were built on Debian 13. They need glibc 2.41, GTK 4.18, FFmpeg 7.1, PipeWire 1.2 and ALSA from your system, or newer versions with the same library names. Where only a newer FFmpeg is installed, <a href="guide/#installing--building-from-the-source-code">build from the source code</a> instead. There are no distribution packages and no Flatpak yet.</p>
+    </div>
+    <figure>
+      <pre class="term"><code><span class="c"># Check the download, unpack it, copy it to /usr/local</span>
+sha256sum --check --ignore-missing SHA256SUMS
+tar -xJf helikodu-{{version}}-x86_64-linux.tar.xz
+cd helikodu-{{version}}-x86_64-linux
+sudo cp -r bin libexec share /usr/local/
+sudo gtk4-update-icon-cache -q -t -f /usr/local/share/icons/hicolor
+sudo update-desktop-database -q /usr/local/share/applications</code></pre>
+      <figcaption>Helikodu then appears in the application list of your desktop. For a 64-bit ARM computer, write <code>aarch64</code> in place of <code>x86_64</code>.</figcaption>
+    </figure>
+  </div>
+  <ul class="next">
+    <li><a href="guide/#installing">Installing, step by step</a></li>
+    <li><a href="guide/#first-run">First run and music folders</a></li>
+    <li><a href="guide/#faq">Frequently asked questions</a></li>
+    <li><a href="guide/#troubleshooting">Troubleshooting</a></li>
+    <li><a href="changelog/#v{{version}}--known-issues">Known issues of {{version}}</a></li>
+  </ul>
+</section>
+
+<section class="part wrap" id="take-part" aria-labelledby="take-part-title">
+  <header class="part-head plain">
+    <div>
+      <h2 id="take-part-title">Take part</h2>
+      <p>Helikodu is free software, written in the open. It uses no service other than GitHub: problems, code and translations all meet there.</p>
+    </div>
+  </header>
+  <dl class="points">
+    <div><dt><a href="{{repository}}/issues">Report a problem</a></dt><dd>Say which version, distribution and desktop you use, what you did and what happened. <a href="guide/#faq--how-do-i-report-a-bug">The FAQ lists what helps.</a></dd></div>
+    <div><dt><a href="{{repository}}/blob/main/po/README.md">Translate</a></dt><dd>Translations are gettext <code>.po</code> files, sent as pull requests. Any gettext editor will do.</dd></div>
+    <div><dt><a href="{{repository}}/blob/main/CONTRIBUTING.md">Change the code</a></dt><dd>The rules are few and written down, and one command runs every check that the project runs.</dd></div>
+    <div><dt><a href="{{repository}}/blob/main/SECURITY.md">Report a security problem</a></dt><dd>Privately, please, and not as a public issue.</dd></div>
+  </dl>
+</section>
+</div>

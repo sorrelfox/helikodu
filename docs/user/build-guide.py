@@ -275,7 +275,10 @@ nav ol { padding-left: 1.5rem; }
 """
 
 
-def build(version):
+def contents():
+    """The guide in parts, as HTML: its title, its introduction, and each
+    chapter with its key, its title and its text. The website
+    (docs/site/build.py) puts the same parts into its own page."""
     book = Book()
     intro = Chapter("contents", GUIDE / "README.md")
     # The introduction: the README without its numbered contents and the
@@ -286,13 +289,16 @@ def build(version):
             continue
         kept.append(line)
     intro.text = "\n".join(kept)
-    parts = [render(intro, book, skip_title=True)]
-    toc = "".join(f'<li><a href="#{c.key}">{inline(c.title, book, c)}</a></li>'
-                  for c in book.chapters)
-    for chapter in book.chapters:
-        parts.append(render(chapter, book))
+    lead = render(intro, book, skip_title=True)
+    chapters = [(c.key, inline(c.title, book, c), render(c, book)) for c in book.chapters]
     if book.errors:
         sys.exit("build-guide: broken links:\n  " + "\n  ".join(book.errors))
+    return inline(intro.title, book, intro), lead, chapters
+
+
+def build(version):
+    title, lead, chapters = contents()
+    toc = "".join(f'<li><a href="#{key}">{name}</a></li>' for key, name, _ in chapters)
     version_line = (f'<p class="version">For Helikodu {html.escape(version)}.</p>'
                     if version else "")
     return f"""<!DOCTYPE html>
@@ -305,11 +311,11 @@ def build(version):
 </head>
 <body>
 <main>
-<h1 id="top">{inline(intro.title, book, intro)}</h1>
+<h1 id="top">{title}</h1>
 {version_line}
-{parts[0]}
+{lead}
 <nav aria-labelledby="contents"><h2 id="contents">Contents</h2><ol>{toc}</ol></nav>
-{chr(10).join(parts[1:])}
+{chr(10).join(text for _, _, text in chapters)}
 <p class="note">The manual pages <code>helikodu(1)</code>, <code>helikodu-cli(1)</code> and
 <code>helikodu-scan-worker(1)</code> describe the programs' options.</p>
 </main>

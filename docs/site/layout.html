@@ -1,0 +1,48 @@
+<!doctype html>
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{title}}</title>
+<meta name="description" content="{{description}}">
+<link rel="canonical" href="{{canonical}}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Helikodu">
+<meta property="og:title" content="{{title}}">
+<meta property="og:description" content="{{description}}">
+<meta property="og:url" content="{{canonical}}">
+<meta property="og:image" content="https://sorrelfox.github.io/helikodu/assets/social.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Helikodu window: a grid of album covers, the play queue and the player deck.">
+<meta name="theme-color" content="#ECECE9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17181B" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="{{root}}assets/helikodu.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{{root}}assets/site.css">
+</head>
+<body class="{{body-class}}">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="brand" href="{{root}}"><img src="{{root}}assets/helikodu.svg" alt="" width="30" height="30">Helikodu</a>
+  <nav aria-label="Site">
+    <a href="{{root}}#features"{{current-features}}>Features</a>
+    <a href="{{root}}#get"{{current-get}}>Get it</a>
+    <a href="{{root}}guide/"{{current-guide}}>User guide</a>
+    <a href="{{root}}changelog/"{{current-changelog}}>Release notes</a>
+    <a href="{{repository}}">Source code</a>
+  </nav>
+</header>
+<main id="main">
+{{content}}
+</main>
+<footer class="foot">
+  <p>Helikodu is free software under the <a href="{{repository}}/blob/main/LICENSE">GNU General Public License, version 3 or later</a>. The text and pictures of this website are licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</p>
+  <p>This site uses no cookies, scripts or trackers, and loads nothing from other servers. The screenshots show Helikodu {{version}} with its sample library: every album, artist and track in them is invented.</p>
+</footer>
+</body>
+</html>

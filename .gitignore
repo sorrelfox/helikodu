@@ -30,6 +30,9 @@ rustc-ice-*.txt
 *.swp
 *~
 
+# The built website
+/_site/
+
 # Python bytecode from test scripts
 __pycache__/
 *.pyc

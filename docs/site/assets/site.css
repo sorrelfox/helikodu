@@ -1,0 +1,599 @@
+/*
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: CC-BY-SA-4.0
+*/
+
+/* The colours are the application's own (its design tokens), light and dark
+   as the visitor's desktop asks, and the fonts are the visitor's own: the
+   site loads nothing but this file and its pictures. */
+:root {
+  color-scheme: light dark;
+  --win: #ECECE9;
+  --side: #E4E4E0;
+  --pane: #F8F8F6;
+  --field: #FFFFFF;
+  --seg: #E2E2DD;
+  --line: #D6D6D0;
+  --line2: #BDBDB6;
+  --t1: #1A1B1E;
+  --t2: #474A51;
+  --t3: #5A5E66;
+  --accent: #F0B23C;
+  --accent-mark: #9E7528;
+  --accent-text: #6A4D15;
+  --on-accent: #15120B;
+  --glass: #0D0E10;
+  --glass-line: #26282D;
+  --glass-t1: #E9EAEC;
+  --glass-t3: #8E929A;
+  --window-shadow: drop-shadow(0 20px 36px rgb(20 20 16 / .22)) drop-shadow(0 2px 5px rgb(20 20 16 / .16));
+  --sans: system-ui, -apple-system, "Segoe UI", "Adwaita Sans", Cantarell, "Noto Sans", Ubuntu, Roboto, sans-serif;
+  --mono: ui-monospace, "Adwaita Mono", "JetBrains Mono", "Noto Sans Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  --measure: 76rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --win: #17181B;
+    --side: #131417;
+    --pane: #1B1C20;
+    --field: #25272D;
+    --seg: #2C2E35;
+    --line: #2A2C32;
+    --line2: #3B3E46;
+    --t1: #EDEEF0;
+    --t2: #B4B8C0;
+    --t3: #8E929A;
+    --accent-mark: #F0B23C;
+    --accent-text: #F3C169;
+    --window-shadow: drop-shadow(0 0 1px rgb(255 255 255 / .28)) drop-shadow(0 24px 44px rgb(0 0 0 / .6));
+  }
+}
+@media (prefers-contrast: more) {
+  :root {
+    --t2: var(--t1);
+    --t3: var(--t1);
+    --line: var(--line2);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 4.25rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+body {
+  margin: 0;
+  background: var(--win);
+  color: var(--t1);
+  font: 400 1.0625rem/1.6 var(--sans);
+  overflow-wrap: break-word;
+}
+img, svg { max-width: 100%; }
+img { height: auto; }
+a { color: var(--accent-text); text-decoration-thickness: 1px; text-underline-offset: .18em; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; border-radius: 3px; }
+code, pre { font-family: var(--mono); }
+code {
+  font-size: .9em;
+  background: var(--seg);
+  border-radius: 4px;
+  padding: .08em .32em;
+}
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.skip { position: absolute; left: -999rem; }
+.skip:focus { left: 1rem; top: 1rem; z-index: 10; background: var(--pane); padding: .5rem 1rem; }
+.defs { position: absolute; }
+.wrap { width: min(100% - 2.5rem, var(--measure)); margin-inline: auto; }
+
+/* The header and the footer of every page. */
+.top {
+  width: min(100% - 2.5rem, var(--measure));
+  margin-inline: auto;
+  padding: 1.1rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem 2rem;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+  color: var(--t1);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -.01em;
+  text-decoration: none;
+}
+.brand img { display: block; }
+.top nav { display: flex; flex-wrap: wrap; gap: .25rem 1.5rem; }
+.top nav a { color: var(--t2); text-decoration: none; font-size: .97rem; padding: .2rem 0; }
+.top nav a:hover { color: var(--t1); }
+.top nav a[aria-current] { color: var(--t1); box-shadow: 0 2px var(--accent-mark); }
+.foot {
+  width: min(100% - 2.5rem, var(--measure));
+  margin: clamp(4rem, 9vw, 7rem) auto 0;
+  padding: 1.5rem 0 3rem;
+  border-top: 1px solid var(--line);
+  color: var(--t2);
+  font-size: .92rem;
+}
+.foot p { max-width: 70ch; margin: 0 0 .75rem; }
+
+/* Buttons, as the application's: the amber one is its Play button. */
+.button {
+  display: inline-block;
+  padding: .62rem 1.15rem;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  color: var(--t1);
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.3;
+}
+.button:hover { background: var(--seg); }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.button.primary:hover { background: #F8C55A; border-color: #F8C55A; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.75rem 0 0; }
+
+/* The start page: the name with its meaning under each half. */
+.hero { padding-top: clamp(1.5rem, 5vw, 4rem); }
+.name {
+  margin: 0;
+  display: flex;
+  font-size: clamp(3.9rem, 16.2vw, 13rem);
+  font-weight: 700;
+  line-height: .84;
+  letter-spacing: -.055em;
+}
+.name-part { display: flex; flex-direction: column; }
+.name-part:first-child .name-gloss { margin-right: clamp(.3rem, .8vw, .6rem); }
+.name-gloss {
+  margin-top: clamp(.9rem, 2.4vw, 1.9rem);
+  padding-top: .5rem;
+  border-top: 2px solid var(--line2);
+  color: var(--t2);
+  font-size: clamp(.82rem, 1.25vw, 1.05rem);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+.name-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .9rem 3rem; }
+.name-note { margin: 0; max-width: 17rem; color: var(--t3); font-size: .92rem; line-height: 1.45; }
+.hero-grid {
+  margin-top: clamp(2rem, 5vw, 3.75rem);
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  gap: 2rem clamp(2rem, 7vw, 6rem);
+  align-items: start;
+}
+.lead { margin: 0; max-width: 38ch; font-size: clamp(1.2rem, 2.05vw, 1.6rem); line-height: 1.42; }
+.facts { margin: .35rem 0 0; font-size: .95rem; }
+.facts div {
+  display: grid;
+  grid-template-columns: 6.25rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: .42rem 0;
+  border-top: 1px solid var(--line);
+}
+.facts div:last-child { border-bottom: 1px solid var(--line); }
+.facts dt { color: var(--t3); }
+.facts dd { margin: 0; }
+.hero-shot { margin: clamp(2.5rem, 6vw, 4.5rem) 0 0; }
+.hero-shot img, .stage img, .pop img, .split-pair, .accents img {
+  display: block;
+  filter: var(--window-shadow);
+}
+.hero-shot img { width: 100%; }
+
+/* The parts of the start page as a shelf of covers. */
+.shelf-part { padding-top: clamp(4rem, 9vw, 7.5rem); }
+.shelf-part h2, .part-head h2 {
+  margin: 0;
+  font-size: clamp(1.9rem, 4.2vw, 3rem);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -.032em;
+}
+.shelf-say { margin: .9rem 0 0; max-width: 56ch; color: var(--t2); font-size: 1.15rem; line-height: 1.5; }
+.shelf {
+  margin: 2.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2.25rem 1.5rem;
+}
+.shelf a { display: block; color: inherit; text-decoration: none; }
+.cover { display: block; aspect-ratio: 1; border-radius: 6px; }
+.shelf .cover { width: 100%; outline: 2px solid transparent; outline-offset: 3px; }
+.shelf a:hover .cover, .shelf a:focus-visible .cover { outline-color: var(--accent-mark); }
+.shelf a:focus-visible { outline: none; }
+.shelf b { display: block; margin-top: .7rem; font-weight: 650; line-height: 1.3; }
+.shelf span { display: block; margin-top: .15rem; color: var(--t2); font-size: .9rem; line-height: 1.35; }
+
+/* The strip that stays on top while the parts scroll by: where you are, and
+   how far, drawn as the application's seek bar. */
+.parts { margin-top: clamp(3.5rem, 8vw, 6rem); }
+.strip {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--side);
+  border-top: 1px solid var(--line);
+}
+.strip-in {
+  width: min(100%, var(--measure) + 2.5rem);
+  margin-inline: auto;
+  padding: 0 .65rem;
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.strip-in::-webkit-scrollbar { display: none; }
+.strip a {
+  flex: none;
+  padding: .72rem .6rem .62rem;
+  color: var(--t2);
+  font-size: .93rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.strip a:hover { color: var(--t1); }
+.strip a:focus-visible { outline-offset: -3px; }
+.strip a:last-child { margin-left: auto; padding-left: 1.5rem; color: var(--t1); font-weight: 600; }
+.seek { height: 1px; background: var(--line); }
+@supports (animation-timeline: scroll()) {
+  .seek {
+    position: relative;
+    height: 5px;
+    background: repeating-linear-gradient(90deg, var(--line2) 0 3px, transparent 3px 6px);
+  }
+  .seek::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(90deg, var(--accent-mark) 0 3px, transparent 3px 6px);
+    clip-path: inset(0 100% 0 0);
+    animation: seek linear both;
+    animation-timeline: scroll(root block);
+  }
+}
+@keyframes seek { to { clip-path: inset(0 0 0 0); } }
+/* The part being read is marked as the playing track is: in the accent. Each
+   part's timeline is cut down to a thin band of the window, so one part at a
+   time is "in view". */
+@supports (animation-timeline: view()) and (timeline-scope: --a) {
+  .parts {
+    timeline-scope: --formats, --playback, --output, --sound, --library, --browse, --search,
+      --playlists, --files, --desktop, --cli, --offline, --get;
+  }
+  .part { view-timeline-inset: 30% 69%; }
+  #formats { view-timeline-name: --formats; }
+  #playback { view-timeline-name: --playback; }
+  #output { view-timeline-name: --output; }
+  #sound { view-timeline-name: --sound; }
+  #library { view-timeline-name: --library; }
+  #browse { view-timeline-name: --browse; }
+  #search { view-timeline-name: --search; }
+  #playlists { view-timeline-name: --playlists; }
+  #files { view-timeline-name: --files; }
+  #desktop { view-timeline-name: --desktop; }
+  #cli { view-timeline-name: --cli; }
+  #offline { view-timeline-name: --offline; }
+  #get { view-timeline-name: --get; }
+  .strip a { animation: here linear; }
+  .strip a[href="#formats"] { animation-timeline: --formats; }
+  .strip a[href="#playback"] { animation-timeline: --playback; }
+  .strip a[href="#output"] { animation-timeline: --output; }
+  .strip a[href="#sound"] { animation-timeline: --sound; }
+  .strip a[href="#library"] { animation-timeline: --library; }
+  .strip a[href="#browse"] { animation-timeline: --browse; }
+  .strip a[href="#search"] { animation-timeline: --search; }
+  .strip a[href="#playlists"] { animation-timeline: --playlists; }
+  .strip a[href="#files"] { animation-timeline: --files; }
+  .strip a[href="#desktop"] { animation-timeline: --desktop; }
+  .strip a[href="#cli"] { animation-timeline: --cli; }
+  .strip a[href="#offline"] { animation-timeline: --offline; }
+  .strip a[href="#get"] { animation-timeline: --get; }
+}
+@keyframes here { from, to { color: var(--accent-text); } }
+
+/* A part: its cover, what it is, its pictures, its points. */
+.part { padding-top: clamp(4rem, 9vw, 7.5rem); }
+.part-head {
+  display: grid;
+  grid-template-columns: clamp(3.5rem, 8vw, 6rem) minmax(0, 1fr);
+  gap: clamp(1rem, 2.5vw, 2rem);
+  align-items: start;
+}
+.part-head.plain { grid-template-columns: minmax(0, 1fr); }
+.part-head p { margin: .9rem 0 0; max-width: 62ch; color: var(--t2); font-size: 1.15rem; line-height: 1.5; }
+.part h3 { margin: 0 0 .6rem; font-size: 1.05rem; font-weight: 650; }
+.note { margin: 1.25rem 0 0; max-width: 72ch; color: var(--t2); font-size: .93rem; line-height: 1.55; }
+.say { margin: clamp(2rem, 4.5vw, 3rem) 0 0; max-width: 64ch; }
+/* A language's name stays in one piece. */
+span[lang] { white-space: nowrap; }
+.say + .viewer { margin-top: 1.25rem; }
+
+.points {
+  margin: clamp(2rem, 4.5vw, 3rem) 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
+  gap: 0 2.5rem;
+}
+.points.narrow { margin-top: 0; grid-template-columns: minmax(0, 1fr); }
+.points div { padding: .95rem 0 1.15rem; border-top: 1px solid var(--line); }
+.points dt { font-weight: 650; line-height: 1.35; }
+.points dd { margin: .3rem 0 0; color: var(--t2); font-size: .97rem; line-height: 1.55; }
+.points dd code { font-size: .86em; }
+
+/* The formats, set large: the list is the picture. */
+.formats {
+  margin: clamp(2rem, 4.5vw, 3rem) 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  gap: 0 2.5rem;
+}
+.formats div { padding: .9rem 0 1.25rem; border-top: 1px solid var(--line); }
+.formats dt { color: var(--t2); font-size: .93rem; }
+.formats dd {
+  margin: .3rem 0 0;
+  font: 600 clamp(1.15rem, 1.9vw, 1.42rem)/1.4 var(--mono);
+  letter-spacing: -.02em;
+  word-spacing: .12em;
+}
+.formats small {
+  display: block;
+  margin-top: .45rem;
+  color: var(--t2);
+  font: 400 .93rem/1.5 var(--sans);
+  letter-spacing: 0;
+  word-spacing: 0;
+}
+
+/* A set of pictures with a button for each, as the application's segmented
+   controls. Without :has() every picture is shown, one under the other. */
+.viewer { margin-top: clamp(2rem, 4.5vw, 3rem); }
+.seg {
+  margin: 0 0 1.5rem;
+  padding: 3px;
+  min-inline-size: 0;
+  max-width: 100%;
+  display: none;
+  flex-wrap: wrap;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--side);
+}
+.seg label { position: relative; cursor: pointer; }
+.seg input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.seg span {
+  display: block;
+  padding: .3rem .78rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--t2);
+  font-size: .92rem;
+  line-height: 1.4;
+}
+.seg label:hover span { color: var(--t1); }
+.seg input:checked + span { background: var(--pane); border-color: var(--line2); color: var(--t1); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent-mark); outline-offset: 1px; }
+.stage figure { margin: 0 0 2.5rem; }
+figure { margin: 0; }
+figcaption { margin-top: 1.1rem; max-width: 70ch; color: var(--t2); font-size: .95rem; line-height: 1.55; }
+@supports selector(:has(*)) {
+  .seg { display: inline-flex; }
+  .stage figure { display: none; margin-bottom: 0; }
+  .viewer:has(label:nth-of-type(1) input:checked) figure:nth-of-type(1),
+  .viewer:has(label:nth-of-type(2) input:checked) figure:nth-of-type(2),
+  .viewer:has(label:nth-of-type(3) input:checked) figure:nth-of-type(3),
+  .viewer:has(label:nth-of-type(4) input:checked) figure:nth-of-type(4),
+  .viewer:has(label:nth-of-type(5) input:checked) figure:nth-of-type(5),
+  .viewer:has(label:nth-of-type(6) input:checked) figure:nth-of-type(6),
+  .viewer:has(label:nth-of-type(7) input:checked) figure:nth-of-type(7),
+  .viewer:has(label:nth-of-type(8) input:checked) figure:nth-of-type(8),
+  .viewer:has(label:nth-of-type(9) input:checked) figure:nth-of-type(9),
+  .viewer:has(label:nth-of-type(10) input:checked) figure:nth-of-type(10) { display: block; }
+}
+
+/* Text beside a tall picture. */
+.beside {
+  margin-top: clamp(2rem, 4.5vw, 3rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
+  gap: 2.5rem clamp(2rem, 6vw, 5rem);
+  align-items: start;
+}
+.beside .points.narrow { grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr)); }
+.pop { position: sticky; top: 5rem; }
+
+/* Tables: the measurements, the queries, the files of a release. */
+.table { margin-top: clamp(2rem, 4.5vw, 3rem); overflow-x: auto; scrollbar-width: thin; }
+table { width: 100%; border-collapse: collapse; font-size: .97rem; }
+caption { padding-bottom: .6rem; text-align: left; font-weight: 650; font-size: 1.05rem; }
+th, td { padding: .62rem 1.5rem .62rem 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+thead th { border-bottom-color: var(--line2); color: var(--t2); font-size: .88rem; font-weight: 500; }
+tbody th { font-weight: 400; }
+th:last-child, td:last-child { padding-right: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.measured td { font-weight: 600; }
+.measured, .queries { max-width: 54rem; }
+.queries code { white-space: nowrap; font-size: .93em; }
+.queries td:first-child { width: 1%; }
+
+/* Light and dark in one picture, and the four accents. */
+.split { margin-top: clamp(2rem, 4.5vw, 3rem); }
+.split-pair { position: relative; }
+.split-pair img { display: block; width: 100%; }
+.split-over { position: absolute; inset: 0; clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%); }
+.accents {
+  margin-top: 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: 1.5rem;
+}
+.accents img { width: 100%; border-radius: 8px; }
+.accents figcaption { margin-top: .6rem; }
+
+/* Commands, on the always-dark surface of the application's readouts. */
+.terms {
+  margin-top: clamp(2rem, 4.5vw, 3rem);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 2.5rem;
+  align-items: start;
+}
+.term {
+  margin: 0;
+  padding: 1.15rem 1.3rem;
+  overflow-x: auto;
+  border: 1px solid var(--glass-line);
+  border-radius: 10px;
+  background: var(--glass);
+  color: var(--glass-t1);
+  font-size: .86rem;
+  line-height: 1.65;
+  tab-size: 4;
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: #3B3E46 transparent;
+}
+.term code { padding: 0; background: none; font-size: 1em; }
+.term .c { color: var(--glass-t3); }
+
+.pair {
+  margin-top: clamp(2rem, 4.5vw, 3rem);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 2rem 4rem;
+}
+.plain { margin: 0; padding: 0; list-style: none; }
+.plain li { padding: .55rem 0; border-top: 1px solid var(--line); color: var(--t2); }
+
+.get-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 2.5rem 3.5rem;
+  align-items: start;
+}
+.get-grid figure { margin-top: clamp(2rem, 4.5vw, 3rem); }
+.get .table code { white-space: nowrap; }
+.next {
+  margin: 2.5rem 0 0;
+  padding: 1.25rem 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 2rem;
+}
+
+/* The guide and the release notes: the contents beside the text. */
+.doc {
+  width: min(100% - 2.5rem, var(--measure));
+  margin: clamp(1rem, 3vw, 2.5rem) auto 0;
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 46rem);
+  gap: 2rem clamp(2rem, 6vw, 5rem);
+  align-items: start;
+}
+.doc-nav {
+  position: sticky;
+  top: 1.5rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  font-size: .93rem;
+  line-height: 1.4;
+}
+.doc-nav p { margin: 0 0 .6rem; color: var(--t3); }
+.doc-nav ol, .doc-nav ul { margin: 0; padding: 0; list-style: none; }
+.doc-nav li { margin: 0; }
+.doc-nav a { display: block; padding: .3rem 0; color: var(--t2); text-decoration: none; }
+.doc-nav a:hover { color: var(--t1); }
+.doc-page { scroll-padding-top: 1rem; }
+.prose h1 { margin: 0 0 .5rem; font-size: clamp(2rem, 4.4vw, 2.9rem); line-height: 1.08; letter-spacing: -.032em; }
+.prose h2 {
+  margin: 3.5rem 0 .75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  font-size: 1.7rem;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+}
+.prose h3 { margin: 2.2rem 0 .5rem; font-size: 1.22rem; line-height: 1.25; }
+.prose h4 { margin: 1.7rem 0 .4rem; font-size: 1.02rem; }
+.prose h5 { margin: 1.4rem 0 .3rem; font-size: 1rem; }
+.prose p, .prose ul, .prose ol { margin: .75rem 0; }
+.prose ul, .prose ol { padding-left: 1.3rem; }
+.prose li { margin: .35rem 0; }
+.prose li::marker { color: var(--t3); }
+.prose pre {
+  margin: 1rem 0;
+  padding: .95rem 1.15rem;
+  overflow-x: auto;
+  border: 1px solid var(--glass-line);
+  border-radius: 10px;
+  background: var(--glass);
+  color: var(--glass-t1);
+  font-size: .86rem;
+  line-height: 1.6;
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: #3B3E46 transparent;
+}
+.prose pre code { padding: 0; background: none; font-size: 1em; }
+.prose .table { margin: 1rem 0; }
+.prose td, .prose th { padding-right: 1.1rem; }
+.prose thead th { color: var(--t2); }
+.doc-note, .prose .version { color: var(--t2); font-size: .95rem; }
+.when { margin-left: .6rem; color: var(--t2); font-size: .6em; font-weight: 400; letter-spacing: 0; }
+.release h3 { font-size: 1.3rem; }
+
+/* The page for an address that does not exist. */
+.lost { width: min(100% - 2.5rem, var(--measure)); margin: clamp(3rem, 10vw, 8rem) auto 0; }
+.lost h1 { margin: 0; font-size: clamp(2.2rem, 6vw, 4rem); line-height: 1.05; letter-spacing: -.035em; }
+.lost p { max-width: 52ch; color: var(--t2); font-size: 1.15rem; }
+
+@media (max-width: 60rem) {
+  .shelf { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hero-grid, .beside, .doc { grid-template-columns: minmax(0, 1fr); }
+  .pop { position: static; max-width: 25rem; }
+  .doc-nav { position: static; max-height: none; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
+  .doc-nav ol, .doc-nav ul { columns: 2 12rem; column-gap: 2rem; }
+  .facts { max-width: 30rem; }
+}
+@media (max-width: 40rem) {
+  body { font-size: 1rem; }
+  .top nav { gap: .1rem 1.1rem; }
+  .shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem 1rem; }
+  .strip a:last-child { margin-left: 0; padding-left: .6rem; }
+  /* The cover beside the heading, the text below both. */
+  .part-head { align-items: center; }
+  .part-head > div { display: contents; }
+  .part-head p { grid-column: 1 / -1; margin-top: 0; }
+  th, td { padding-right: .9rem; }
+  .queries code, .get .table code { white-space: normal; overflow-wrap: anywhere; }
+  .queries td:first-child { width: auto; }
+}
