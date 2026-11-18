@@ -20,6 +20,7 @@ pub mod lyrics;
 pub mod player;
 mod service;
 pub mod settings;
+pub mod waveforms;
 
 pub use event::{Event, SubscribeOptions};
 pub use service::{LibraryChoice, Service, ServiceConfig, ServiceError};

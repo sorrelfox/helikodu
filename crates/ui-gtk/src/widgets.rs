@@ -11,6 +11,7 @@ pub(crate) mod copies_badge;
 pub(crate) mod cover_art;
 pub(crate) mod empty_state;
 pub(crate) mod eq_graph;
+pub(crate) mod level_meter;
 pub(crate) mod lyric_lines;
 pub(crate) mod now_links;
 pub(crate) mod playing_indicator;
@@ -18,6 +19,7 @@ pub(crate) mod rating_stars;
 pub(crate) mod signal_lamp;
 pub(crate) mod signal_path_chain;
 pub(crate) mod signal_path_list;
+pub(crate) mod spectrum_view;
 pub(crate) mod title_line;
 pub(crate) mod waveform_seek_bar;
 

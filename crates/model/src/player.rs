@@ -8,6 +8,7 @@
 //! about what comes next. The queue, its entries and context, and the play modes,
 //! which the service owns and front ends see.
 
+mod analyzer;
 mod engine_command;
 mod engine_error;
 mod engine_event;
@@ -18,6 +19,10 @@ mod track_flags;
 mod transport_state;
 mod volume;
 
+pub use analyzer::{
+    AnalyzerFrame, ChannelLevel, LEVEL_FLOOR_DB, SPECTRUM_BANDS, SPECTRUM_HIGH_HZ, SPECTRUM_LOW_HZ,
+    amplitude_db, axis_fraction, band_centre_hz, band_edge_hz,
+};
 pub use engine_command::{EngineCommand, LoopRange};
 pub use engine_error::EngineError;
 pub use engine_event::{AudioStreamInfo, EngineEvent, TrackEndReason};

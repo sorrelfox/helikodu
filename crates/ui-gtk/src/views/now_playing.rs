@@ -4,17 +4,20 @@
 //! Now Playing: the full-window view of the playing track. It replaces the
 //! sidebar, the content and the panel; the deck stays below it.
 //!
-//! - A top strip: "Library" (leaves the view), the segments Lyrics and Queue,
-//!   and the window controls.
+//! - A top strip: "Library" (leaves the view), the segments Lyrics, Queue and
+//!   Analyzer, and the window controls.
 //! - On a dark ground tinted with the cover's colour: the cover, the title,
 //!   the artist, "Album · Year · Track n", the rating and the play count; at
-//!   the right the synced lyrics with their times (a click seeks), or the
-//!   queue.
+//!   the right the synced lyrics with their times (a click seeks), the queue,
+//!   or the analyzer: the spectrum and the level of each channel of what the
+//!   device is given.
 //! - The signal strip: the lamp and its state, the SignalPathChain, and the
 //!   buffer and underrun counters.
 //!
 //! The view draws only when something changes: a new line glides into the
-//! middle while playing, nothing moves while paused.
+//! middle while playing, nothing moves while paused. The analyzer's
+//! measurements are asked for only while its page is on screen, and they come
+//! only while sound is played.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -23,17 +26,19 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, graphene, gsk};
 
-use crate::backend::{Backend, PlaybackState, PlayerRequest, SignalState, TrackRow};
+use crate::backend::{Backend, PlaybackState, PlayerRequest, SignalState, TrackRow, Update};
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
 use crate::models::lyrics::{LyricsChange, LyricsModel};
 use crate::playback::{Change, Playback, PlayerView};
 use crate::style::color::Rgba;
+use crate::widgets::level_meter::LevelMeter;
 use crate::widgets::lyric_lines::{LinesStyle, LyricLines};
 use crate::widgets::now_links::NowLinks;
 use crate::widgets::signal_path_chain::SignalPathChain;
 use crate::widgets::signal_path_list::state_label;
+use crate::widgets::spectrum_view::SpectrumView;
 use crate::widgets::{CoverArt, RatingStars, SignalLamp, label};
 use crate::window::panel::lyrics::{offset_text, source_text};
 
@@ -155,7 +160,10 @@ pub(crate) struct NowPlayingView {
     plays: gtk::Label,
     segment_lyrics: gtk::ToggleButton,
     segment_queue: gtk::ToggleButton,
+    segment_analyzer: gtk::ToggleButton,
     pages: gtk::Stack,
+    spectrum: SpectrumView,
+    meter: LevelMeter,
     lines: Rc<LyricLines>,
     note: gtk::Label,
     queue: gtk::ListBox,
@@ -225,8 +233,11 @@ impl NowPlayingView {
         segment_lyrics.set_active(true);
         let segment_queue = segment(&tr("Queue"));
         segment_queue.set_group(Some(&segment_lyrics));
+        let segment_analyzer = segment(&tr("Analyzer"));
+        segment_analyzer.set_group(Some(&segment_lyrics));
         segments.append(&segment_lyrics);
         segments.append(&segment_queue);
+        segments.append(&segment_analyzer);
         strip.append(&segments);
         let controls = gtk::WindowControls::new(gtk::PackType::End);
         controls.set_valign(gtk::Align::Center);
@@ -311,6 +322,8 @@ impl NowPlayingView {
         queue_scroller.set_hscrollbar_policy(gtk::PolicyType::Never);
         queue_scroller.set_child(Some(&queue));
         pages.add_named(&queue_scroller, Some("queue"));
+        let (analyzer_page, spectrum, meter) = analyzer_page();
+        pages.add_named(&analyzer_page, Some("analyzer"));
         body.append(&pages);
         content.append(&body);
 
@@ -372,7 +385,10 @@ impl NowPlayingView {
             plays,
             segment_lyrics,
             segment_queue,
+            segment_analyzer,
             pages,
+            spectrum,
+            meter,
             lines,
             note,
             queue,
@@ -389,7 +405,11 @@ impl NowPlayingView {
             side: Cell::new(COVER_MAX),
         });
 
-        for button in [&view.segment_lyrics, &view.segment_queue] {
+        for button in [
+            &view.segment_lyrics,
+            &view.segment_queue,
+            &view.segment_analyzer,
+        ] {
             let weak = Rc::downgrade(&view);
             button.connect_toggled(move |button| {
                 if let Some(view) = weak.upgrade()
@@ -413,6 +433,20 @@ impl NowPlayingView {
                 glib::idle_add_local_once(move || cover.set_shape(side, 10.0));
             }
         }));
+        // The measurements are asked for while the analyzer is on screen.
+        let b = backend.clone();
+        analyzer_page.connect_map(move |_| {
+            let reduced = crate::style::current().reduced_motion;
+            b.follow_analyzer(Some(if reduced { 10 } else { 30 }));
+        });
+        let b = backend.clone();
+        analyzer_page.connect_unmap(move |_| b.follow_analyzer(None));
+        let weak = Rc::downgrade(&view);
+        playback.connect_event(move |update| {
+            if let (Some(view), Update::Analyzer(frame)) = (weak.upgrade(), update) {
+                view.show_analyzer(frame);
+            }
+        });
         let weak = Rc::downgrade(&view);
         playback.connect(move |player, change| {
             if let Some(view) = weak.upgrade() {
@@ -471,6 +505,8 @@ impl NowPlayingView {
     fn show_page(&self) {
         if self.segment_queue.is_active() {
             self.pages.set_visible_child_name("queue");
+        } else if self.segment_analyzer.is_active() {
+            self.pages.set_visible_child_name("analyzer");
         } else {
             self.show_lyrics();
         }
@@ -479,7 +515,7 @@ impl NowPlayingView {
     fn show_lyrics(&self) {
         let lyrics = self.lyrics.lyrics();
         self.lines.set_lyrics(lyrics.as_deref(), self.lyrics.line());
-        if self.segment_queue.is_active() {
+        if self.segment_queue.is_active() || self.segment_analyzer.is_active() {
             return;
         }
         self.pages.set_visible_child_name(match &lyrics {
@@ -629,10 +665,61 @@ impl NowPlayingView {
         texts
     }
 
+    /// Shows a measurement of the analyzer, while its page is on screen.
+    fn show_analyzer(&self, frame: &crate::backend::AnalyzerFrame) {
+        if self.spectrum.is_mapped() {
+            self.spectrum.show(frame);
+            self.meter.show(frame);
+        }
+    }
+
+    /// The segment that shows the analyzer, the spectrum and the meter, for
+    /// tests.
+    pub(crate) fn analyzer(&self) -> (&gtk::ToggleButton, &SpectrumView, &LevelMeter) {
+        (&self.segment_analyzer, &self.spectrum, &self.meter)
+    }
+
     /// The lyrics lines, for tests.
     pub(crate) fn lines(&self) -> &Rc<LyricLines> {
         &self.lines
     }
+}
+
+/// The analyzer's page: the spectrum and the channel levels, each under a
+/// section label with its measure at the right, and where the sound is
+/// measured.
+fn analyzer_page() -> (gtk::Box, SpectrumView, LevelMeter) {
+    let page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    page.add_css_class("hk-np-analyzer");
+    page.set_valign(gtk::Align::Center);
+    let header = |title: &str, measure: &str| {
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        row.add_css_class("hk-np-analyzer-head");
+        let title = label(title, &["hk-section-label"]);
+        title.set_hexpand(true);
+        row.append(&title);
+        let measure = label(measure, &["hk-mono", "hk-np-analyzer-measure"]);
+        measure.set_xalign(1.0);
+        row.append(&measure);
+        row
+    };
+    page.append(&header(
+        &tr("Spectrum"),
+        &tr("1/6 OCTAVE · PEAK HOLD 1.5 s"),
+    ));
+    let spectrum = SpectrumView::default();
+    page.append(&spectrum);
+    let level = header(&tr("Level"), &tr("RMS 300 ms · dBFS"));
+    level.add_css_class("hk-np-analyzer-level");
+    page.append(&level);
+    let meter = LevelMeter::default();
+    page.append(&meter);
+    let note = label(
+        &tr("Measured after the last processing stage, before the device"),
+        &["hk-mono", "hk-np-analyzer-note"],
+    );
+    page.append(&note);
+    (page, spectrum, meter)
 }
 
 /// A row of the queue in Now Playing: number or position, title and artist,

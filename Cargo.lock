@@ -1224,6 +1224,7 @@ dependencies = [
  "helikodu-testkit",
  "jack",
  "pipewire",
+ "realfft",
  "rtrb",
  "rubato",
  "serde",

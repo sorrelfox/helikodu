@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use helikodu_model::audio::{AudioSpec, OutputBackendKind};
 
 use super::convert::Encoder;
-use super::ring::{SampleReader, StreamShared, ring};
+use super::ring::{SampleReader, StreamShared, ring_tapped};
 use super::{OpenedStream, OutputError, OutputStream, StreamConfig, StreamState, StreamTiming};
 
 /// The length of one period of a software sink.
@@ -73,7 +73,7 @@ impl SoftwareStream {
                 device: config.device.clone(),
                 reason: format!("{} cannot be written", spec.format),
             })?;
-        let (writer, reader, shared) = ring(spec, config.buffer);
+        let (writer, reader, shared) = ring_tapped(spec, config.buffer, config.tap.as_ref());
         let worker = Worker {
             reader,
             shared: shared.clone(),

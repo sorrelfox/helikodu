@@ -614,7 +614,11 @@ impl Services for ServiceServices {
         let dirs = self.service.dirs();
         StorageUsage {
             covers: folder_size(&dirs.cache.join("thumbnails")),
-            analysis: None,
+            analysis: folder_size(
+                &dirs
+                    .cache
+                    .join(helikodu_service::waveforms::WAVEFORM_FOLDER),
+            ),
             logs: None,
             undo: None,
         }

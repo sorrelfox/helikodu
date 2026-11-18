@@ -14,6 +14,7 @@ use crate::library::LibraryEvent;
 use crate::lyrics::LyricsEvent;
 use crate::player::PlayerEvent;
 use crate::settings::SettingsEvent;
+use crate::waveforms::WaveformEvent;
 
 /// Everything the service announces.
 #[derive(Debug, Clone, PartialEq)]
@@ -28,6 +29,9 @@ pub enum Event {
     /// From the lyrics service (with the player's events: they follow the
     /// playing track).
     Lyrics(LyricsEvent),
+    /// From the waveform service (with the player's events: they follow the
+    /// queue).
+    Waveform(WaveformEvent),
 }
 
 /// What a subscriber wants: which kinds of events, how often positions, and how it
@@ -92,7 +96,7 @@ impl SubscribeOptions {
             Event::Player(_) => self.player,
             Event::Settings(_) => self.settings,
             Event::Library(_) => self.library,
-            Event::Lyrics(_) => self.player,
+            Event::Lyrics(_) | Event::Waveform(_) => self.player,
         }
     }
 }

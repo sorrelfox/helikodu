@@ -37,7 +37,7 @@ use helikodu_model::audio::{AudioSpec, DeviceInfo, Endianness, OutputBackendKind
 
 use self::connection::{Command, DeviceTable, OpenRequest};
 use self::stream::PipeWireStream;
-use super::ring::ring;
+use super::ring::ring_tapped;
 use super::{EventSender, OpenedStream, OutputBackend, OutputError, StreamConfig};
 
 const KIND: OutputBackendKind = OutputBackendKind::PipeWire;
@@ -175,7 +175,7 @@ impl OutputBackend for PipeWireBackend {
             format: SampleFormat::F32(Endianness::NATIVE),
             ..config.spec
         };
-        let (writer, reader, shared) = ring(spec, config.buffer);
+        let (writer, reader, shared) = ring_tapped(spec, config.buffer, config.tap.as_ref());
         let id = self.next_stream.fetch_add(1, Ordering::Relaxed);
         let request = OpenRequest {
             config: config.clone(),

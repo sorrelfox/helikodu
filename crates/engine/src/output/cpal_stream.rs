@@ -19,7 +19,7 @@ use helikodu_model::audio::{
 };
 
 use super::convert::Encoder;
-use super::ring::{SampleReader, StreamShared, ring};
+use super::ring::{SampleReader, StreamShared, ring_tapped};
 use super::{
     EventSender, OpenedStream, OutputError, OutputEvent, OutputStream, StreamConfig, StreamState,
     StreamTiming,
@@ -74,7 +74,7 @@ pub(super) fn build(request: Build<'_>) -> Result<(CpalStream, super::SampleWrit
         .ok_or_else(|| failed(format!("cannot write {} through cpal", spec.format)))?;
     let encoder = Encoder::new(spec.format, channels)
         .ok_or_else(|| failed(format!("cannot write {}", spec.format)))?;
-    let (writer, reader, shared) = ring(spec, config.buffer);
+    let (writer, reader, shared) = ring_tapped(spec, config.buffer, config.tap.as_ref());
     let stream_config = cpal::StreamConfig {
         channels: spec.channel_count(),
         sample_rate: spec.rate.hz(),

@@ -1286,6 +1286,34 @@ impl FakePlayer {
 }
 
 impl PlayerControl for FakePlayer {
+    /// While playing, one measurement shaped like music; nothing moves after it
+    /// until another comes (tests send them through the updates).
+    fn follow_analyzer(&self, per_second: Option<u32>) {
+        if per_second.is_none() || self.state.borrow().state != PlaybackState::Playing {
+            return;
+        }
+        let bands = (0..helikodu_model::player::SPECTRUM_BANDS)
+            .map(|i| -14.0 - i as f32 * 0.7 - (i as f32 * 1.3).sin().abs() * 9.0)
+            .collect();
+        use helikodu_model::audio::ChannelPosition;
+        let channels = [
+            (ChannelPosition::FrontLeft, -14.2, -3.1),
+            (ChannelPosition::FrontRight, -15.3, -3.9),
+        ]
+        .into_iter()
+        .map(|(position, rms_db, peak_db)| super::ChannelLevel {
+            position,
+            rms_db,
+            peak_db,
+        })
+        .collect();
+        self.emit(Update::Analyzer(Arc::new(super::AnalyzerFrame {
+            bands,
+            channels,
+            live: true,
+        })));
+    }
+
     fn send(&self, request: PlayerRequest) {
         match request {
             PlayerRequest::PlayAlbum { album, start, .. } => {

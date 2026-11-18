@@ -26,6 +26,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Audiobooks: the album page of an audiobook lists its chapters with where each starts and which have been heard, shows how much is left, continues where you stopped and can start again. Audiobooks are left out of shuffle and of **Play all** in other views. The kind of an album (music, audiobook, audio from a video) can be changed on its page and survives rescans.
 - Chapters: while a chapter plays, the deck shows its number and title, and the seek bar covers the whole file with a gap at each chapter boundary.
 - Folders outside the library: the Folders view also shows the home folder, connected drives and the file system, plays from them without storing anything, and adds a folder to the library with **Add to library**.
+- Waveform seek bar: the bars of the seek bar follow the loudness of the track. Peaks are computed in the background for the playing track, the next few in the queue and the last played, never while the library is scanned, and kept within the **Analysis data** limit (Settings ▸ Library ▸ Storage), oldest first.
+- Analyzer in Now Playing: a spectrum with peak hold and an RMS and peak meter for each channel ("CLIP" at full scale), measured after the last processing stage. It moves only while sound plays and the page is shown.
 
 ### Changed
 

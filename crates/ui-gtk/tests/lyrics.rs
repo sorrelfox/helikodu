@@ -4,7 +4,8 @@
 //! The Lyrics tab of the panel and Now Playing against the sample backend:
 //! synced lines that follow the position and seek when activated, plain
 //! lyrics, the empty state, Now Playing opening and closing, and no frames
-//! drawn while nothing changes.
+//! drawn while nothing changes; the analyzer, which moves only while sound
+//! comes, and the waveform of the seek bar.
 //!
 //! Like `widgets.rs`, this program has its own main function and runs only
 //! under the headless compositor script; names on the command line pick tests:
@@ -29,7 +30,10 @@ use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use helikodu_ui_gtk::backend::{Backend, PlayerRequest, sample};
+use helikodu_model::audio::ChannelPosition;
+use helikodu_ui_gtk::backend::{
+    AnalyzerFrame, Backend, ChannelLevel, PlayerRequest, Update, sample,
+};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice, set_choice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display, snapshot};
 
@@ -178,6 +182,131 @@ fn nothing_is_drawn_while_paused(app: &gtk::Application) {
     window.close();
 }
 
+/// A measurement of the analyzer: every band at `band` dB, both channels at
+/// `rms` with peaks at `peak`.
+fn frame(band: f32, rms: f32, peak: f32, live: bool) -> Update {
+    let channel = |position| ChannelLevel {
+        position,
+        rms_db: rms,
+        peak_db: peak,
+    };
+    Update::Analyzer(std::sync::Arc::new(AnalyzerFrame {
+        bands: vec![band; 48],
+        channels: vec![
+            channel(ChannelPosition::FrontLeft),
+            channel(ChannelPosition::FrontRight),
+        ],
+        live,
+    }))
+}
+
+/// Counts the frames the window draws in `ms` milliseconds.
+fn frames_in(window: &MainWindow, ms: u64) -> u32 {
+    let frames = Rc::new(Cell::new(0u32));
+    let clock = window.frame_clock().expect("a frame clock");
+    let f = frames.clone();
+    let id = clock.connect_after_paint(move |_| f.set(f.get() + 1));
+    spin(ms);
+    clock.disconnect(id);
+    frames.get()
+}
+
+/// The analyzer shows what it is sent while its page is on screen: bars and
+/// peak lines, the channel levels, "CLIP" at full scale. After the sound
+/// stops the bars fall back, the peak lines follow after their hold, and then
+/// nothing is drawn.
+fn analyzer_moves_only_while_sound_comes(app: &gtk::Application) {
+    let (backend, updates) = sample::backend_with_updates(&sample::SampleOptions {
+        playing: Some((0, 2, 102)),
+        ..sample::SampleOptions::default()
+    });
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    window.set_default_size(1440, 900);
+    window.present();
+    spin(150);
+    WidgetExt::activate_action(&window, "win.now-playing", None).unwrap();
+    // Not on screen: what comes is not shown.
+    updates.try_send(frame(-10.0, -12.0, -3.0, true)).unwrap();
+    spin(100);
+    let rest = |levels: &[(f32, f32)]| {
+        levels
+            .iter()
+            .all(|&(bar, peak)| bar <= -60.0 && peak <= -60.0)
+    };
+    assert!(rest(&window.now_playing_spectrum()));
+
+    // On screen, the sample player sends one measurement at once.
+    window.show_now_playing_analyzer();
+    wait_for("the first measurement", 2, || {
+        !rest(&window.now_playing_spectrum())
+    });
+    let rows = window.now_playing_levels();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(
+        rows[0],
+        ("\u{2212}14.2".to_owned(), "PEAK \u{2212}3.1 dB".to_owned())
+    );
+
+    updates.try_send(frame(-6.0, -9.0, 0.0, true)).unwrap();
+    spin(50);
+    let (bars, rows) = (window.now_playing_spectrum(), window.now_playing_levels());
+    let moving = window.now_playing_analyzer_moving();
+    assert!(
+        bars.iter().all(|&(bar, peak)| bar == -6.0 && peak == -6.0),
+        "{bars:?}"
+    );
+    assert_eq!(rows[1].1, "CLIP");
+    assert!(moving);
+
+    // The sound stops: everything comes to rest, then no frame is drawn.
+    updates.try_send(frame(-96.0, -96.0, -96.0, false)).unwrap();
+    spin(300);
+    let bars = window.now_playing_spectrum();
+    assert!(
+        bars[0].0 < -6.0 && bars[0].0 > -60.0,
+        "falls back: {:?}",
+        bars[0]
+    );
+    assert_eq!(bars[0].1, -6.0, "the peak line holds");
+    wait_for("the analyzer to rest", 6, || {
+        !window.now_playing_analyzer_moving()
+    });
+    let (bars, rows) = (window.now_playing_spectrum(), window.now_playing_levels());
+    assert!(rest(&bars));
+    assert_eq!(rows[0].0, "\u{2212}\u{221e}");
+    assert_eq!(frames_in(&window, 800), 0, "frames drawn while at rest");
+
+    // Leaving the view forgets what it showed, and nothing more is shown.
+    WidgetExt::activate_action(&window, "win.now-playing", None).unwrap();
+    updates.try_send(frame(-10.0, -12.0, -3.0, true)).unwrap();
+    spin(100);
+    assert!(rest(&window.now_playing_spectrum()));
+    window.close();
+}
+
+/// The seek bar draws the waveform of the playing track once it has one, and
+/// the flat band again when nothing plays.
+fn seek_bar_waveform(app: &gtk::Application) {
+    let (backend, updates) = sample::backend_with_updates(&sample::SampleOptions {
+        playing: Some((0, 2, 102)),
+        ..sample::SampleOptions::default()
+    });
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    window.present();
+    spin(150);
+    assert!(!window.deck_has_waveform());
+    let peaks: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
+    updates
+        .try_send(Update::Waveform(Some(std::sync::Arc::from(peaks))))
+        .unwrap();
+    wait_for("the waveform", 2, || window.deck_has_waveform());
+    updates.try_send(Update::NowPlaying(None)).unwrap();
+    wait_for("the flat band", 2, || !window.deck_has_waveform());
+    window.close();
+}
+
 /// Writes the tab and the view, dark and light, when asked to.
 /// The deck's artist and album links open their pages, the title opens the
 /// album at the playing track, and right click on the title opens the
@@ -251,6 +380,10 @@ fn screenshots(app: &gtk::Application) {
     WidgetExt::activate_action(&window, "win.now-playing", None).unwrap();
     shot("lyrics-none-light");
     set_choice(SchemeChoice::Dark, AccentChoice::Amber);
+    backend.send(PlayerRequest::Previous);
+    WidgetExt::activate_action(&window, "win.now-playing", None).unwrap();
+    window.show_now_playing_analyzer();
+    shot("now-playing-analyzer-dark");
     window.close();
 }
 
@@ -265,6 +398,11 @@ const TESTS: &[Test] = &[
         nothing_is_drawn_while_paused,
     ),
     ("deck_links_navigate", deck_links_navigate),
+    (
+        "analyzer_moves_only_while_sound_comes",
+        analyzer_moves_only_while_sound_comes,
+    ),
+    ("seek_bar_waveform", seek_bar_waveform),
     ("screenshots", screenshots),
 ];
 

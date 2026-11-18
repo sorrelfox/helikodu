@@ -12,6 +12,14 @@ The bar at the bottom of the window is the player deck. It shows the cover, titl
 
 Tracks of the same format follow each other without a gap, so live albums and DJ mixes play as they were recorded.
 
+## The waveform
+
+The bars of the seek bar show how loud each part of the track is. Helikodu works them out in the background for the playing track, the next few tracks in the queue and the last ones played; until then, and while your library is being scanned, the seek bar is a flat band. The waveforms are kept in the cache folder within the **Analysis data** limit under **Storage** in the **Library** settings; at the limit, the waveforms used longest ago are removed first.
+
+## The analyzer
+
+In Now Playing (**F11**, or click the cover in the deck), **Analyzer** shows the spectrum of the sound, with a line over each bar that holds its recent peak, and a meter for each channel: the RMS level over the last 300 ms, a line at the peak, and **CLIP** for two seconds when a peak reaches full scale. The sound is measured after the last processing stage, just before it goes to the device, so the volume and any DSP are included. The analyzer moves only while sound plays and the page is shown; with reduced motion it updates less often and the peak lines do not fall.
+
 ## Crossfades and fades
 
 Under **Crossfade** in the **Playback** settings, tracks can blend into each other: **between tracks** sets how long the end of one track overlaps the start of the next, and **when you skip** does the same when you skip to another track. Both are **Off** by default. Tracks that follow each other on one album still join without a gap, and so does bit-perfect playback in exclusive mode.

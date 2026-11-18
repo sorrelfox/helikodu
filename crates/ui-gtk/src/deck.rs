@@ -436,6 +436,10 @@ impl Deck {
         match change {
             Change::Position => self.show_times(view),
             Change::State | Change::Track => {
+                // Nothing plays: the flat band of the idle deck.
+                if view.now.is_none() {
+                    imp.seek_bar.set_peaks(None);
+                }
                 let playing = view.state == PlaybackState::Playing;
                 imp.play.set_icon_name(if playing {
                     "media-playback-pause-symbolic"
@@ -519,6 +523,7 @@ impl Deck {
             Change::Modes => self.show_modes(view),
             Change::Loop => self.show_loop(view),
             Change::Sleep => self.show_sleep(view),
+            Change::Waveform => imp.seek_bar.set_peaks(view.waveform.as_deref()),
             Change::Queue | Change::Stats | Change::Cursor => {}
         }
     }
@@ -538,6 +543,11 @@ impl Deck {
     }
 
     /// The output button's device and signal text.
+    /// Whether the seek bar draws a waveform rather than the flat band.
+    pub(crate) fn has_waveform(&self) -> bool {
+        self.imp().seek_bar.has_peaks()
+    }
+
     pub(crate) fn output_text(&self) -> (String, String) {
         let imp = self.imp();
         (imp.device.text().into(), imp.signal.text().into())

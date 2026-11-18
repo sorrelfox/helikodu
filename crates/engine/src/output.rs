@@ -59,6 +59,7 @@ mod reservation;
 mod ring;
 mod software_sink;
 mod stream_status;
+mod tap;
 mod wav;
 
 use std::fmt;
@@ -88,6 +89,7 @@ pub use self::reservation::{
 pub use self::ring::SampleWriter;
 pub use self::software_sink::Pacing;
 pub use self::stream_status::{StreamState, StreamTiming};
+pub use self::tap::{AudioTap, TapFormat};
 pub use self::wav::WavBackend;
 
 /// A way of sending audio to devices: lists the devices and opens streams on them.
@@ -180,6 +182,9 @@ pub struct StreamConfig {
     /// have one. PipeWire's session manager restores a stored volume per
     /// application; this value replaces it.
     pub volume: Option<f32>,
+    /// Where the device side copies what it gives the device, for the analyzer;
+    /// `None` copies nothing.
+    pub tap: Option<AudioTap>,
 }
 
 impl StreamConfig {
@@ -196,6 +201,7 @@ impl StreamConfig {
             request_rate: true,
             buffer: Self::DEFAULT_BUFFER,
             volume: None,
+            tap: None,
         }
     }
 }

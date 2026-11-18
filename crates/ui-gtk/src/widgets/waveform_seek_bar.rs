@@ -4,8 +4,9 @@
 //! WaveformSeekBar: the seek bar drawn as a band of bars. Bars before the
 //! position are in the accent fill, the rest in `waveRest` on the dark glass
 //! deck or the stronger line colour on the light one; a bar is either played
-//! or not. Until the library has peaks for a track every bar is
-//! 28 % high (a flat band).
+//! or not. Each bar is as high as the loudest peak of the stretch of the track
+//! it covers; until the track has peaks (they are computed in the background)
+//! every bar is 28 % high (a flat band).
 //!
 //! Click or drag seeks; the arrow keys move by the seek step, Home and End jump
 //! to the ends. A seek is requested on release, and at most ten times a second
@@ -194,6 +195,8 @@ mod imp {
             let accent = colors.played.to_gdk();
             let rest = colors.rest.to_gdk();
             let peaks = self.peaks.borrow();
+            // A file of chapters is drawn whole; its peaks are of one chapter.
+            let flat = peaks.is_empty() || !self.gaps.borrow().is_empty();
             let (a, b) = obj.shown_loop();
             let section = obj.fractions(a, b);
             let outside = colors.outside.to_gdk();
@@ -208,10 +211,10 @@ mod imp {
                 })
                 .collect();
             for i in 0..count {
-                let peak = if peaks.is_empty() {
+                let peak = if flat {
                     FLAT
                 } else {
-                    peaks[i * peaks.len() / count].max(MIN)
+                    bar_peak(&peaks, i, count).max(MIN)
                 };
                 let bar_h = (peak * h).round().max(2.0);
                 // The bars share the whole width, as in the design: the space
@@ -244,6 +247,15 @@ glib::wrapper! {
     pub(crate) struct WaveformSeekBar(ObjectSubclass<imp::WaveformSeekBar>)
         @extends gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
+
+/// The peak of bar `i` of `count`: the largest of the peaks it covers.
+fn bar_peak(peaks: &[f32], i: usize, count: usize) -> f32 {
+    let start = i * peaks.len() / count;
+    let end = ((i + 1) * peaks.len() / count).clamp(start + 1, peaks.len().max(1));
+    peaks
+        .get(start..end)
+        .map_or(0.0, |part| part.iter().fold(0.0f32, |m, &p| m.max(p)))
 }
 
 /// The parts of `rect` outside the horizontal ranges `gaps`.
@@ -296,6 +308,26 @@ impl WaveformSeekBar {
         imp.offset.set(offset);
         imp.gaps.replace(gaps);
         self.queue_draw();
+    }
+
+    /// Draws the bars from `peaks` (0 to 255, from the start of the track to its
+    /// end), or as a flat band without them.
+    pub(crate) fn set_peaks(&self, peaks: Option<&[u8]>) {
+        let peaks: Vec<f32> = peaks
+            .unwrap_or_default()
+            .iter()
+            .map(|&p| f32::from(p) / 255.0)
+            .collect();
+        let imp = self.imp();
+        if *imp.peaks.borrow() != peaks {
+            imp.peaks.replace(peaks);
+            self.queue_draw();
+        }
+    }
+
+    /// Whether the bars follow peaks rather than a flat band, for tests.
+    pub(crate) fn has_peaks(&self) -> bool {
+        !self.imp().peaks.borrow().is_empty()
     }
 
     /// Shows the A-B loop's points, as far as they are set.

@@ -303,6 +303,7 @@ impl Worker {
         let mut config = stream_config(&settings, &source.format());
         config.device = self.selection.device.clone();
         config.mode = settings.mode;
+        config.tap = Some(self.config.tap.clone());
         config
     }
 

@@ -47,6 +47,7 @@
 //!   automatically (see [`session`]).
 
 mod actor;
+mod analyzer;
 mod command;
 mod config;
 mod error;
@@ -71,6 +72,7 @@ use helikodu_model::audio::MediaTime;
 use helikodu_model::player::StopAfter;
 
 use self::actor::{Actor, Input, Startup};
+use self::analyzer::TapUsers;
 use self::listen::Recorder;
 use self::queue::Queue;
 use self::rng::Rng;
@@ -81,6 +83,7 @@ use crate::bus::{EventBus, Subscription};
 use crate::clock::SharedClock;
 use crate::event::{SubscribeOptions, subscribe};
 
+pub use self::analyzer::AnalyzerWatch;
 pub use self::command::{ContextRequest, PlayerCommand};
 pub use self::config::{
     PlayerConfig, PlayerPrefs, ReplayGain, ReplayGainMode, SessionConfig, SinkPacing,
@@ -100,6 +103,7 @@ pub struct Player {
     bus: EventBus<Event>,
     clock: SharedClock,
     shared: Arc<Shared>,
+    tap: TapUsers,
 }
 
 impl Player {
@@ -161,6 +165,8 @@ impl Player {
 
         let mut engine_config = config.engine_config(&startup.selection);
         engine_config.volume = startup.volume;
+        let tap = TapUsers::default();
+        engine_config.tap = tap.tap.clone();
         let registry = DecoderRegistry::with_settings(&config.decoders);
         let (engine, engine_events) =
             Engine::spawn_with_registry(engine_config, registry).map_err(PlayerError::Spawn)?;
@@ -213,6 +219,7 @@ impl Player {
             bus,
             clock: config.clock,
             shared,
+            tap,
         };
         Ok((player, events))
     }
@@ -259,6 +266,34 @@ impl Player {
     /// thread.
     pub fn status(&self) -> PlayerStatus {
         self.shared.status()
+    }
+
+    /// A handle that reads the queue from another thread, as
+    /// [`queue`](Self::queue) does.
+    pub fn queue_reader(&self) -> QueueReader {
+        QueueReader(Arc::clone(&self.shared))
+    }
+
+    /// Measures the sound the device is given (see [`AnalyzerWatch`]) and hands
+    /// `sink` a frame every `interval` while sound arrives, until `sink` returns
+    /// `false` or the watch is dropped. Runs on a thread of its own.
+    pub fn watch_analyzer(
+        &self,
+        interval: std::time::Duration,
+        sink: impl FnMut(helikodu_model::player::AnalyzerFrame) -> bool + Send + 'static,
+    ) -> Result<AnalyzerWatch, PlayerError> {
+        AnalyzerWatch::start(&self.tap, interval, sink).map_err(PlayerError::Spawn)
+    }
+}
+
+/// Reads a player's queue from any thread; see [`Player::queue_reader`].
+#[derive(Debug, Clone)]
+pub struct QueueReader(Arc<Shared>);
+
+impl QueueReader {
+    /// The queue as of the last change.
+    pub fn queue(&self) -> Arc<QueueSnapshot> {
+        self.0.queue()
     }
 }
 

@@ -30,6 +30,7 @@ use rtrb::{Consumer, Producer, RingBuffer};
 
 use super::convert::{Encoder, f32_to_s32, s32_to_f32};
 use super::device_stage::{DeviceAction, DeviceStage};
+use super::tap::{AudioTap, TapFeed};
 use super::{OutputError, StreamState, StreamTiming};
 use crate::pipeline::SharedVolume;
 
@@ -190,9 +191,20 @@ struct Scheduled {
 
 /// Creates a ring buffer of `buffer` length for the negotiated `spec`, and the
 /// state shared by its two ends.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn ring(
     spec: AudioSpec,
     buffer: Duration,
+) -> (SampleWriter, SampleReader, Arc<StreamShared>) {
+    ring_tapped(spec, buffer, None)
+}
+
+/// Like [`ring`], and the device side copies what it hands the device to `tap`
+/// while that is wanted.
+pub(crate) fn ring_tapped(
+    spec: AudioSpec,
+    buffer: Duration,
+    tap: Option<&AudioTap>,
 ) -> (SampleWriter, SampleReader, Arc<StreamShared>) {
     let channels = usize::from(spec.channel_count().max(1));
     let rate = spec.rate;
@@ -233,6 +245,7 @@ pub(crate) fn ring(
         stage: DeviceStage::new(spec, volume),
         taken: 0,
         shared: shared.clone(),
+        tap: tap.map(|tap| tap.feed(spec)),
     };
     (writer, reader, shared)
 }
@@ -405,6 +418,8 @@ pub(crate) struct SampleReader {
     /// The ring position of the next frame: frames delivered plus discarded.
     taken: u64,
     shared: Arc<StreamShared>,
+    /// Where a copy of the delivered frames goes, for the analyzer.
+    tap: Option<TapFeed>,
 }
 
 impl SampleReader {
@@ -509,7 +524,12 @@ impl SampleReader {
             if let Ok(chunk) = self.consumer.read_chunk(block.len()) {
                 let (first, second) = chunk.as_slices();
                 match sink.as_deref_mut() {
-                    Some(sink) if exact => sink.encode_s32(done, first, second),
+                    Some(sink) if exact => {
+                        sink.encode_s32(done, first, second);
+                        if let Some(tap) = &mut self.tap {
+                            tap.push_s32(first, second);
+                        }
+                    }
                     _ => {
                         let (a, b) = block.split_at_mut(first.len());
                         if self.shared.integer {
@@ -528,6 +548,9 @@ impl SampleReader {
                 self.stage.apply(block);
                 if let Some(sink) = sink.as_deref_mut() {
                     sink.encode(done, block);
+                }
+                if let Some(tap) = &mut self.tap {
+                    tap.push(block);
                 }
             }
             self.taken += frames as u64;
@@ -680,6 +703,30 @@ mod tests {
         assert_eq!(timing.frames_written, 7000);
         assert_eq!(timing.frames_delivered, 7000);
         assert_eq!(timing.underruns, 0);
+    }
+
+    #[test]
+    fn the_tap_gets_what_the_device_gets() {
+        let spec = AudioSpec::new(
+            SampleFormat::F32(Endianness::NATIVE),
+            SampleRate::HZ_48000,
+            ChannelLayout::STEREO,
+        );
+        let tap = AudioTap::new();
+        let (mut writer, mut reader, _) = ring_tapped(spec, Duration::from_millis(20), Some(&tap));
+        let mut out = vec![0.0; 8];
+        writer.write(&[0.5; 8]);
+        reader.read(&mut out);
+        let mut copied = Vec::new();
+        tap.drain(&mut copied);
+        assert!(copied.is_empty(), "not copied until wanted");
+        tap.set_wanted(true);
+        writer.write(&[0.1, 0.2, 0.3, 0.4]);
+        reader.read(&mut out);
+        tap.drain(&mut copied);
+        // Only the frames taken from the ring, not the silence after them.
+        assert_eq!(copied, [0.1, 0.2, 0.3, 0.4]);
+        assert_eq!(&out[..4], &copied[..]);
     }
 
     #[test]

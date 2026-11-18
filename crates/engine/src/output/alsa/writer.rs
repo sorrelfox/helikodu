@@ -14,7 +14,7 @@ use helikodu_model::audio::{
 };
 
 use super::super::convert::Encoder;
-use super::super::ring::{SampleReader, StreamShared, ring};
+use super::super::ring::{SampleReader, StreamShared, ring_tapped};
 use super::super::{
     EventSender, OpenedStream, OutputError, OutputEvent, OutputStream, ReservationGuard,
     StreamConfig, StreamState, StreamTiming,
@@ -92,7 +92,7 @@ impl AlsaStream {
         reservation: Option<ReservationGuard>,
     ) -> Result<OpenedStream, OutputError> {
         let spec = negotiated.spec;
-        let (writer, reader, shared) = ring(spec, config.buffer);
+        let (writer, reader, shared) = ring_tapped(spec, config.buffer, config.tap.as_ref());
         let worker = Writer {
             pcm,
             reader,

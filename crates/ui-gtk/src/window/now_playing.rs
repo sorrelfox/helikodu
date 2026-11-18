@@ -220,6 +220,48 @@ impl MainWindow {
             .unwrap_or_default()
     }
 
+    /// Picks the Analyzer segment of Now Playing.
+    #[doc(hidden)]
+    pub fn show_now_playing_analyzer(&self) {
+        if let Some(view) = self.imp().now_playing.borrow().as_ref() {
+            view.analyzer().0.set_active(true);
+        }
+    }
+
+    /// Each bar of the analyzer's spectrum and its peak line, in dB.
+    #[doc(hidden)]
+    pub fn now_playing_spectrum(&self) -> Vec<(f32, f32)> {
+        let view = self.imp().now_playing.borrow();
+        view.as_ref()
+            .map(|view| view.analyzer().1.levels())
+            .unwrap_or_default()
+    }
+
+    /// Each channel's RMS and peak text in the analyzer.
+    #[doc(hidden)]
+    pub fn now_playing_levels(&self) -> Vec<(String, String)> {
+        let view = self.imp().now_playing.borrow();
+        view.as_ref()
+            .map(|view| view.analyzer().2.rows_text())
+            .unwrap_or_default()
+    }
+
+    /// Whether the analyzer still moves (its frame-clock callbacks run).
+    #[doc(hidden)]
+    pub fn now_playing_analyzer_moving(&self) -> bool {
+        let view = self.imp().now_playing.borrow();
+        view.as_ref().is_some_and(|view| {
+            let (_, spectrum, meter) = view.analyzer();
+            spectrum.is_moving() || meter.is_moving()
+        })
+    }
+
+    /// Whether the deck's seek bar draws a waveform.
+    #[doc(hidden)]
+    pub fn deck_has_waveform(&self) -> bool {
+        self.imp().deck.has_waveform()
+    }
+
     /// Shows the panel's Lyrics tab.
     #[doc(hidden)]
     pub fn show_lyrics_tab(&self) {

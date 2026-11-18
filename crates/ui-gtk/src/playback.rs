@@ -42,6 +42,8 @@ pub(crate) struct PlayerView {
     pub(crate) sleep: Option<(SleepTimer, Instant)>,
     /// The queue entry selected for "Continue from the selected track".
     pub(crate) cursor: Option<u64>,
+    /// The waveform peaks of the playing track, while it has them.
+    pub(crate) waveform: Option<std::sync::Arc<[u8]>>,
 }
 
 impl PlayerView {
@@ -77,6 +79,8 @@ pub(crate) enum Change {
     Sleep,
     /// The entry selected in the queue.
     Cursor,
+    /// The waveform peaks of the playing track.
+    Waveform,
 }
 
 type Listener = Box<dyn Fn(&PlayerView, Change)>;
@@ -136,6 +140,7 @@ impl Playback {
             Change::Loop,
             Change::Sleep,
             Change::Cursor,
+            Change::Waveform,
         ] {
             listener(&view, change);
         }
@@ -232,6 +237,10 @@ impl Playback {
                 Update::Cursor(cursor) => {
                     view.cursor = cursor;
                     &[Change::Cursor]
+                }
+                Update::Waveform(peaks) => {
+                    view.waveform = peaks;
+                    &[Change::Waveform]
                 }
                 // The output button follows the path: its lamp and the format
                 // the device was opened with.

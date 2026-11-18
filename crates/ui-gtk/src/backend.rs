@@ -26,6 +26,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 pub use browse::{ChapterRow, MediaKind, YearRange, YearRow};
+pub use helikodu_model::player::{AnalyzerFrame, ChannelLevel};
 pub use helikodu_model::player::{
     PlayModes, PlayScope, RepeatMode, ShuffleMode, StopAfter, TrackFlags,
 };
@@ -1481,6 +1482,12 @@ pub enum Update {
         /// Its flags now.
         flags: TrackFlags,
     },
+    /// The waveform peaks of the playing track (0 to 255), or `None` while it
+    /// has none: the seek bar is then a flat band.
+    Waveform(Option<Arc<[u8]>>),
+    /// A measurement of the analyzer, while one is followed
+    /// ([`Backend::follow_analyzer`]) and sound is played.
+    Analyzer(Arc<AnalyzerFrame>),
 }
 
 /// Takes requests on the main thread.
@@ -1496,6 +1503,10 @@ pub trait PlayerControl: fmt::Debug {
     /// The playlists were changed in the window: desktop integrations that
     /// list them read them again.
     fn playlists_changed(&self) {}
+
+    /// Whether a view shows the analyzer, and how many measurements a second
+    /// it wants; `None` stops them.
+    fn follow_analyzer(&self, _per_second: Option<u32>) {}
 }
 
 /// The front end's handle on the core.
@@ -1620,6 +1631,12 @@ impl Backend {
     /// [`PlayerControl::follow_position`]).
     pub fn follow_position(&self, shown: bool) {
         self.player.follow_position(shown);
+    }
+
+    /// Starts or stops the analyzer's measurements (see
+    /// [`PlayerControl::follow_analyzer`]).
+    pub fn follow_analyzer(&self, per_second: Option<u32>) {
+        self.player.follow_analyzer(per_second);
     }
 
     /// Sends a request to the player past the gate.

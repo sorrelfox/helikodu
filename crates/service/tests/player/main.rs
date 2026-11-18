@@ -8,6 +8,7 @@
 // Tests may unwrap (see clippy.toml); clippy does not count the helpers here as tests.
 #![allow(clippy::unwrap_used)]
 
+mod analyzer;
 mod contexts;
 mod controls;
 mod crash;

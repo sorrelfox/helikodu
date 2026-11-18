@@ -5,6 +5,7 @@
 //! and Tech 3342 (loudness range), generated here: integrated loudness and range
 //! within ±0.1 LU, true peak of an inter-sample peak, album values of a 3-track
 //! album, and files and CUE-style sections measured through the decoder registry.
+//! Also the waveform peaks of a generated file and of a section of it.
 
 #![forbid(unsafe_code)]
 #![allow(clippy::unwrap_used)]
@@ -14,7 +15,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use helikodu_engine::analysis::{
-    AnalysisError, LoudnessMeter, TrackMeasurement, album_loudness, measure_source,
+    AnalysisError, LoudnessMeter, TrackMeasurement, WAVEFORM_BINS, album_loudness, measure_source,
+    waveform_peaks,
 };
 use helikodu_engine::decode::DecoderRegistry;
 use helikodu_model::audio::{ChannelLayout, MediaTime, SampleRate};
@@ -310,6 +312,43 @@ fn cancelling_and_failing() {
     let result = measure_source(&registry, &MediaSource::file(&missing), &|| false);
     assert!(
         matches!(result, Err(AnalysisError::Decode(_))),
+        "{result:?}"
+    );
+}
+
+#[test]
+fn waveform_peaks_of_a_generated_file() {
+    // Ten seconds at −30 dBFS, then ten at −6 dBFS (the second half twenty times
+    // louder), then two of silence.
+    let mut samples = stereo(&[tone(-30.0, 10.0), tone(-6.0, 10.0)]);
+    samples.extend(std::iter::repeat_n(0.0, RATE as usize * 2 * 2));
+    let path = write_wav("waveform.wav", &samples);
+    let registry = DecoderRegistry::with_default_backends();
+    let peaks = waveform_peaks(&registry, &MediaSource::file(&path), WAVEFORM_BINS, &|| {
+        false
+    })
+    .unwrap();
+    assert_eq!(peaks.len(), WAVEFORM_BINS);
+    let quiet = (10f64.powf(-30.0 / 20.0) * 255.0).round() as u8;
+    let loud = (10f64.powf(-6.0 / 20.0) * 255.0).round() as u8;
+    let at = |secs: f64| peaks[(secs / 22.0 * WAVEFORM_BINS as f64) as usize];
+    assert!(at(5.0).abs_diff(quiet) <= 1, "{} vs {quiet}", at(5.0));
+    assert!(at(15.0).abs_diff(loud) <= 1, "{} vs {loud}", at(15.0));
+    assert_eq!(at(21.0), 0);
+
+    // A section has its own waveform.
+    let rate = SampleRate::new(RATE).unwrap();
+    let second = MediaSource::file(&path).with_section(SourceSection::Span {
+        start: MediaTime::from_frames(10 * u64::from(RATE), rate),
+        end: Some(MediaTime::from_frames(20 * u64::from(RATE), rate)),
+    });
+    let peaks = waveform_peaks(&registry, &second, 100, &|| false).unwrap();
+    assert_eq!(peaks.len(), 100);
+    assert!(peaks.iter().all(|p| p.abs_diff(loud) <= 1), "{peaks:?}");
+
+    let result = waveform_peaks(&registry, &MediaSource::file(&path), 100, &|| true);
+    assert!(
+        matches!(result, Err(AnalysisError::Cancelled)),
         "{result:?}"
     );
 }

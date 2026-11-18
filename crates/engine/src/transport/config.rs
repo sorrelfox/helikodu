@@ -8,7 +8,7 @@ use std::time::Duration;
 use helikodu_model::player::Volume;
 use helikodu_model::settings::{DspSettings, OutputSettings, TransitionSettings};
 
-use crate::output::{Pacing, SharedConnector, SharedReservation};
+use crate::output::{AudioTap, Pacing, SharedConnector, SharedReservation};
 use crate::pipeline::{FadeDurations, ProcessingSettings};
 
 /// What the engine starts with.
@@ -57,6 +57,9 @@ pub struct EngineConfig {
     /// Backends the program brings itself, in place of the built-in ones of the same
     /// kind. The default has none.
     pub backend_connector: SharedConnector,
+    /// Where every stream copies what it gives its device, for the analyzer.
+    /// Copying starts with [`AudioTap::set_wanted`].
+    pub tap: AudioTap,
 }
 
 impl Default for EngineConfig {
@@ -73,6 +76,7 @@ impl Default for EngineConfig {
             next_wait: Duration::from_secs(5),
             device_reservation: SharedReservation::default(),
             backend_connector: SharedConnector::default(),
+            tap: AudioTap::default(),
         }
     }
 }

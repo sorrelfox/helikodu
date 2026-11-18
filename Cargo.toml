@@ -98,6 +98,8 @@ proptest = { version = "1.11", default-features = false, features = ["std"] }
 # XML reading for XSPF playlists. No default features: UTF-8 only (other charsets are
 # decoded before parsing) and no async or serde support.
 quick-xml = { version = "0.42", default-features = false }
+# Real-input FFT for the spectrum analyzer; already built for the resampler.
+realfft = "3.5.1"
 # The `regexp()` SQL function behind the query language's `~` operator.
 regex = "1.12"
 # MIDI synthesis with a SoundFont 2 file, in pure Rust.

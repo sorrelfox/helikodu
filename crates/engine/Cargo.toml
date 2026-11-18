@@ -48,6 +48,7 @@ helikodu-ffmpeg-bridge.workspace = true
 helikodu-model.workspace = true
 jack = { workspace = true, optional = true }
 pipewire = { workspace = true, optional = true }
+realfft.workspace = true
 rtrb.workspace = true
 rubato.workspace = true
 thiserror.workspace = true

@@ -84,3 +84,5 @@ crates/ui-gtk/src/backend/service/browse.rs
 crates/ui-gtk/src/views/smart_playlist.rs
 crates/ui-gtk/src/views/smart_rules.rs
 crates/ui-gtk/src/window/playlists.rs
+crates/ui-gtk/src/widgets/spectrum_view.rs
+crates/ui-gtk/src/widgets/level_meter.rs

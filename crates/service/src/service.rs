@@ -38,6 +38,7 @@ use crate::player::{
     ReplayGain, SessionConfig, SinkPacing,
 };
 use crate::settings::{SETTINGS_FILE, SettingsEvent, SettingsStore, UI_STATE_FILE, UiStateStore};
+use crate::waveforms::{PeakStore, WAVEFORM_FOLDER, WantedSources, WaveformService};
 
 /// Which library the service opens.
 #[derive(Debug, Clone, Default)]
@@ -115,6 +116,7 @@ pub struct Service {
     // session), then the library.
     glue: Option<(Arc<AtomicBool>, JoinHandle<()>)>,
     lyrics: Option<LyricsService>,
+    waveforms: Option<WaveformService>,
     player: Player,
     library: Option<LibraryService>,
     settings: Arc<SettingsStore>,
@@ -176,6 +178,7 @@ impl Service {
             transitions: current.playback.transitions,
             decoders: current.playback.decoders.clone(),
         };
+        let wanted_library = player_config.library.clone();
         let (player, _) = Player::spawn(player_config)?;
         // A restored session may have played on another device than the settings
         // name: the settings follow it.
@@ -214,9 +217,22 @@ impl Service {
         )
         .inspect_err(|e| eprintln!("helikodu: cannot start the lyrics service: {e}"))
         .ok();
+        // Without the waveforms the seek bar stays flat.
+        let waveforms = WaveformService::start(
+            Arc::new(PeakStore::new(
+                dirs.cache.join(WAVEFORM_FOLDER),
+                u64::from(current.library.storage.analysis_mib) << 20,
+            )),
+            &bus,
+            helikodu_engine::decode::DecoderRegistry::with_settings(&current.playback.decoders),
+            wanted_sources(player.queue_reader(), wanted_library),
+        )
+        .inspect_err(|e| eprintln!("helikodu: cannot start the waveform service: {e}"))
+        .ok();
         Ok(Self {
             glue: Some((stop, glue)),
             lyrics,
+            waveforms,
             player,
             library,
             settings,
@@ -242,6 +258,11 @@ impl Service {
     /// The lyrics of the playing track, unless their thread could not start.
     pub fn lyrics(&self) -> Option<&LyricsService> {
         self.lyrics.as_ref()
+    }
+
+    /// The waveform peaks of the seek bar, unless their thread could not start.
+    pub fn waveforms(&self) -> Option<&WaveformService> {
+        self.waveforms.as_ref()
     }
 
     /// The library, unless the service runs without one.
@@ -277,6 +298,36 @@ impl Drop for Service {
             let _ = thread.join();
         }
     }
+}
+
+/// The sources the waveform service gives peaks: the current entry, the next few
+/// and the few played last.
+fn wanted_sources(
+    queue: crate::player::QueueReader,
+    library: Option<MusicLibrary>,
+) -> WantedSources {
+    use helikodu_model::library::TrackRef;
+    const AHEAD: usize = 8;
+    const BEHIND: usize = 2;
+    Box::new(move || {
+        let snapshot = queue.queue();
+        let entries = snapshot
+            .current_entry()
+            .into_iter()
+            .chain(snapshot.upcoming().iter().take(AHEAD))
+            .chain(snapshot.history().iter().rev().take(BEHIND));
+        entries
+            .filter_map(|entry| match &entry.track {
+                TrackRef::File(source) => Some(source.clone()),
+                TrackRef::Library(id) => library
+                    .as_ref()?
+                    .track_source(*id)
+                    .ok()
+                    .flatten()
+                    .map(|found| found.source),
+            })
+            .collect()
+    })
 }
 
 /// Writes `output` into the `[output]` settings if they name another device.

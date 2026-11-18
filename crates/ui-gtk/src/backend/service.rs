@@ -50,8 +50,10 @@ use helikodu_service::library::{
 };
 use helikodu_service::player::SleepWhen as ServiceSleepWhen;
 use helikodu_service::player::{
-    ContextRequest, EndReason, Notice, PlayerCommand, PlayerEvent, QueueSnapshot as Snapshot,
+    AnalyzerWatch, ContextRequest, EndReason, Notice, PlayerCommand, PlayerEvent,
+    QueueSnapshot as Snapshot,
 };
+use helikodu_service::waveforms::WaveformEvent;
 use helikodu_service::{Event, Service, SubscribeOptions};
 
 use super::{
@@ -1449,6 +1451,8 @@ pub struct ServicePlayer {
     positions: Arc<AtomicBool>,
     /// MPRIS, which lists the playlists.
     mpris: Option<Arc<Mpris>>,
+    /// The analyzer's measurements, while a view shows them.
+    analyzer: std::cell::RefCell<Option<AnalyzerWatch>>,
 }
 
 impl ServicePlayer {
@@ -1476,6 +1480,28 @@ impl PlayerControl for ServicePlayer {
             let _ = thread::Builder::new()
                 .name("helikodu-mpris-playlists".into())
                 .spawn(move || mpris.playlists_changed());
+        }
+    }
+
+    fn follow_analyzer(&self, per_second: Option<u32>) {
+        // The old feed ends before a new one starts.
+        drop(self.analyzer.take());
+        let Some(per_second) = per_second.filter(|&n| n > 0) else {
+            return;
+        };
+        let updates = self.updates.clone();
+        let interval = Duration::from_secs(1) / per_second;
+        let watch = self
+            .service
+            .player()
+            .watch_analyzer(interval, move |frame| {
+                updates.try_send(Update::Analyzer(Arc::new(frame))).is_ok()
+            });
+        match watch {
+            Ok(watch) => {
+                self.analyzer.replace(Some(watch));
+            }
+            Err(e) => eprintln!("helikodu: cannot start the analyzer: {e}"),
         }
     }
 
@@ -1848,11 +1874,31 @@ struct Forwarder {
     /// Whether the engine has reported the path of what is heard; the output
     /// button then follows the path rather than the decoded format.
     path_known: bool,
+    /// What the current entry plays, for its waveform.
+    playing: Option<MediaSource>,
 }
 
 impl Forwarder {
     fn send(&self, update: Update) -> bool {
         self.updates.send_blocking(update).is_ok()
+    }
+
+    /// Sends the waveform of `track`, which now plays: its peaks if they are
+    /// stored, otherwise none until they are.
+    fn send_waveform(&mut self, track: &TrackRef) -> bool {
+        self.playing = match track {
+            TrackRef::File(source) => Some(source.clone()),
+            TrackRef::Library(id) => self
+                .service
+                .library()
+                .and_then(|l| l.library().track_source(*id).ok().flatten())
+                .map(|found| found.source),
+        };
+        let peaks = self
+            .playing
+            .as_ref()
+            .and_then(|source| self.service.waveforms()?.peaks(source));
+        self.send(Update::Waveform(peaks))
     }
 
     /// The album of the queue's context, for the entries that came with it.
@@ -2040,10 +2086,12 @@ impl Forwarder {
                     channels: Some(spec.channel_count()),
                 };
                 self.send_now_playing(*entry, track.clone(), path.clone(), format);
-                self.send(Update::Position {
-                    elapsed: Duration::ZERO,
-                    length: length.map(MediaTime::as_duration),
-                }) && self.send(Update::Output(self.output.clone()))
+                self.send_waveform(track)
+                    && self.send(Update::Position {
+                        elapsed: Duration::ZERO,
+                        length: length.map(MediaTime::as_duration),
+                    })
+                    && self.send(Update::Output(self.output.clone()))
             }
             // Nothing draws the position while the window is hidden.
             PlayerEvent::Position { .. } if !self.positions.load(Ordering::Relaxed) => true,
@@ -2227,6 +2275,7 @@ impl Forwarder {
                 channels: Some(now.spec.channel_count()),
             };
             self.send_now_playing(now.entry, now.track.clone(), now.path.clone(), format);
+            let _ = self.send_waveform(&now.track);
             let _ = self.send(Update::Position {
                 elapsed: status.position.as_duration(),
                 length: now.length.map(MediaTime::as_duration),
@@ -2259,6 +2308,14 @@ impl Forwarder {
                 Ok(Event::Lyrics(event)) => {
                     for update in lyrics::updates(&event) {
                         if !self.send(update) {
+                            return;
+                        }
+                    }
+                }
+                Ok(Event::Waveform(WaveformEvent::Ready { source })) => {
+                    if self.playing.as_ref() == Some(&source) {
+                        let peaks = self.service.waveforms().and_then(|w| w.peaks(&source));
+                        if !self.send(Update::Waveform(peaks)) {
                             return;
                         }
                     }
@@ -2355,6 +2412,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         pending_cover: Arc::new(Mutex::new(None)),
         positions: Arc::clone(&positions),
         path_known: false,
+        playing: None,
     };
     thread::Builder::new()
         .name("helikodu-ui-events".into())
@@ -2378,6 +2436,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         updates: sender,
         positions,
         mpris,
+        analyzer: std::cell::RefCell::new(None),
     });
     services::follow_folders(&service, true);
     let services = Arc::new(services::ServiceServices {
