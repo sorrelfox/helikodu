@@ -7,79 +7,48 @@ The player service (queue, play modes, session, statistics recording), the libra
 
 The Cargo features `pipewire`, `alsa` and `dsd` (all on by default) pass on to the engine's features of the same names; `bundled-sqlite` (off by default) passes on to the library's.
 
+## Overview
+
+| Module | What it holds |
+|---|---|
+| `service.rs` | `Service::start(ServiceConfig)`: settings, library, player and bus kept in step (playback settings reconfigure the player, the output device follows both ways) |
+| `bus.rs`, `event.rs` | `EventBus`, `Subscription` (derefs to a `Receiver`), `Waker` for main loops; `Event` (`Player`, `Settings`, `Library`), `SubscribeOptions` (kinds of events, position throttling) |
+| `clock.rs` | `Clock`, `SystemClock`, `FakeClock` for tests |
+| `files.rs` | `AppDirs` (XDG config, state, data, cache), `write_atomic` |
+| `settings.rs`, `settings/migrate.rs` | `SettingsStore` (`settings.toml`), `migrate` and `MIGRATIONS`, `applies`, `UiStateStore` (`ui-state.toml`) |
+| `player.rs`, `player/` | The player service |
+| `library.rs`, `library/` | `MusicLibrary` (blocking, typed queries) and `LibraryService` (worker thread, thumbnails, scans, watcher) |
+
 ## Player
 
-`src/player.rs` and `src/player/` hold the player service. `Player::spawn(PlayerConfig)` starts the service actor, a thread that owns the engine and the queue, and returns the handle and the receiver of `PlayerEvent`s. `Player::send` takes `PlayerCommand`s; every change of state goes through the actor's mailbox. Dropping the handle stops playback and ends the thread.
-
-```rust
-use helikodu_service::player::{Player, PlayerCommand, PlayerConfig, PlayerEvent};
-
-let (player, events) = Player::spawn(PlayerConfig::new(selection))?;
-player.send(PlayerCommand::PlayFiles { files, start: 0 })?;
-for event in events.iter() {
-    if let PlayerEvent::Ended { .. } = event {
-        break;
-    }
-}
-```
-
-| File | What it holds |
-|---|---|
-| `player.rs` | `Player`: spawning, sending, shutting down |
-| `player/actor.rs` | `PlayerCommand` and the actor: the queue, the engine's events, skipping |
-| `player/config.rs` | `PlayerConfig`: the output settings built from a backend, device and mode (there is no settings file yet), the start volume, `SinkPacing`, `ReplayGain` (mode, preamps, clipping prevention) |
-| `player/loudness.rs` | Reading the loudness tags of queued files and whether a file plays as part of its album |
-| `player/event.rs` | `PlayerEvent`, `EndReason` |
-| `player/outputs.rs` | `list_outputs`, `sound_backends`, `resolve_backend`, `next_output` |
-| `player/queue.rs` | The queue of files |
-| `player/error.rs` | `PlayerError` |
+`Player::spawn(PlayerConfig)` starts the service actor, a thread that owns the engine, the queue and the session, and returns the handle with a subscription to its events. `Player::send` (or a cloned `CommandSender`) takes `PlayerCommand`s; `Player::queue()` and `Player::status()` read the latest state without waiting for the actor; `Player::sync()` waits until earlier commands are handled and the session is saved.
 
 | Command | What it does |
 |---|---|
-| `PlayFiles { files, start }` | Replaces the queue and plays from `start` |
-| `PlayPause`, `Play`, `Pause`, `Stop` | `Play` after a stop or the end plays the current file again |
-| `Next`, `Previous` | `Next` past the last file ends playback; `Previous` restarts the current file after three seconds of it, and goes to the file before otherwise |
-| `Seek`, `SeekForward`, `SeekBackward` | Within the current file |
-| `SetVolume`, `AdjustVolume` | The volume control's position; `AdjustVolume` adds to it, within 0 to 1 |
-| `SetOutput`, `NextOutput` | Moves playback to another backend, device or mode without stopping. `NextOutput` steps through the devices of PipeWire and then ALSA, or, while the null backend plays, stays on it |
+| `PlayFiles`, `PlayTracks { context, tracks, start }` | Replaces the queue (or appends, with `PlayerPrefs::append_contexts`) and plays |
+| `PlayContext { context: ContextRequest, title, start }` | An album, artist, genre or search, looked up in the library |
+| `Enqueue { tracks, at: Next \| End }`, `PlayEntry`, `Remove`, `Move`, `Clear` | Edit the queue; `Clear` keeps the playing entry |
+| `PlayPause`, `Play`, `Pause`, `Stop`, `Next`, `Previous`, `Seek*` | Transport; `Previous` restarts after `PlayerPrefs::previous_restart` |
+| `SetVolume`, `AdjustVolume`, `SetOutput`, `NextOutput` | Volume and output, switched while playing |
+| `SetShuffle`, `SetRepeat`, `SetStopAfter`, `Configure` | Play modes and preferences |
 
-| Event | When |
-|---|---|
-| `State` | The engine's transport changed state |
-| `TrackChanged` | A file began to play: its index, the queue length, path, format and length |
-| `Position` | A few times per second while playing, and after a seek |
-| `VolumeChanged`, `OutputChanged` | After the commands that change them |
-| `Problem` | An error, with the file it concerns if any. Playback goes on where it can |
-| `Ended` | Playback stopped for good: `QueueFinished`, `Stopped` or `OutputFailed`, with the number of files played and failed |
+Events (`PlayerEvent`): `State { playback, transport }`, `TrackChanged` (now playing), `Position`, `QueueChanged { version }`, `ModesChanged`, `StopAfterChanged`, `VolumeChanged`, `OutputChanged`, `DevicesChanged`, `Problem`, `Notice` (crash recovery, suspect skipped, context unavailable, session or listen not saved), `ListenRecorded`, `Ended`.
 
-**Gapless playback.** The next file is handed to the engine when it asks for one (`NearEnd` answered with `SetNext`), so files the engine can join play without a gap.
+- **Queue.** Entries (`EntryId`, `TrackRef`, whether they came with the context) in play order, with the context order beside it. Shuffle stores its permutation, so "Previous" retraces what played; turning it off restores context order. With repeat-all and shuffle, each cycle plays every entry once in a new order. `QueueSnapshot::splice_from` gives the list-model change between two versions.
+- **Gapless.** The next entry is named at `NearEnd`; when the queue, modes or stop-after change afterwards, the engine gets the new one.
+- **Unplayable entries** are reported and skipped in the direction playback moved, and passed over for the rest of that queue.
+- **Statistics.** With a library, each listen to a library track (also a file that is in the library) is measured from the engine's positions (seeks excluded) and recorded with `PlayRules` on a thread of its own: finished, skipped (moved on) or stopped. Long tracks start where they stopped when `resume_long_tracks` is on.
+- **Session** (`SessionConfig`, `$XDG_STATE_HOME/helikodu`): `session.json` (queue, context order, position, modes, volume, output, suspect tracks) saved by atomic replace after changes (debounced), every 15 s while playing and at the end; restored paused. `playing.json` is the crash sentinel: it names what loads or plays and is removed when nothing plays and at a normal end. Found at the start, it adds a strike to each track it names and the session is restored paused with a notice; two strikes in a row make a track suspect, which automatic playback passes over until it plays to its end.
 
-**Unplayable files.** A file that does not open is reported with `Problem` and skipped in the direction playback was moving: forward normally, backward after `Previous` (and forward again from the first file). A next file that does not open is skipped before it is reached. A file that fails while decoding ends there, and playback goes on with the next one.
+## Settings
 
-**Loudness normalization.** `PlayerConfig::replay_gain` selects `ReplayGainMode::Off` (the default), `Track`, `Album` or `Auto`, with a preamp for tagged files, one for untagged files, and clipping prevention by the peak (on by default). When it is not off, each file's ReplayGain or Opus R128 tags are read (through the library crate, in this process) just before the file is handed to the engine, and go with it as the `PlaybackItem`'s `Loudness`. In `Auto` mode a file plays as part of its album, and so with the album gain, when the file before or after it in the queue has the same album title and album artists.
-
-**Outputs.** `list_outputs(backend)` asks a backend for its devices. `next_output` chooses the device after the current one in a list; a current choice of the default device stands for the device the backend marks as default.
-
-Not done yet in the player:
-
-- Shuffle, repeat, stop-after, consume, enqueueing, and the session that keeps the queue across restarts.
-- The settings store: the output settings are built from parameters.
-- Statistics: plays and skips are not recorded.
+`SettingsStore` reads `$XDG_CONFIG_HOME/helikodu/settings.toml` into `helikodu_model::settings::Settings` (tables `library`, `playback`, `output`, `loudness`, `appearance`, `advanced`, and `version`). Older files are migrated step by step before they are read; a broken file gives the defaults and is kept as `settings.toml.bak` when first replaced; a value out of range resets its table; a file from a newer version is read but never written. `update` validates, saves atomically and publishes `SettingsEvent::Changed` with the changed groups; `applies(key)` says whether a change is live or needs a restart (output format and loudness, until the engine can change them while running).
 
 ## Library
 
-`src/library.rs` and `src/library/` are the library facade for tools that use the database directly, such as `helikodu-cli scan`, `search`, `info` and `stats`.
+`MusicLibrary` opens the database (`open`, `open_existing`, `in_memory`, `from_library`) and offers browsing (`albums`, `album`, `artists`, `genres`, `tracks`, `all_tracks`), `search`, `track_info`, `file_info`, `track_source` (file and CUE span), statistics (`stats`, `record_listen`, `history`), `rate` (whole stars), `overview` and `scan`.
 
-| Item | What it does |
-|---|---|
-| `default_database_path` | `$XDG_DATA_HOME/helikodu/library.db`, or `~/.local/share/helikodu/library.db` |
-| `MusicLibrary::open`, `open_existing` | Opens the database, creating it and its folder, or only if it exists (a newer schema opens read-only). The sort order follows `LC_ALL`, `LC_COLLATE` or `LANG` |
-| `MusicLibrary::scan` | Starts a scan (`ScanRequest`: folders, or the library's own folders when empty; exclude patterns; worker count and program) and returns the `ScanHandle` |
-| `MusicLibrary::search` | A page of results, each with its file path |
-| `MusicLibrary::track_info`, `file_info`, `read_file_info` | `TrackInfo`: tags, audio properties, loudness values of the file's tags, and the library entry with statistics. A file is read directly; a library file that cannot be read any more is described from the library |
-| `MusicLibrary::overview` | The library folders, totals and most played tracks |
-
-The library crate's result types the front ends need (`SearchHit`, `ScanEvent`, `ScanSummary`, `TrackTags`, `TrackStats`, `LibraryTotals`, …) are re-exported from `helikodu_service::library`.
+`LibraryService` runs the same queries on its own thread and hands each result to a callback; `describe` gives what the queue panel shows; `thumbnail` answers from the cache or schedules the artwork pool (`LibraryEvent::ThumbnailReady`); `scan`, `watch`, `rescan` announce progress as `LibraryEvent::Scan`, `Watch`, `ScanEnded` and `Changed`.
 
 ## Tests
 
@@ -89,7 +58,9 @@ cargo test -p helikodu-service
 
 `tests/library.rs` fills a database file through the library crate and checks the facade: search with paths, track details and statistics, a library file that cannot be read, totals and the most played tracks, a missing library and a scan without folders. The level of ReplayGain playback is checked end to end by `apps/cli/tests/replaygain.rs`.
 
-`tests/player/` plays generated WAV files: to the WAV sink as fast as it takes them (the joins between files bit-exact, unplayable and missing files skipped, an empty queue), and in real time to the null sink (next, previous, pause, seek, volume, a move from the null sink to a WAV file while playing).
+`tests/player/` covers the player through its public API: the queue, controls, play modes (stop-after, repeat, shuffle cycles, play next, remove, move, choose), the order of events and position thinning, the session saved and restored, the crash sentinel over three simulated abnormal ends, and statistics recorded in a library in memory with a fake clock. The queue model's own unit tests include property tests (`proptest`): every entry once per shuffled cycle, "Previous" retracing the history, and edits keeping the queue consistent. `tests/settings.rs` checks the settings store on disk and `tests/service.rs` the whole service.
+
+The player tests play generated WAV files: to the WAV sink as fast as it takes them (the joins between files bit-exact, unplayable and missing files skipped, an empty queue), and in real time to the null sink (next, previous, pause, seek, volume, a move from the null sink to a WAV file while playing).
 
 A test against the real sound servers is ignored by default. It never makes a sound:
 

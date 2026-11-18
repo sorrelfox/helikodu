@@ -127,8 +127,14 @@ fn switches_between_pipewire_and_alsa_while_playing() {
             let left = deadline.saturating_duration_since(Instant::now());
             match events.recv_timeout(left).expect("timed out") {
                 PlayerEvent::Problem { error, .. } => panic!("{next:?}: {error}"),
-                PlayerEvent::State(TransportState::Reconfiguring) => reconfigured = true,
-                PlayerEvent::State(TransportState::Playing) if reconfigured => break,
+                PlayerEvent::State {
+                    transport: TransportState::Reconfiguring,
+                    ..
+                } => reconfigured = true,
+                PlayerEvent::State {
+                    transport: TransportState::Playing,
+                    ..
+                } if reconfigured => break,
                 _ => {}
             }
         }

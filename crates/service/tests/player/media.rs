@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use helikodu_model::audio::{
     BackendSelection, DeviceSelection, OutputBackendKind, OutputSelection,
 };
+use helikodu_service::bus::Subscription;
 use helikodu_service::player::{Player, PlayerConfig, PlayerEvent, SinkPacing};
 
 pub(crate) const RATE: u32 = 44_100;
@@ -106,10 +107,41 @@ pub(crate) fn null_output() -> OutputSelection {
 pub(crate) fn player(
     selection: OutputSelection,
     pacing: SinkPacing,
-) -> (Player, Receiver<PlayerEvent>) {
+) -> (Player, Subscription<PlayerEvent>) {
     let mut config = PlayerConfig::new(selection);
     config.pacing = pacing;
     Player::spawn(config).unwrap()
+}
+
+/// Starts a player with `config` changed by `change`.
+pub(crate) fn player_with(
+    selection: OutputSelection,
+    pacing: SinkPacing,
+    change: impl FnOnce(&mut PlayerConfig),
+) -> (Player, Subscription<PlayerEvent>) {
+    let mut config = PlayerConfig::new(selection);
+    config.pacing = pacing;
+    change(&mut config);
+    Player::spawn(config).unwrap()
+}
+
+/// `count` WAV files of `millis` each in `dir`, named `0.wav`, `1.wav`, …
+pub(crate) fn wav_files(dir: &Path, count: usize, millis: usize) -> Vec<PathBuf> {
+    (0..count)
+        .map(|i| {
+            let path = dir.join(format!("{i}.wav"));
+            write_wav(&path, &samples(millis * RATE as usize / 1000, i as u32 + 1));
+            path
+        })
+        .collect()
+}
+
+/// Waits for `TrackChanged` and returns the file.
+pub(crate) fn next_path(events: &Receiver<PlayerEvent>) -> PathBuf {
+    match until(events, |e| matches!(e, PlayerEvent::TrackChanged { .. })).0 {
+        PlayerEvent::TrackChanged { path, .. } => path,
+        _ => unreachable!(),
+    }
 }
 
 /// Collects events until one matches `done`, which it returns with those before it.

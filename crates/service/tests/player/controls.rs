@@ -28,7 +28,7 @@ fn files(test: &str, count: usize, seconds: usize) -> (PathBuf, Vec<PathBuf>) {
 }
 
 fn state(wanted: TransportState) -> impl FnMut(&PlayerEvent) -> bool {
-    move |e| *e == PlayerEvent::State(wanted)
+    move |e| matches!(e, PlayerEvent::State { transport, .. } if *transport == wanted)
 }
 
 #[test]
@@ -141,6 +141,9 @@ fn volume_changes_are_reported_and_clamped() {
     player
         .send(PlayerCommand::PlayFiles { files, start: 0 })
         .unwrap();
+    // The player announces the volume it starts with first.
+    let (event, _) = until(&events, |e| matches!(e, PlayerEvent::VolumeChanged(_)));
+    assert_eq!(event, PlayerEvent::VolumeChanged(Volume::FULL));
     player.send(PlayerCommand::AdjustVolume(-0.25)).unwrap();
     let (event, _) = until(&events, |e| matches!(e, PlayerEvent::VolumeChanged(_)));
     assert_eq!(
@@ -173,7 +176,13 @@ fn output_switches_while_playing() {
     let (event, _) = until(&events, |e| matches!(e, PlayerEvent::OutputChanged(_)));
     assert_eq!(event, PlayerEvent::OutputChanged(target));
     let (end, seen) = until(&events, |e| matches!(e, PlayerEvent::Ended { .. }));
-    assert!(seen.contains(&PlayerEvent::State(TransportState::Reconfiguring)));
+    assert!(seen.iter().any(|e| matches!(
+        e,
+        PlayerEvent::State {
+            transport: TransportState::Reconfiguring,
+            ..
+        }
+    )));
     assert_eq!(
         end,
         PlayerEvent::Ended {

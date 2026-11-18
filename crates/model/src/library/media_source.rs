@@ -3,13 +3,9 @@
 
 //! Where the audio of a track comes from.
 
-use std::ffi::OsString;
-use std::fmt;
-use std::os::unix::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
 
-use serde::de::{self, SeqAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 use crate::audio::MediaTime;
 
@@ -22,8 +18,8 @@ use crate::audio::MediaTime;
 pub struct MediaSource {
     /// The file.
     #[serde(
-        serialize_with = "serialize_path",
-        deserialize_with = "deserialize_path"
+        serialize_with = "crate::path_serde::serialize_bytes",
+        deserialize_with = "crate::path_serde::deserialize"
     )]
     pub path: PathBuf,
     /// The part of the file to play, or `None` for all of it.
@@ -71,56 +67,12 @@ pub enum SourceSection {
     },
 }
 
-fn serialize_path<S: Serializer>(path: &Path, serializer: S) -> Result<S::Ok, S::Error> {
-    serializer.serialize_bytes(path.as_os_str().as_bytes())
-}
-
-fn deserialize_path<'de, D: Deserializer<'de>>(deserializer: D) -> Result<PathBuf, D::Error> {
-    deserializer.deserialize_byte_buf(PathVisitor)
-}
-
-/// Accepts a path as bytes, as a sequence of numbers, or as text.
-struct PathVisitor;
-
-impl<'de> Visitor<'de> for PathVisitor {
-    type Value = PathBuf;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a file path as bytes or text")
-    }
-
-    fn visit_bytes<E: de::Error>(self, bytes: &[u8]) -> Result<PathBuf, E> {
-        Ok(path_from_bytes(bytes.to_vec()))
-    }
-
-    fn visit_byte_buf<E: de::Error>(self, bytes: Vec<u8>) -> Result<PathBuf, E> {
-        Ok(path_from_bytes(bytes))
-    }
-
-    fn visit_str<E: de::Error>(self, text: &str) -> Result<PathBuf, E> {
-        Ok(PathBuf::from(text))
-    }
-
-    fn visit_string<E: de::Error>(self, text: String) -> Result<PathBuf, E> {
-        Ok(PathBuf::from(text))
-    }
-
-    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<PathBuf, A::Error> {
-        let mut bytes = Vec::with_capacity(seq.size_hint().unwrap_or(0));
-        while let Some(byte) = seq.next_element::<u8>()? {
-            bytes.push(byte);
-        }
-        Ok(path_from_bytes(bytes))
-    }
-}
-
-fn path_from_bytes(bytes: Vec<u8>) -> PathBuf {
-    PathBuf::from(OsString::from_vec(bytes))
-}
-
 #[cfg(test)]
 mod tests {
+    use std::os::unix::ffi::OsStrExt;
+
     use super::*;
+    use crate::path_serde::from_bytes as path_from_bytes;
 
     /// A name in Latin-1, which is not valid UTF-8: "Café.flac".
     fn latin1_path() -> PathBuf {

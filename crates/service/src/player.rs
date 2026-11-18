@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The player service: a queue of files played by the engine.
+//! The player service: the play queue, played by the engine.
 //!
-//! [`Player::spawn`] starts the service actor, which owns an engine and the queue.
-//! Front ends send [`PlayerCommand`]s with [`Player::send`] and receive
-//! [`PlayerEvent`]s; every change of state goes through the actor's mailbox.
+//! [`Player::spawn`] starts the service actor, a thread that owns the engine, the
+//! queue and the session. Front ends send [`PlayerCommand`]s with [`Player::send`]
+//! and follow [`PlayerEvent`]s through subscriptions; every change of state goes
+//! through the actor's mailbox. [`Player::queue`] and [`Player::status`] read the
+//! latest state without waiting for the actor.
 //!
 //! ```no_run
 //! use helikodu_model::audio::OutputSelection;
@@ -24,60 +26,138 @@
 //!
 //! # Playing the queue
 //!
-//! - The queue plays in order. Each next file is handed to the engine when it asks
-//!   for one ([`NearEnd`](helikodu_model::player::EngineEvent::NearEnd)), so files
-//!   of the same format join without a gap.
-//! - A file that cannot be opened or decoded is reported with
+//! - The queue holds entries in play order, with the context they came from. Each
+//!   next entry is handed to the engine when it asks for one
+//!   ([`NearEnd`](helikodu_model::player::EngineEvent::NearEnd)), so tracks of the
+//!   same format join without a gap; when the queue, the modes or stop-after change
+//!   after that, the engine is told the new next entry.
+//! - Shuffle stores its order, so "Previous" walks back the order played; repeat is
+//!   off, one or all; stop-after ends playback when the current track ends.
+//! - An entry that cannot be opened or decoded is reported with
 //!   [`PlayerEvent::Problem`] and skipped, in the direction playback was moving.
-//! - [`PlayerCommand::Previous`] restarts the current file when more than three
-//!   seconds of it have played, and goes to the file before otherwise.
-//!   [`PlayerCommand::Next`] on the last file ends playback.
-//! - When playback stops for good, [`PlayerEvent::Ended`] says why and how many
-//!   files played and failed.
-//! - With loudness normalization on ([`PlayerConfig::replay_gain`]), each file's
-//!   ReplayGain or Opus R128 tags are read just before it is handed to the engine.
+//! - "Previous" restarts the current entry after the time set in
+//!   [`PlayerPrefs::previous_restart`] (three seconds by default) and goes to the
+//!   entry before otherwise.
+//! - With a library, every listen to a library track (also a file that is in the
+//!   library) is recorded with the play and skip rules of
+//!   [`PlayerPrefs::play_rules`], on a thread of its own.
+//! - With a session folder, the queue, position, modes, volume and output are saved
+//!   after changes and at the end, and restored paused at the start; the crash
+//!   sentinel keeps a track that ended the program twice in a row from playing
+//!   automatically (see [`session`]).
 
 mod actor;
+mod command;
 mod config;
 mod error;
 mod event;
+mod listen;
 mod loudness;
 mod outputs;
 mod queue;
+mod rng;
+pub mod session;
+mod shared;
 
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use std::sync::mpsc::{self, Sender};
 use std::thread::{self, JoinHandle};
 
 use helikodu_engine::transport::Engine;
+use helikodu_model::audio::MediaTime;
 
-pub use self::actor::PlayerCommand;
-use self::actor::{Actor, Input};
-pub use self::config::{PlayerConfig, ReplayGain, ReplayGainMode, SinkPacing};
+use self::actor::{Actor, Input, Startup};
+use self::listen::Recorder;
+use self::queue::Queue;
+use self::rng::Rng;
+use self::session::SessionFiles;
+use self::shared::Shared;
+use crate::Event;
+use crate::bus::{EventBus, Subscription};
+use crate::clock::SharedClock;
+use crate::event::{SubscribeOptions, subscribe};
+
+pub use self::command::{ContextRequest, PlayerCommand};
+pub use self::config::{
+    PlayerConfig, PlayerPrefs, ReplayGain, ReplayGainMode, SessionConfig, SinkPacing,
+};
 pub use self::error::PlayerError;
-pub use self::event::{EndReason, PlayerEvent};
+pub use self::event::{EndReason, Notice, PlayerEvent};
 pub use self::outputs::{list_outputs, next_output, resolve_backend, sound_backends};
+pub use self::shared::{NowPlaying, PlayerStatus, QueueSnapshot, Splice};
 
-/// A running player. Dropping it stops playback, closes the device and ends the
-/// service thread.
+/// A running player. Dropping it ends the listen in progress, saves the session,
+/// removes the crash sentinel, stops playback and ends the service thread.
 #[derive(Debug)]
 pub struct Player {
     inputs: Sender<Input>,
     thread: Option<JoinHandle<()>>,
+    bus: EventBus<Event>,
+    clock: SharedClock,
+    shared: Arc<Shared>,
 }
 
 impl Player {
-    /// Starts a player with `config` and returns it with the receiver of its events.
+    /// Starts a player with `config` and returns it with a subscription to all its
+    /// events (every position included).
     ///
     /// Fails if the configuration is invalid or a thread cannot be started. A backend
     /// or device that cannot be used is reported later, as a
     /// [`PlayerEvent::Problem`], when playback starts.
-    pub fn spawn(config: PlayerConfig) -> Result<(Self, Receiver<PlayerEvent>), PlayerError> {
+    pub fn spawn(config: PlayerConfig) -> Result<(Self, Subscription<PlayerEvent>), PlayerError> {
         config.validate()?;
-        let selection = config.output.selection();
-        let (engine, engine_events) =
-            Engine::spawn(config.engine_config()).map_err(PlayerError::Spawn)?;
+        let bus = config.bus.clone().unwrap_or_default();
+        let rng = config.shuffle_seed.map_or_else(Rng::from_entropy, Rng::new);
+        let mut startup = Startup {
+            queue: Queue::new(rng.clone()),
+            position: None,
+            volume: config.volume,
+            selection: config.output.selection(),
+            suspects: HashSet::new(),
+            strikes: HashMap::new(),
+            crash: None,
+            session: None,
+            replay_gain: config.replay_gain.mode,
+            prefs: config.prefs,
+            library: config.library.clone(),
+        };
+        if let Some(session_config) = &config.session {
+            let mut files = SessionFiles::new(&session_config.dir);
+            let report = files.take_crash_report();
+            let saved = files.load();
+            if let Some(saved) = saved {
+                startup.suspects.extend(saved.suspects.iter().cloned());
+                if session_config.restore {
+                    startup.queue = Queue::restore(
+                        rng,
+                        saved.context,
+                        saved.entries,
+                        saved.linear,
+                        saved.current,
+                        saved.modes,
+                    );
+                    startup.position = Some(MediaTime::from_millis(saved.position_ms));
+                    startup.volume = saved.volume;
+                    startup.selection = saved.output;
+                }
+            }
+            startup.suspects.extend(report.suspects().cloned());
+            if report.crashed {
+                let mut suspects: Vec<_> = report.suspects().cloned().collect();
+                suspects.sort_by_key(|t| format!("{t:?}"));
+                let mut tracks: Vec<_> = report.strikes.keys().cloned().collect();
+                tracks.sort_by_key(|t| format!("{t:?}"));
+                startup.crash = Some(Notice::RecoveredAfterCrash { tracks, suspects });
+            }
+            startup.strikes = report.strikes;
+            startup.session = Some((files, session_config.clone()));
+        }
+
+        let mut engine_config = config.engine_config(&startup.selection);
+        engine_config.volume = startup.volume;
+        let (engine, engine_events) = Engine::spawn(engine_config).map_err(PlayerError::Spawn)?;
         let (inputs, mailbox) = mpsc::channel();
-        let (events, event_receiver) = mpsc::channel();
         let forward = inputs.clone();
         thread::Builder::new()
             .name("helikodu-player-events".into())
@@ -89,12 +169,32 @@ impl Player {
                 }
             })
             .map_err(PlayerError::Spawn)?;
+        let recorder = match &config.library {
+            Some(library) => {
+                let results = inputs.clone();
+                Some(
+                    Recorder::start(library.clone(), move |recorded| {
+                        let _ = results.send(Input::Recorded(recorded));
+                    })
+                    .map_err(PlayerError::Spawn)?,
+                )
+            }
+            None => None,
+        };
+        let shared = Arc::new(Shared::default());
+        let events = subscribe(
+            &bus,
+            Arc::clone(&config.clock),
+            SubscribeOptions::player(),
+            player_event,
+        );
         let actor = Actor::new(
             engine,
-            events,
-            selection,
-            config.volume,
-            config.replay_gain.mode,
+            bus.clone(),
+            Arc::clone(&config.clock),
+            Arc::clone(&shared),
+            startup,
+            recorder,
         );
         let thread = thread::Builder::new()
             .name("helikodu-player".into())
@@ -103,8 +203,11 @@ impl Player {
         let player = Self {
             inputs,
             thread: Some(thread),
+            bus,
+            clock: config.clock,
+            shared,
         };
-        Ok((player, event_receiver))
+        Ok((player, events))
     }
 
     /// Sends a command. Fails only if the service thread has ended.
@@ -112,6 +215,63 @@ impl Player {
         self.inputs
             .send(Input::Command(command))
             .map_err(|_| PlayerError::Gone)
+    }
+
+    /// A handle that sends commands to this player from another thread, such as an
+    /// MPRIS or D-Bus endpoint. It fails once the player is dropped.
+    pub fn sender(&self) -> CommandSender {
+        CommandSender(self.inputs.clone())
+    }
+
+    /// Waits until every command sent before has been handled and the session saved.
+    pub fn sync(&self) -> Result<(), PlayerError> {
+        let (reply, done) = mpsc::channel();
+        self.inputs
+            .send(Input::Sync(reply))
+            .map_err(|_| PlayerError::Gone)?;
+        done.recv().map_err(|_| PlayerError::Gone)
+    }
+
+    /// Subscribes to the player's events with `options` (its library and settings
+    /// flags are ignored).
+    pub fn subscribe(&self, options: SubscribeOptions) -> Subscription<PlayerEvent> {
+        subscribe(&self.bus, Arc::clone(&self.clock), options, player_event)
+    }
+
+    /// The bus the player publishes on.
+    pub fn bus(&self) -> &EventBus<Event> {
+        &self.bus
+    }
+
+    /// The queue as of the last change. Never waits for the player's thread.
+    pub fn queue(&self) -> Arc<QueueSnapshot> {
+        self.shared.queue()
+    }
+
+    /// The state of playback as of the last change. Never waits for the player's
+    /// thread.
+    pub fn status(&self) -> PlayerStatus {
+        self.shared.status()
+    }
+}
+
+/// Sends commands to a player; see [`Player::sender`].
+#[derive(Debug, Clone)]
+pub struct CommandSender(Sender<Input>);
+
+impl CommandSender {
+    /// Sends a command. Fails only if the player has ended.
+    pub fn send(&self, command: PlayerCommand) -> Result<(), PlayerError> {
+        self.0
+            .send(Input::Command(command))
+            .map_err(|_| PlayerError::Gone)
+    }
+}
+
+fn player_event(event: &Event) -> Option<PlayerEvent> {
+    match event {
+        Event::Player(event) => Some(event.clone()),
+        _ => None,
     }
 }
 

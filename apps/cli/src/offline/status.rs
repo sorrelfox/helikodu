@@ -56,7 +56,9 @@ impl Status {
     /// Follows `event` and prints what it says.
     pub(super) fn show(&mut self, event: &PlayerEvent) {
         match event {
-            PlayerEvent::State(state) => {
+            PlayerEvent::State {
+                transport: state, ..
+            } => {
                 self.state = *state;
                 self.redraw();
             }
@@ -66,6 +68,7 @@ impl Status {
                 path,
                 spec,
                 length,
+                ..
             } => {
                 self.track = Some((*index, *count, path.clone()));
                 self.position = MediaTime::ZERO;
@@ -91,7 +94,7 @@ impl Status {
                 self.output = output.clone();
                 self.message(&format!("Output: {}", describe_output(output)));
             }
-            PlayerEvent::Problem { file, error } => match file {
+            PlayerEvent::Problem { file, error, .. } => match file {
                 Some((_, path)) => self.message(&format!("{}: {error}", path.display())),
                 None => self.message(&format!("error: {error}")),
             },
@@ -106,6 +109,8 @@ impl Status {
                     eprint!("{text}{end}");
                 }
             }
+            // The queue, modes and statistics are not shown by the command line.
+            _ => {}
         }
     }
 

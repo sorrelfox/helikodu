@@ -4,19 +4,29 @@
 //! What a player starts with.
 
 use std::ops::RangeInclusive;
+use std::path::PathBuf;
+use std::time::Duration;
 
 use helikodu_engine::output::Pacing;
 use helikodu_engine::pipeline::{
     ClippingPrevention, LoudnessMode, LoudnessSettings, ProcessingSettings,
 };
 use helikodu_engine::transport::EngineConfig;
+use helikodu_library::PlayRules;
 use helikodu_model::audio::{
     BackendSelection, DeviceSelection, OutputBackendKind, OutputSelection,
 };
 use helikodu_model::player::Volume;
-use helikodu_model::settings::OutputSettings;
+use helikodu_model::settings::{
+    ClippingPrevention as ClippingSetting, ContextAction, LoudnessMode as LoudnessSetting,
+    LoudnessSettings as LoudnessTable, OutputSettings, PlaybackSettings,
+};
 
 use super::PlayerError;
+use crate::Event;
+use crate::bus::EventBus;
+use crate::clock::{SharedClock, SystemClock};
+use crate::library::MusicLibrary;
 
 /// How the null and WAV backends, which have no device clock, take audio.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -65,6 +75,21 @@ pub struct ReplayGain {
 impl ReplayGain {
     /// The range of both preamps, in dB.
     pub const PREAMP_RANGE: RangeInclusive<f64> = -24.0..=24.0;
+
+    /// Loudness normalization as the `[loudness]` settings ask for it.
+    pub fn from_settings(loudness: &LoudnessTable) -> Self {
+        Self {
+            mode: match loudness.mode {
+                LoudnessSetting::Off => ReplayGainMode::Off,
+                LoudnessSetting::Track => ReplayGainMode::Track,
+                LoudnessSetting::Album => ReplayGainMode::Album,
+                LoudnessSetting::Auto => ReplayGainMode::Auto,
+            },
+            preamp_db: loudness.preamp_db,
+            untagged_preamp_db: loudness.untagged_preamp_db,
+            prevent_clipping: loudness.clipping == ClippingSetting::LowerGain,
+        }
+    }
 }
 
 impl Default for ReplayGain {
@@ -78,24 +103,105 @@ impl Default for ReplayGain {
     }
 }
 
-/// The settings a player starts with. There is no settings file yet; the output
-/// settings are built from the chosen backend, device and mode, and the rest keep
-/// their defaults.
-#[derive(Debug, Clone, PartialEq)]
+/// How the player behaves, from the `[playback]` settings. It can be changed while
+/// the player runs ([`PlayerCommand::Configure`](super::PlayerCommand::Configure)).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlayerPrefs {
+    /// How much of an entry must have played for "Previous" to restart it instead of
+    /// going to the entry before; `None` always goes to the entry before.
+    pub previous_restart: Option<Duration>,
+    /// What counts as a play and a skip, and which tracks remember where listening
+    /// stopped.
+    pub play_rules: PlayRules,
+    /// Whether playing a context adds it to the end of the queue instead of
+    /// replacing the queue.
+    pub append_contexts: bool,
+    /// Whether long library tracks start where listening last stopped.
+    pub resume_long_tracks: bool,
+}
+
+impl Default for PlayerPrefs {
+    fn default() -> Self {
+        Self::from_settings(&PlaybackSettings::default())
+    }
+}
+
+impl PlayerPrefs {
+    /// The preferences the `[playback]` settings ask for.
+    pub fn from_settings(playback: &PlaybackSettings) -> Self {
+        Self {
+            previous_restart: playback.previous_restart(),
+            play_rules: PlayRules {
+                play_percent: playback.play_count_percent,
+                play_time: playback.play_count_time(),
+                resume_after: playback.long_track(),
+            },
+            append_contexts: playback.play_context == ContextAction::Append,
+            resume_long_tracks: playback.resume_long_tracks,
+        }
+    }
+}
+
+/// Where the session is kept, and whether it is restored.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionConfig {
+    /// The folder of the session file and the crash sentinel: normally
+    /// `$XDG_STATE_HOME/helikodu`.
+    pub dir: PathBuf,
+    /// Whether the saved queue, position, modes, volume and output are restored at
+    /// the start. The crash sentinel is read either way.
+    pub restore: bool,
+    /// How long after a change the session is saved, so that a burst of changes is
+    /// written once. Zero saves after every command.
+    pub debounce: Duration,
+    /// How often the position is saved while playing.
+    pub position_interval: Duration,
+}
+
+impl SessionConfig {
+    /// The session in `dir`, restored, saved a second after changes and every
+    /// fifteen seconds while playing.
+    pub fn new(dir: impl Into<PathBuf>) -> Self {
+        Self {
+            dir: dir.into(),
+            restore: true,
+            debounce: Duration::from_secs(1),
+            position_interval: Duration::from_secs(15),
+        }
+    }
+}
+
+/// What a player starts with.
+#[derive(Debug, Clone)]
 pub struct PlayerConfig {
-    /// The `[output]` settings.
+    /// The `[output]` settings. A restored session's output selection replaces
+    /// the backend, device and mode.
     pub output: OutputSettings,
-    /// The volume to start with.
+    /// The volume to start with, unless a session is restored.
     pub volume: Volume,
     /// How the null and WAV backends take audio.
     pub pacing: SinkPacing,
     /// Loudness normalization; off by default.
     pub replay_gain: ReplayGain,
+    /// How the player behaves.
+    pub prefs: PlayerPrefs,
+    /// The library: plays library tracks, resolves contexts and records statistics.
+    /// Without it only files play and nothing is recorded.
+    pub library: Option<MusicLibrary>,
+    /// The session; without it nothing is saved or restored and no crash sentinel is
+    /// kept.
+    pub session: Option<SessionConfig>,
+    /// The time source.
+    pub clock: SharedClock,
+    /// The bus to publish on; a new one when `None`.
+    pub bus: Option<EventBus<Event>>,
+    /// The seed of the shuffle order; from the time when `None`.
+    pub shuffle_seed: Option<u64>,
 }
 
 impl PlayerConfig {
     /// Plays to `selection`, with the default output settings otherwise, at full
-    /// volume and in real time.
+    /// volume and in real time, without library or session.
     pub fn new(selection: OutputSelection) -> Self {
         let OutputSelection {
             backend,
@@ -112,6 +218,12 @@ impl PlayerConfig {
             volume: Volume::FULL,
             pacing: SinkPacing::RealTime,
             replay_gain: ReplayGain::default(),
+            prefs: PlayerPrefs::default(),
+            library: None,
+            session: None,
+            clock: SystemClock::shared(),
+            bus: None,
+            shuffle_seed: None,
         }
     }
 
@@ -143,9 +255,13 @@ impl PlayerConfig {
         Ok(())
     }
 
-    pub(super) fn engine_config(&self) -> EngineConfig {
+    pub(super) fn engine_config(&self, output: &OutputSelection) -> EngineConfig {
+        let mut settings = self.output.clone();
+        settings.backend = output.backend;
+        settings.device = output.device.clone();
+        settings.mode = output.mode;
         EngineConfig {
-            output: self.output.clone(),
+            output: settings,
             volume: self.volume,
             sink_pacing: match self.pacing {
                 SinkPacing::RealTime => Pacing::RealTime,
@@ -217,7 +333,11 @@ mod tests {
     fn replay_gain_reaches_the_engine() {
         let mut config = PlayerConfig::new(OutputSelection::default());
         assert_eq!(
-            config.engine_config().processing.loudness.mode,
+            config
+                .engine_config(&OutputSelection::default())
+                .processing
+                .loudness
+                .mode,
             LoudnessMode::Off
         );
         config.replay_gain = ReplayGain {
@@ -226,7 +346,10 @@ mod tests {
             untagged_preamp_db: -2.0,
             prevent_clipping: false,
         };
-        let loudness = config.engine_config().processing.loudness;
+        let loudness = config
+            .engine_config(&OutputSelection::default())
+            .processing
+            .loudness;
         assert_eq!(loudness.mode, LoudnessMode::Album);
         assert_eq!(loudness.preamp_db, 3.0);
         assert_eq!(loudness.untagged_preamp_db, -2.0);
@@ -239,6 +362,30 @@ mod tests {
         ));
         config.replay_gain.preamp_db = f64::NAN;
         assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn preferences_follow_the_settings() {
+        let playback = PlaybackSettings {
+            previous_restarts_after_s: 0,
+            play_count_percent: 60,
+            play_count_minutes: 2,
+            play_context: ContextAction::Append,
+            ..PlaybackSettings::default()
+        };
+        let prefs = PlayerPrefs::from_settings(&playback);
+        assert_eq!(prefs.previous_restart, None);
+        assert_eq!(prefs.play_rules.play_percent, 60);
+        assert_eq!(prefs.play_rules.play_time, Duration::from_secs(120));
+        assert!(prefs.append_contexts);
+        assert_eq!(
+            PlayerPrefs::default().previous_restart,
+            Some(Duration::from_secs(3))
+        );
+        let gain = ReplayGain::from_settings(&LoudnessTable::default());
+        assert_eq!(gain.mode, ReplayGainMode::Auto);
+        assert_eq!(gain.untagged_preamp_db, -6.0);
+        assert!(gain.prevent_clipping);
     }
 
     #[test]

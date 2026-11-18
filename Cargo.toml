@@ -57,6 +57,8 @@ lofty = "0.25.5"
 notify = { version = "8.2.2", default-features = false }
 # Native PipeWire output; the crate is young, so the version is exact.
 pipewire = { version = "=0.10.1", features = ["v1_2_0"] }
+# Property tests (development only). No default features: no forking or regex strategies.
+proptest = { version = "1.11", default-features = false, features = ["std"] }
 # The `regexp()` SQL function behind the query language's `~` operator.
 regex = "1.12"
 # Resource limits (address space, core dumps) that scan workers set on themselves.

@@ -11,10 +11,10 @@ The vocabulary every other crate speaks: audio formats, channel layouts and devi
 |---|---|
 | `audio` | `SampleFormat` (integer, float and DSD, with byte order), `SampleRate`, `ChannelPosition` and `ChannelLayout` in the canonical WAVE order, `AudioSpec`, `MediaTime` (exact times as ticks at a tick rate), `OutputBackendKind`, `BackendSelection`, `DeviceId`, `DeviceSelection`, `DeviceKey`, `DeviceInfo`, `OutputMode`, `OutputSelection` |
 | `library` | `TrackId`, `TrackRef`, `MediaSource` (a path kept as bytes, with an optional subsong or span) |
-| `player` | The engine's `EngineCommand`s and `EngineEvent`s, `TransportState`, `PlaybackItem` (with the `Loudness` values of its tags) and `ItemId`, `Volume` (cubic curve), `EngineError` |
-| `settings` | `Settings` with the `[output]` table (`OutputSettings`, per-device `DeviceProfile`s), read from and written to `settings.toml` with defaults |
+| `player` | The engine's `EngineCommand`s and `EngineEvent`s, `TransportState`, `PlaybackItem` (with the `Loudness` values of its tags) and `ItemId`, `Volume` (cubic curve), `EngineError`; the queue's `EntryId`, `QueueEntry`, `QueueContext` (`ContextSource`), `EnqueueAt`, `ShuffleMode`, `RepeatMode`, `StopAfter`, `PlayModes`, `PlaybackState` |
+| `settings` | `Settings` (versioned) with the tables `library`, `playback`, `output` (with per-device `DeviceProfile`s), `loudness`, `appearance` and `advanced`, each with defaults and validation (`SettingsError`); `SettingsGroup`, `Applies`; `UiState` (window size, pane widths and visibility) for `ui-state.toml` |
 
-Album, artist and playlist records, the queue and the service's player commands, and the query tree are still to come.
+Album, artist and playlist records and the query tree are still to come.
 
 Values that appear in `settings.toml` or on the command line have one text form, used by `Display`, `FromStr` and serde alike, for example `fixed:48000`, `hardware:PCM` or `alsa:hw:CARD=D10s,DEV=0`. File paths are never converted to strings: they are serialized as bytes, so names that are not valid UTF-8 survive.
 

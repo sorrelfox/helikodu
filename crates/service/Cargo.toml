@@ -24,7 +24,13 @@ bundled-sqlite = ["helikodu-library/bundled-sqlite"]
 helikodu-engine.workspace = true
 helikodu-library.workspace = true
 helikodu-model.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
 
 [lints]
 workspace = true

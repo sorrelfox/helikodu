@@ -9,5 +9,9 @@
 #![allow(clippy::unwrap_used)]
 
 mod controls;
+mod crash;
 mod media;
+mod modes;
 mod queue;
+mod session;
+mod stats;

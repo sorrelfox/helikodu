@@ -4,14 +4,15 @@
 //! Playback: the commands the engine accepts, the events it sends, and the values they
 //! carry.
 //!
-//! These are the engine's own messages. The engine plays what it is told and decides
-//! nothing about what comes next; the queue, play modes and the commands front ends
-//! send to the service are not defined here yet.
+//! The engine's own messages: the engine plays what it is told and decides nothing
+//! about what comes next. The queue, its entries and context, and the play modes,
+//! which the service owns and front ends see.
 
 mod engine_command;
 mod engine_error;
 mod engine_event;
 mod playback_item;
+mod queue;
 mod transport_state;
 mod volume;
 
@@ -19,5 +20,9 @@ pub use engine_command::EngineCommand;
 pub use engine_error::EngineError;
 pub use engine_event::{EngineEvent, TrackEndReason};
 pub use playback_item::{ItemId, Loudness, PlaybackItem};
+pub use queue::{
+    ContextSource, EnqueueAt, EntryId, PlayModes, PlaybackState, QueueContext, QueueEntry,
+    RepeatMode, ShuffleMode, StopAfter,
+};
 pub use transport_state::TransportState;
 pub use volume::Volume;

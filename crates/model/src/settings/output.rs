@@ -18,7 +18,7 @@ pub use output_format::OutputFormat;
 pub use sample_rate_policy::SampleRatePolicy;
 pub use volume_control::VolumeControl;
 
-use super::SettingsError;
+use super::{SettingsError, check_range};
 use crate::audio::{BackendSelection, DeviceKey, DeviceSelection, OutputMode, OutputSelection};
 
 /// The allowed length of the playback buffer, in milliseconds.
@@ -114,16 +114,7 @@ impl OutputSettings {
 }
 
 fn check_buffer(key: &str, value: u32) -> Result<(), SettingsError> {
-    if BUFFER_MS.contains(&value) {
-        Ok(())
-    } else {
-        Err(SettingsError {
-            key: key.to_owned(),
-            value: value.into(),
-            min: (*BUFFER_MS.start()).into(),
-            max: (*BUFFER_MS.end()).into(),
-        })
-    }
+    check_range(key, value, BUFFER_MS)
 }
 
 /// Settings for one device that replace the general ones while it is in use. A field
@@ -239,7 +230,10 @@ fixed_volume_confirmed = true
                 ..DeviceProfile::default()
             },
         );
-        let settings = Settings { output };
+        let settings = Settings {
+            output,
+            ..Settings::default()
+        };
         let text = toml::to_string(&settings).unwrap();
         assert!(text.contains(r#"sample_rate = "fixed:48000""#), "{text}");
         assert!(text.contains(r#"volume = "hardware:PCM""#), "{text}");
