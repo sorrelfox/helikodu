@@ -994,6 +994,9 @@ impl MainWindow {
                 } else if let Some(key) = window.open_playlist_key() {
                     // Without a toast to undo, the open playlist's last edit.
                     window.step_playlist(key, false);
+                } else {
+                    // Otherwise the newest tag edit.
+                    window.step_tags(false);
                 }
             })
             .build();
@@ -1410,6 +1413,25 @@ impl MainWindow {
         if let Some(pages) = self.pages() {
             pages.tracks.select_rows(start, count);
         }
+    }
+
+    /// Starts editing `column` of the selected rows of the track table, as F2
+    /// does; the entry, if the edit began (for tests).
+    #[doc(hidden)]
+    pub fn demo_edit_track_cell(&self, column: crate::backend::TrackColumn) -> Option<gtk::Entry> {
+        self.pages().and_then(|p| p.tracks.demo_edit(column))
+    }
+
+    /// The texts the other selected rows show while a cell of `column` is
+    /// edited, and the status bar's texts (for tests).
+    #[doc(hidden)]
+    pub fn track_edit_preview(
+        &self,
+        column: crate::backend::TrackColumn,
+    ) -> (Vec<String>, (String, String)) {
+        self.pages()
+            .map(|p| (p.tracks.previewed(column), p.tracks.status_texts()))
+            .unwrap_or_default()
     }
 
     /// Opens a folder of the folder tree, a level per call (for screenshots).

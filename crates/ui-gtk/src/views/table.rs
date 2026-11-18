@@ -249,6 +249,11 @@ impl TableCell {
         }
     }
 
+    /// The text shown.
+    pub(crate) fn shown_text(&self) -> String {
+        self.imp().text.borrow().clone()
+    }
+
     /// The child widget.
     pub(crate) fn child(&self) -> Option<gtk::Widget> {
         self.imp().main_child()

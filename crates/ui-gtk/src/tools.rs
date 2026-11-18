@@ -9,5 +9,7 @@
 
 pub(crate) mod copies;
 pub(crate) mod duplicates;
+pub(crate) mod tag_preview;
+pub(crate) mod tag_tools;
 pub(crate) mod tool_window;
 pub(crate) mod trash;

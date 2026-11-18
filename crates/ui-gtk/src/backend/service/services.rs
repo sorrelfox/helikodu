@@ -23,12 +23,12 @@ use helikodu_service::Service;
 use helikodu_service::formats::{sqlite_version, supported_formats_for};
 use helikodu_service::jobs::loudness::{LoudnessEvent, LoudnessRequest};
 use helikodu_service::library::tag_editing::{
-    BatchItem, CoverChange, EditStamp, EditableFile, FieldKey, ReadOptions, TagChanges,
-    TagField as WriterField, WriteError, load_for_editing,
+    BatchItem, CoverChange, CoverLimits, EditStamp, EditableFile, FieldKey, ReadOptions,
+    TagChanges, TagField as WriterField, WriteError, load_for_editing, read_embedded_covers,
 };
 use helikodu_service::library::{
-    LibraryEvent, LoudnessSelection, ScanEvent, ScanRequest, TrackInfo, TrashOutcome, TrashRefusal,
-    WatchSettings,
+    LibraryEvent, LoudnessSelection, ScanEvent, ScanRequest, StepProblem, TrackInfo, TrashOutcome,
+    TrashRefusal, WatchSettings,
 };
 use helikodu_service::player::{
     PlayerCommand, list_outputs, resolve_backend as resolve, sound_backends,
@@ -37,7 +37,7 @@ use helikodu_service::player::{
 use super::super::services::{
     BackendSelection, CoverEdit, DatabaseInfo, DeviceInfo, EditTrack, FileFacts, FolderState,
     FormatReport, LibraryFolder, OutputBackendKind, OutputSelection, ScanStatus, Services,
-    Settings, StorageUsage, TagEdit, TagField, Versions, WriteResult,
+    Settings, StorageUsage, TagEdit, TagField, TagStepResult, Versions, WriteResult,
 };
 use super::super::services::{
     CopyGroup, DuplicateCounts, DuplicateGroup, FileId, KeepRule, MatchBy, TrashProblem,
@@ -67,6 +67,10 @@ pub(super) struct Opened {
     /// Why its tags cannot be written, if they cannot.
     read_only: Option<String>,
 }
+
+/// Held while tags are written or a tag edit is undone, so that the steps of
+/// the undo journal happen one after the other.
+static TAG_WRITES: Mutex<()> = Mutex::new(());
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
@@ -356,6 +360,7 @@ fn edit_track(key: TrackKey, info: &TrackInfo, file: Result<EditableFile, String
         path: info.path.clone(),
         fields,
         other,
+        raw: BTreeMap::new(),
         rating: entry.and_then(|e| e.stats.rating.map(|r| r.stars_rounded())),
         cover,
         cover_seed: key.0.wrapping_mul(0x9E37_79B9_7F4A_7C15),
@@ -392,11 +397,14 @@ fn edit_track(key: TrackKey, info: &TrackInfo, file: Result<EditableFile, String
     }
 }
 
-/// The changes of `edit` as the tag writer takes them; the rating is kept in
-/// the library and is not among them.
-fn tag_changes(edit: &TagEdit) -> Result<TagChanges, String> {
+/// The changes of `edit` with the field values `fields` as the tag writer
+/// takes them; the rating is kept in the library and is not among them.
+fn tag_changes(
+    edit: &TagEdit,
+    fields: &BTreeMap<TagField, Vec<String>>,
+) -> Result<TagChanges, String> {
     let mut changes = TagChanges::new();
-    for (field, values) in &edit.fields {
+    for (field, values) in fields {
         let key = form_key(field);
         let values: Vec<String> = match (&key, field) {
             // Other fields are one text; a field with several values is split.
@@ -425,6 +433,7 @@ fn tag_changes(edit: &TagEdit) -> Result<TagChanges, String> {
         }
     }
     changes.cover = match &edit.cover {
+        _ if edit.cover_not_inside => None,
         None => None,
         Some(CoverEdit::Remove) => Some(CoverChange::RemoveFront),
         Some(CoverEdit::Set(path)) => {
@@ -441,6 +450,34 @@ fn tag_changes(edit: &TagEdit) -> Result<TagChanges, String> {
         .as_ref()
         .map(|text| (!text.trim().is_empty()).then(|| text.clone()));
     Ok(changes)
+}
+
+/// Copies the picture at `picture` into `folder` as `cover.jpg` (or
+/// `cover.png` for a PNG picture), unless the folder has that file already.
+fn save_beside(picture: &Path, folder: &Path) -> Result<(), String> {
+    let bytes = std::fs::read(picture).map_err(|e| e.to_string())?;
+    let name = if bytes.starts_with(b"\x89PNG") {
+        "cover.png"
+    } else {
+        "cover.jpg"
+    };
+    let target = folder.join(name);
+    if target.exists() {
+        return Err(fill(
+            &tr("{} is already in the folder; it was kept."),
+            &[name],
+        ));
+    }
+    let temporary = folder.join(format!(".{name}.part"));
+    std::fs::write(&temporary, &bytes)
+        .and_then(|()| std::fs::rename(&temporary, &target))
+        .map_err(|e| {
+            let _ = std::fs::remove_file(&temporary);
+            fill(
+                &tr("The cover could not be saved in the folder: {}"),
+                &[&e.to_string()],
+            )
+        })
 }
 
 /// A trash outcome as the windows report it.
@@ -643,7 +680,22 @@ impl Services for ServiceServices {
                 load_for_editing(&info.path, &ReadOptions::default())
                     .map_err(|e| fill(&tr("The file cannot be read: {}"), &[&e.to_string()]))
             };
-            let track = edit_track(*key, &info, file.as_ref().map_err(Clone::clone).cloned());
+            let mut track = edit_track(*key, &info, file.as_ref().map_err(Clone::clone).cloned());
+            // The text as stored, for "Repair garbled text".
+            if file.as_ref().is_ok_and(|f| f.charset_repaired) {
+                let plain = ReadOptions {
+                    repair_charsets: false,
+                    legacy_charset: None,
+                };
+                if let Ok(raw) = load_for_editing(&info.path, &plain) {
+                    let (fields, _) = file_fields(&raw);
+                    for (field, values) in fields {
+                        if track.fields.get(&field) != Some(&values) {
+                            track.raw.insert(field, values);
+                        }
+                    }
+                }
+            }
             opened.insert(
                 *key,
                 Opened {
@@ -658,6 +710,7 @@ impl Services for ServiceServices {
     }
 
     fn write_tags(&self, edit: &TagEdit) -> Vec<WriteResult> {
+        let _writing = lock(&TAG_WRITES);
         let Some(library) = self.service.library() else {
             let message = tr("Helikodu runs without a library.");
             return edit
@@ -680,11 +733,6 @@ impl Services for ServiceServices {
         let mut results: Vec<WriteResult> = Vec::new();
         let mut items = Vec::new();
         let mut written_keys = Vec::new();
-        let changes = if edit.touches_files() {
-            Some(tag_changes(edit))
-        } else {
-            None
-        };
         for key in &edit.tracks {
             let Some(Opened {
                 path,
@@ -709,6 +757,9 @@ impl Services for ServiceServices {
                 });
                 continue;
             }
+            let changes = edit
+                .touches_files()
+                .then(|| tag_changes(edit, &edit.fields_for(*key)));
             match &changes {
                 None => results.push(WriteResult {
                     track: *key,
@@ -732,10 +783,12 @@ impl Services for ServiceServices {
         }
         if !items.is_empty() {
             let settings = self.service.settings().get();
-            match library.write_tags(&items, &settings, &mut |_| {}) {
+            match library.edit_tags(&items, &settings, &mut |_| {}) {
                 Ok(report) => {
                     let mut opened = lock(&self.opened);
-                    for (key, (path, result)) in written_keys.iter().zip(&report.batch.results) {
+                    for (key, (path, result)) in
+                        written_keys.iter().zip(&report.write.batch.results)
+                    {
                         let error = match result {
                             Ok(outcome) => {
                                 opened.insert(
@@ -768,13 +821,20 @@ impl Services for ServiceServices {
                 }
             }
         }
-        // The rating is kept in the library, for every track whose file was saved.
+        // The rating is kept in the library (and written into the file when the
+        // settings ask for it), for every track whose file was saved.
         if let Some(stars) = edit.rating {
+            let settings = (*self.service.settings().get()).clone();
             for result in results.iter_mut().filter(|r| r.error.is_none()) {
                 let (reply, answer) = std::sync::mpsc::channel();
-                let sent = library.rate(TrackId::new(result.track.0), stars, move |r| {
-                    let _ = reply.send(r);
-                });
+                let sent = library.rate_into_file(
+                    TrackId::new(result.track.0),
+                    stars,
+                    settings.clone(),
+                    move |r| {
+                        let _ = reply.send(r.map(|_| ()));
+                    },
+                );
                 result.error = match sent.map(|()| answer.recv()) {
                     Ok(Ok(Ok(()))) => None,
                     Ok(Ok(Err(e))) | Err(e) => Some(e.to_string()),
@@ -782,9 +842,66 @@ impl Services for ServiceServices {
                 };
             }
         }
+        // The new cover beside the files too, where the folder has none yet.
+        if let (true, Some(CoverEdit::Set(picture))) = (edit.cover_in_folder, &edit.cover) {
+            let mut done: Vec<PathBuf> = Vec::new();
+            for result in results.iter_mut().filter(|r| r.error.is_none()) {
+                let Some(folder) = opened
+                    .get(&result.track)
+                    .and_then(|o| o.path.parent().map(Path::to_path_buf))
+                else {
+                    continue;
+                };
+                if done.contains(&folder) {
+                    continue;
+                }
+                done.push(folder.clone());
+                if let Err(reason) = save_beside(picture, &folder) {
+                    result.error = Some(reason);
+                }
+            }
+        }
         // In the order of the selection.
         results.sort_by_key(|r| edit.tracks.iter().position(|k| *k == r.track));
         results
+    }
+
+    fn cover_picture(&self, track: TrackKey) -> Option<Vec<u8>> {
+        let path = lock(&self.opened).get(&track)?.path.clone();
+        let covers = read_embedded_covers(&path, &CoverLimits::default()).ok()?;
+        covers.front()?.bytes().ok().map(<[u8]>::to_vec)
+    }
+
+    fn step_tags(&self, redo: bool) -> Result<Option<TagStepResult>, BackendError> {
+        let _writing = lock(&TAG_WRITES);
+        let Some(library) = self.service.library() else {
+            return Ok(None);
+        };
+        let settings = self.service.settings().get();
+        let Some(report) = library.step_tags(redo, &settings).map_err(error)? else {
+            return Ok(None);
+        };
+        // The files changed back were read again; a following edit opens them anew.
+        lock(&self.opened).clear();
+        let file_name = |path: &Path| {
+            path.file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default()
+        };
+        Ok(Some(TagStepResult {
+            files: report.files.len(),
+            problems: report
+                .failed()
+                .map(|(path, problem)| {
+                    let reason = match problem {
+                        StepProblem::Changed => tr("The file was changed since."),
+                        StepProblem::Write(e) => write_error_text(e),
+                        other => other.to_string(),
+                    };
+                    (file_name(path), reason)
+                })
+                .collect(),
+        }))
     }
 
     fn formats(&self) -> FormatReport {

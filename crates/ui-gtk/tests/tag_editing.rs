@@ -423,6 +423,206 @@ fn shows_mp4_dates_and_centres_numbers(app: &gtk::Application) {
     window.destroy();
 }
 
+/// A main window over a fresh library of three tracks in `name`.
+fn window_over(app: &gtk::Application, name: &str) -> (MainWindow, Backend, Vec<PathBuf>) {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (backend, files) = library(&dir);
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    window.set_default_size(1440, 900);
+    window.present();
+    spin(100);
+    (window, backend, files)
+}
+
+fn album_of(file: &Path) -> Option<String> {
+    read_file_info(file).unwrap().tags.album
+}
+
+fn title_of(file: &Path) -> Option<String> {
+    read_file_info(file).unwrap().tags.title
+}
+
+fn undoes_and_redoes_a_save(app: &gtk::Application) {
+    let (window, backend, files) = window_over(app, "ui-tag-undo");
+    let keys = keys(&backend);
+    let flac: Vec<TrackKey> = keys[..2].iter().map(|(_, k)| *k).collect();
+    window.edit_tags(&flac);
+    wait_for("the tag editor", || toplevel("tag-editor").is_some());
+    let editor = toplevel("tag-editor").unwrap();
+    assert!(
+        labels(&editor)
+            .iter()
+            .any(|l| l.contains("Undo with Ctrl Z")),
+        "the footer tells how to undo"
+    );
+    album_entry(&editor, "Old Name").set_text("New Name");
+    button(&editor, "Save 2 files").emit_clicked();
+    wait_for("the save", || toplevel("tag-editor").is_none());
+    wait_for("the toast", || {
+        window
+            .toast_text()
+            .is_some_and(|t| t.contains("Saved 2 files"))
+    });
+    assert_eq!(album_of(&files[0]).as_deref(), Some("New Name"));
+
+    // Ctrl+Z while the toast is up runs its Undo.
+    WidgetExt::activate_action(&window, "win.undo", None).unwrap();
+    wait_for("the undo", || {
+        files[..2]
+            .iter()
+            .all(|f| album_of(f).as_deref() == Some("Old Name"))
+    });
+    wait_for("the undo toast", || {
+        window
+            .toast_text()
+            .is_some_and(|t| t.contains("Put back the tags of 2 files"))
+    });
+    let library = backend.library();
+    wait_for("the library to follow", || {
+        library
+            .track_rows(&flac)
+            .unwrap()
+            .iter()
+            .all(|r| r.album_title == "Old Name")
+    });
+
+    // Ctrl+Shift+Z does it again, with a toast whose Undo takes it back.
+    WidgetExt::activate_action(&window, "win.redo", None).unwrap();
+    wait_for("the redo", || {
+        files[..2]
+            .iter()
+            .all(|f| album_of(f).as_deref() == Some("New Name"))
+    });
+    wait_for("the redo toast", || {
+        window
+            .toast_text()
+            .is_some_and(|t| t.contains("Changed the tags of 2 files again"))
+    });
+    WidgetExt::activate_action(&window, "win.undo", None).unwrap();
+    wait_for("the second undo", || {
+        album_of(&files[0]).as_deref() == Some("Old Name")
+            && window
+                .toast_text()
+                .is_some_and(|t| t.contains("Put back the tags of 2 files"))
+    });
+    WidgetExt::activate_action(&window, "win.undo", None).unwrap();
+    wait_for("nothing more to undo", || {
+        window
+            .toast_text()
+            .is_some_and(|t| t.contains("There is nothing to undo"))
+    });
+    assert_eq!(album_of(&files[2]).as_deref(), Some("Old Name"));
+}
+
+fn tag_tools_fill_the_editor(app: &gtk::Application) {
+    let (window, backend, files) = window_over(app, "ui-tag-tools");
+    let keys = keys(&backend);
+    let flac: Vec<TrackKey> = keys[..2].iter().map(|(_, k)| *k).collect();
+    window.edit_tags(&flac);
+    wait_for("the tag editor", || toplevel("tag-editor").is_some());
+    let editor = toplevel("tag-editor").unwrap();
+
+    // Find and replace changes one title: a value for that file alone.
+    WidgetExt::activate_action(&editor, "tageditor.tool", Some(&"replace".to_variant())).unwrap();
+    wait_for("tag tools", || toplevel("tag-tools").is_some());
+    let tools = toplevel("tag-tools").unwrap();
+    assert!(labels(&tools).iter().any(|l| l == "Find and replace"));
+    let entries: Vec<gtk::Entry> = descendants(tools.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Entry>().ok())
+        .collect();
+    entries[0].set_text("One");
+    entries[1].set_text("Uno");
+    spin(50);
+    button(&tools, "Replace in 1 file").emit_clicked();
+    wait_for("tag tools to close", || toplevel("tag-tools").is_none());
+    let pending = descendants(editor.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Entry>().ok())
+        .any(|e| e.placeholder_text().as_deref() == Some("<1 new value>"));
+    assert!(pending, "the title holds a value for one file");
+
+    // Numbering writes the same total into both: an ordinary edit.
+    WidgetExt::activate_action(&editor, "tageditor.tool", Some(&"number".to_variant())).unwrap();
+    wait_for("tag tools", || toplevel("tag-tools").is_some());
+    let tools = toplevel("tag-tools").unwrap();
+    spin(50);
+    button(&tools, "Number 2 files").emit_clicked();
+    wait_for("tag tools to close", || toplevel("tag-tools").is_none());
+    album_entry(&editor, "2");
+
+    button(&editor, "Save 2 files").emit_clicked();
+    wait_for("the save", || toplevel("tag-editor").is_none());
+    assert_eq!(title_of(&files[0]).as_deref(), Some("Uno"));
+    assert_eq!(title_of(&files[1]).as_deref(), Some("Two"));
+    let total = |backend: &Backend| {
+        let tracks = backend.services().edit_tracks(&flac[1..]).unwrap();
+        tracks[0]
+            .fields
+            .get(&helikodu_ui_gtk::backend::services::TagField::TrackTotal)
+            .cloned()
+    };
+    assert_eq!(total(&backend), Some(vec!["2".to_owned()]));
+
+    WidgetExt::activate_action(&window, "win.undo", None).unwrap();
+    wait_for("the undo", || title_of(&files[0]).as_deref() == Some("One"));
+    assert_eq!(total(&backend), None);
+}
+
+fn edits_in_the_track_table(app: &gtk::Application) {
+    use helikodu_ui_gtk::backend::TrackColumn;
+    let (window, _backend, files) = window_over(app, "ui-tag-table");
+    window.open_page("tracks");
+    wait_for("the tracks", || window.track_table_stats().0 == 3);
+    spin(200);
+    window.demo_select_tracks(0, 2);
+    let entry = RefCell::new(None);
+    wait_for("the cell entry", || {
+        entry.replace(window.demo_edit_track_cell(TrackColumn::Album));
+        entry.borrow().is_some()
+    });
+    let entry = entry.take().unwrap();
+    assert_eq!(
+        entry.text(),
+        "Old Name",
+        "the entry starts with the cell's text"
+    );
+    entry.set_text("Letters");
+    spin(50);
+    let (previews, (left, right)) = window.track_edit_preview(TrackColumn::Album);
+    assert_eq!(
+        previews,
+        ["Letters"],
+        "the other selected row shows the value"
+    );
+    assert_eq!(left, "Editing Album for the 2 selected tracks");
+    assert!(right.contains("Enter saves"), "{right}");
+    entry.emit_activate();
+    wait_for("the save", || {
+        files[..2]
+            .iter()
+            .all(|f| album_of(f).as_deref() == Some("Letters"))
+    });
+    assert_eq!(album_of(&files[2]).as_deref(), Some("Old Name"));
+    let (previews, (left, _)) = window.track_edit_preview(TrackColumn::Album);
+    assert!(previews.is_empty());
+    assert!(!left.starts_with("Editing"), "{left}");
+    wait_for("the toast", || {
+        window
+            .toast_text()
+            .is_some_and(|t| t.contains("Saved 2 files"))
+    });
+    WidgetExt::activate_action(&window, "win.undo", None).unwrap();
+    wait_for("the undo", || {
+        files[..2]
+            .iter()
+            .all(|f| album_of(f).as_deref() == Some("Old Name"))
+    });
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
@@ -431,6 +631,9 @@ const TESTS: &[Test] = &[
         "shows_mp4_dates_and_centres_numbers",
         shows_mp4_dates_and_centres_numbers,
     ),
+    ("undoes_and_redoes_a_save", undoes_and_redoes_a_save),
+    ("tag_tools_fill_the_editor", tag_tools_fill_the_editor),
+    ("edits_in_the_track_table", edits_in_the_track_table),
 ];
 
 fn main() -> ExitCode {

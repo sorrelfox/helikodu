@@ -71,6 +71,10 @@ crates/ui-gtk/src/window/play_modes.rs
 crates/ui-gtk/src/tools/copies.rs
 crates/ui-gtk/src/tools/duplicates.rs
 crates/ui-gtk/src/tools/trash.rs
+crates/ui-gtk/src/tools/tag_tools.rs
+crates/ui-gtk/src/tools/tag_preview.rs
+crates/ui-gtk/src/views/tracks/edit.rs
+crates/ui-gtk/src/window/tag_undo.rs
 crates/ui-gtk/src/widgets/copies_badge.rs
 crates/ui-gtk/src/backend.rs
 crates/ui-gtk/src/query_text.rs

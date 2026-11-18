@@ -85,8 +85,16 @@ fn ratings(context: &Rc<Context>) -> gtk::Box {
         )),
     );
     switch.set_active(context.settings().advanced.write_ratings_to_tags);
-    // Applied from a later version.
-    line.set_sensitive(false);
+    let weak = Rc::downgrade(context);
+    switch.connect_active_notify(move |switch| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let on = switch.is_active();
+        if !context.update(|s| s.advanced.write_ratings_to_tags = on) {
+            switch.set_active(!on);
+        }
+    });
     line
 }
 

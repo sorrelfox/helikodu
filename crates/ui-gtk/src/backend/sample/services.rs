@@ -17,7 +17,7 @@ use super::super::services::{
     Availability, BackendSelection, DatabaseInfo, Decoder, DecoderStatus, DeviceId, DeviceInfo,
     DeviceSelection, EditTrack, FamilyStatus, FileFacts, FolderState, FormatFamily, FormatReport,
     LibraryFolder, OutputBackendKind, OutputMode, OutputSelection, ScanStatus, Services, Settings,
-    StorageUsage, TagEdit, TagField, Versions, WriteResult,
+    StorageUsage, TagEdit, TagField, TagStepResult, Versions, WriteResult,
 };
 use super::super::services::{
     CopyGroup, DuplicateCounts, DuplicateGroup, FileId, KeepRule, MatchBy, TrashResult,
@@ -26,12 +26,18 @@ use super::super::services::{LimiterReading, LoudnessCoverage, LoudnessScope, Lo
 use super::super::{BackendError, OutputInfo, SignalState, TrackKey, Update};
 use super::SampleLibrary;
 
+/// The tag edits of the sample tracks, field by field.
+type Edits = HashMap<TrackKey, BTreeMap<TagField, Vec<String>>>;
+
 #[derive(Debug)]
 struct MemoryState {
     settings: Arc<Settings>,
     output: OutputSelection,
     roots: Vec<PathBuf>,
     edits: HashMap<TrackKey, BTreeMap<TagField, Vec<String>>>,
+    /// The tag edits as they were before each save, and before each undo.
+    tag_undo: Vec<(usize, Edits)>,
+    tag_redo: Vec<(usize, Edits)>,
     ratings: HashMap<TrackKey, Option<u8>>,
     lyrics: HashMap<TrackKey, String>,
     covers_removed: Vec<TrackKey>,
@@ -72,6 +78,8 @@ impl MemoryServices {
                 output: OutputSelection::default(),
                 roots,
                 edits: HashMap::new(),
+                tag_undo: Vec::new(),
+                tag_redo: Vec::new(),
                 ratings: HashMap::new(),
                 lyrics: HashMap::new(),
                 covers_removed: Vec::new(),
@@ -421,6 +429,7 @@ impl Services for MemoryServices {
                     key: *key,
                     path,
                     fields,
+                    raw: BTreeMap::new(),
                     other: vec![
                         ("LABEL".into(), "Saar Records".into()),
                         ("CATALOGNUMBER".into(), format!("SR-{:03}", album.row.key.0)),
@@ -467,12 +476,17 @@ impl Services for MemoryServices {
             .map(|t| (t.key, t.file_name()))
             .collect();
         let mut state = self.lock();
+        if edit.touches_files() {
+            let before = state.edits.clone();
+            state.tag_undo.push((edit.tracks.len(), before));
+            state.tag_redo.clear();
+        }
         edit.tracks
             .iter()
             .map(|key| {
                 let entry = state.edits.entry(*key).or_default();
-                for (field, values) in &edit.fields {
-                    entry.insert(field.clone(), values.clone());
+                for (field, values) in edit.fields_for(*key) {
+                    entry.insert(field, values);
                 }
                 if let Some(rating) = edit.rating {
                     state.ratings.insert(*key, rating);
@@ -490,6 +504,32 @@ impl Services for MemoryServices {
                 }
             })
             .collect()
+    }
+
+    fn cover_picture(&self, _track: TrackKey) -> Option<Vec<u8>> {
+        None
+    }
+
+    fn step_tags(&self, redo: bool) -> Result<Option<TagStepResult>, BackendError> {
+        let mut state = self.lock();
+        let popped = if redo {
+            state.tag_redo.pop()
+        } else {
+            state.tag_undo.pop()
+        };
+        let Some((files, edits)) = popped else {
+            return Ok(None);
+        };
+        let now = std::mem::replace(&mut state.edits, edits);
+        if redo {
+            state.tag_undo.push((files, now));
+        } else {
+            state.tag_redo.push((files, now));
+        }
+        Ok(Some(TagStepResult {
+            files,
+            problems: Vec::new(),
+        }))
     }
 
     fn formats(&self) -> FormatReport {

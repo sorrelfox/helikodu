@@ -639,6 +639,8 @@ impl MainWindow {
             .activate(|window: &MainWindow, _, _| {
                 if let Some(key) = window.open_playlist_key() {
                     window.step_playlist(key, true);
+                } else {
+                    window.step_tags(true);
                 }
             })
             .build();

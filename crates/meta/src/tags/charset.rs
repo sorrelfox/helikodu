@@ -214,6 +214,28 @@ pub(crate) fn encoding_for_label(label: &str) -> Option<&'static Encoding> {
     Encoding::for_label(label.trim().as_bytes())
 }
 
+/// What [`repair_garbled`] found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GarbledRepair {
+    /// The legacy charset the text was taken to be in, as its WHATWG name
+    /// (`windows-1251`, `Shift_JIS`, …); `None` when no text needed one.
+    pub charset: Option<&'static str>,
+    /// The repaired form of each text, or `None` when it stays as it is.
+    pub repaired: Vec<Option<String>>,
+}
+
+/// Repairs the garbled text among `texts` as the reader does (see the module
+/// documentation), with the charset guessed from all of them together, or the
+/// charset `label` names when one is given and known.
+pub fn repair_garbled(texts: &[&str], label: Option<&str>) -> GarbledRepair {
+    let preferred = label.and_then(encoding_for_label);
+    let repair = CharsetRepair::detect(texts.iter().copied(), preferred);
+    GarbledRepair {
+        charset: repair.legacy.map(Encoding::name),
+        repaired: texts.iter().map(|t| repair.repair(t)).collect(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,6 +250,17 @@ mod tests {
 
     fn repair_alone(text: &str) -> Option<String> {
         CharsetRepair::detect([text], None).repair(text)
+    }
+
+    #[test]
+    fn garbled_text_is_repaired_with_the_chosen_charset() {
+        let broken = as_latin1("Кино", "windows-1251");
+        let found = repair_garbled(&[&broken, "Plain"], None);
+        assert_eq!(found.charset, Some("windows-1251"));
+        assert_eq!(found.repaired, vec![Some("Кино".to_owned()), None]);
+        let koi = repair_garbled(&[&broken], Some("koi8-r"));
+        assert_eq!(koi.charset, Some("KOI8-R"));
+        assert_ne!(koi.repaired[0].as_deref(), Some("Кино"));
     }
 
     #[test]

@@ -26,6 +26,7 @@ impl Providers {
             "lyrics.css",
             "playmodes.css",
             "tools.css",
+            "tags.css",
             "browse.css",
             "playlists.css",
         ] {

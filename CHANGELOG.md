@@ -28,6 +28,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Folders outside the library: the Folders view also shows the home folder, connected drives and the file system, plays from them without storing anything, and adds a folder to the library with **Add to library**.
 - Waveform seek bar: the bars of the seek bar follow the loudness of the track. Peaks are computed in the background for the playing track, the next few in the queue and the last played, never while the library is scanned, and kept within the **Analysis data** limit (Settings ▸ Library ▸ Storage), oldest first.
 - Analyzer in Now Playing: a spectrum with peak hold and an RMS and peak meter for each channel ("CLIP" at full scale), measured after the last processing stage. It moves only while sound plays and the page is shown.
+- Tag edits can be undone and done again (Ctrl+Z, Ctrl+Shift+Z, and Undo in the toast after saving): each file gets back its tags, cover and lyrics, unless it was changed since. The last 100 changes are kept for 90 days.
+- Tag tools, from the tag editor: fill tags from file names with a pattern, number the tracks, change capital letters, find and replace (also with regular expressions), repair garbled text from old code pages, and create sort names. Their values go into the editor and are written when it saves.
+- Tags can be edited in the Tracks table: F2 edits a cell, for all selected rows at once.
+- The tag editor's Cover tab takes a dropped picture, saves the front cover as a file, and can also put a new cover as `cover.jpg` in the album folder.
+- Ratings can also be written into the files (**Settings → Advanced**, off by default).
 
 ### Changed
 

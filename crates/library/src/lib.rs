@@ -24,6 +24,8 @@ mod query;
 mod scan;
 mod search;
 mod stats;
+mod tag_journal;
+pub mod tag_tools;
 mod tag_writes;
 mod track_source;
 mod watch;
@@ -87,6 +89,10 @@ pub use stats::{
     HistoryEntry, HistoryQuery, HistoryTotals, Listen, ListenEnd, ListenOutcome, PlayRules, Rating,
     TrackStats,
 };
+pub use tag_journal::{
+    KEPT_DAYS, KEPT_STEPS, StepProblem, TagEditReport, TagHistory, TagStep, TagStepId,
+    TagStepReport,
+};
 pub use tag_writes::{RateError, RatingOutcome, TagWriteReport, TagWriteSettings};
 pub use track_source::TrackSource;
 pub use watch::{PollReason, RescanReason, WatchEvent, WatchMode, WatchOptions, Watcher};
@@ -99,6 +105,8 @@ pub use watch::{PollReason, RescanReason, WatchEvent, WatchMode, WatchOptions, W
 /// collect the edits in [`TagChanges`](tag_editing::TagChanges) and write them with
 /// [`Library::write_tags`] as one [`BatchItem`](tag_editing::BatchItem) per file.
 pub mod tag_editing {
+    /// The pictures inside a file, to save its front cover as a file.
+    pub use helikodu_meta::covers::{CoverLimits, read_embedded_covers};
     /// A rating as tags hold it: 0 to 10 half stars.
     pub use helikodu_meta::tags::Rating as TagRating;
     pub use helikodu_meta::tags::writing::{

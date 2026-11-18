@@ -898,14 +898,22 @@ impl LibrarySource for ServiceLibrary {
             .library()
             .ok_or_else(|| BackendError(tr("There is no library.")))?;
         let (reply, answer) = std::sync::mpsc::channel();
+        // With "Write ratings to files" on, the rating goes into the file too.
+        let settings = (*self.service.settings().get()).clone();
         library
-            .rate(track_id(track), stars.filter(|s| *s > 0), move |r| {
-                let _ = reply.send(r);
-            })
+            .rate_into_file(
+                track_id(track),
+                stars.filter(|s| *s > 0),
+                settings,
+                move |r| {
+                    let _ = reply.send(r);
+                },
+            )
             .map_err(error)?;
         answer
             .recv()
             .map_err(|_| BackendError(tr("The library has stopped.")))?
+            .map(|_| ())
             .map_err(error)
     }
 

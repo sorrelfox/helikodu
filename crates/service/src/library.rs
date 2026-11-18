@@ -66,6 +66,9 @@ pub use helikodu_library::PlayKeys;
 /// selection shares, and the changes written by [`MusicLibrary::write_tags`] and
 /// [`LibraryService::write_tags`].
 pub use helikodu_library::tag_editing;
+/// The tag tools: values from file names, numbering, capital letters, find and
+/// replace, garbled text and sort names, worked out without touching a file.
+pub use helikodu_library::tag_tools;
 pub use helikodu_library::{
     AlbumDetail, AlbumFilter, AlbumId, AlbumQuery, AlbumSort, AlbumSummary, ArtistQuery, ArtistRef,
     ArtistRole, ArtistSummary, AudioProperties, CoverHash, Disc, ExcludeRule, FailureKind,
@@ -90,6 +93,12 @@ pub use helikodu_library::{
     MainCopyError, MatchBy, Trash, TrashError, TrashOutcome, TrashRefusal, Trashed, backup_path,
 };
 pub use helikodu_library::{FileSection, YearSpan, YearSummary};
+/// The undo journal of tag edits: [`MusicLibrary::edit_tags`] records each
+/// save, [`MusicLibrary::undo_tags`] and [`MusicLibrary::redo_tags`] step through
+/// them.
+pub use helikodu_library::{
+    RatingOutcome, StepProblem, TagEditReport, TagHistory, TagStep, TagStepId, TagStepReport,
+};
 pub use helikodu_library::{SavedSearch, SavedSearchId};
 
 /// Why a library operation failed.
@@ -620,6 +629,79 @@ impl MusicLibrary {
             progress,
             &CancelToken::new(),
         )?)
+    }
+
+    /// Writes tags as [`write_tags`](Self::write_tags) does and records the
+    /// change in the undo journal of tag edits as one step.
+    pub fn edit_tags(
+        &self,
+        items: &[BatchItem],
+        library: &LibrarySettings,
+        advanced: &AdvancedSettings,
+        worker_program: Option<&Path>,
+        progress: &mut dyn FnMut(&BatchProgress),
+    ) -> Result<TagEditReport, LibraryError> {
+        let scan = scan_options(library, worker_program)?;
+        Ok(self.library.edit_tags(
+            items,
+            &TagWriteSettings::from_settings(advanced),
+            &scan,
+            progress,
+            &CancelToken::new(),
+        )?)
+    }
+
+    /// What the undo journal of tag edits can undo and do again.
+    pub fn tag_history(&self) -> Result<TagHistory, LibraryError> {
+        Ok(self.library.tag_history()?)
+    }
+
+    /// Undoes the newest tag edit (`redo` false), or does the newest undone one
+    /// again; `None` when there is none. Files changed since are left alone and
+    /// reported.
+    pub fn step_tags(
+        &self,
+        redo: bool,
+        library: &LibrarySettings,
+        advanced: &AdvancedSettings,
+        worker_program: Option<&Path>,
+    ) -> Result<Option<TagStepReport>, LibraryError> {
+        let scan = scan_options(library, worker_program)?;
+        let settings = TagWriteSettings::from_settings(advanced);
+        Ok(if redo {
+            self.library.redo_tags(&settings, &scan)?
+        } else {
+            self.library.undo_tags(&settings, &scan)?
+        })
+    }
+
+    /// Rates `track` like [`rate`](Self::rate), and with the `[advanced]`
+    /// setting to write ratings to files, also into the file of a whole-file
+    /// track, which is then read again.
+    pub fn rate_into_file(
+        &self,
+        track: TrackId,
+        stars: Option<u8>,
+        library: &LibrarySettings,
+        advanced: &AdvancedSettings,
+        worker_program: Option<&Path>,
+    ) -> Result<RatingOutcome, LibraryError> {
+        let settings = TagWriteSettings::from_settings(advanced);
+        if !settings.write_ratings_to_tags {
+            self.rate(track, stars)?;
+            return Ok(RatingOutcome {
+                rating: stars.and_then(Rating::from_stars),
+                file: None,
+                refresh: None,
+            });
+        }
+        let scan = scan_options(library, worker_program)?;
+        self.library
+            .rate_track(track, stars, &settings, &scan)
+            .map_err(|e| match e {
+                helikodu_library::RateError::InvalidStars(s) => LibraryError::InvalidRating(s),
+                helikodu_library::RateError::Db(e) => LibraryError::Database(e),
+            })
     }
 
     /// The library folders and whether each is masked or polled.

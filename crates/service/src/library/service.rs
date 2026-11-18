@@ -12,13 +12,13 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use helikodu_library::TagWriteReport;
 use helikodu_library::tag_editing::{BatchItem, BatchProgress};
 use helikodu_library::{
     ArtworkOptions, ArtworkPool, CoverHash, CoverLocator, ScanEvent, ScanHandle, ScanSummary,
     Thumbnail, ThumbnailCache, ThumbnailCacheOptions, ThumbnailSize, WatchEvent, WatchOptions,
     Watcher, read_file_details,
 };
+use helikodu_library::{RatingOutcome, TagEditReport, TagHistory, TagStepReport, TagWriteReport};
 use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::settings::{LibrarySettings, Settings};
 
@@ -386,6 +386,88 @@ impl LibraryService {
             self.bus.publish(&Event::Library(LibraryEvent::Changed));
         }
         Ok(report)
+    }
+
+    /// Writes tags as [`write_tags`](Self::write_tags) does and records the
+    /// change in the undo journal of tag edits; announces
+    /// [`LibraryEvent::Changed`] when a file was read again. Blocks.
+    pub fn edit_tags(
+        &self,
+        items: &[BatchItem],
+        settings: &Settings,
+        progress: &mut dyn FnMut(&BatchProgress),
+    ) -> Result<TagEditReport, LibraryError> {
+        let report = self.library.edit_tags(
+            items,
+            &settings.library,
+            &settings.advanced,
+            self.worker_program.as_deref(),
+            progress,
+        )?;
+        if report.write.refresh.is_some() {
+            self.bus.publish(&Event::Library(LibraryEvent::Changed));
+        }
+        Ok(report)
+    }
+
+    /// What the undo journal of tag edits can undo and do again.
+    pub fn tag_history(&self) -> Result<TagHistory, LibraryError> {
+        self.library.tag_history()
+    }
+
+    /// Undoes the newest tag edit, or with `redo` does the newest undone one
+    /// again; announces [`LibraryEvent::Changed`] when a file was read again.
+    /// Blocks: call it off a window's thread.
+    pub fn step_tags(
+        &self,
+        redo: bool,
+        settings: &Settings,
+    ) -> Result<Option<TagStepReport>, LibraryError> {
+        let report = self.library.step_tags(
+            redo,
+            &settings.library,
+            &settings.advanced,
+            self.worker_program.as_deref(),
+        )?;
+        if report.as_ref().is_some_and(|r| r.refresh.is_some()) {
+            self.bus.publish(&Event::Library(LibraryEvent::Changed));
+        }
+        Ok(report)
+    }
+
+    /// Rates `track` as [`rate`](Self::rate) does, and writes the rating into
+    /// its file when `settings` ask for it; announces
+    /// [`LibraryEvent::RatingChanged`], and [`LibraryEvent::Changed`] when the
+    /// file was read again.
+    pub fn rate_into_file(
+        &self,
+        track: TrackId,
+        stars: Option<u8>,
+        settings: Settings,
+        reply: impl FnOnce(Result<RatingOutcome, LibraryError>) + Send + 'static,
+    ) -> Result<(), LibraryError> {
+        let bus = self.bus.clone();
+        let worker = self.worker_program.clone();
+        self.run(
+            move |l| {
+                let outcome = l.rate_into_file(
+                    track,
+                    stars,
+                    &settings.library,
+                    &settings.advanced,
+                    worker.as_deref(),
+                )?;
+                bus.publish(&Event::Library(LibraryEvent::RatingChanged {
+                    track,
+                    stars,
+                }));
+                if matches!(outcome.refresh, Some(Ok(_))) {
+                    bus.publish(&Event::Library(LibraryEvent::Changed));
+                }
+                Ok(outcome)
+            },
+            reply,
+        )
     }
 
     /// Applies the `[library.duplicates]` settings of `settings` in the background

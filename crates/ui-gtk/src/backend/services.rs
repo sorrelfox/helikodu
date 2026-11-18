@@ -203,6 +203,9 @@ pub struct EditTrack {
     pub fields: BTreeMap<TagField, Vec<String>>,
     /// The other fields, by their names in the file.
     pub other: Vec<(String, String)>,
+    /// The form's fields as the file stores them, where that differs from
+    /// `fields` because garbled text was repaired on reading.
+    pub raw: BTreeMap<TagField, Vec<String>>,
     /// The rating in whole stars.
     pub rating: Option<u8>,
     /// The front cover.
@@ -255,18 +258,42 @@ pub struct TagEdit {
     pub lyrics: Option<String>,
     /// A new rating in whole stars, or none.
     pub rating: Option<Option<u8>>,
+    /// Values that differ per track (from the tag tools), field by field; a
+    /// field named in `fields` replaces them.
+    pub per_track: BTreeMap<TrackKey, BTreeMap<TagField, Vec<String>>>,
+    /// Whether a new cover stays out of the files ("Keep the cover: Inside
+    /// each file" unticked).
+    pub cover_not_inside: bool,
+    /// Whether a new cover is also saved as `cover.jpg` (or `cover.png`) in
+    /// the folder of each file, where no such file is yet.
+    pub cover_in_folder: bool,
 }
 
 impl TagEdit {
     /// Whether anything is changed in the files themselves (the rating is
     /// kept in the library).
     pub fn touches_files(&self) -> bool {
-        !self.fields.is_empty() || self.cover.is_some() || self.lyrics.is_some()
+        !self.fields.is_empty()
+            || (self.cover.is_some() && !self.cover_not_inside)
+            || self.lyrics.is_some()
+            || self.per_track.values().any(|f| !f.is_empty())
+    }
+
+    /// The field values written into `track`: its own values from the tag
+    /// tools, then the values for all.
+    pub fn fields_for(&self, track: TrackKey) -> BTreeMap<TagField, Vec<String>> {
+        let mut fields = self.per_track.get(&track).cloned().unwrap_or_default();
+        for (field, values) in &self.fields {
+            fields.insert(field.clone(), values.clone());
+        }
+        fields
     }
 
     /// Whether anything is changed at all.
     pub fn is_empty(&self) -> bool {
-        !self.touches_files() && self.rating.is_none()
+        !self.touches_files()
+            && self.rating.is_none()
+            && !(self.cover.is_some() && self.cover_in_folder)
     }
 }
 
@@ -279,6 +306,15 @@ pub struct WriteResult {
     pub file: String,
     /// Why it failed, if it did.
     pub error: Option<String>,
+}
+
+/// What undoing or doing again a tag edit did.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TagStepResult {
+    /// The files of the edit.
+    pub files: usize,
+    /// The files left as they were, by name, and why.
+    pub problems: Vec<(String, String)>,
 }
 
 /// How many tracks have loudness values.
@@ -412,8 +448,15 @@ pub trait Services: fmt::Debug + Send + Sync {
 
     /// The tracks `tracks` as the tag editor shows them. Blocking.
     fn edit_tracks(&self, tracks: &[TrackKey]) -> Result<Vec<EditTrack>, BackendError>;
-    /// Saves `edit`, file by file. Blocking.
+    /// Saves `edit`, file by file, as one step of the tag undo journal.
+    /// Blocking.
     fn write_tags(&self, edit: &TagEdit) -> Vec<WriteResult>;
+    /// The bytes of the front cover inside the file of `track`, as the tag
+    /// editor opened it. Blocking.
+    fn cover_picture(&self, track: TrackKey) -> Option<Vec<u8>>;
+    /// Undoes the newest saved tag edit, or with `redo` does the newest undone
+    /// one again; `None` when there is none. Blocking.
+    fn step_tags(&self, redo: bool) -> Result<Option<TagStepResult>, BackendError>;
 
     /// What this build can play.
     fn formats(&self) -> FormatReport;

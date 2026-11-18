@@ -29,6 +29,8 @@ use super::common::{bytes, compact_button, dialog_window, note, tilde};
 use crate::backend::services::{CoverEdit, EditTrack, TagEdit, TagField, WriteResult};
 use crate::backend::{Backend, ThumbnailState, TrackKey};
 use crate::i18n::{fill, ntr, tr};
+use crate::tools::tag_preview::{Tool, ToolTrack, ToolValues};
+use crate::tools::tag_tools;
 use crate::widgets::{CoverArt, RatingStars, icon_button, label};
 use crate::window::MainWindow;
 
@@ -164,6 +166,9 @@ struct FieldInput {
     start: Shared,
     edited_mark: gtk::Box,
     frame: gtk::Widget,
+    /// How many different values the tag tools gave this field, file by
+    /// file; 0 when they gave none.
+    pending: Cell<usize>,
 }
 
 impl FieldInput {
@@ -172,7 +177,9 @@ impl FieldInput {
         let now = match (&self.entry, &self.chips) {
             (Some(entry), _) => {
                 let text = entry.text();
-                if matches!(self.start, Shared::Mixed(_)) && text.is_empty() {
+                if (matches!(self.start, Shared::Mixed(_)) || self.pending.get() > 0)
+                    && text.is_empty()
+                {
                     return None;
                 }
                 parse(&self.field, &text)
@@ -217,7 +224,19 @@ impl FieldInput {
                 gtk::AccessibleInvalidState::False
             })]);
         }
-        let edited = self.change().is_some();
+        let pending = self.pending.get();
+        if let Some(entry) = &self.entry {
+            if pending > 0 {
+                entry.set_placeholder_text(Some(&fill(
+                    &ntr("<{} new value>", "<{} new values>", pending),
+                    &[&pending.to_string()],
+                )));
+                entry.add_css_class("hk-keep");
+            } else if matches!(self.start, Shared::Mixed(_)) {
+                entry.set_placeholder_text(Some(&tr("<keep>")));
+            }
+        }
+        let edited = self.change().is_some() || pending > 0;
         self.edited_mark.set_visible(edited);
         if edited {
             self.frame.add_css_class("edited");
@@ -329,6 +348,11 @@ struct Editor {
     info: gtk::Box,
     cover_tab: gtk::Box,
     tab_buttons: RefCell<Vec<gtk::ToggleButton>>,
+    /// Values from the tag tools that differ file by file.
+    pending: RefCell<ToolValues>,
+    /// "Keep the cover": inside each file, and as a file in the folder.
+    cover_inside: Cell<bool>,
+    cover_in_folder: Cell<bool>,
 }
 
 impl std::fmt::Debug for Editor {
@@ -394,7 +418,111 @@ impl Editor {
             cover: self.cover.borrow().clone(),
             lyrics,
             rating: self.rating.get(),
+            per_track: self.pending.borrow().clone(),
+            cover_not_inside: !self.cover_inside.get(),
+            cover_in_folder: self.cover_in_folder.get(),
         }
+    }
+
+    /// The files as the tag tools see them: their values with the edits made
+    /// so far.
+    fn tool_tracks(&self) -> Vec<ToolTrack> {
+        let edit = self.edit();
+        self.tracks
+            .iter()
+            .map(|track| {
+                let mut values = track.fields.clone();
+                for (name, value) in &track.other {
+                    let values_of: Vec<String> = value
+                        .split(';')
+                        .map(str::trim)
+                        .filter(|v| !v.is_empty())
+                        .map(str::to_owned)
+                        .collect();
+                    values.insert(TagField::Custom(name.clone()), values_of);
+                }
+                for (field, now) in edit.fields_for(track.key) {
+                    values.insert(field, now);
+                }
+                ToolTrack {
+                    key: track.key,
+                    path: track.path.clone(),
+                    values,
+                    raw: track.raw.clone(),
+                }
+            })
+            .collect()
+    }
+
+    /// Opens Tag tools at `tool` for the files of the editor.
+    fn open_tools(self: &Rc<Self>, tool: Tool) {
+        let weak = Rc::downgrade(self);
+        tag_tools::open(&self.window, self.tool_tracks(), tool, move |values| {
+            if let Some(editor) = weak.upgrade() {
+                editor.apply_tool(values);
+            }
+        });
+    }
+
+    /// Takes the values the tag tools give: a field that gets one value for
+    /// every file is filled in the form; others are kept file by file and
+    /// shown as "N new values".
+    fn apply_tool(&self, values: ToolValues) {
+        let mut fields: Vec<TagField> = Vec::new();
+        {
+            let mut pending = self.pending.borrow_mut();
+            for (track, changes) in values {
+                for (field, new) in changes {
+                    if !fields.contains(&field) {
+                        fields.push(field.clone());
+                    }
+                    pending.entry(track).or_default().insert(field, new);
+                }
+            }
+        }
+        for field in fields {
+            let mut seen: Vec<Vec<String>> = Vec::new();
+            let mut everyone = true;
+            for track in &self.tracks {
+                match self
+                    .pending
+                    .borrow()
+                    .get(&track.key)
+                    .and_then(|f| f.get(&field))
+                {
+                    Some(values) => {
+                        if !seen.contains(values) {
+                            seen.push(values.clone());
+                        }
+                    }
+                    None => everyone = false,
+                }
+            }
+            let inputs = self.inputs.borrow();
+            let Some(input) = inputs.iter().find(|i| i.field == field) else {
+                continue;
+            };
+            if everyone && seen.len() == 1 {
+                // One value for all: an ordinary edit of the form.
+                for changes in self.pending.borrow_mut().values_mut() {
+                    changes.remove(&field);
+                }
+                input.pending.set(0);
+                if let Some(entry) = &input.entry {
+                    entry.set_text(&shown(&field, &seen[0]));
+                } else if let Some(chips) = &input.chips {
+                    chips.values.replace(seen[0].clone());
+                    chips.changed();
+                }
+            } else {
+                input.pending.set(seen.len());
+                if let Some(entry) = &input.entry {
+                    entry.set_text("");
+                }
+            }
+        }
+        self.pending.borrow_mut().retain(|_, f| !f.is_empty());
+        self.refresh();
     }
 
     fn refresh(&self) {
@@ -405,8 +533,8 @@ impl Editor {
         let invalid = self.inputs.borrow().iter().any(FieldInput::invalid);
         self.save.set_sensitive(!edit.is_empty() && !invalid);
         let marks = [
-            !edit.fields.is_empty() || edit.rating.is_some(),
-            edit.cover.is_some(),
+            !edit.fields.is_empty() || edit.rating.is_some() || !edit.per_track.is_empty(),
+            edit.cover.is_some() && !edit.is_empty(),
             edit.lyrics.is_some(),
             false,
         ];
@@ -459,13 +587,15 @@ impl Editor {
         if failed.is_empty() {
             if let Some(main) = &main {
                 let n = edit.tracks.len();
-                main.toast(
-                    &fill(
-                        &ntr("Saved {} file", "Saved {} files", n),
-                        &[&n.to_string()],
-                    ),
-                    false,
+                let text = fill(
+                    &ntr("Saved {} file", "Saved {} files", n),
+                    &[&n.to_string()],
                 );
+                if edit.touches_files() {
+                    main.toast_tags_undo(&text);
+                } else {
+                    main.toast(&text, false);
+                }
                 if let Some(stars) = edit.rating {
                     main.ratings_changed(&edit.tracks, stars);
                 }
@@ -573,6 +703,7 @@ fn form_field(
             chips: Some(chips),
             start,
             edited_mark: edited,
+            pending: Cell::new(0),
         });
     } else if let Some(total) = total {
         let line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
@@ -595,6 +726,7 @@ fn form_field(
                 chips: None,
                 start,
                 edited_mark: edited.clone(),
+                pending: Cell::new(0),
             });
         }
     } else {
@@ -607,6 +739,7 @@ fn form_field(
             chips: None,
             start,
             edited_mark: edited,
+            pending: Cell::new(0),
         });
     }
     for input in &inputs {
@@ -957,6 +1090,7 @@ fn fill_cover_tab(editor: &Rc<Editor>) {
     side.append(&text);
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let choose = compact_button(&tr("Choose image…"));
+    let save_as = compact_button(&tr("Save as a file…"));
     let remove = compact_button(&tr("Remove"));
     let sensitive = editor.read_only().is_none();
     choose.set_sensitive(sensitive);
@@ -989,6 +1123,14 @@ fn fill_cover_tab(editor: &Rc<Editor>) {
         );
     });
     buttons.append(&choose);
+    save_as.set_sensitive(pending.is_none() && first.is_some_and(|t| t.cover.is_some()));
+    let weak = Rc::downgrade(editor);
+    save_as.connect_clicked(move |_| {
+        if let Some(editor) = weak.upgrade() {
+            save_cover_as(&editor);
+        }
+    });
+    buttons.append(&save_as);
     let weak = Rc::downgrade(editor);
     remove.connect_clicked(move |_| {
         if let Some(editor) = weak.upgrade() {
@@ -1014,7 +1156,132 @@ fn fill_cover_tab(editor: &Rc<Editor>) {
         buttons.append(&keep);
     }
     side.append(&buttons);
+    side.append(&drop_area(editor, sensitive));
+    side.append(&keep_cover(editor, sensitive));
     tab.append(&side);
+}
+
+/// The area a picture can be dropped on to make it the front cover.
+fn drop_area(editor: &Rc<Editor>, sensitive: bool) -> gtk::Box {
+    let area = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    area.add_css_class("hk-cover-drop");
+    let text = label(&tr("or drop a picture here"), &[]);
+    text.set_hexpand(true);
+    area.append(&text);
+    area.set_sensitive(sensitive);
+    let target = gtk::DropTarget::new(gio::File::static_type(), gdk::DragAction::COPY);
+    let weak = Rc::downgrade(editor);
+    target.connect_drop(move |_, value, _, _| {
+        let (Some(editor), Ok(file)) = (weak.upgrade(), value.get::<gio::File>()) else {
+            return false;
+        };
+        let Some(path) = file.path() else {
+            return false;
+        };
+        editor.cover.replace(Some(CoverEdit::Set(path)));
+        fill_cover_tab(&editor);
+        editor.refresh();
+        true
+    });
+    let weak = area.downgrade();
+    target.connect_enter(move |_, _, _| {
+        if let Some(area) = weak.upgrade() {
+            area.add_css_class("hk-drop-hover");
+        }
+        gdk::DragAction::COPY
+    });
+    let weak = area.downgrade();
+    target.connect_leave(move |_| {
+        if let Some(area) = weak.upgrade() {
+            area.remove_css_class("hk-drop-hover");
+        }
+    });
+    area.add_controller(target);
+    area
+}
+
+/// "Keep the cover": inside each file, and as `cover.jpg` in the album
+/// folder; each with a line on what it means.
+fn keep_cover(editor: &Rc<Editor>, sensitive: bool) -> gtk::Box {
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    column.add_css_class("hk-keep-cover");
+    column.append(&label(&tr("Keep the cover"), &["hk-section-label"]));
+    type Choice = (String, String, bool, fn(&Editor, bool));
+    let choices: [Choice; 2] = [
+        (
+            tr("Inside each file"),
+            tr("It travels with the file."),
+            editor.cover_inside.get(),
+            |e, on| e.cover_inside.set(on),
+        ),
+        (
+            tr("As cover.jpg in the album folder"),
+            tr("One picture for the whole folder. Other players look for it there."),
+            editor.cover_in_folder.get(),
+            |e, on| e.cover_in_folder.set(on),
+        ),
+    ];
+    for (title, line, active, set) in choices {
+        let check = gtk::CheckButton::new();
+        let text = gtk::Box::new(gtk::Orientation::Vertical, 2);
+        text.append(&label(&title, &[]));
+        text.append(&label(&line, &["hk-t3", "hk-secondary"]));
+        check.set_child(Some(&text));
+        check.set_active(active);
+        // They decide where a new picture goes.
+        check.set_sensitive(sensitive && matches!(*editor.cover.borrow(), Some(CoverEdit::Set(_))));
+        check.update_property(&[gtk::accessible::Property::Label(&title)]);
+        let weak = Rc::downgrade(editor);
+        check.connect_toggled(move |check| {
+            if let Some(editor) = weak.upgrade() {
+                set(&editor, check.is_active());
+                editor.refresh();
+            }
+        });
+        column.append(&check);
+    }
+    column
+}
+
+/// Saves the front cover of the first file as a picture file the user names.
+fn save_cover_as(editor: &Rc<Editor>) {
+    let Some(track) = editor.tracks.first().map(|t| t.key) else {
+        return;
+    };
+    let services = editor.backend.services();
+    let weak = Rc::downgrade(editor);
+    glib::spawn_future_local(async move {
+        let Ok(Some(bytes)) = gio::spawn_blocking(move || services.cover_picture(track)).await
+        else {
+            return;
+        };
+        let Some(editor) = weak.upgrade() else { return };
+        let name = if bytes.starts_with(b"\x89PNG") {
+            "cover.png"
+        } else {
+            "cover.jpg"
+        };
+        let dialog = gtk::FileDialog::builder()
+            .title(tr("Save the cover as a file"))
+            .initial_name(name)
+            .modal(true)
+            .build();
+        let window = editor.window.clone();
+        let main = editor.main.clone();
+        dialog.save(Some(&window), gio::Cancellable::NONE, move |result| {
+            let Ok(Some(path)) = result.map(|f| f.path()) else {
+                return;
+            };
+            if let Err(e) = std::fs::write(&path, &bytes)
+                && let Some(main) = main.upgrade()
+            {
+                main.toast(
+                    &fill(&tr("The cover could not be saved: {}"), &[&e.to_string()]),
+                    true,
+                );
+            }
+        });
+    });
 }
 
 fn lyrics_tab(editor: &Rc<Editor>) -> gtk::Widget {
@@ -1412,6 +1679,9 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
         info,
         cover_tab,
         tab_buttons: RefCell::new(Vec::new()),
+        pending: RefCell::new(BTreeMap::new()),
+        cover_inside: Cell::new(true),
+        cover_in_folder: Cell::new(false),
     });
 
     let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -1481,6 +1751,10 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
     }
     buttons[0].set_active(true);
     editor.tab_buttons.replace(buttons);
+    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    spacer.set_hexpand(true);
+    tabs.append(&spacer);
+    tabs.append(&tools_button(&editor));
     main_column.append(&tabs);
     main_column.append(&editor.problems);
     main_column.append(&stack);
@@ -1490,7 +1764,7 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
     let footer = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     footer.add_css_class("hk-dialog-footer");
     let how = label(
-        &tr("Written to a copy, verified, then swapped in."),
+        &tr("Written to a copy, verified, then swapped in. Undo with Ctrl Z."),
         &["hk-t3", "hk-secondary"],
     );
     how.set_hexpand(true);
@@ -1522,6 +1796,41 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
     });
     window.present();
     window
+}
+
+/// The compact "Tag tools" button at the end of the tab strip: a menu of the
+/// tools, each opening the Tag tools window there.
+fn tools_button(editor: &Rc<Editor>) -> gtk::MenuButton {
+    let button = gtk::MenuButton::new();
+    button.set_label(&tr("Tag tools"));
+    button.add_css_class("hk-sort");
+    button.set_valign(gtk::Align::Center);
+    button.set_widget_name("tag-tools");
+    button.set_sensitive(editor.read_only().is_none());
+    let group = gio::SimpleActionGroup::new();
+    let action = gio::SimpleAction::new("tool", Some(glib::VariantTy::STRING));
+    let weak = Rc::downgrade(editor);
+    action.connect_activate(move |_, parameter| {
+        let (Some(editor), Some(tool)) = (
+            weak.upgrade(),
+            parameter
+                .and_then(glib::Variant::get::<String>)
+                .and_then(|id| Tool::from_id(&id)),
+        ) else {
+            return;
+        };
+        editor.open_tools(tool);
+    });
+    group.add_action(&action);
+    editor.window.insert_action_group("tageditor", Some(&group));
+    let menu = gio::Menu::new();
+    for tool in Tool::ALL {
+        let item = gio::MenuItem::new(Some(&tool.title()), None);
+        item.set_action_and_target_value(Some("tageditor.tool"), Some(&tool.id().to_variant()));
+        menu.append_item(&item);
+    }
+    button.set_menu_model(Some(&menu));
+    button
 }
 
 /// Opens the tag editor over `main` for `tracks`, once their tags are read.
@@ -1563,6 +1872,7 @@ mod tests {
             path: PathBuf::from(format!("/music/{key}.flac")),
             fields,
             other: Vec::new(),
+            raw: BTreeMap::new(),
             rating: None,
             cover: None,
             cover_seed: 0,

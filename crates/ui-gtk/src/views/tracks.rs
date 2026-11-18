@@ -14,6 +14,8 @@
 //!
 //! The same view, without its toolbar, lists the tracks of an artist.
 
+mod edit;
+
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
@@ -157,6 +159,11 @@ pub(crate) struct TracksView {
     unmarked: Cell<bool>,
     /// Called with the number of tracks after each load.
     on_loaded: RefCell<Option<Loaded>>,
+    /// The cell being edited (F2).
+    editing: RefCell<Option<edit::CellEdit>>,
+    /// The column and row of the last click, where F2 edits.
+    clicked_column: Cell<Option<TrackColumn>>,
+    clicked_row: Cell<Option<u32>>,
 }
 
 impl std::fmt::Debug for TracksView {
@@ -269,6 +276,9 @@ impl TracksView {
                 quiet: Cell::new(false),
                 unmarked: Cell::new(false),
                 on_loaded: RefCell::new(None),
+                editing: RefCell::new(None),
+                clicked_column: Cell::new(None),
+                clicked_row: Cell::new(None),
             }
         });
         columns_button.set_menu_model(Some(&view.columns_menu()));
@@ -315,6 +325,7 @@ impl TracksView {
                 TrackColumn::Format => TableCell::text(0.0, &["hk-mono-meta"]),
                 _ => TableCell::text(0.0, &[]),
             };
+            cell.set_widget_name(column_id(column));
             if let Some(view) = weak.upgrade() {
                 view.cells.borrow_mut().push(cell.downgrade());
                 if let Some(stars) = cell.child().and_downcast::<RatingStars>() {
@@ -354,11 +365,15 @@ impl TracksView {
             });
             view.model.ensure_row(&track);
         });
-        factory.connect_unbind(|_, item| {
+        let weak = view.clone();
+        factory.connect_unbind(move |_, item| {
             if let Some(cell) = item
                 .downcast_ref::<gtk::ColumnViewCell>()
                 .and_then(|i| i.child().and_downcast::<TableCell>())
             {
+                if let Some(view) = weak.upgrade() {
+                    view.cell_unbound(&cell);
+                }
                 cell.forget();
                 cell.set_position(None);
             }
@@ -408,6 +423,7 @@ impl TracksView {
             }
             _ => cell.set_text(&text(row.as_ref())),
         }
+        self.decorate_cell(cell, track.key(), column);
     }
 
     fn connect(self: &Rc<Self>, playback: &Rc<Playback>) {
@@ -485,9 +501,27 @@ impl TracksView {
                 view.popup(None);
                 return glib::Propagation::Stop;
             }
+            if key == gdk::Key::F2 && !view.is_editing() {
+                view.start_edit();
+                return glib::Propagation::Stop;
+            }
             glib::Propagation::Proceed
         });
         self.table.add_controller(keys);
+        // Where F2 edits: the column and row last clicked.
+        let click = gtk::GestureClick::new();
+        click.set_button(gdk::BUTTON_PRIMARY);
+        click.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(self);
+        click.connect_pressed(move |_, _, x, y| {
+            let Some(view) = weak.upgrade() else { return };
+            if let Some(column) = view.column_at(x, y) {
+                view.clicked_column.set(Some(column));
+            }
+            view.clicked_row
+                .set(cell_at(&view.table, x, y).and_then(|c| c.position()));
+        });
+        self.table.add_controller(click);
         let weak = Rc::downgrade(self);
         DraggedTracks::source(&self.table, move |x, y| {
             let view = weak.upgrade()?;
