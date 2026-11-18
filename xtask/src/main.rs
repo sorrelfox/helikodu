@@ -12,6 +12,7 @@ mod check_deps;
 mod ci;
 mod codegen;
 mod corpus;
+mod dist;
 mod offline_audit;
 mod stress;
 mod synth_library;
@@ -31,6 +32,8 @@ commands:
   check-deps      check the crate dependency rules and the unsafe-code policy
   codegen         write the files generated from the design tokens (--check)
   corpus          generate the test corpus into target/corpus (--check, --strict)
+  dist            write the release source tarball with vendored crates and its
+                  checksum into target/dist (--tag vX.Y.Z, --out DIR)
   offline-audit   run every test program without a network and fail on any
                   Internet socket (--self-test)
   stress          play in real time under full CPU load and fail on any underrun
@@ -45,6 +48,7 @@ fn main() -> ExitCode {
         Some("check-deps") => check_deps::run(),
         Some("codegen") => codegen::run(&args[1..]),
         Some("corpus") => corpus::run(&args[1..]),
+        Some("dist") => dist::run(&args[1..]),
         Some("offline-audit") => offline_audit::run(&args[1..]),
         Some("stress") => stress::run(&args[1..]),
         Some("synth-library") => synth_library::run(&args[1..]),

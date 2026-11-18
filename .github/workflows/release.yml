@@ -1,0 +1,159 @@
+# Publishes a release. A version tag (v0.1.0) builds the source tarball with
+# vendored crates and the x86_64 Linux build, and publishes both with a
+# SHA256SUMS file as a GitHub Release whose notes are the tag's section of
+# CHANGELOG.md. Started by hand, it is a dry run: everything is built and kept
+# as workflow artifacts, and nothing is published.
+#
+# The build runs in the Debian 13 container of ci/containers: the oldest
+# supported base (glibc 2.41, GTK 4.18, FFmpeg 7.1), so the binary runs on
+# that and newer systems that still ship the FFmpeg 7 libraries.
+# See docs/dev/releasing.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build the release files (Debian 13)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # No cache: release files are built from a clean state only.
+      - name: Build container
+        run: docker build -t helikodu-ci:debian -f ci/containers/debian.Containerfile ci/containers
+      - name: Test, make the source tarball and build from it
+        env:
+          # Only a tag push checks the tag against the workspace version.
+          RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
+        run: |
+          docker run --rm -e CI=true -e CARGO_TERM_COLOR -e RELEASE_TAG \
+            -v "$PWD:/src" \
+            helikodu-ci:debian sh -euxc '
+              git config --global --add safe.directory /src
+              apt-get update
+              apt-get install -y --no-install-recommends appstream desktop-file-utils gettext xz-utils
+              rustup toolchain install
+
+              cargo xtask ci --tests-only
+
+              version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
+              name="helikodu-$version"
+              out=/src/target/release-assets
+              rm -rf "$out"
+              if [ -n "$RELEASE_TAG" ]; then
+                cargo xtask dist --out "$out" --tag "$RELEASE_TAG"
+              else
+                cargo xtask dist --out "$out"
+              fi
+              source_tarball="$out/$name.tar.xz"
+              epoch=$(git log -1 --format=%ct)
+
+              # The binaries are built from the source tarball, offline, as a
+              # packager would build them.
+              mkdir -p /tmp/source
+              tar -xJf "$source_tarball" -C /tmp/source
+              cd "/tmp/source/$name"
+              meson setup /tmp/build --prefix=/usr/local --buildtype=release \
+                -Doffline=true -Dbundled_sqlite=true
+              meson compile -C /tmp/build
+              meson test -C /tmp/build --print-errorlogs
+              meson install -C /tmp/build --destdir /tmp/stage
+
+              binary="helikodu-$version-x86_64-linux"
+              mkdir -p "/tmp/pack/$binary"
+              cp -a /tmp/stage/usr/local/. "/tmp/pack/$binary/"
+              cp LICENSE README.md CHANGELOG.md "/tmp/pack/$binary/"
+              cat > "/tmp/pack/$binary/INSTALL.txt" <<EOF
+          Helikodu $version for x86_64 Linux
+
+          Built on Debian 13 for the prefix /usr/local. It needs these libraries
+          from the system, or newer versions with the same library names:
+          glibc 2.41, GTK 4.18, FFmpeg 7.1 (libavformat.so.61, libavcodec.so.61,
+          libavutil.so.59), PipeWire 1.2 and ALSA. SQLite is built in.
+          Where a system has moved on to newer FFmpeg libraries, build from the
+          source tarball instead (see "Building" in README.md).
+
+          Install (bin/, libexec/ and share/ go into /usr/local):
+
+            sudo cp -r bin libexec share /usr/local/
+            sudo gtk4-update-icon-cache -q -t -f /usr/local/share/icons/hicolor
+            sudo update-desktop-database -q /usr/local/share/applications
+
+          The programs must stay in /usr/local: the scan worker is looked up
+          in ../libexec/helikodu/ beside them, and the D-Bus service file and
+          the translations use /usr/local paths.
+
+          Uninstall:
+
+            sudo rm /usr/local/bin/helikodu /usr/local/bin/helikodu-cli
+            sudo rm -r /usr/local/libexec/helikodu
+            sudo rm /usr/local/share/applications/io.github.sorrelfox.Helikodu.desktop
+            sudo rm /usr/local/share/metainfo/io.github.sorrelfox.Helikodu.metainfo.xml
+            sudo rm /usr/local/share/dbus-1/services/io.github.sorrelfox.Helikodu.service
+            sudo rm /usr/local/share/icons/hicolor/*/apps/io.github.sorrelfox.Helikodu*.svg
+          EOF
+              tar --create --file=- --sort=name --format=posix \
+                  --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime \
+                  --mtime="@$epoch" --owner=0 --group=0 --numeric-owner \
+                  --mode=u+rw,go+r,go-w --directory /tmp/pack "$binary" \
+                | xz --compress --stdout -6 --threads=1 > "$out/$binary.tar.xz"
+
+              cd "$out"
+              sha256sum "$name.tar.xz" "$binary.tar.xz" > SHA256SUMS
+              rm -f ./*.sha256
+              cat SHA256SUMS
+            '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: target/release-assets/
+          if-no-files-found: error
+
+  publish:
+    name: Publish the GitHub Release
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eux
+          version=${TAG#v}
+          # Every 0.x version and every version with a suffix (-rc1) is a pre-release.
+          prerelease=
+          case "$version" in
+            0.* | *-*) prerelease=--prerelease ;;
+          esac
+          cd release-assets
+          sha256sum --check SHA256SUMS
+          gh release create "$TAG" \
+            --verify-tag \
+            --title "Helikodu $version" \
+            --notes-file release-notes.md \
+            $prerelease \
+            "helikodu-$version.tar.xz" \
+            "helikodu-$version-x86_64-linux.tar.xz" \
+            SHA256SUMS

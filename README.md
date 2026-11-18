@@ -18,12 +18,35 @@ The name is Estonian: *heli* means "sound" and *kodu* means "home". It is a home
 
 ## Building
 
-Helikodu needs Rust (the version is pinned in `rust-toolchain.toml`) and, as the work progresses, the development files of GTK 4, FFmpeg, PipeWire, ALSA and SQLite.
+Helikodu needs Rust (the version is pinned in `rust-toolchain.toml`) and the development files of GTK 4.18 or newer, FFmpeg 7.1 or newer (libavformat, libavcodec, libavutil), PipeWire 1.2 or newer, ALSA and SQLite 3.43 or newer with FTS5.
+
+For development, Cargo builds and runs everything:
 
 ```sh
 cargo build
-cargo xtask ci      # every check that CI runs
+cargo run -p helikodu   # the desktop application
+cargo xtask ci          # every check that CI runs
 ```
+
+To install, Meson (1.0 or newer) calls Cargo to build the programs in release mode and installs them with the desktop entry, the AppStream metainfo, the D-Bus service file, the icons and the translations (msgfmt from gettext is needed for those):
+
+```sh
+meson setup _build --prefix=/usr/local --buildtype=release
+meson compile -C _build
+meson test -C _build      # validates the desktop entry and metainfo, where the tools are installed
+sudo meson install -C _build --no-rebuild   # or: meson install -C _build --destdir "$PWD/stage"
+```
+
+`--no-rebuild` keeps `sudo` from starting Cargo again as root: Cargo decides what is up to date, so Meson always runs it.
+
+`helikodu` and `helikodu-cli` go to `<prefix>/bin` and the scan worker to `<prefix>/libexec/helikodu`, where the programs look for it. Meson options:
+
+| Option | Default | Effect |
+|---|---|---|
+| `-Doffline=true` | `false` | Builds with `cargo --offline`. Use it with a release source tarball, whose `vendor/` folder holds every crate |
+| `-Dbundled_sqlite=true` | `false` | Builds the SQLite copy bundled with rusqlite instead of linking the system SQLite |
+
+The release source tarballs (`helikodu-<version>.tar.xz` on the [Releases](https://github.com/sorrelfox/helikodu/releases) page) include the vendored crates, so they build without network access. How releases are made is described in [docs/dev/releasing.md](docs/dev/releasing.md).
 
 ## Repository layout
 

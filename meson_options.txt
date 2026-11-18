@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+option(
+  'offline',
+  type: 'boolean',
+  value: false,
+  description: 'Build without network access (cargo --offline); use it with the vendored crates of a release tarball',
+)
+option(
+  'bundled_sqlite',
+  type: 'boolean',
+  value: false,
+  description: 'Build the SQLite copy bundled with rusqlite instead of linking the system SQLite (3.43 or newer, with FTS5)',
+)
