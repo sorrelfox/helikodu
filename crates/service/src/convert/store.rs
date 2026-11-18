@@ -10,10 +10,10 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use super::naming::NamingPattern;
 use super::presets::Preset;
 use super::sync::SyncDestination;
 use crate::files::write_atomic;
+use helikodu_library::NamingPattern;
 
 /// The name of the file in the configuration folder.
 pub const EXPORT_FILE: &str = "export.toml";
@@ -28,7 +28,7 @@ pub struct ConverterChoices {
     pub folder: Option<PathBuf>,
     /// The naming pattern.
     pub pattern: String,
-    /// The characters names may hold, by [`NameStyle::id`](super::NameStyle::id).
+    /// The characters names may hold, by [`CharacterSet::id`](super::CharacterSet::id).
     pub names: String,
     /// Whether tags and covers are copied into the new files.
     pub copy_tags: bool,

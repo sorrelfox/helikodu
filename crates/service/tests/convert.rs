@@ -24,11 +24,11 @@ use helikodu_library::{
 };
 use helikodu_model::library::{MediaSource, TrackId};
 use helikodu_service::convert::{
-    ConvertEvent, ConvertJob, ItemOutcome, JobAction, JobItem, JobOptions, Manifest, NameStyle,
+    CharacterSet, ConvertEvent, ConvertJob, ItemOutcome, JobAction, JobItem, JobOptions, Manifest,
     NamingPattern, PlannedAction, Preset, SyncDestination, SyncFiles, SyncSource, plan_conversion,
     plan_sync, run_sync, source_tracks,
 };
-use helikodu_service::library::{MusicLibrary, TrackFilter};
+use helikodu_service::library::{Destination, MusicLibrary, OrganizeOptions, TrackFilter};
 
 const RATE: u32 = 44_100;
 
@@ -95,11 +95,23 @@ fn write_flac(path: &Path, title: &str) {
 
 /// A library of three FLAC tracks of one album in `music`.
 fn library(music: &Path) -> (MusicLibrary, Vec<TrackId>) {
+    library_of(
+        music,
+        &[
+            ("Tidewater", 1, None),
+            ("Glass Harbour", 2, None),
+            ("Kelp", 3, None),
+        ],
+    )
+}
+
+/// A library of FLAC tracks of one album in `music`: title, track and disc.
+fn library_of(music: &Path, album: &[(&str, u32, Option<u32>)]) -> (MusicLibrary, Vec<TrackId>) {
     fs::create_dir_all(music).unwrap();
     let library = Library::open(&DatabaseConfig::in_memory()).unwrap();
     let root = library.add_root(music).unwrap();
     let mut tracks = Vec::new();
-    for (n, title) in ["Tidewater", "Glass Harbour", "Kelp"].iter().enumerate() {
+    for (n, (title, track_no, disc_no)) in album.iter().enumerate() {
         let path = music.join(format!("{n}.flac"));
         write_flac(&path, title);
         let mut record = TrackRecord::new(
@@ -125,7 +137,8 @@ fn library(music: &Path) -> (MusicLibrary, Vec<TrackId>) {
             artists: vec!["Mari Kask".into()],
             album_artists: vec!["Mari Kask".into()],
             album: Some("Tidewater Rooms".into()),
-            track_no: Some(n as u32 + 1),
+            track_no: Some(*track_no),
+            disc_no: *disc_no,
             ..TrackTags::default()
         };
         tracks.push(library.upsert_track(record).unwrap().track);
@@ -147,7 +160,15 @@ fn a_conversion_copies_tags_and_leaves_existing_files_alone() {
         .find(|p| p.id == "wav-cd")
         .unwrap();
     let pattern = NamingPattern::parse("{albumartist}/{album}/{track} {title}").unwrap();
-    let plan = plan_conversion(&sources, &wav, &out, &pattern, NameStyle::Portable, false);
+    let plan = plan_conversion(
+        &sources,
+        &wav,
+        &out,
+        &pattern,
+        CharacterSet::Windows,
+        "Unknown",
+        false,
+    );
     assert!(plan.iter().all(|p| p.action == PlannedAction::Convert));
     assert_eq!(
         plan[1].relative,
@@ -211,6 +232,89 @@ fn a_conversion_copies_tags_and_leaves_existing_files_alone() {
 }
 
 #[test]
+fn the_organizer_and_the_converter_name_a_track_alike() {
+    let base = dir("same-names");
+    let music = base.join("music");
+    let (library, tracks) = library_of(
+        &music,
+        &[
+            ("Tidewater", 1, Some(1)),
+            ("Glass Harbour", 2, Some(1)),
+            ("Kelp: Part 1?", 1, Some(2)),
+        ],
+    );
+    let sources = source_tracks(&library, &tracks).unwrap();
+    let wav = Preset::builtins()
+        .into_iter()
+        .find(|p| p.id == "wav-cd")
+        .unwrap();
+    for text in [
+        NamingPattern::DEFAULT,
+        "{albumartist}/{year} {album}/[{disc}-]{track} {title}",
+        "{album}/[Disc {disc}/]{track} - {title}",
+        "{genre}/{artist} - {album} - [{composer} [({year})] ]{track} {title}",
+        "{tag:mood}/{filename}",
+    ] {
+        for set in CharacterSet::ALL {
+            let pattern = NamingPattern::parse(text).unwrap();
+            let organized = library
+                .plan_organize(
+                    Some(&tracks),
+                    &OrganizeOptions {
+                        pattern: text.to_owned(),
+                        into: Destination::OwnLibraryFolder,
+                        characters: set,
+                        unknown: "Unknown".to_owned(),
+                    },
+                )
+                .unwrap();
+            let converted = plan_conversion(
+                &sources,
+                &wav,
+                &base.join("out"),
+                &pattern,
+                set,
+                "Unknown",
+                false,
+            );
+            for item in &converted {
+                let moved = organized
+                    .iter()
+                    .find(|m| m.track == item.track.track)
+                    .unwrap();
+                let organizer = moved.to.strip_prefix(&music).unwrap().to_string_lossy();
+                let converter = item.relative.to_string_lossy();
+                assert_eq!(
+                    organizer.strip_suffix(".flac"),
+                    converter.strip_suffix(".wav"),
+                    "{text} with {set:?}"
+                );
+            }
+        }
+    }
+    let names: Vec<_> = plan_conversion(
+        &sources,
+        &wav,
+        &base.join("out"),
+        &NamingPattern::default(),
+        CharacterSet::Windows,
+        "Unknown",
+        false,
+    )
+    .into_iter()
+    .map(|p| p.relative)
+    .collect();
+    assert_eq!(
+        names,
+        [
+            PathBuf::from("Mari Kask/Tidewater Rooms/1-01 Tidewater.wav"),
+            PathBuf::from("Mari Kask/Tidewater Rooms/1-02 Glass Harbour.wav"),
+            PathBuf::from("Mari Kask/Tidewater Rooms/2-01 Kelp_ Part 1_.wav"),
+        ]
+    );
+}
+
+#[test]
 fn cancelling_leaves_nothing_behind() {
     let base = dir("cancel");
     let (library, tracks) = library(&base.join("music"));
@@ -263,7 +367,7 @@ fn a_sync_copies_stays_current_and_removes_only_its_own_files() {
     destination.files = SyncFiles::ConvertLossless;
     let presets = Preset::builtins();
 
-    let plan = plan_sync(&library, &destination, &presets).unwrap();
+    let plan = plan_sync(&library, &destination, &presets, "Unknown").unwrap();
     assert_eq!((plan.to_convert, plan.to_copy, plan.to_remove), (3, 0, 0));
     assert_eq!(plan.playlists.len(), 1, "the search becomes a playlist");
     assert!(plan.bytes_free.is_some());
@@ -285,11 +389,11 @@ fn a_sync_copies_stays_current_and_removes_only_its_own_files() {
         "{playlist}"
     );
 
-    let again = plan_sync(&library, &destination, &presets).unwrap();
+    let again = plan_sync(&library, &destination, &presets, "Unknown").unwrap();
     assert_eq!((again.to_convert, again.already_there), (0, 3));
 
     destination.sources.clear();
-    let removal = plan_sync(&library, &destination, &presets).unwrap();
+    let removal = plan_sync(&library, &destination, &presets, "Unknown").unwrap();
     assert_eq!(removal.to_remove, 4);
     run_sync(
         Some(&library),

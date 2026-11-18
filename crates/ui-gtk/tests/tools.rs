@@ -129,7 +129,7 @@ fn the_converter_converts(app: &gtk::Application) {
     pattern.set_text("{albumartist}/{nope}");
     spin(100);
     assert!(
-        texts(&tool).contains("{nope} is not a field"),
+        texts(&tool).contains("There is no field called nope. At character 15."),
         "{}",
         texts(&tool)
     );

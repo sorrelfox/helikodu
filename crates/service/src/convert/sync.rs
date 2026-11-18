@@ -26,11 +26,11 @@ use helikodu_model::library::TrackId;
 use serde::{Deserialize, Serialize};
 
 use super::job::{ConvertEvent, ConvertSummary, ItemOutcome, JobAction, JobItem, JobOptions};
-use super::naming::{NameStyle, NamingPattern};
 use super::plan::{SourceTrack, source_tracks};
 use super::presets::Preset;
 use crate::files::write_atomic;
 use crate::library::{LibraryError, MusicLibrary};
+use helikodu_library::{CharacterSet, NamingPattern, clean_file_name};
 
 /// The list of files Helikodu put on a destination.
 pub const MANIFEST_FILE: &str = ".helikodu-sync.json";
@@ -126,7 +126,7 @@ fn default_pattern() -> String {
 }
 
 fn default_names() -> String {
-    NameStyle::Portable.id().to_owned()
+    CharacterSet::Windows.id().to_owned()
 }
 
 const fn yes() -> bool {
@@ -400,11 +400,13 @@ pub struct SyncPlan {
     pub foreign: usize,
 }
 
-/// Plans the sync of `destination`. `presets` are every preset there is.
+/// Plans the sync of `destination`. `presets` are every preset there is; a
+/// field that is empty outside square brackets is named `unknown`.
 pub fn plan_sync(
     library: &MusicLibrary,
     destination: &SyncDestination,
     presets: &[Preset],
+    unknown: &str,
 ) -> Result<SyncPlan, LibraryError> {
     let preset = presets
         .iter()
@@ -412,7 +414,7 @@ pub fn plan_sync(
         .cloned()
         .unwrap_or_else(|| Preset::builtins().remove(0));
     let pattern = NamingPattern::parse(&destination.pattern).unwrap_or_default();
-    let style = NameStyle::from_id(&destination.names).unwrap_or_default();
+    let style = CharacterSet::from_id(&destination.names).unwrap_or_default();
     let manifest = Manifest::load(&destination.path);
     let owned: HashMap<&Path, &ManifestEntry> = manifest
         .files
@@ -451,7 +453,7 @@ pub fn plan_sync(
                     .map(|e| e.to_string_lossy().to_lowercase())
                     .unwrap_or_default()
             };
-            let stem = pattern.render(&track, style);
+            let stem = pattern.render_path(&track.names, style, unknown, &format!(".{extension}"));
             let relative = unique(&stem, &extension, &mut taken);
             placed.insert(track.track, relative.clone());
             wanted.insert(relative.clone());
@@ -597,8 +599,8 @@ fn unique(stem: &Path, extension: &str, taken: &mut HashSet<String>) -> PathBuf 
     }
 }
 
-fn clean_playlist_name(name: &str, style: NameStyle, taken: &mut HashSet<String>) -> String {
-    let base = super::naming::clean_name(name, style);
+fn clean_playlist_name(name: &str, style: CharacterSet, taken: &mut HashSet<String>) -> String {
+    let base = clean_file_name(name, style);
     let base = if base.is_empty() {
         "Playlist".to_owned()
     } else {

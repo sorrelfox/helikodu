@@ -324,6 +324,20 @@ pub struct TagStepResult {
     pub problems: Vec<(String, String)>,
 }
 
+/// What a step of the shared undo history (tag edits and file runs) did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HistoryStepResult {
+    /// A tag edit was undone or done again.
+    Tags(TagStepResult),
+    /// A run of the file organizer (or a file renamed) was undone or done again.
+    Files {
+        /// What kind of run.
+        kind: RunKind,
+        /// What happened to its files.
+        report: RunReport,
+    },
+}
+
 /// How many tracks have loudness values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LoudnessCoverage {
@@ -478,6 +492,12 @@ pub trait Services: fmt::Debug + Send + Sync {
     /// Undoes the newest saved tag edit, or with `redo` does the newest undone
     /// one again; `None` when there is none. Blocking.
     fn step_tags(&self, redo: bool) -> Result<Option<TagStepResult>, BackendError>;
+    /// Undoes the newest tag edit or file run, whichever came last, or with
+    /// `redo` does the one undone last again; `None` when there is none.
+    /// Blocking.
+    fn step_history(&self, redo: bool) -> Result<Option<HistoryStepResult>, BackendError> {
+        Ok(self.step_tags(redo)?.map(HistoryStepResult::Tags))
+    }
 
     /// What this build can play.
     fn formats(&self) -> FormatReport;

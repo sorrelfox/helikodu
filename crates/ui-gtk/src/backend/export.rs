@@ -13,8 +13,8 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 pub use helikodu_service::convert::{
-    ConvertEvent, ConvertSummary, ConverterChoices, EncodeFormat, ExportState, ItemOutcome,
-    JobOptions, NameStyle, NamingPattern, PatternError, PatternErrorKind, PlannedAction, Preset,
+    CharacterSet, ConvertEvent, ConvertSummary, ConverterChoices, EncodeFormat, ExportState,
+    ItemOutcome, JobOptions, NamingPattern, PatternError, PatternProblem, PlannedAction, Preset,
     PresetQuality, SyncAction, SyncDestination, SyncFiles, SyncItem, SyncPlan, SyncSource,
 };
 pub use helikodu_service::cover_manager::{CoverResult, CoverSave, CoverShow, FolderPicture};
@@ -109,7 +109,7 @@ pub trait ExportServices: Send + Sync + fmt::Debug {
         preset: &Preset,
         folder: &Path,
         pattern: &NamingPattern,
-        style: NameStyle,
+        style: CharacterSet,
         replace: bool,
     ) -> Result<Vec<ConvertRow>, BackendError>;
     /// Starts converting `rows` in the background; the events carry the index of

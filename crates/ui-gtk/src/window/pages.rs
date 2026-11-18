@@ -1000,8 +1000,8 @@ impl MainWindow {
                     // Without a toast to undo, the open playlist's last edit.
                     window.step_playlist(key, false);
                 } else {
-                    // Otherwise the newest tag edit.
-                    window.step_tags(false);
+                    // Otherwise the newest tag edit or file run.
+                    window.step_undo_history(false);
                 }
             })
             .build();

@@ -640,7 +640,7 @@ impl MainWindow {
                 if let Some(key) = window.open_playlist_key() {
                     window.step_playlist(key, true);
                 } else {
-                    window.step_tags(true);
+                    window.step_undo_history(true);
                 }
             })
             .build();

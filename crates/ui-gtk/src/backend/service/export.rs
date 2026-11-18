@@ -22,8 +22,8 @@ use helikodu_service::cover_manager::{
 use helikodu_service::library::{AlbumId, MusicLibrary};
 
 use super::super::export::{
-    ConvertRow, CoverAction, CoverAlbum, EncodeFormat, ExportServices, ExportState, JobEvents,
-    JobOptions, NameStyle, NamingPattern, Preset, SyncDestination, SyncPlan,
+    CharacterSet, ConvertRow, CoverAction, CoverAlbum, EncodeFormat, ExportServices, ExportState,
+    JobEvents, JobOptions, NamingPattern, Preset, SyncDestination, SyncPlan,
 };
 use super::super::{AlbumKey, BackendError, CoverKey, TrackKey};
 use crate::i18n::tr;
@@ -181,25 +181,31 @@ impl ExportServices for ServiceExport {
         preset: &Preset,
         folder: &Path,
         pattern: &NamingPattern,
-        style: NameStyle,
+        style: CharacterSet,
         replace: bool,
     ) -> Result<Vec<ConvertRow>, BackendError> {
         let music = self.music()?;
         let ids: Vec<TrackId> = tracks.iter().copied().map(track_id).collect();
         let sources = source_tracks(&music, &ids).map_err(error)?;
-        Ok(
-            plan_conversion(&sources, preset, folder, pattern, style, replace)
-                .into_iter()
-                .map(|item| ConvertRow {
-                    track: TrackKey(item.track.track.get()),
-                    seconds: item.track.duration().map_or(0.0, |d| d.as_secs_f64()),
-                    relative: item.relative,
-                    target: item.target,
-                    action: item.action,
-                    expected_bytes: item.expected_bytes,
-                })
-                .collect(),
+        Ok(plan_conversion(
+            &sources,
+            preset,
+            folder,
+            pattern,
+            style,
+            &tr("Unknown"),
+            replace,
         )
+        .into_iter()
+        .map(|item| ConvertRow {
+            track: TrackKey(item.track.track.get()),
+            seconds: item.track.duration().map_or(0.0, |d| d.as_secs_f64()),
+            relative: item.relative,
+            target: item.target,
+            action: item.action,
+            expected_bytes: item.expected_bytes,
+        })
+        .collect())
     }
 
     fn start_conversion(
@@ -254,7 +260,7 @@ impl ExportServices for ServiceExport {
 
     fn plan_sync(&self, destination: &SyncDestination) -> Result<SyncPlan, BackendError> {
         let music = self.music()?;
-        plan_sync(&music, destination, &self.presets()).map_err(error)
+        plan_sync(&music, destination, &self.presets(), &tr("Unknown")).map_err(error)
     }
 
     fn start_sync(
@@ -269,7 +275,7 @@ impl ExportServices for ServiceExport {
         if !destination.is_connected() {
             return Err(BackendError(tr("The destination is not connected.")));
         }
-        let plan = plan_sync(&music, &destination, &presets).map_err(error)?;
+        let plan = plan_sync(&music, &destination, &presets, &tr("Unknown")).map_err(error)?;
         let store = self.store();
         let mut events = events;
         self.spawn(move |cancel| {

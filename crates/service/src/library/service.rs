@@ -435,6 +435,28 @@ impl LibraryService {
         Ok(report)
     }
 
+    /// Undoes the newest tag edit or file run, whichever came last, or with
+    /// `redo` does the one undone last again; announces
+    /// [`LibraryEvent::Changed`]. Blocks: call it off a window's thread.
+    pub fn step_history(
+        &self,
+        redo: bool,
+        settings: &Settings,
+        progress: super::Progress<'_>,
+    ) -> Result<Option<super::HistoryReport>, LibraryError> {
+        let report = self.library.step_history(
+            redo,
+            &settings.library,
+            &settings.advanced,
+            self.worker_program.as_deref(),
+            progress,
+        )?;
+        if report.is_some() {
+            self.bus.publish(&Event::Library(LibraryEvent::Changed));
+        }
+        Ok(report)
+    }
+
     /// Rates `track` as [`rate`](Self::rate) does, and writes the rating into
     /// its file when `settings` ask for it; announces
     /// [`LibraryEvent::RatingChanged`], and [`LibraryEvent::Changed`] when the

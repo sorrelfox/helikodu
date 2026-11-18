@@ -9,13 +9,10 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use helikodu_library::{AudioProperties, TrackTags};
-use helikodu_model::library::{MediaSource, TrackId};
-use helikodu_model::query::Field;
-
-use super::naming::{FieldValues, NameStyle, NamingPattern};
 use super::presets::Preset;
 use crate::library::{LibraryError, MusicLibrary};
+use helikodu_library::{AudioProperties, CharacterSet, FieldMap, NamingPattern, TrackTags};
+use helikodu_model::library::{MediaSource, TrackId};
 
 /// A library track as a conversion reads it.
 #[derive(Debug, Clone, PartialEq)]
@@ -32,8 +29,9 @@ pub struct SourceTrack {
     pub audio: AudioProperties,
     /// The size of the file in bytes.
     pub size: Option<u64>,
-    /// The number of discs of its album, as far as the tracks read with it show.
-    pub disc_total: Option<u32>,
+    /// The values a naming pattern names it by, as the library gives them to the
+    /// file organizer too.
+    pub names: FieldMap,
 }
 
 impl SourceTrack {
@@ -58,53 +56,14 @@ impl SourceTrack {
     }
 }
 
-impl FieldValues for SourceTrack {
-    fn value(&self, field: &Field) -> Option<String> {
-        let t = &self.tags;
-        let text = |v: &Option<String>| v.clone().filter(|v| !v.trim().is_empty());
-        let list = |v: &[String]| (!v.is_empty()).then(|| v.join(", "));
-        let stem = || {
-            self.path
-                .file_stem()
-                .map(|s| s.to_string_lossy().into_owned())
-        };
-        match field {
-            Field::Title => text(&t.title).or_else(stem),
-            Field::Artist => list(&t.artists),
-            Field::AlbumArtist => list(&t.album_artists).or_else(|| list(&t.artists)),
-            Field::Album => text(&t.album),
-            Field::Composer => list(&t.composers),
-            Field::Genre => list(&t.genres),
-            Field::Year => t.year.map(|y| y.to_string()),
-            Field::Track => t.track_no.map(|n| n.to_string()),
-            Field::Disc => t.disc_no.map(|n| n.to_string()),
-            Field::Codec => self.audio.codec.clone(),
-            Field::Container => self.audio.container.clone(),
-            Field::SampleRate => self.audio.sample_rate.map(|r| r.to_string()),
-            Field::BitDepth => self.audio.bit_depth.map(|b| b.to_string()),
-            Field::Channels => self.audio.channels.map(|c| c.to_string()),
-            Field::Bitrate => self.audio.bitrate.map(|b| (b / 1000).to_string()),
-            Field::Filename => stem(),
-            Field::Folder => self
-                .path
-                .parent()
-                .and_then(Path::file_name)
-                .map(|s| s.to_string_lossy().into_owned()),
-            _ => None,
-        }
-    }
-
-    fn disc_total(&self) -> Option<u32> {
-        self.disc_total
-    }
-}
-
 /// Reads `tracks` from the library for a conversion; tracks that are gone are left
 /// out.
 pub fn source_tracks(
     library: &MusicLibrary,
     tracks: &[TrackId],
 ) -> Result<Vec<SourceTrack>, LibraryError> {
+    let mut names: std::collections::HashMap<TrackId, FieldMap> =
+        library.inner().naming_values(tracks)?.into_iter().collect();
     let mut out = Vec::with_capacity(tracks.len());
     for &track in tracks {
         let Some(details) = library.track_details(track)? else {
@@ -124,22 +83,8 @@ pub fn source_tracks(
             tags: details.tags,
             audio: details.audio,
             size,
-            disc_total: None,
+            names: names.remove(&track).unwrap_or_default(),
         });
-    }
-    // An album shows several discs when one of its tracks is on a disc after the
-    // first.
-    let mut discs: std::collections::HashMap<(Option<String>, Vec<String>), u32> =
-        std::collections::HashMap::new();
-    for t in &out {
-        let key = (t.tags.album.clone(), t.tags.album_artists.clone());
-        let disc = t.tags.disc_no.unwrap_or(1);
-        let entry = discs.entry(key).or_insert(1);
-        *entry = (*entry).max(disc);
-    }
-    for t in &mut out {
-        let key = (t.tags.album.clone(), t.tags.album_artists.clone());
-        t.disc_total = discs.get(&key).copied().filter(|n| *n > 1);
     }
     Ok(out)
 }
@@ -171,14 +116,16 @@ pub struct PlannedItem {
 }
 
 /// What a conversion of `tracks` with `preset` into `folder` will do. Targets are
-/// named by `pattern`; two tracks that would get the same name get ` (2)`, ` (3)`,
-/// … Existing files are replaced only with `replace`.
+/// named by `pattern` with the characters of `set`, a field that is empty outside
+/// square brackets written as `unknown`; two tracks that would get the same name
+/// get ` (2)`, ` (3)`, … Existing files are replaced only with `replace`.
 pub fn plan_conversion(
     tracks: &[SourceTrack],
     preset: &Preset,
     folder: &Path,
     pattern: &NamingPattern,
-    style: NameStyle,
+    set: CharacterSet,
+    unknown: &str,
     replace: bool,
 ) -> Vec<PlannedItem> {
     let mut taken: HashSet<PathBuf> = HashSet::new();
@@ -196,7 +143,7 @@ pub fn plan_conversion(
             } else {
                 preset.encode_format().extension().to_owned()
             };
-            let stem = pattern.render(track, style);
+            let stem = pattern.render_path(&track.names, set, unknown, &format!(".{extension}"));
             let relative = unique(&stem, &extension, &mut taken);
             let target = folder.join(&relative);
             let action = if !replace && target.exists() {
@@ -254,6 +201,8 @@ fn unique(stem: &Path, extension: &str, taken: &mut HashSet<PathBuf>) -> PathBuf
 mod tests {
     use super::*;
 
+    use helikodu_model::query::Field;
+
     fn track(title: &str, codec: &str, kbps: Option<u32>) -> SourceTrack {
         let tags = TrackTags {
             title: Some(title.into()),
@@ -276,7 +225,11 @@ mod tests {
             tags,
             audio,
             size: Some(1000),
-            disc_total: None,
+            names: FieldMap::default()
+                .with(Field::Title, title)
+                .with(Field::AlbumArtist, "Mari Kask")
+                .with(Field::Album, "Tidewater Rooms")
+                .with(Field::Track, "1"),
         }
     }
 
@@ -295,7 +248,8 @@ mod tests {
             opus,
             Path::new("/nonexistent/phone"),
             &pattern,
-            NameStyle::Portable,
+            CharacterSet::Windows,
+            "Unknown",
             false,
         );
         let names: Vec<_> = plan.iter().map(|p| p.relative.clone()).collect();

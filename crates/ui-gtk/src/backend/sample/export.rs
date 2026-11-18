@@ -15,12 +15,13 @@ use helikodu_service::convert::{
 };
 
 use super::super::export::{
-    ConvertEvent, ConvertRow, CoverAction, CoverAlbum, CoverResult, CoverShow, EncodeFormat,
-    ExportServices, ExportState, FolderPicture, JobEvents, JobOptions, NameStyle, NamingPattern,
+    CharacterSet, ConvertEvent, ConvertRow, CoverAction, CoverAlbum, CoverResult, CoverShow,
+    EncodeFormat, ExportServices, ExportState, FolderPicture, JobEvents, JobOptions, NamingPattern,
     PlannedAction, Preset, SyncAction, SyncDestination, SyncPlan,
 };
 use super::super::{AlbumKey, AlbumQuery, BackendError, LibrarySource, TrackKey};
 use super::SampleLibrary;
+use crate::i18n::tr;
 
 /// The state the sample tools keep for as long as the program runs.
 static STATE: Mutex<Option<ExportState>> = Mutex::new(None);
@@ -116,7 +117,7 @@ impl ExportServices for SampleExport {
         preset: &Preset,
         folder: &Path,
         pattern: &NamingPattern,
-        style: NameStyle,
+        style: CharacterSet,
         replace: bool,
     ) -> Result<Vec<ConvertRow>, BackendError> {
         let rows = self.library()?.track_rows(tracks)?;
@@ -141,7 +142,9 @@ impl ExportServices for SampleExport {
                 } else {
                     format.extension().to_owned()
                 };
-                let mut relative = pattern.render(&values, style).into_os_string();
+                let mut relative = pattern
+                    .render_path(&values, style, &tr("Unknown"), &format!(".{extension}"))
+                    .into_os_string();
                 relative.push(".");
                 relative.push(extension);
                 let relative = PathBuf::from(relative);

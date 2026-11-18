@@ -5,9 +5,9 @@
 //! happen to it.
 //!
 //! The values of the fields come from the library (the tags as it read them) and
-//! from the file's first track. Track numbers have two digits (three on an album
-//! of a hundred tracks or more). The disc number is written only for an album of
-//! several discs, with as many digits as the number of discs needs.
+//! from the file's first track; the converter and folder sync take theirs from
+//! here too ([`Library::naming_values`](crate::Library::naming_values)), so that
+//! a pattern names a track alike in every tool. The pattern pads the numbers.
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -18,7 +18,9 @@ use helikodu_model::library::TrackId;
 use helikodu_model::query::Field;
 use rusqlite::{Connection, OptionalExtension, params};
 
-use super::{Change, Destination, NamingPattern, OrganizeError, OrganizeOptions, PlannedMove};
+use super::{
+    Change, Destination, FieldMap, NamingPattern, OrganizeError, OrganizeOptions, PlannedMove,
+};
 use crate::catalog::write::file_at;
 use crate::catalog::{sql_track_id, track_id_from_sql};
 use crate::copies::FileId;
@@ -63,6 +65,13 @@ const COLUMNS: &str = "f.id, t.id, d.path, f.name, r.path, f.missing_since IS NO
     t.year, t.original_year, t.track_no, t.track_total, t.disc_no, t.disc_total,
     t.disc_subtitle, t.release_type, t.codec, t.container, t.sample_rate, t.bit_depth,
     t.channels, t.bitrate, t.work, t.movement, t.movement_no";
+
+/// One track, by its id, in a library folder masked or not.
+const FROM_TRACK: &str = "FROM tracks t
+    JOIN files f ON f.id = t.file_id
+    JOIN dirs d ON d.id = f.dir_id
+    JOIN roots r ON r.id = d.root_id
+    WHERE t.id = ?1";
 
 const FROM: &str = "FROM files f
     JOIN dirs d ON d.id = f.dir_id
@@ -195,45 +204,84 @@ fn other_tag(c: &Connection, track: i64, key: &str) -> rusqlite::Result<Option<S
 /// The highest disc number and number of discs of each album.
 fn album_discs(c: &Connection) -> rusqlite::Result<HashMap<i64, i64>> {
     c.prepare_cached(
-        "SELECT album_id, max(coalesce(disc_no, 1), coalesce(max(disc_total), 1))
+        "SELECT album_id, max(max(coalesce(disc_no, 1)), coalesce(max(disc_total), 1))
          FROM tracks WHERE album_id IS NOT NULL GROUP BY album_id",
     )?
     .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
     .collect()
 }
 
-/// The number of digits of `n`.
-fn digits(n: i64) -> usize {
-    n.max(1).to_string().len()
-}
-
-/// The value of `field` for `facts`.
-fn value_of(
+/// The values of the fields of `facts` (only `fields`, or every field and tag
+/// when `None`) for a pattern.
+fn values_of(
     c: &Connection,
     facts: &FileFacts,
     discs: &HashMap<i64, i64>,
-    field: &Field,
-) -> rusqlite::Result<Option<String>> {
-    Ok(match field {
-        Field::Track => facts.track_no.map(|n| {
-            let width = facts.track_total.map_or(2, |t| digits(t).max(2));
-            format!("{n:0width$}")
-        }),
-        Field::Disc => {
-            let most = facts
-                .album
-                .and_then(|a| discs.get(&a).copied())
-                .unwrap_or(1)
-                .max(facts.disc_total.unwrap_or(1))
-                .max(facts.disc_no.unwrap_or(1));
-            match facts.disc_no {
-                Some(n) if most > 1 => {
-                    let width = digits(most);
-                    Some(format!("{n:0width$}"))
+    fields: Option<&[Field]>,
+) -> rusqlite::Result<FieldMap> {
+    let to_u32 = |n: i64| u32::try_from(n).ok();
+    let mut map = FieldMap {
+        track_count: facts.track_total.and_then(to_u32),
+        disc_count: facts
+            .album
+            .and_then(|a| discs.get(&a).copied())
+            .into_iter()
+            .chain(facts.disc_total)
+            .max()
+            .and_then(to_u32),
+        ..FieldMap::default()
+    };
+    match fields {
+        Some(fields) => {
+            for field in fields {
+                if let Some(value) = value_of(c, facts, field)? {
+                    map.set(field.clone(), value);
                 }
-                _ => None,
             }
         }
+        None => {
+            for field in Field::named() {
+                if let Some(value) = value_of(c, facts, &field)? {
+                    map.set(field, value);
+                }
+            }
+            let tags: Vec<(String, String)> = c
+                .prepare_cached(
+                    "SELECT upper(key), value FROM track_tags WHERE track_id = ?1 ORDER BY rowid",
+                )?
+                .query_map([facts.track], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()?;
+            let mut joined: Vec<(String, Vec<String>)> = Vec::new();
+            for (key, value) in tags {
+                match joined.iter_mut().find(|(k, _)| *k == key) {
+                    Some((_, values)) => values.push(value),
+                    None => joined.push((key, vec![value])),
+                }
+            }
+            for (key, values) in joined {
+                map.set(Field::Tag(key), values.join(", "));
+            }
+        }
+    }
+    Ok(map)
+}
+
+/// The value of `field` for `facts`, numbers as plain numbers.
+fn value_of(c: &Connection, facts: &FileFacts, field: &Field) -> rusqlite::Result<Option<String>> {
+    Ok(match field {
+        Field::Track => facts.track_no.map(|n| n.to_string()),
+        Field::Disc => facts.disc_no.map(|n| n.to_string()),
+        Field::Title => facts
+            .values
+            .get("title")
+            .filter(|t| !t.trim().is_empty())
+            .cloned()
+            .or_else(|| {
+                facts
+                    .path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+            }),
         Field::Composer => people(c, facts.track, 2)?,
         Field::Performer => people(c, facts.track, 3)?,
         Field::Conductor => people(c, facts.track, 4)?,
@@ -251,6 +299,26 @@ fn value_of(
             .map(|s| s.to_string_lossy().into_owned()),
         other => facts.values.get(other.name().as_ref()).cloned(),
     })
+}
+
+/// The values of every field and tag of each of `tracks` that the library has,
+/// for a naming pattern: what the organizer names its files by.
+pub(super) fn naming_values(
+    c: &Connection,
+    tracks: &[TrackId],
+) -> rusqlite::Result<Vec<(TrackId, FieldMap)>> {
+    let discs = album_discs(c)?;
+    let mut statement = c.prepare_cached(&format!("SELECT {COLUMNS} {FROM_TRACK}"))?;
+    let mut out = Vec::with_capacity(tracks.len());
+    for &track in tracks {
+        if let Some(facts) = statement
+            .query_row([sql_track_id(track)], facts)
+            .optional()?
+        {
+            out.push((track, values_of(c, &facts, &discs, None)?));
+        }
+    }
+    Ok(out)
 }
 
 /// The extension of `path` with its dot, or nothing.
@@ -285,17 +353,9 @@ pub(super) fn plan(
             };
             let mut targets = Vec::with_capacity(files.len());
             for facts in &files {
-                let mut values: HashMap<&Field, Option<String>> = HashMap::new();
-                for field in &fields {
-                    values.insert(field, value_of(c, facts, &discs, field)?);
-                }
+                let values = values_of(c, facts, &discs, Some(&fields))?;
                 let ext = extension(&facts.path);
-                let names = pattern.render(
-                    &|field| values.get(field).cloned().flatten(),
-                    options.characters,
-                    &options.unknown,
-                    &ext,
-                );
+                let names = pattern.render(&values, options.characters, &options.unknown, &ext);
                 let mut to = base_folder.clone().unwrap_or_else(|| facts.root.clone());
                 let count = names.len();
                 for (i, name) in names.into_iter().enumerate() {

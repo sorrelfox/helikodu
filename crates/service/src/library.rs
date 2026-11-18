@@ -106,6 +106,9 @@ pub use helikodu_library::{
 };
 pub use helikodu_library::{FacetChoice, FacetField, FacetKey, FacetList, FacetValue};
 pub use helikodu_library::{FileSection, YearSpan, YearSummary};
+/// One undo history over tag edits and file runs, newest first: what Ctrl+Z and
+/// Ctrl+Shift+Z step through outside an open playlist.
+pub use helikodu_library::{HistoryAction, HistoryError, HistoryReport, UndoHistory};
 pub use helikodu_library::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 /// The undo journal of tag edits: [`MusicLibrary::edit_tags`] records each
 /// save, [`MusicLibrary::undo_tags`] and [`MusicLibrary::redo_tags`] step through
@@ -692,6 +695,30 @@ impl MusicLibrary {
             self.library.redo_tags(&settings, &scan)?
         } else {
             self.library.undo_tags(&settings, &scan)?
+        })
+    }
+
+    /// Undoes the newest tag edit or file run, whichever came last (`redo`
+    /// false), or does the one undone last again; `None` when there is none.
+    pub fn step_history(
+        &self,
+        redo: bool,
+        library: &LibrarySettings,
+        advanced: &AdvancedSettings,
+        worker_program: Option<&Path>,
+        progress: Progress<'_>,
+    ) -> Result<Option<HistoryReport>, LibraryError> {
+        let scan = scan_options(library, worker_program)?;
+        let settings = TagWriteSettings::from_settings(advanced);
+        let report = if redo {
+            self.library.redo_last(&settings, &scan, progress)
+        } else {
+            self.library.undo_last(&settings, &scan, progress)
+        };
+        report.map_err(|e| match e {
+            HistoryError::Tags(e) => LibraryError::Scan(e),
+            HistoryError::Files(e) => LibraryError::Organize(e),
+            HistoryError::Db(e) => LibraryError::Database(e),
         })
     }
 

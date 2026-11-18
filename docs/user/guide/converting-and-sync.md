@@ -8,7 +8,7 @@ Everything happens on this computer. Helikodu never downloads covers or sends an
 
 **Convert…** converts the tracks of the library into another format, for a phone, an old player or a CD.
 
-- **Presets** on the left: Opus 128 (about 1 MB a minute), Opus 192, MP3 V0, AAC 256, FLAC, ALAC and WAV 16-bit / 44.1 kHz. **New preset** saves the current choices as a preset of your own.
+- **Presets** on the left: Opus 128 (about 1 MB a minute), Opus 192, MP3 V0, AAC 256, FLAC, ALAC and WAV 16-bit / 44.1 kHz. **New preset** saves the current choices as a preset of your own; right-click one of your own (or press the Menu key, F2 or Delete) to rename or delete it.
 - **Format**, **Quality**, **Sample rate** and **Channels**. Opus is always written at 48 kHz. The formats are those the FFmpeg on your computer can write; a format without an encoder says so, and cannot be used.
 - **Save to**: the folder the new files go to. **Folders and names**: a naming pattern (see below).
 - **Copy tags and covers** writes the tags and the front cover into each new file. **Replace files that are already there** overwrites files of the same name; without it they are left alone.
@@ -20,14 +20,15 @@ Tracks of a CUE sheet are converted into files of their own.
 
 ## Naming patterns
 
-A pattern says where a file goes and what it is called, from its tags:
+A pattern says where a file goes and what it is called, from its tags. The converter, folder sync and [Organize Files](file-tools.md#naming-patterns) read patterns the same way, so one pattern gives a track the same name in each of them.
 
-- `{field}` is a field of the track, with the names of the search: `{albumartist}`, `{artist}`, `{album}`, `{title}`, `{track}`, `{disc}`, `{year}`, `{genre}`, `{composer}` and others.
+- `{field}` is a field of the track, with the names of the search: `{albumartist}`, `{artist}`, `{album}`, `{title}`, `{track}`, `{disc}`, `{year}`, `{genre}`, `{composer}`, `{tag:MOOD}` and others.
 - `/` starts a folder.
-- Text in square brackets is left out when a field in it is empty: `{album}[ ({year})]`.
-- Track and disc numbers have two digits. On an album of several discs, `{track}` is written with its disc: `1-01`.
+- Text in square brackets is left out when a field in it is empty: `{album}[ ({year})]`. Brackets can be nested (an inner bracket is left out on its own) and can hold a folder: `[Disc {disc}/]`.
+- Track numbers have two digits (three on an album of a hundred tracks or more). `{disc}` has a value only on an album of several discs, so `[{disc}-]{track}` gives `01` on an album of one disc and `2-01` on the second of two. `{track}` never includes the disc.
+- A field that is empty outside square brackets is written as "Unknown".
 
-The default, `{albumartist}/{album}/{track} {title}`, gives `Mari Kask/Tidewater Rooms/01 Tidewater.opus`. Characters that file names on memory sticks and phones cannot hold are replaced by `_`. When two tracks would get the same name, the second gets ` (2)`.
+The default, `{albumartist}/{album}/[{disc}-]{track} {title}`, gives `Mari Kask/Tidewater Rooms/01 Tidewater.opus`. Characters that file names on memory sticks and phones cannot hold are replaced by `_`, and a name is cut to 255 bytes. When two tracks would get the same name, the second gets ` (2)`. A pattern that cannot be read is explained under the entry, with the character where the problem is.
 
 ## Sync and export
 

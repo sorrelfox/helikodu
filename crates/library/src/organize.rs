@@ -35,7 +35,10 @@ mod run;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-pub use helikodu_meta::naming::{CharacterSet, NamingPattern, PatternError, PatternProblem};
+pub use helikodu_meta::naming::{
+    CharacterSet, FieldMap, FieldValues, MAX_NAME_BYTES, NamingPattern, PatternError,
+    PatternProblem, clean_file_name,
+};
 use helikodu_model::library::TrackId;
 
 pub use patterns::SavedPattern;
@@ -335,6 +338,16 @@ impl Library {
             &|_, _| {},
             &CancelToken::new(),
         )
+    }
+
+    /// The values of the fields and tags of each of `tracks` for a naming
+    /// pattern, as the organizer names files by them; tracks the library does not
+    /// have are left out. The converter and folder sync name their files by
+    /// these, so that a pattern gives one name in every tool.
+    pub fn naming_values(&self, tracks: &[TrackId]) -> Result<Vec<(TrackId, FieldMap)>, DbError> {
+        let tracks = tracks.to_vec();
+        self.database()
+            .read(move |c| plan::naming_values(c, &tracks))
     }
 
     /// The newest run of the journal, after finishing any run a crash cut short.

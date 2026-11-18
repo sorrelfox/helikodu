@@ -44,7 +44,7 @@ The facts about the file, which you cannot change here: name, folder, size, the 
 
 ## Undo
 
-Every save can be undone. The toast **Saved N files** has an **Undo** button, and **Ctrl+Z** in the main window undoes the newest tag change even after the toast is gone (unless a playlist is open, where Ctrl+Z undoes the playlist's last change). **Ctrl+Shift+Z** does it again. Each file gets back the tags, cover and lyrics it had before; a file that was changed since (by another program, or by a later edit you did not undo) keeps its tags, and the toast says how many. Helikodu keeps the last 100 changes, for 90 days.
+Every save can be undone. The toast **Saved N files** has an **Undo** button, and **Ctrl+Z** in the main window undoes the newest tag change even after the toast is gone (unless a playlist is open, where Ctrl+Z undoes the playlist's last change). Tag changes and runs of [Organize Files](file-tools.md) share one history: Ctrl+Z undoes whichever came last, and a notice says what was undone, such as "Undid tag edit of 3 files" or "Undid moving 120 files". **Ctrl+Shift+Z** does it again. Each file gets back the tags, cover and lyrics it had before; a file that was changed since (by another program, or by a later edit you did not undo) keeps its tags, and the toast says how many. Helikodu keeps the last 100 changes, for 90 days.
 
 ## Tag tools
 

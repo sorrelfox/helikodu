@@ -246,8 +246,11 @@ fn record(
 ) -> rusqlite::Result<i64> {
     c.execute("DELETE FROM tag_journal WHERE undone = 1", [])?;
     let step: i64 = c.query_row(
-        "INSERT INTO tag_journal (at, undone) VALUES (?1, 0) RETURNING id",
-        [now],
+        &format!(
+            "INSERT INTO tag_journal (at, undone, seq) VALUES (?1, 0, {}) RETURNING id",
+            crate::history::next_seq(2)
+        ),
+        params![now, crate::history::now_ms()],
         |row| row.get(0),
     )?;
     for file in files {
@@ -294,7 +297,7 @@ fn prune(c: &Connection, now: i64) -> rusqlite::Result<()> {
 }
 
 /// The step that undoing (`redo` false) or doing again would take.
-fn next_step(c: &Connection, redo: bool) -> rusqlite::Result<Option<TagStep>> {
+pub(crate) fn next_step(c: &Connection, redo: bool) -> rusqlite::Result<Option<TagStep>> {
     let sql = if redo {
         "SELECT id, at FROM tag_journal WHERE undone = 1 ORDER BY id ASC LIMIT 1"
     } else {

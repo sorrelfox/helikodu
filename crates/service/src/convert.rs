@@ -11,7 +11,6 @@
 //! ever left behind.
 
 pub mod job;
-pub mod naming;
 pub mod plan;
 pub mod presets;
 pub mod store;
@@ -22,10 +21,15 @@ pub use helikodu_engine::convert::{
     EncodeFormat, EncodeQuality, EncoderAvailability, TranscodeSettings, encoder_availability,
     supported_sample_rates,
 };
+/// Naming patterns, shared with the file organizer: one pattern gives one name
+/// for one track in every tool.
+pub use helikodu_library::{
+    CharacterSet, FieldMap, FieldValues, NamingPattern, PatternError, PatternProblem,
+    clean_file_name,
+};
 pub use job::{
     ConvertEvent, ConvertJob, ConvertSummary, ItemOutcome, JobAction, JobItem, JobOptions,
 };
-pub use naming::{FieldMap, FieldValues, NameStyle, NamingPattern, PatternError, PatternErrorKind};
 pub use plan::{PlannedAction, PlannedItem, SourceTrack, plan_conversion, source_tracks};
 pub use presets::{Preset, PresetQuality};
 pub use store::{ConverterChoices, EXPORT_FILE, ExportState, ExportStore};

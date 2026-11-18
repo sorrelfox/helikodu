@@ -19,7 +19,8 @@ use std::path::{Path, PathBuf};
 
 use helikodu_library::tag_editing::{FieldKey, read_lyrics};
 use helikodu_library::{
-    CancelToken, DatabaseConfig, Library, ScanOptions, StepProblem, TagStepReport, TagWriteSettings,
+    CancelToken, DatabaseConfig, HistoryAction, HistoryReport, Library, ScanOptions, StepProblem,
+    TagStepReport, TagWriteSettings,
 };
 use helikodu_meta::covers::{CoverLimits, read_embedded_covers};
 use helikodu_meta::tags::writing::{
@@ -385,4 +386,106 @@ fn a_file_back_as_wanted_counts_as_done() {
     assert_eq!(s.title(0), "Old 1");
     let tags = read_tags(&s.files[0], &ReadOptions::default()).unwrap();
     assert_eq!(tags.tags.title.as_deref(), Some("Old 1"));
+}
+
+/// Which journal an undo or redo of the shared history went to, and how many
+/// files it touched.
+fn step_kind(report: Option<HistoryReport>) -> (&'static str, usize) {
+    match report.unwrap() {
+        HistoryReport::Tags(report) => {
+            all_ok(&report);
+            ("tags", report.files.len())
+        }
+        HistoryReport::Files { report, .. } => {
+            assert_eq!(report.problems().count(), 0);
+            ("files", report.moved())
+        }
+    }
+}
+
+impl Setup {
+    fn undo_last(&self) -> Option<HistoryReport> {
+        self.library
+            .undo_last(&TagWriteSettings::default(), &self.options, &|_, _| {})
+            .unwrap()
+    }
+
+    fn redo_last(&self) -> Option<HistoryReport> {
+        self.library
+            .redo_last(&TagWriteSettings::default(), &self.options, &|_, _| {})
+            .unwrap()
+    }
+
+    /// Renames file `i` to `name` as a run of the file journal.
+    fn rename(&self, i: usize, name: &str) -> PathBuf {
+        let from = self.files[i].clone();
+        let file = self.library.file_of_path(&from).unwrap().unwrap();
+        let report = self
+            .library
+            .rename_file(file, from.clone(), std::ffi::OsStr::new(name))
+            .unwrap();
+        assert_eq!(report.moved(), 1);
+        from.with_file_name(name)
+    }
+}
+
+#[test]
+fn tag_edits_and_file_runs_are_undone_newest_first_and_redone_in_order() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let s = Setup::new("undo-shared", 3);
+    assert!(s.library.undo_history().unwrap().undo.is_none());
+    // A tag edit, a rename, another tag edit.
+    assert!(s.edit(&[(0, title("A"))]));
+    let renamed = s.rename(1, "renamed.flac");
+    assert!(s.edit(&[(2, title("C")), (0, title("A2"))]));
+    let history = s.library.undo_history().unwrap();
+    assert!(matches!(history.undo, Some(HistoryAction::Tags(ref t)) if t.files == 2));
+    assert!(history.redo.is_none());
+
+    assert_eq!(step_kind(s.undo_last()), ("tags", 2));
+    assert_eq!((s.title(0), s.title(2)), ("A".into(), "Old 3".into()));
+    assert!(matches!(
+        s.library.undo_history().unwrap().undo,
+        Some(HistoryAction::Files(_))
+    ));
+    assert_eq!(step_kind(s.undo_last()), ("files", 1));
+    assert!(s.files[1].exists() && !renamed.exists());
+    assert_eq!(step_kind(s.undo_last()), ("tags", 1));
+    assert_eq!(s.title(0), "Old 1");
+    assert!(s.undo_last().is_none(), "nothing more to undo");
+
+    // Redo goes forward in the order the steps were done.
+    assert!(matches!(
+        s.library.undo_history().unwrap().redo,
+        Some(HistoryAction::Tags(ref t)) if t.files == 1
+    ));
+    assert_eq!(step_kind(s.redo_last()), ("tags", 1));
+    assert_eq!(s.title(0), "A");
+    assert_eq!(step_kind(s.redo_last()), ("files", 1));
+    assert!(renamed.exists() && !s.files[1].exists());
+    assert_eq!(step_kind(s.redo_last()), ("tags", 2));
+    assert_eq!((s.title(0), s.title(2)), ("A2".into(), "C".into()));
+    assert!(s.redo_last().is_none(), "nothing more to do again");
+}
+
+#[test]
+fn something_new_after_an_undo_ends_what_can_be_done_again() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let s = Setup::new("undo-shared-branch", 2);
+    let _ = s.rename(1, "renamed.flac");
+    assert_eq!(step_kind(s.undo_last()), ("files", 1));
+    // A tag edit after the undone run: the run can no longer be done again.
+    assert!(s.edit(&[(0, title("X"))]));
+    assert!(s.library.undo_history().unwrap().redo.is_none());
+    assert!(s.redo_last().is_none());
+    assert_eq!(step_kind(s.undo_last()), ("tags", 1));
+    // Undoing the edit makes it the one to do again, not the older run.
+    assert!(matches!(
+        s.library.undo_history().unwrap().redo,
+        Some(HistoryAction::Tags(_))
+    ));
 }

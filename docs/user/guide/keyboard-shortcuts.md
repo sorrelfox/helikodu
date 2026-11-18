@@ -24,7 +24,7 @@
 | Ctrl+J | Jump to the playing track |
 | Alt+Return | Track properties: opens the [tag editor](tags.md) for the selected tracks |
 | Ctrl+A | Select all |
-| Ctrl+Z | Undo, while a toast offers it; in a playlist, undo its last change; elsewhere, undo the last tag change |
+| Ctrl+Z | Undo, while a toast offers it; in a playlist, undo its last change; elsewhere, undo the newest tag change or file organizer run |
 | Ctrl+Shift+Z, Ctrl+Y | Redo the last undone change of a playlist, or elsewhere the last undone tag change |
 | F2 | Rename the open playlist; in Tracks, [edit the cell](tags.md#editing-in-the-track-table) of the selected row |
 | Ctrl+N | New playlist |

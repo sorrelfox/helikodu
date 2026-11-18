@@ -29,7 +29,7 @@ use super::file_tools::{
 use super::tool_window::{CHECK, Frame, GAP, footer, frame, primary_button, table_header};
 use crate::backend::services::{
     CancelToken, Change, CharacterSet, Destination, FileId, FileRunSummary, MoveRequest,
-    OrganizeOptions, PatternProblem, PlannedMove, SavedPattern, Services,
+    OrganizeOptions, PlannedMove, SavedPattern, Services,
 };
 use crate::backend::{Backend, PlayerRequest, TrackKey};
 use crate::dialogs::common::{compact_button, dropdown, find_open, on_selected, tilde};
@@ -98,31 +98,13 @@ fn pattern_name(name: &str) -> String {
 }
 
 /// The character sets, in the order of their dropdown.
-const SETS: [CharacterSet; 3] = [
-    CharacterSet::Windows,
-    CharacterSet::AsIs,
-    CharacterSet::Ascii,
-];
+const SETS: [CharacterSet; 3] = CharacterSet::ALL;
 
 fn set_name(set: CharacterSet) -> String {
     match set {
         CharacterSet::AsIs => tr("Names as they are"),
         CharacterSet::Ascii => tr("Plain ASCII only"),
         _ => tr("Names that Windows can read"),
-    }
-}
-
-/// Why a pattern cannot be read, in words.
-fn problem_text(problem: &PatternProblem) -> String {
-    match problem {
-        PatternProblem::Empty => tr("The pattern is empty."),
-        PatternProblem::UnclosedField => tr("A field is not closed with }."),
-        PatternProblem::EmptyField => tr("{} names no field."),
-        PatternProblem::UnknownField(name) => fill(&tr("There is no field called {}."), &[name]),
-        PatternProblem::UnclosedBracket => tr("A [ is not closed with ]."),
-        PatternProblem::UnexpectedClose(c) => fill(&tr("{} closes nothing."), &[&c.to_string()]),
-        PatternProblem::NestedField => tr("A field name cannot hold {."),
-        _ => tr("A folder name would be empty."),
     }
 }
 
@@ -317,7 +299,7 @@ impl Organizer {
         let name = fill(&tr("Pattern {}"), &[&count.to_string()]);
         let text = self.pattern.text().to_string();
         let text = if text.trim().is_empty() {
-            "{albumartist}/{album}/{track} {title}".to_owned()
+            crate::backend::services::NamingPattern::DEFAULT.to_owned()
         } else {
             text
         };
@@ -333,6 +315,82 @@ impl Organizer {
             let Some(this) = weak.upgrade() else { return };
             match saved {
                 Ok(id) => this.load_patterns(Some(id)),
+                Err(error) => this.pattern_note.set_text(&error.0),
+            }
+        });
+    }
+
+    /// The saved pattern of a row of the list.
+    fn saved_of(&self, row: &gtk::ListBoxRow) -> Option<SavedPattern> {
+        let name = row.widget_name();
+        let id: i64 = name.strip_prefix("pattern-")?.parse().ok()?;
+        self.patterns.borrow().iter().find(|p| p.id == id).cloned()
+    }
+
+    /// Asks for a new name of the pattern of `row`.
+    fn rename_pattern(self: &Rc<Self>, row: &gtk::ListBoxRow) {
+        let Some(saved) = self.saved_of(row) else {
+            return;
+        };
+        let weak = Rc::downgrade(self);
+        crate::window::playlists::ask_name(
+            row.upcast_ref(),
+            &pattern_name(&saved.name),
+            &tr("Pattern name"),
+            move |name| {
+                let Some(this) = weak.upgrade() else { return };
+                let services = this.services();
+                let pattern = saved.pattern.clone();
+                this.change_patterns(Some(saved.id), move || {
+                    services.save_naming_pattern(Some(saved.id), &name, &pattern)
+                });
+            },
+        );
+    }
+
+    /// Asks before deleting the pattern of `row`.
+    fn delete_pattern(self: &Rc<Self>, row: &gtk::ListBoxRow) {
+        let Some(saved) = self.saved_of(row) else {
+            return;
+        };
+        let weak = Rc::downgrade(self);
+        crate::tools::confirm_delete(
+            &self.window,
+            &fill(
+                &tr("Delete the pattern “{}”?"),
+                &[&pattern_name(&saved.name)],
+            ),
+            &tr("Files it organized stay where they are."),
+            move || {
+                let Some(this) = weak.upgrade() else { return };
+                let services = this.services();
+                let keep = this.chosen.get().filter(|id| *id != saved.id);
+                this.change_patterns(keep, move || {
+                    services.delete_naming_pattern(saved.id).map(|()| 0)
+                });
+            },
+        );
+    }
+
+    /// Runs `change` on a thread of its own, then lists the patterns again
+    /// with `choose` chosen; a failure is shown under the pattern.
+    fn change_patterns(
+        self: &Rc<Self>,
+        choose: Option<i64>,
+        change: impl FnOnce() -> Result<i64, crate::backend::BackendError> + Send + 'static,
+    ) {
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let (sender, receiver) = async_channel::bounded(1);
+            std::thread::spawn(move || {
+                let _ = sender.send_blocking(change());
+            });
+            let Ok(result) = receiver.recv().await else {
+                return;
+            };
+            let Some(this) = weak.upgrade() else { return };
+            match result {
+                Ok(_) => this.load_patterns(choose),
                 Err(error) => this.pattern_note.set_text(&error.0),
             }
         });
@@ -398,13 +456,8 @@ impl Organizer {
         // A pattern that cannot be read is reported at once, under the entry.
         if let Err(error) = crate::backend::services::NamingPattern::parse(&options.pattern) {
             self.pattern.add_css_class("error");
-            self.pattern_note.set_text(&fill(
-                &tr("{} At character {}."),
-                &[
-                    &problem_text(&error.problem),
-                    &(error.start + 1).to_string(),
-                ],
-            ));
+            self.pattern_note
+                .set_text(&crate::tools::naming_problem(&error));
             self.pattern_note.add_css_class("hk-query-problem");
             self.planned.borrow_mut().clear();
             self.rebuild();
@@ -1110,6 +1163,21 @@ pub(crate) fn open(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Option<g
         this.bind(&row, item, index);
     });
 
+    let (weak_rename, weak_delete) = (Rc::downgrade(&organizer), Rc::downgrade(&organizer));
+    crate::tools::edit_rows(
+        &list,
+        |row| row.widget_name().starts_with("pattern-"),
+        move |row| {
+            if let Some(this) = weak_rename.upgrade() {
+                this.rename_pattern(row);
+            }
+        },
+        move |row| {
+            if let Some(this) = weak_delete.upgrade() {
+                this.delete_pattern(row);
+            }
+        },
+    );
     let weak = Rc::downgrade(&organizer);
     list.connect_row_selected(move |_, row| {
         let (Some(this), Some(row)) = (weak.upgrade(), row) else {

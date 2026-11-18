@@ -27,8 +27,8 @@ use helikodu_service::library::tag_editing::{
     TagChanges, TagField as WriterField, WriteError, load_for_editing, read_embedded_covers,
 };
 use helikodu_service::library::{
-    LibraryEvent, LoudnessSelection, ScanEvent, ScanRequest, StepProblem, TrackInfo, TrashOutcome,
-    TrashRefusal, WatchSettings,
+    HistoryReport, LibraryEvent, LoudnessSelection, ScanEvent, ScanRequest, StepProblem,
+    TagStepReport, TrackInfo, TrashOutcome, TrashRefusal, WatchSettings,
 };
 use helikodu_service::player::{
     PlayerCommand, list_outputs, resolve_backend as resolve, sound_backends,
@@ -36,8 +36,8 @@ use helikodu_service::player::{
 
 use super::super::services::{
     BackendSelection, CoverEdit, DatabaseInfo, DeviceInfo, EditTrack, FileFacts, FolderState,
-    FormatReport, LibraryFolder, OutputBackendKind, OutputSelection, ScanStatus, Services,
-    Settings, StorageUsage, TagEdit, TagField, TagStepResult, Versions, WriteResult,
+    FormatReport, HistoryStepResult, LibraryFolder, OutputBackendKind, OutputSelection, ScanStatus,
+    Services, Settings, StorageUsage, TagEdit, TagField, TagStepResult, Versions, WriteResult,
 };
 use super::super::services::{
     CancelToken, FileProgress, FileRunId, FileRunSummary, FoundFile, MissingFile, MoveRequest,
@@ -901,25 +901,33 @@ impl Services for ServiceServices {
         };
         // The files changed back were read again; a following edit opens them anew.
         lock(&self.opened).clear();
-        let file_name = |path: &Path| {
-            path.file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default()
+        Ok(Some(tag_step_result(&report)))
+    }
+
+    fn step_history(&self, redo: bool) -> Result<Option<HistoryStepResult>, BackendError> {
+        let _writing = lock(&TAG_WRITES);
+        let Some(library) = self.service.library() else {
+            return Ok(None);
         };
-        Ok(Some(TagStepResult {
-            files: report.files.len(),
-            problems: report
-                .failed()
-                .map(|(path, problem)| {
-                    let reason = match problem {
-                        StepProblem::Changed => tr("The file was changed since."),
-                        StepProblem::Write(e) => write_error_text(e),
-                        other => other.to_string(),
-                    };
-                    (file_name(path), reason)
+        let settings = self.service.settings().get();
+        let report = library
+            .step_history(redo, &settings, &|_, _| {})
+            .map_err(error)?;
+        Ok(match report {
+            None => None,
+            Some(HistoryReport::Tags(report)) => {
+                lock(&self.opened).clear();
+                Some(HistoryStepResult::Tags(tag_step_result(&report)))
+            }
+            Some(HistoryReport::Files { run, report }) => {
+                lock(&self.opened).clear();
+                self.announce_files_changed();
+                Some(HistoryStepResult::Files {
+                    kind: run.kind,
+                    report,
                 })
-                .collect(),
-        }))
+            }
+        })
     }
 
     fn formats(&self) -> FormatReport {
@@ -1177,5 +1185,29 @@ impl Services for ServiceServices {
             pipewire: None,
             sqlite: Some(sqlite_version().to_owned()),
         }
+    }
+}
+
+/// A tag step as the window reports it: the files, and those left alone by
+/// name with the reason.
+fn tag_step_result(report: &TagStepReport) -> TagStepResult {
+    let file_name = |path: &Path| {
+        path.file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    };
+    TagStepResult {
+        files: report.files.len(),
+        problems: report
+            .failed()
+            .map(|(path, problem)| {
+                let reason = match problem {
+                    StepProblem::Changed => tr("The file was changed since."),
+                    StepProblem::Write(e) => write_error_text(e),
+                    other => other.to_string(),
+                };
+                (file_name(path), reason)
+            })
+            .collect(),
     }
 }

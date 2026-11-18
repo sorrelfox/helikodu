@@ -16,6 +16,7 @@ mod cover_facts;
 mod covers;
 mod db;
 mod details;
+mod history;
 mod library;
 mod loudness;
 mod maintenance;
@@ -70,6 +71,7 @@ pub use helikodu_meta::covers::CoverHash;
 pub use helikodu_meta::playlists::{PathStyle, PlaylistKind};
 /// A cover found by a scan worker, as a [`TrackCovers`] holds it.
 pub use helikodu_meta::worker::{CoverOrigin, CoverReport};
+pub use history::{HistoryAction, HistoryError, HistoryReport, UndoHistory};
 pub use library::Library;
 pub use loudness::{
     AlbumMeasurement, LoudnessCoverage, LoudnessSelection, LoudnessTarget, MeasuredLoudness,
@@ -79,9 +81,10 @@ pub use maintenance::{Trash, TrashError, Trashed};
 pub use media_kinds::FileSection;
 pub use missing::{FoundFile, MissingFile, RelinkOutcome, RelinkProblem};
 pub use organize::{
-    Change, CharacterSet, Destination, FileRunId, FileRunSummary, MoveOutcome, MoveProblem,
-    MoveRequest, NamingPattern, OrganizeError, OrganizeOptions, PatternError, PatternProblem,
-    PlannedMove, Progress, RunKind, RunReport, SavedPattern,
+    Change, CharacterSet, Destination, FieldMap, FieldValues, FileRunId, FileRunSummary,
+    MAX_NAME_BYTES, MoveOutcome, MoveProblem, MoveRequest, NamingPattern, OrganizeError,
+    OrganizeOptions, PatternError, PatternProblem, PlannedMove, Progress, RunKind, RunReport,
+    SavedPattern, clean_file_name,
 };
 pub use play_keys::PlayKeys;
 pub use playlists::{CleanupCounts, FoundReport, Pin, PinTarget, PlaylistNode, PlaylistType};

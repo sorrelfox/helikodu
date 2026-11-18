@@ -499,14 +499,14 @@ fn undoes_and_redoes_a_save(app: &gtk::Application) {
     wait_for("the redo toast", || {
         window
             .toast_text()
-            .is_some_and(|t| t.contains("Changed the tags of 2 files again"))
+            .is_some_and(|t| t.contains("Redid tag edit of 2 files"))
     });
     WidgetExt::activate_action(&window, "win.undo", None).unwrap();
     wait_for("the second undo", || {
         album_of(&files[0]).as_deref() == Some("Old Name")
             && window
                 .toast_text()
-                .is_some_and(|t| t.contains("Put back the tags of 2 files"))
+                .is_some_and(|t| t.contains("Undid tag edit of 2 files"))
     });
     WidgetExt::activate_action(&window, "win.undo", None).unwrap();
     wait_for("nothing more to undo", || {

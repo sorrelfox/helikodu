@@ -24,7 +24,7 @@ use super::tool_window::{
     Frame, GAP, cell, footer, frame, primary_button, shown_path, side_row, table_header,
 };
 use crate::backend::export::{
-    ConvertRow, EncodeFormat, ExportServices, ExportState, JobOptions, NameStyle, NamingPattern,
+    CharacterSet, ConvertRow, EncodeFormat, ExportServices, ExportState, JobOptions, NamingPattern,
     PlannedAction, Preset, PresetQuality,
 };
 use crate::backend::{Backend, PlayerRequest, TrackKey, TrackQuery, TrackRow};
@@ -192,8 +192,8 @@ fn channel_choices() -> Vec<(String, Option<u16>)> {
     ]
 }
 
-fn style_of(id: &str) -> NameStyle {
-    NameStyle::from_id(id).unwrap_or_default()
+fn style_of(id: &str) -> CharacterSet {
+    CharacterSet::from_id(id).unwrap_or_default()
 }
 
 struct Converter {
@@ -240,6 +240,87 @@ impl Converter {
     fn save(&self) {
         let state = self.state.borrow().clone();
         let _ = self.export.save_state(&state);
+    }
+
+    /// The preset of the user's own on `row`.
+    fn own_preset(&self, row: &gtk::ListBoxRow) -> Option<Preset> {
+        let name = row.widget_name();
+        let id = name.strip_prefix("preset-")?;
+        self.state
+            .borrow()
+            .presets
+            .iter()
+            .find(|p| p.id == id)
+            .cloned()
+    }
+
+    /// Asks for a new name of the preset on `row`.
+    fn rename_preset(self: &Rc<Self>, row: &gtk::ListBoxRow) {
+        let Some(preset) = self.own_preset(row) else {
+            return;
+        };
+        let weak = Rc::downgrade(self);
+        crate::window::playlists::ask_name(
+            row.upcast_ref(),
+            &preset_name(&preset),
+            &tr("Preset name"),
+            move |name| {
+                let Some(this) = weak.upgrade() else { return };
+                if let Some(own) = this
+                    .state
+                    .borrow_mut()
+                    .presets
+                    .iter_mut()
+                    .find(|p| p.id == preset.id)
+                {
+                    own.name = name;
+                }
+                this.save();
+                this.fill_presets();
+                if this.current.borrow().id == preset.id {
+                    let current = this.presets().into_iter().find(|p| p.id == preset.id);
+                    if let Some(current) = current {
+                        this.title.set_text(&preset_name(&current));
+                        this.current.replace(current);
+                    }
+                }
+            },
+        );
+    }
+
+    /// Asks before deleting the preset on `row`.
+    fn delete_preset(self: &Rc<Self>, row: &gtk::ListBoxRow) {
+        let Some(preset) = self.own_preset(row) else {
+            return;
+        };
+        let weak = Rc::downgrade(self);
+        crate::tools::confirm_delete(
+            &self.window,
+            &fill(&tr("Delete the preset “{}”?"), &[&preset_name(&preset)]),
+            &tr("Files converted with it stay as they are."),
+            move || {
+                let Some(this) = weak.upgrade() else { return };
+                let first = {
+                    let mut state = this.state.borrow_mut();
+                    state.presets.retain(|p| p.id != preset.id);
+                    if state.converter.preset == preset.id {
+                        let first = state.all_presets().into_iter().next();
+                        if let Some(first) = &first {
+                            state.converter.preset = first.id.clone();
+                        }
+                        first
+                    } else {
+                        None
+                    }
+                };
+                this.save();
+                this.fill_presets();
+                if let Some(first) = first {
+                    this.show_preset(&first);
+                    this.replan();
+                }
+            },
+        );
     }
 
     /// Fills the left pane.
@@ -1011,6 +1092,26 @@ pub(crate) fn open_with(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Opt
     converter.fill_presets();
     converter.show_preset(&current);
 
+    let (weak_rename, weak_delete) = (Rc::downgrade(&converter), Rc::downgrade(&converter));
+    let weak_own = Rc::downgrade(&converter);
+    crate::tools::edit_rows(
+        &list,
+        move |row| {
+            weak_own
+                .upgrade()
+                .is_some_and(|this| this.own_preset(row).is_some())
+        },
+        move |row| {
+            if let Some(this) = weak_rename.upgrade() {
+                this.rename_preset(row);
+            }
+        },
+        move |row| {
+            if let Some(this) = weak_delete.upgrade() {
+                this.delete_preset(row);
+            }
+        },
+    );
     let weak = Rc::downgrade(&converter);
     list.connect_row_selected(move |list, row| {
         let (Some(this), Some(row)) = (weak.upgrade(), row) else {

@@ -386,11 +386,17 @@ pub(super) fn organize(
     let journal = planned.clone();
     let run = db.writer()?.write(move |c| {
         let run: i64 = c
-            .prepare_cached(
-                "INSERT INTO file_runs (started_at, kind, pattern, state)
-                 VALUES (?1, ?2, ?3, 0) RETURNING id",
-            )?
-            .query_row(params![now, kind_number(kind), pattern], |row| row.get(0))?;
+            .prepare_cached(&format!(
+                "INSERT INTO file_runs (started_at, kind, pattern, state, seq)
+                 VALUES (?1, ?2, ?3, 0, {}) RETURNING id",
+                crate::history::next_seq(4)
+            ))?
+            .query_row(
+                params![now, kind_number(kind), pattern, crate::history::now_ms()],
+                |row| row.get(0),
+            )?;
+        // As a new tag edit does: what waited to be done again cannot be now.
+        c.execute("DELETE FROM tag_journal WHERE undone = 1", [])?;
         let mut insert = c.prepare_cached(
             "INSERT INTO file_moves (run_id, position, file_id, from_path, to_path, state)
              VALUES (?1, ?2, ?3, ?4, ?5, 0)",
@@ -552,6 +558,17 @@ pub(super) fn step(
         })?;
         let removed = fsops::remove_empty(&made);
         forget_folders(db, removed)?;
+        // When it was undone, for the shared undo history.
+        let now = crate::history::now_ms();
+        db.writer()?.write(move |c| {
+            c.execute(
+                &format!(
+                    "UPDATE file_runs SET undone_seq = {} WHERE id = ?1",
+                    crate::history::next_seq(2)
+                ),
+                params![id, now],
+            )
+        })?;
     }
     settle_run_state(db, id)?;
     Ok(RunReport {
