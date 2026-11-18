@@ -1129,7 +1129,7 @@ msgstr "작곡가"
 #: crates/ui-gtk/src/tools/tag_preview.rs:283
 msgctxt "track number"
 msgid "Track"
-msgstr ""
+msgstr "트랙"
 
 #: crates/ui-gtk/src/views/album.rs:894
 #, rust-format
@@ -1948,7 +1948,7 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:67
 #, rust-format
 msgid "Change tags in place for files over {}"
-msgstr ""
+msgstr "{}보다 큰 파일은 태그를 제자리에서 변경"
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:81
 msgid ""
@@ -2371,7 +2371,7 @@ msgstr "수동"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:73
 msgctxt "folder"
 msgid "Not connected"
-msgstr ""
+msgstr "연결되지 않음"
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:107
 #, rust-format
@@ -2666,7 +2666,7 @@ msgstr "라이브러리를 사용할 수 없습니다."
 #, rust-format
 msgid "{} of {} tracks has ReplayGain or R128 values"
 msgid_plural "{} of {} tracks have ReplayGain or R128 values"
-msgstr[0] ""
+msgstr[0] "전체 {1}곡 중 {0}곡에 ReplayGain 또는 R128 값이 있습니다"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:279
 msgid "Every track has loudness values."
@@ -2988,7 +2988,7 @@ msgstr "트랙의 {}%"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:166
 #, rust-format
 msgid "after {} or {} whichever comes first"
-msgstr ""
+msgstr "들은 시간이 {0} 또는 {1} 중 하나에 이르면"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:172
 msgid ""
@@ -3122,7 +3122,7 @@ msgstr "일시 정지 및 재개"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:439
 msgctxt "fade"
 msgid "Seek"
-msgstr ""
+msgstr "탐색"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:445
 msgid "Skip to another track"
@@ -3179,7 +3179,7 @@ msgstr[0] "{}번"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:588
 #, rust-format
 msgid "play the loop {} then fade out over {}"
-msgstr ""
+msgstr "루프를 {0} 재생한 뒤 페이드 아웃: {1}"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:597
 #, rust-format
@@ -3255,7 +3255,7 @@ msgstr[0] "<새 값 {}개>"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:683
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:696
 msgid "<keep>"
-msgstr "<keep>"
+msgstr "<유지>"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:271
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:272
@@ -3275,7 +3275,7 @@ msgstr[0] "파일 {}개를 저장했습니다"
 #, rust-format
 msgid "{} of {} files could not be saved"
 msgid_plural "{} of {} files could not be saved"
-msgstr[0] ""
+msgstr[0] "파일 {1}개 중 {0}개를 저장하지 못했습니다"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:658
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:784
@@ -3393,7 +3393,7 @@ msgstr "또는 여기에 그림을 끌어다 놓으십시오"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1220
 msgctxt "heading"
 msgid "Keep the cover"
-msgstr ""
+msgstr "커버 저장"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1226
 msgid "Inside each file"
@@ -3970,7 +3970,7 @@ msgstr "{} 사진 선택"
 #: crates/ui-gtk/src/views/folders.rs:106
 msgctxt "home folder"
 msgid "Home"
-msgstr ""
+msgstr "홈"
 
 #: crates/ui-gtk/src/views/folders.rs:126
 msgid "File system"
@@ -4136,7 +4136,7 @@ msgstr "파일 누락됨"
 #: crates/ui-gtk/src/views/playlist.rs:542
 msgctxt "track"
 msgid "Missing"
-msgstr ""
+msgstr "누락됨"
 
 #: crates/ui-gtk/src/views/playlist.rs:596
 msgid "Save as a playlist file…"
@@ -4682,7 +4682,7 @@ msgstr "스펙트럼"
 #: crates/ui-gtk/src/views/now_playing.rs:711
 #, rust-format
 msgid "1/5 OCTAVE · PEAK HOLD {} s"
-msgstr ""
+msgstr "1/5 옥타브 · 피크 홀드 {}초"
 
 #: crates/ui-gtk/src/views/now_playing.rs:717
 #: crates/ui-gtk/src/widgets/level_meter.rs:108
@@ -4907,39 +4907,39 @@ msgstr "{}(자동)"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:86
 msgid "Flat"
-msgstr ""
+msgstr "플랫"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:87
 msgid "Bass boost"
-msgstr ""
+msgstr "저음 강조"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:88
 msgid "Bass cut"
-msgstr ""
+msgstr "저음 감소"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:89
 msgid "Treble boost"
-msgstr ""
+msgstr "고음 강조"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:90
 msgid "Treble cut"
-msgstr ""
+msgstr "고음 감소"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:92
 msgid "Vocal"
-msgstr ""
+msgstr "보컬"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:93
 msgid "Rock"
-msgstr ""
+msgstr "록"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:94
 msgid "Pop"
-msgstr ""
+msgstr "팝"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:95
 msgid "Jazz"
-msgstr ""
+msgstr "재즈"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:96
 #: crates/ui-gtk/src/tools/organizer.rs:94
@@ -4948,11 +4948,11 @@ msgstr "클래식"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:97
 msgid "Electronic"
-msgstr ""
+msgstr "일렉트로닉"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:98
 msgid "Acoustic"
-msgstr ""
+msgstr "어쿠스틱"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:161
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:211
@@ -5021,7 +5021,7 @@ msgstr "필터 {} 제거"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:492
 msgid "Type"
-msgstr ""
+msgstr "유형"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:517
 msgid "Equalizer settings (ParametricEQ.txt)"
@@ -5574,7 +5574,7 @@ msgstr "1.5시간"
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:100
 msgctxt "sleep timer"
 msgid "Stop after"
-msgstr ""
+msgstr "정지 시점"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:111
 msgid "Other…"
@@ -5609,7 +5609,7 @@ msgstr "트랙이 끝난 후"
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:166
 #, rust-format
 msgid "{} left"
-msgstr ""
+msgstr "{} 남음"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:174
 msgid "+10 min"
@@ -6019,14 +6019,14 @@ msgstr[0] "파일 {}개는 그대로 두었습니다"
 #: crates/ui-gtk/src/tools/tool_window.rs:60
 msgctxt "column"
 msgid "Main"
-msgstr ""
+msgstr "기본"
 
 #. Translators: a narrow column header of the duplicate tables: the
 #. copies to move to the trash.
 #: crates/ui-gtk/src/tools/tool_window.rs:63
 msgctxt "column"
 msgid "Remove"
-msgstr ""
+msgstr "제거"
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:81
 #, rust-format
@@ -6283,7 +6283,7 @@ msgid ""
 "{} of {} file names fits the pattern · values in grey are already in the tags"
 msgid_plural ""
 "{} of {} file names fit the pattern · values in grey are already in the tags"
-msgstr[0] ""
+msgstr[0] "파일 이름 {1}개 중 {0}개가 패턴과 맞음 · 회색 값은 이미 태그에 있는 값"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:510
 msgid "Type the text to find."
@@ -6335,7 +6335,7 @@ msgstr "Enter: 저장 · Tab: 다음 열 · Esc: 취소"
 #, rust-format
 msgid "{} of {} files could not be saved. {}: {}"
 msgid_plural "{} of {} files could not be saved. {}: {}"
-msgstr[0] ""
+msgstr[0] "파일 {1}개 중 {0}개를 저장하지 못했습니다. {2}: {3}"
 
 #: crates/ui-gtk/src/window/tag_undo.rs:45
 #: crates/ui-gtk/src/window/tag_undo.rs:117
@@ -6370,7 +6370,7 @@ msgstr[0] "파일 {}개의 태그를 되돌렸습니다"
 #, rust-format
 msgid "{} of {} files kept its tags. {}: {}"
 msgid_plural "{} of {} files kept their tags. {}: {}"
-msgstr[0] ""
+msgstr[0] "파일 {1}개 중 {0}개의 태그를 되돌리지 못했습니다. {2}: {3}"
 
 #: crates/ui-gtk/src/window/tag_undo.rs:172
 #, rust-format
@@ -6782,7 +6782,7 @@ msgstr "파일을 찾는 중…"
 #, rust-format
 msgid "{} found in {}, matched by size and content · {}"
 msgid_plural "{} found in {}, matched by size and content · {}"
-msgstr[0] ""
+msgstr[0] "{1}에서 {0}개 찾음(크기와 내용으로 확인) · {2}"
 
 #. Translators: the summary of the missing files: {0} is a
 #. number of files, {1} "{} not found".
@@ -6791,7 +6791,7 @@ msgstr[0] ""
 msgid "{} found in the library folders, matched by size and content · {}"
 msgid_plural ""
 "{} found in the library folders, matched by size and content · {}"
-msgstr[0] ""
+msgstr[0] "라이브러리 폴더에서 {0}개 찾음(크기와 내용으로 확인) · {1}"
 
 #: crates/ui-gtk/src/tools/missing_files.rs:301
 #, rust-format
@@ -6838,7 +6838,7 @@ msgstr "찾지 못함"
 #, rust-format
 msgid "{}, missing for {} day, {}"
 msgid_plural "{}, missing for {} days, {}"
-msgstr[0] ""
+msgstr[0] "{0}, {1}일 동안 누락됨, {2}"
 
 #: crates/ui-gtk/src/tools/missing_files.rs:613
 msgid "Relink this track"
@@ -6997,28 +6997,28 @@ msgstr ""
 #: crates/ui-gtk/src/tools/verify_files.rs:409
 #, rust-format
 msgid "Every file was decoded from start to end. {} {} {}"
-msgstr ""
+msgstr "모든 파일을 처음부터 끝까지 디코딩했습니다. {} {} {}"
 
 #. Translators: a number of files that decoded without a problem.
 #: crates/ui-gtk/src/tools/verify_files.rs:413
 #, rust-format
 msgid "{} is fine."
 msgid_plural "{} are fine."
-msgstr[0] ""
+msgstr[0] "{}개는 정상입니다."
 
 #. Translators: a number of files that decoded with problems.
 #: crates/ui-gtk/src/tools/verify_files.rs:418
 #, rust-format
 msgid "{} has problems."
 msgid_plural "{} have problems."
-msgstr[0] ""
+msgstr[0] "{}개에 문제가 있습니다."
 
 #. Translators: a number of files that could not be read.
 #: crates/ui-gtk/src/tools/verify_files.rs:423
 #, rust-format
 msgid "{} could not be read."
 msgid_plural "{} could not be read."
-msgstr[0] ""
+msgstr[0] "{}개는 읽을 수 없습니다."
 
 #: crates/ui-gtk/src/tools/verify_files.rs:464
 msgid "Nothing has been checked yet."
@@ -7497,7 +7497,7 @@ msgstr[0] "{1}부터 {0}회 재생"
 #. and punctuation as your language writes a date.
 #: crates/ui-gtk/src/views/history.rs:826
 msgid "%e %b %Y"
-msgstr ""
+msgstr "%Y년 %b %e일"
 
 #: crates/ui-gtk/src/views/history.rs:839
 #, rust-format
@@ -7657,14 +7657,14 @@ msgstr "하나 이상"
 #. dropdown of "Match {} of these rules".
 #: crates/ui-gtk/src/views/smart_playlist.rs:282
 msgid "Which rules must match"
-msgstr ""
+msgstr "충족해야 할 규칙"
 
 #. Translators: the first line of the smart playlist editor; {} is a
 #. dropdown with "all" or "any".
 #: crates/ui-gtk/src/views/smart_playlist.rs:286
 #, rust-format
 msgid "Match {} of these rules"
-msgstr ""
+msgstr "다음 규칙을 {} 충족"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:305
 msgid "Limit"
@@ -7691,7 +7691,7 @@ msgstr "순서"
 #: crates/ui-gtk/src/views/smart_playlist.rs:325
 #, rust-format
 msgid "Limit to {} {} sorted by {}"
-msgstr ""
+msgstr "제한: {0} {1}, 정렬 기준: {2}"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:339
 msgid "The same rules as query text"
@@ -7724,7 +7724,7 @@ msgstr "그룹 내 충족 조건"
 #: crates/ui-gtk/src/views/smart_playlist.rs:962
 #, rust-format
 msgid "{} of these"
-msgstr ""
+msgstr "다음을 {} 충족"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:981
 msgid "Add rule to group"
@@ -7787,91 +7787,91 @@ msgstr ""
 #: crates/ui-gtk/src/views/smart_rules.rs:63
 msgctxt "rule condition"
 msgid "contains"
-msgstr ""
+msgstr "포함"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:64
 msgctxt "rule condition"
 msgid "is"
-msgstr ""
+msgstr "일치"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:65
 msgctxt "rule condition"
 msgid "is not"
-msgstr ""
+msgstr "일치하지 않음"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:66
 msgctxt "rule condition"
 msgid "does not contain"
-msgstr ""
+msgstr "포함하지 않음"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:67
 msgctxt "rule condition"
 msgid "matches"
-msgstr ""
+msgstr "패턴 일치"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:68
 msgctxt "rule condition"
 msgid "is at least"
-msgstr ""
+msgstr "이상"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:69
 msgctxt "rule condition"
 msgid "is at most"
-msgstr ""
+msgstr "이하"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:70
 msgctxt "rule condition"
 msgid "is more than"
-msgstr ""
+msgstr "초과"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:71
 msgctxt "rule condition"
 msgid "is less than"
-msgstr ""
+msgstr "미만"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:72
 msgctxt "rule condition"
 msgid "in the last"
-msgstr ""
+msgstr "최근"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:73
 msgctxt "rule condition"
 msgid "not in the last"
-msgstr ""
+msgstr "최근 제외"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:74
 msgctxt "rule condition"
 msgid "is before"
-msgstr ""
+msgstr "이전"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:75
 msgctxt "rule condition"
 msgid "is after"
-msgstr ""
+msgstr "이후"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:76
 msgctxt "rule condition"
 msgid "is set"
-msgstr ""
+msgstr "값 있음"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:77
 msgctxt "rule condition"
 msgid "is not set"
-msgstr ""
+msgstr "값 없음"
 
 #. Translators: a condition of a codec or container rule; it finds
 #. every file of this kind (FLAC, MP3, …).
 #: crates/ui-gtk/src/views/smart_rules.rs:87
 msgctxt "codec rule condition"
 msgid "is"
-msgstr ""
+msgstr "일치"
 
 #. Translators: a condition of a codec or container rule; it finds
 #. only files whose codec has exactly this name.
 #: crates/ui-gtk/src/views/smart_rules.rs:91
 msgctxt "codec rule condition"
 msgid "is exactly"
-msgstr ""
+msgstr "정확히 일치"
 
 #. Translators: a sentence of the rule line of a smart playlist:
 #. {0} is the field (Codec or Container), {1} the value (FLAC or
@@ -7881,7 +7881,7 @@ msgstr ""
 #, rust-format
 msgctxt "codec rule"
 msgid "{} is {}"
-msgstr ""
+msgstr "{0}: {1}"
 
 #. Translators: as above, but it finds only files whose codec has
 #. exactly this name.
@@ -7889,7 +7889,7 @@ msgstr ""
 #, rust-format
 msgctxt "codec rule"
 msgid "{} is exactly {}"
-msgstr ""
+msgstr "{0}: 정확히 {1}"
 
 #. Translators: the sentences of the rule line of a smart playlist
 #. (context "smart rule"): {0} is the field (Title, Rating, Added,
@@ -7899,91 +7899,91 @@ msgstr ""
 #, rust-format
 msgctxt "smart rule"
 msgid "{} contains {}"
-msgstr ""
+msgstr "{0}: {1} 포함"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:114
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is {}"
-msgstr ""
+msgstr "{0}: {1}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:115
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is not {}"
-msgstr ""
+msgstr "{0}: {1} 아님"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:116
 #, rust-format
 msgctxt "smart rule"
 msgid "{} does not contain {}"
-msgstr ""
+msgstr "{0}: {1} 포함하지 않음"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:117
 #, rust-format
 msgctxt "smart rule"
 msgid "{} matches {}"
-msgstr ""
+msgstr "{0}: {1} 패턴 일치"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:118
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is at least {}"
-msgstr ""
+msgstr "{0}: {1} 이상"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:119
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is at most {}"
-msgstr ""
+msgstr "{0}: {1} 이하"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:120
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is more than {}"
-msgstr ""
+msgstr "{0}: {1} 초과"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:121
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is less than {}"
-msgstr ""
+msgstr "{0}: {1} 미만"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:122
 #, rust-format
 msgctxt "smart rule"
 msgid "{} in the last {}"
-msgstr ""
+msgstr "{0}: 최근 {1}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:123
 #, rust-format
 msgctxt "smart rule"
 msgid "{} not in the last {}"
-msgstr ""
+msgstr "{0}: 최근 {1} 제외"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:124
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is before {}"
-msgstr ""
+msgstr "{0}: {1} 이전"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:125
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is after {}"
-msgstr ""
+msgstr "{0}: {1} 이후"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:126
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is set"
-msgstr ""
+msgstr "{}: 값 있음"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:127
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is not set"
-msgstr ""
+msgstr "{}: 값 없음"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:206
 msgid "Movement"
@@ -8058,13 +8058,13 @@ msgstr[0] "{}년"
 #, rust-format
 msgctxt "smart rule"
 msgid "{} or {}"
-msgstr ""
+msgstr "{} 또는 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:522
 #, rust-format
 msgctxt "smart rule"
 msgid "{} and {}"
-msgstr ""
+msgstr "{} 그리고 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:537
 msgid "Album order"
@@ -8145,27 +8145,27 @@ msgstr "무작위 순서"
 #: crates/ui-gtk/src/views/smart_rules.rs:605
 msgctxt "limit unit"
 msgid "tracks"
-msgstr ""
+msgstr "곡"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:606
 msgctxt "limit unit"
 msgid "minutes"
-msgstr ""
+msgstr "분"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:607
 msgctxt "limit unit"
 msgid "hours"
-msgstr ""
+msgstr "시간"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:608
 msgctxt "limit unit"
 msgid "MB"
-msgstr ""
+msgstr "MB"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:609
 msgctxt "limit unit"
 msgid "GB"
-msgstr ""
+msgstr "GB"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:692
 msgid "In the order of the text"
@@ -8258,32 +8258,32 @@ msgstr "새 폴더…"
 #: crates/ui-gtk/src/window/playlists.rs:377
 msgctxt "album"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "사이드바에 고정됨"
 
 #: crates/ui-gtk/src/window/playlists.rs:378
 msgctxt "artist"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "사이드바에 고정됨"
 
 #: crates/ui-gtk/src/window/playlists.rs:379
 msgctxt "playlist"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "사이드바에 고정됨"
 
 #: crates/ui-gtk/src/window/playlists.rs:380
 msgctxt "album"
 msgid "Unpinned"
-msgstr ""
+msgstr "고정 해제됨"
 
 #: crates/ui-gtk/src/window/playlists.rs:381
 msgctxt "artist"
 msgid "Unpinned"
-msgstr ""
+msgstr "고정 해제됨"
 
 #: crates/ui-gtk/src/window/playlists.rs:382
 msgctxt "playlist"
 msgid "Unpinned"
-msgstr ""
+msgstr "고정 해제됨"
 
 #. Translators: a playlist was moved into a folder; {}
 #. is the folder's name.
@@ -8295,7 +8295,7 @@ msgstr "{} 폴더로 이동함"
 #. Translators: a playlist was moved out of its folders.
 #: crates/ui-gtk/src/window/playlists.rs:459
 msgid "Moved to the top level"
-msgstr ""
+msgstr "최상위로 이동함"
 
 #: crates/ui-gtk/src/window/playlists.rs:498
 msgid "Unlocked"
@@ -8454,7 +8454,7 @@ msgstr "동기화 안 됨"
 #. "Nov 2026"; keep the % codes, change their order as needed.
 #: crates/ui-gtk/src/views/home.rs:160
 msgid "%b %Y"
-msgstr ""
+msgstr "%Y년 %b"
 
 #: crates/ui-gtk/src/views/home.rs:344
 msgid "Show all"
@@ -8508,7 +8508,7 @@ msgstr "모두 초기화"
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:292
 msgctxt "shortcut"
 msgid "Changed"
-msgstr ""
+msgstr "변경됨"
 
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:399
 #, rust-format
@@ -8722,7 +8722,7 @@ msgstr "오늘 {}에 집계"
 #: crates/ui-gtk/src/views/statistics.rs:405
 msgctxt "statistics column"
 msgid "tracks"
-msgstr ""
+msgstr "곡"
 
 #: crates/ui-gtk/src/views/statistics.rs:450
 #, rust-format
@@ -8740,7 +8740,7 @@ msgstr "{}: {}곡"
 #: crates/ui-gtk/src/views/statistics.rs:507
 msgctxt "statistics column"
 msgid "plays"
-msgstr ""
+msgstr "재생 횟수"
 
 #: crates/ui-gtk/src/views/statistics.rs:489
 #, rust-format
@@ -8767,7 +8767,7 @@ msgstr[0] "드라이브 {}개"
 #, rust-format
 msgid "in {} folder and {}"
 msgid_plural "in {} folders and {}"
-msgstr[0] ""
+msgstr[0] "폴더 {}개, {}"
 
 #: crates/ui-gtk/src/views/statistics.rs:605
 #, rust-format
@@ -8811,7 +8811,7 @@ msgstr "올해"
 msgctxt "statistics caption"
 msgid "play"
 msgid_plural "plays"
-msgstr[0] ""
+msgstr[0] "재생"
 
 #: crates/ui-gtk/src/views/statistics.rs:666
 msgid "listened"
@@ -8823,7 +8823,7 @@ msgstr "들은 시간"
 msgctxt "statistics caption"
 msgid "skip"
 msgid_plural "skips"
-msgstr[0] ""
+msgstr[0] "건너뜀"
 
 #: crates/ui-gtk/src/views/statistics.rs:675
 msgid "never played"
@@ -9095,7 +9095,7 @@ msgstr[0] "파일 {}개"
 #: crates/ui-gtk/src/tools/converter.rs:978
 #, rust-format
 msgid "Work on {}"
-msgstr ""
+msgstr "한 번에 {} 처리"
 
 #: crates/ui-gtk/src/tools/converter.rs:994
 msgid "From"
@@ -9199,7 +9199,7 @@ msgstr ""
 #, rust-format
 msgid "Synced: {} file · {}"
 msgid_plural "Synced: {} files · {}"
-msgstr[0] ""
+msgstr[0] "동기화됨: 파일 {}개 · {}"
 
 #: crates/ui-gtk/src/tools/sync_export.rs:450
 msgid "The destination is not connected. Connect it to sync."

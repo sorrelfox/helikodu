@@ -1140,7 +1140,7 @@ msgstr "Componist"
 #: crates/ui-gtk/src/tools/tag_preview.rs:283
 msgctxt "track number"
 msgid "Track"
-msgstr ""
+msgstr "Track"
 
 #: crates/ui-gtk/src/views/album.rs:894
 #, rust-format
@@ -1976,7 +1976,7 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:67
 #, rust-format
 msgid "Change tags in place for files over {}"
-msgstr ""
+msgstr "Tags ter plekke wijzigen voor bestanden groter dan {}"
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:81
 msgid ""
@@ -2403,7 +2403,7 @@ msgstr "Handmatig"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:73
 msgctxt "folder"
 msgid "Not connected"
-msgstr ""
+msgstr "Niet aangesloten"
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:107
 #, rust-format
@@ -2709,8 +2709,8 @@ msgstr "De bibliotheek is niet beschikbaar."
 #, rust-format
 msgid "{} of {} tracks has ReplayGain or R128 values"
 msgid_plural "{} of {} tracks have ReplayGain or R128 values"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} van {} nummers heeft ReplayGain- of R128-waarden"
+msgstr[1] "{} van {} nummers hebben ReplayGain- of R128-waarden"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:279
 msgid "Every track has loudness values."
@@ -3047,7 +3047,7 @@ msgstr "{} % van het nummer"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:166
 #, rust-format
 msgid "after {} or {} whichever comes first"
-msgstr ""
+msgstr "na {} of na {}, wat het eerst komt"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:172
 msgid ""
@@ -3183,7 +3183,7 @@ msgstr "Pauzeren en hervatten"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:439
 msgctxt "fade"
 msgid "Seek"
-msgstr ""
+msgstr "Spoelen"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:445
 msgid "Skip to another track"
@@ -3246,7 +3246,7 @@ msgstr[1] "{} keer"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:588
 #, rust-format
 msgid "play the loop {} then fade out over {}"
-msgstr ""
+msgstr "de lus {} afspelen en daarna uitfaden in {}"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:597
 #, rust-format
@@ -3323,7 +3323,7 @@ msgstr[1] "<{} nieuwe waarden>"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:683
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:696
 msgid "<keep>"
-msgstr "<keep>"
+msgstr "<behouden>"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:271
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:272
@@ -3344,8 +3344,8 @@ msgstr[1] "{} bestanden opgeslagen"
 #, rust-format
 msgid "{} of {} files could not be saved"
 msgid_plural "{} of {} files could not be saved"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} van {} bestanden kon niet worden opgeslagen"
+msgstr[1] "{} van {} bestanden konden niet worden opgeslagen"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:658
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:784
@@ -3466,7 +3466,7 @@ msgstr "of sleep hier een afbeelding naartoe"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1220
 msgctxt "heading"
 msgid "Keep the cover"
-msgstr ""
+msgstr "Hoes behouden"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1226
 msgid "Inside each file"
@@ -4059,7 +4059,7 @@ msgstr "Foto van {} kiezen"
 #: crates/ui-gtk/src/views/folders.rs:106
 msgctxt "home folder"
 msgid "Home"
-msgstr ""
+msgstr "Persoonlijke map"
 
 #: crates/ui-gtk/src/views/folders.rs:126
 msgid "File system"
@@ -4228,7 +4228,7 @@ msgstr "Het bestand ontbreekt"
 #: crates/ui-gtk/src/views/playlist.rs:542
 msgctxt "track"
 msgid "Missing"
-msgstr ""
+msgstr "Ontbreekt"
 
 #: crates/ui-gtk/src/views/playlist.rs:596
 msgid "Save as a playlist file…"
@@ -4781,7 +4781,7 @@ msgstr "Spectrum"
 #: crates/ui-gtk/src/views/now_playing.rs:711
 #, rust-format
 msgid "1/5 OCTAVE · PEAK HOLD {} s"
-msgstr ""
+msgstr "1/5 OCTAAF · PIEK VASTHOUDEN {} s"
 
 #: crates/ui-gtk/src/views/now_playing.rs:717
 #: crates/ui-gtk/src/widgets/level_meter.rs:108
@@ -5010,39 +5010,39 @@ msgstr "{} (auto)"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:86
 msgid "Flat"
-msgstr ""
+msgstr "Vlak"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:87
 msgid "Bass boost"
-msgstr ""
+msgstr "Meer bas"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:88
 msgid "Bass cut"
-msgstr ""
+msgstr "Minder bas"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:89
 msgid "Treble boost"
-msgstr ""
+msgstr "Meer hoge tonen"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:90
 msgid "Treble cut"
-msgstr ""
+msgstr "Minder hoge tonen"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:92
 msgid "Vocal"
-msgstr ""
+msgstr "Zang"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:93
 msgid "Rock"
-msgstr ""
+msgstr "Rock"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:94
 msgid "Pop"
-msgstr ""
+msgstr "Pop"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:95
 msgid "Jazz"
-msgstr ""
+msgstr "Jazz"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:96
 #: crates/ui-gtk/src/tools/organizer.rs:94
@@ -5051,11 +5051,11 @@ msgstr "Klassiek"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:97
 msgid "Electronic"
-msgstr ""
+msgstr "Elektronisch"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:98
 msgid "Acoustic"
-msgstr ""
+msgstr "Akoestisch"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:161
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:211
@@ -5125,7 +5125,7 @@ msgstr "Filter {} verwijderen"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:492
 msgid "Type"
-msgstr ""
+msgstr "Type"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:517
 msgid "Equalizer settings (ParametricEQ.txt)"
@@ -5685,7 +5685,7 @@ msgstr "1,5 uur"
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:100
 msgctxt "sleep timer"
 msgid "Stop after"
-msgstr ""
+msgstr "Stoppen na"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:111
 msgid "Other…"
@@ -5720,7 +5720,7 @@ msgstr "Na het nummer"
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:166
 #, rust-format
 msgid "{} left"
-msgstr ""
+msgstr "nog {}"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:174
 msgid "+10 min"
@@ -6154,14 +6154,14 @@ msgstr[1] "{} bestanden op hun plaats gelaten"
 #: crates/ui-gtk/src/tools/tool_window.rs:60
 msgctxt "column"
 msgid "Main"
-msgstr ""
+msgstr "Hoofd"
 
 #. Translators: a narrow column header of the duplicate tables: the
 #. copies to move to the trash.
 #: crates/ui-gtk/src/tools/tool_window.rs:63
 msgctxt "column"
 msgid "Remove"
-msgstr ""
+msgstr "Verwijderen"
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:81
 #, rust-format
@@ -6425,8 +6425,8 @@ msgid ""
 "{} of {} file names fits the pattern · values in grey are already in the tags"
 msgid_plural ""
 "{} of {} file names fit the pattern · values in grey are already in the tags"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} van {} bestandsnamen past in het patroon · grijze waarden staan al in de tags"
+msgstr[1] "{} van {} bestandsnamen passen in het patroon · grijze waarden staan al in de tags"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:510
 msgid "Type the text to find."
@@ -6479,8 +6479,8 @@ msgstr "Enter slaat op · Tab gaat naar de volgende kolom · Esc annuleert"
 #, rust-format
 msgid "{} of {} files could not be saved. {}: {}"
 msgid_plural "{} of {} files could not be saved. {}: {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} van {} bestanden kon niet worden opgeslagen. {}: {}"
+msgstr[1] "{} van {} bestanden konden niet worden opgeslagen. {}: {}"
 
 #: crates/ui-gtk/src/window/tag_undo.rs:45
 #: crates/ui-gtk/src/window/tag_undo.rs:117
@@ -6517,8 +6517,8 @@ msgstr[1] "Tags van {} bestanden teruggezet"
 #, rust-format
 msgid "{} of {} files kept its tags. {}: {}"
 msgid_plural "{} of {} files kept their tags. {}: {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} van {} bestanden heeft zijn tags behouden. {}: {}"
+msgstr[1] "{} van {} bestanden hebben hun tags behouden. {}: {}"
 
 #: crates/ui-gtk/src/window/tag_undo.rs:172
 #, rust-format
@@ -6947,8 +6947,8 @@ msgstr "Bestanden zoeken…"
 #, rust-format
 msgid "{} found in {}, matched by size and content · {}"
 msgid_plural "{} found in {}, matched by size and content · {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} gevonden in {}, herkend aan grootte en inhoud · {}"
+msgstr[1] "{} gevonden in {}, herkend aan grootte en inhoud · {}"
 
 #. Translators: the summary of the missing files: {0} is a
 #. number of files, {1} "{} not found".
@@ -6957,8 +6957,8 @@ msgstr[1] ""
 msgid "{} found in the library folders, matched by size and content · {}"
 msgid_plural ""
 "{} found in the library folders, matched by size and content · {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} gevonden in de bibliotheekmappen, herkend aan grootte en inhoud · {}"
+msgstr[1] "{} gevonden in de bibliotheekmappen, herkend aan grootte en inhoud · {}"
 
 #: crates/ui-gtk/src/tools/missing_files.rs:301
 #, rust-format
@@ -7009,8 +7009,8 @@ msgstr "Niet gevonden"
 #, rust-format
 msgid "{}, missing for {} day, {}"
 msgid_plural "{}, missing for {} days, {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{}, ontbreekt al {} dag, {}"
+msgstr[1] "{}, ontbreekt al {} dagen, {}"
 
 #: crates/ui-gtk/src/tools/missing_files.rs:613
 msgid "Relink this track"
@@ -7179,31 +7179,31 @@ msgstr ""
 #: crates/ui-gtk/src/tools/verify_files.rs:409
 #, rust-format
 msgid "Every file was decoded from start to end. {} {} {}"
-msgstr ""
+msgstr "Elk bestand is van begin tot eind gedecodeerd. {} {} {}"
 
 #. Translators: a number of files that decoded without a problem.
 #: crates/ui-gtk/src/tools/verify_files.rs:413
 #, rust-format
 msgid "{} is fine."
 msgid_plural "{} are fine."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} is in orde."
+msgstr[1] "{} zijn in orde."
 
 #. Translators: a number of files that decoded with problems.
 #: crates/ui-gtk/src/tools/verify_files.rs:418
 #, rust-format
 msgid "{} has problems."
 msgid_plural "{} have problems."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} heeft problemen."
+msgstr[1] "{} hebben problemen."
 
 #. Translators: a number of files that could not be read.
 #: crates/ui-gtk/src/tools/verify_files.rs:423
 #, rust-format
 msgid "{} could not be read."
 msgid_plural "{} could not be read."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} kon niet worden gelezen."
+msgstr[1] "{} konden niet worden gelezen."
 
 #: crates/ui-gtk/src/tools/verify_files.rs:464
 msgid "Nothing has been checked yet."
@@ -7689,7 +7689,7 @@ msgstr[1] "{} keer afgespeeld sinds {}"
 #. and punctuation as your language writes a date.
 #: crates/ui-gtk/src/views/history.rs:826
 msgid "%e %b %Y"
-msgstr ""
+msgstr "%e %b %Y"
 
 #: crates/ui-gtk/src/views/history.rs:839
 #, rust-format
@@ -7856,14 +7856,14 @@ msgstr "een van"
 #. dropdown of "Match {} of these rules".
 #: crates/ui-gtk/src/views/smart_playlist.rs:282
 msgid "Which rules must match"
-msgstr ""
+msgstr "Aan welke regels moet worden voldaan"
 
 #. Translators: the first line of the smart playlist editor; {} is a
 #. dropdown with "all" or "any".
 #: crates/ui-gtk/src/views/smart_playlist.rs:286
 #, rust-format
 msgid "Match {} of these rules"
-msgstr ""
+msgstr "Voldoen aan {} deze regels"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:305
 msgid "Limit"
@@ -7890,7 +7890,7 @@ msgstr "Volgorde"
 #: crates/ui-gtk/src/views/smart_playlist.rs:325
 #, rust-format
 msgid "Limit to {} {} sorted by {}"
-msgstr ""
+msgstr "Beperken tot {} {}, gesorteerd op {}"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:339
 msgid "The same rules as query text"
@@ -7923,7 +7923,7 @@ msgstr "In groep voldoen aan"
 #: crates/ui-gtk/src/views/smart_playlist.rs:962
 #, rust-format
 msgid "{} of these"
-msgstr ""
+msgstr "{} deze regels"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:981
 msgid "Add rule to group"
@@ -7987,91 +7987,91 @@ msgstr ""
 #: crates/ui-gtk/src/views/smart_rules.rs:63
 msgctxt "rule condition"
 msgid "contains"
-msgstr ""
+msgstr "bevat"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:64
 msgctxt "rule condition"
 msgid "is"
-msgstr ""
+msgstr "is"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:65
 msgctxt "rule condition"
 msgid "is not"
-msgstr ""
+msgstr "is niet"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:66
 msgctxt "rule condition"
 msgid "does not contain"
-msgstr ""
+msgstr "bevat niet"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:67
 msgctxt "rule condition"
 msgid "matches"
-msgstr ""
+msgstr "komt overeen met"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:68
 msgctxt "rule condition"
 msgid "is at least"
-msgstr ""
+msgstr "is minstens"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:69
 msgctxt "rule condition"
 msgid "is at most"
-msgstr ""
+msgstr "is hoogstens"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:70
 msgctxt "rule condition"
 msgid "is more than"
-msgstr ""
+msgstr "is meer dan"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:71
 msgctxt "rule condition"
 msgid "is less than"
-msgstr ""
+msgstr "is minder dan"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:72
 msgctxt "rule condition"
 msgid "in the last"
-msgstr ""
+msgstr "in de afgelopen"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:73
 msgctxt "rule condition"
 msgid "not in the last"
-msgstr ""
+msgstr "niet in de afgelopen"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:74
 msgctxt "rule condition"
 msgid "is before"
-msgstr ""
+msgstr "is vóór"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:75
 msgctxt "rule condition"
 msgid "is after"
-msgstr ""
+msgstr "is na"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:76
 msgctxt "rule condition"
 msgid "is set"
-msgstr ""
+msgstr "is ingevuld"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:77
 msgctxt "rule condition"
 msgid "is not set"
-msgstr ""
+msgstr "is niet ingevuld"
 
 #. Translators: a condition of a codec or container rule; it finds
 #. every file of this kind (FLAC, MP3, …).
 #: crates/ui-gtk/src/views/smart_rules.rs:87
 msgctxt "codec rule condition"
 msgid "is"
-msgstr ""
+msgstr "is"
 
 #. Translators: a condition of a codec or container rule; it finds
 #. only files whose codec has exactly this name.
 #: crates/ui-gtk/src/views/smart_rules.rs:91
 msgctxt "codec rule condition"
 msgid "is exactly"
-msgstr ""
+msgstr "is precies"
 
 #. Translators: a sentence of the rule line of a smart playlist:
 #. {0} is the field (Codec or Container), {1} the value (FLAC or
@@ -8081,7 +8081,7 @@ msgstr ""
 #, rust-format
 msgctxt "codec rule"
 msgid "{} is {}"
-msgstr ""
+msgstr "{} is {}"
 
 #. Translators: as above, but it finds only files whose codec has
 #. exactly this name.
@@ -8089,7 +8089,7 @@ msgstr ""
 #, rust-format
 msgctxt "codec rule"
 msgid "{} is exactly {}"
-msgstr ""
+msgstr "{} is precies {}"
 
 #. Translators: the sentences of the rule line of a smart playlist
 #. (context "smart rule"): {0} is the field (Title, Rating, Added,
@@ -8099,91 +8099,91 @@ msgstr ""
 #, rust-format
 msgctxt "smart rule"
 msgid "{} contains {}"
-msgstr ""
+msgstr "{} bevat {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:114
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is {}"
-msgstr ""
+msgstr "{} is {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:115
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is not {}"
-msgstr ""
+msgstr "{} is niet {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:116
 #, rust-format
 msgctxt "smart rule"
 msgid "{} does not contain {}"
-msgstr ""
+msgstr "{} bevat niet {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:117
 #, rust-format
 msgctxt "smart rule"
 msgid "{} matches {}"
-msgstr ""
+msgstr "{} komt overeen met {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:118
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is at least {}"
-msgstr ""
+msgstr "{} is minstens {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:119
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is at most {}"
-msgstr ""
+msgstr "{} is hoogstens {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:120
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is more than {}"
-msgstr ""
+msgstr "{} is meer dan {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:121
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is less than {}"
-msgstr ""
+msgstr "{} is minder dan {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:122
 #, rust-format
 msgctxt "smart rule"
 msgid "{} in the last {}"
-msgstr ""
+msgstr "{} in de afgelopen {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:123
 #, rust-format
 msgctxt "smart rule"
 msgid "{} not in the last {}"
-msgstr ""
+msgstr "{} niet in de afgelopen {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:124
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is before {}"
-msgstr ""
+msgstr "{} is vóór {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:125
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is after {}"
-msgstr ""
+msgstr "{} is na {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:126
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is set"
-msgstr ""
+msgstr "{} is ingevuld"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:127
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is not set"
-msgstr ""
+msgstr "{} is niet ingevuld"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:206
 msgid "Movement"
@@ -8262,13 +8262,13 @@ msgstr[1] "{} jaar"
 #, rust-format
 msgctxt "smart rule"
 msgid "{} or {}"
-msgstr ""
+msgstr "{} of {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:522
 #, rust-format
 msgctxt "smart rule"
 msgid "{} and {}"
-msgstr ""
+msgstr "{} en {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:537
 msgid "Album order"
@@ -8349,27 +8349,27 @@ msgstr "In willekeurige volgorde"
 #: crates/ui-gtk/src/views/smart_rules.rs:605
 msgctxt "limit unit"
 msgid "tracks"
-msgstr ""
+msgstr "nummers"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:606
 msgctxt "limit unit"
 msgid "minutes"
-msgstr ""
+msgstr "minuten"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:607
 msgctxt "limit unit"
 msgid "hours"
-msgstr ""
+msgstr "uur"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:608
 msgctxt "limit unit"
 msgid "MB"
-msgstr ""
+msgstr "MB"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:609
 msgctxt "limit unit"
 msgid "GB"
-msgstr ""
+msgstr "GB"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:692
 msgid "In the order of the text"
@@ -8465,32 +8465,32 @@ msgstr "Nieuwe map…"
 #: crates/ui-gtk/src/window/playlists.rs:377
 msgctxt "album"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "Vastgezet in de zijbalk"
 
 #: crates/ui-gtk/src/window/playlists.rs:378
 msgctxt "artist"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "Vastgezet in de zijbalk"
 
 #: crates/ui-gtk/src/window/playlists.rs:379
 msgctxt "playlist"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "Vastgezet in de zijbalk"
 
 #: crates/ui-gtk/src/window/playlists.rs:380
 msgctxt "album"
 msgid "Unpinned"
-msgstr ""
+msgstr "Losgemaakt"
 
 #: crates/ui-gtk/src/window/playlists.rs:381
 msgctxt "artist"
 msgid "Unpinned"
-msgstr ""
+msgstr "Losgemaakt"
 
 #: crates/ui-gtk/src/window/playlists.rs:382
 msgctxt "playlist"
 msgid "Unpinned"
-msgstr ""
+msgstr "Losgemaakt"
 
 #. Translators: a playlist was moved into a folder; {}
 #. is the folder's name.
@@ -8502,7 +8502,7 @@ msgstr "Verplaatst naar {}"
 #. Translators: a playlist was moved out of its folders.
 #: crates/ui-gtk/src/window/playlists.rs:459
 msgid "Moved to the top level"
-msgstr ""
+msgstr "Verplaatst naar het hoogste niveau"
 
 #: crates/ui-gtk/src/window/playlists.rs:498
 msgid "Unlocked"
@@ -8663,7 +8663,7 @@ msgstr "Niet gesynchroniseerd"
 #. "Nov 2026"; keep the % codes, change their order as needed.
 #: crates/ui-gtk/src/views/home.rs:160
 msgid "%b %Y"
-msgstr ""
+msgstr "%b %Y"
 
 #: crates/ui-gtk/src/views/home.rs:344
 msgid "Show all"
@@ -8717,7 +8717,7 @@ msgstr "Alles herstellen"
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:292
 msgctxt "shortcut"
 msgid "Changed"
-msgstr ""
+msgstr "Gewijzigd"
 
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:399
 #, rust-format
@@ -8934,7 +8934,7 @@ msgstr "vandaag geteld om {}"
 #: crates/ui-gtk/src/views/statistics.rs:405
 msgctxt "statistics column"
 msgid "tracks"
-msgstr ""
+msgstr "nummers"
 
 #: crates/ui-gtk/src/views/statistics.rs:450
 #, rust-format
@@ -8952,7 +8952,7 @@ msgstr "{}: {} nummers"
 #: crates/ui-gtk/src/views/statistics.rs:507
 msgctxt "statistics column"
 msgid "plays"
-msgstr ""
+msgstr "keer afgespeeld"
 
 #: crates/ui-gtk/src/views/statistics.rs:489
 #, rust-format
@@ -8982,8 +8982,8 @@ msgstr[1] "{} schijven"
 #, rust-format
 msgid "in {} folder and {}"
 msgid_plural "in {} folders and {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "in {} map op {}"
+msgstr[1] "in {} mappen op {}"
 
 #: crates/ui-gtk/src/views/statistics.rs:605
 #, rust-format
@@ -9030,8 +9030,8 @@ msgstr "dit jaar"
 msgctxt "statistics caption"
 msgid "play"
 msgid_plural "plays"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "keer afgespeeld"
+msgstr[1] "keer afgespeeld"
 
 #: crates/ui-gtk/src/views/statistics.rs:666
 msgid "listened"
@@ -9043,8 +9043,8 @@ msgstr "beluisterd"
 msgctxt "statistics caption"
 msgid "skip"
 msgid_plural "skips"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "keer overgeslagen"
+msgstr[1] "keer overgeslagen"
 
 #: crates/ui-gtk/src/views/statistics.rs:675
 msgid "never played"
@@ -9325,7 +9325,7 @@ msgstr[1] "{} bestanden tegelijk"
 #: crates/ui-gtk/src/tools/converter.rs:978
 #, rust-format
 msgid "Work on {}"
-msgstr ""
+msgstr "{} verwerken"
 
 #: crates/ui-gtk/src/tools/converter.rs:994
 msgid "From"
@@ -9430,8 +9430,8 @@ msgstr ""
 #, rust-format
 msgid "Synced: {} file · {}"
 msgid_plural "Synced: {} files · {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Gesynchroniseerd: {} bestand · {}"
+msgstr[1] "Gesynchroniseerd: {} bestanden · {}"
 
 #: crates/ui-gtk/src/tools/sync_export.rs:450
 msgid "The destination is not connected. Connect it to sync."

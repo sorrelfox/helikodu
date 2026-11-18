@@ -1122,7 +1122,7 @@ msgstr "作曲家"
 #: crates/ui-gtk/src/tools/tag_preview.rs:283
 msgctxt "track number"
 msgid "Track"
-msgstr ""
+msgstr "曲目"
 
 #: crates/ui-gtk/src/views/album.rs:894
 #, rust-format
@@ -1932,7 +1932,7 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:67
 #, rust-format
 msgid "Change tags in place for files over {}"
-msgstr ""
+msgstr "对大于 {} 的文件直接原位修改标签"
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:81
 msgid ""
@@ -2342,7 +2342,7 @@ msgstr "手动"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:73
 msgctxt "folder"
 msgid "Not connected"
-msgstr ""
+msgstr "未连接"
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:107
 #, rust-format
@@ -2626,7 +2626,7 @@ msgstr "音乐库不可用。"
 #, rust-format
 msgid "{} of {} tracks has ReplayGain or R128 values"
 msgid_plural "{} of {} tracks have ReplayGain or R128 values"
-msgstr[0] ""
+msgstr[0] "{} 首曲目（共 {} 首）有 ReplayGain 或 R128 值"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:279
 msgid "Every track has loudness values."
@@ -2942,7 +2942,7 @@ msgstr "曲目的 {}%"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:166
 #, rust-format
 msgid "after {} or {} whichever comes first"
-msgstr ""
+msgstr "播放达到 {0} 或 {1} 时（以先达到者为准）"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:172
 msgid ""
@@ -3074,7 +3074,7 @@ msgstr "暂停和继续"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:439
 msgctxt "fade"
 msgid "Seek"
-msgstr ""
+msgstr "进度跳转"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:445
 msgid "Skip to another track"
@@ -3130,7 +3130,7 @@ msgstr[0] "{} 次"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:588
 #, rust-format
 msgid "play the loop {} then fade out over {}"
-msgstr ""
+msgstr "循环部分播放 {0} 后淡出，淡出时长 {1}"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:597
 #, rust-format
@@ -3206,7 +3206,7 @@ msgstr[0] "<{} 个新值>"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:683
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:696
 msgid "<keep>"
-msgstr "<keep>"
+msgstr "<保留>"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:271
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:272
@@ -3226,7 +3226,7 @@ msgstr[0] "已保存 {} 个文件"
 #, rust-format
 msgid "{} of {} files could not be saved"
 msgid_plural "{} of {} files could not be saved"
-msgstr[0] ""
+msgstr[0] "{} 个文件（共 {} 个）无法保存"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:658
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:784
@@ -3344,7 +3344,7 @@ msgstr "或将图片拖放到这里"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1220
 msgctxt "heading"
 msgid "Keep the cover"
-msgstr ""
+msgstr "保存封面"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1226
 msgid "Inside each file"
@@ -3917,7 +3917,7 @@ msgstr "选择 {} 的照片"
 #: crates/ui-gtk/src/views/folders.rs:106
 msgctxt "home folder"
 msgid "Home"
-msgstr ""
+msgstr "主文件夹"
 
 #: crates/ui-gtk/src/views/folders.rs:126
 msgid "File system"
@@ -4081,7 +4081,7 @@ msgstr "文件缺失"
 #: crates/ui-gtk/src/views/playlist.rs:542
 msgctxt "track"
 msgid "Missing"
-msgstr ""
+msgstr "缺失"
 
 #: crates/ui-gtk/src/views/playlist.rs:596
 msgid "Save as a playlist file…"
@@ -4623,7 +4623,7 @@ msgstr "频谱"
 #: crates/ui-gtk/src/views/now_playing.rs:711
 #, rust-format
 msgid "1/5 OCTAVE · PEAK HOLD {} s"
-msgstr ""
+msgstr "1/5 倍频程 · 峰值保持 {} 秒"
 
 #: crates/ui-gtk/src/views/now_playing.rs:717
 #: crates/ui-gtk/src/widgets/level_meter.rs:108
@@ -4848,39 +4848,39 @@ msgstr "{}（自动）"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:86
 msgid "Flat"
-msgstr ""
+msgstr "平坦"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:87
 msgid "Bass boost"
-msgstr ""
+msgstr "低音增强"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:88
 msgid "Bass cut"
-msgstr ""
+msgstr "低音削减"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:89
 msgid "Treble boost"
-msgstr ""
+msgstr "高音增强"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:90
 msgid "Treble cut"
-msgstr ""
+msgstr "高音削减"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:92
 msgid "Vocal"
-msgstr ""
+msgstr "人声"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:93
 msgid "Rock"
-msgstr ""
+msgstr "摇滚"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:94
 msgid "Pop"
-msgstr ""
+msgstr "流行"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:95
 msgid "Jazz"
-msgstr ""
+msgstr "爵士"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:96
 #: crates/ui-gtk/src/tools/organizer.rs:94
@@ -4889,11 +4889,11 @@ msgstr "古典音乐"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:97
 msgid "Electronic"
-msgstr ""
+msgstr "电子"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:98
 msgid "Acoustic"
-msgstr ""
+msgstr "原声"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:161
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:211
@@ -4960,7 +4960,7 @@ msgstr "移除滤波器 {}"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:492
 msgid "Type"
-msgstr ""
+msgstr "类型"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:517
 msgid "Equalizer settings (ParametricEQ.txt)"
@@ -5506,7 +5506,7 @@ msgstr "1.5 小时"
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:100
 msgctxt "sleep timer"
 msgid "Stop after"
-msgstr ""
+msgstr "停止时机"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:111
 msgid "Other…"
@@ -5541,7 +5541,7 @@ msgstr "当前曲目结束后"
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:166
 #, rust-format
 msgid "{} left"
-msgstr ""
+msgstr "剩余 {}"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:174
 msgid "+10 min"
@@ -5945,14 +5945,14 @@ msgstr[0] "{} 个文件保留在原处"
 #: crates/ui-gtk/src/tools/tool_window.rs:60
 msgctxt "column"
 msgid "Main"
-msgstr ""
+msgstr "主副本"
 
 #. Translators: a narrow column header of the duplicate tables: the
 #. copies to move to the trash.
 #: crates/ui-gtk/src/tools/tool_window.rs:63
 msgctxt "column"
 msgid "Remove"
-msgstr ""
+msgstr "移除"
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:81
 #, rust-format
@@ -6203,7 +6203,7 @@ msgid ""
 "{} of {} file names fits the pattern · values in grey are already in the tags"
 msgid_plural ""
 "{} of {} file names fit the pattern · values in grey are already in the tags"
-msgstr[0] ""
+msgstr[0] "{} 个文件名（共 {} 个）符合模式 · 灰色的值已存在于标签中"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:510
 msgid "Type the text to find."
@@ -6255,7 +6255,7 @@ msgstr "Enter 保存 · Tab 转到下一列 · Esc 取消"
 #, rust-format
 msgid "{} of {} files could not be saved. {}: {}"
 msgid_plural "{} of {} files could not be saved. {}: {}"
-msgstr[0] ""
+msgstr[0] "{} 个文件（共 {} 个）无法保存。{}：{}"
 
 #: crates/ui-gtk/src/window/tag_undo.rs:45
 #: crates/ui-gtk/src/window/tag_undo.rs:117
@@ -6290,7 +6290,7 @@ msgstr[0] "已恢复 {} 个文件的标签"
 #, rust-format
 msgid "{} of {} files kept its tags. {}: {}"
 msgid_plural "{} of {} files kept their tags. {}: {}"
-msgstr[0] ""
+msgstr[0] "{} 个文件（共 {} 个）的标签未能还原。{}：{}"
 
 #: crates/ui-gtk/src/window/tag_undo.rs:172
 #, rust-format
@@ -6695,7 +6695,7 @@ msgstr "正在查找文件…"
 #, rust-format
 msgid "{} found in {}, matched by size and content · {}"
 msgid_plural "{} found in {}, matched by size and content · {}"
-msgstr[0] ""
+msgstr[0] "在 {1} 中找到 {0} 个，按大小和内容匹配 · {2}"
 
 #. Translators: the summary of the missing files: {0} is a
 #. number of files, {1} "{} not found".
@@ -6704,7 +6704,7 @@ msgstr[0] ""
 msgid "{} found in the library folders, matched by size and content · {}"
 msgid_plural ""
 "{} found in the library folders, matched by size and content · {}"
-msgstr[0] ""
+msgstr[0] "在音乐库文件夹中找到 {} 个，按大小和内容匹配 · {}"
 
 #: crates/ui-gtk/src/tools/missing_files.rs:301
 #, rust-format
@@ -6751,7 +6751,7 @@ msgstr "未找到"
 #, rust-format
 msgid "{}, missing for {} day, {}"
 msgid_plural "{}, missing for {} days, {}"
-msgstr[0] ""
+msgstr[0] "{}，已缺失 {} 天，{}"
 
 #: crates/ui-gtk/src/tools/missing_files.rs:613
 msgid "Relink this track"
@@ -6903,28 +6903,28 @@ msgstr "选择要检查的内容，然后按“校验”。检查不会更改任
 #: crates/ui-gtk/src/tools/verify_files.rs:409
 #, rust-format
 msgid "Every file was decoded from start to end. {} {} {}"
-msgstr ""
+msgstr "所有文件都已从头到尾解码。{}{}{}"
 
 #. Translators: a number of files that decoded without a problem.
 #: crates/ui-gtk/src/tools/verify_files.rs:413
 #, rust-format
 msgid "{} is fine."
 msgid_plural "{} are fine."
-msgstr[0] ""
+msgstr[0] "{} 个正常。"
 
 #. Translators: a number of files that decoded with problems.
 #: crates/ui-gtk/src/tools/verify_files.rs:418
 #, rust-format
 msgid "{} has problems."
 msgid_plural "{} have problems."
-msgstr[0] ""
+msgstr[0] "{} 个有问题。"
 
 #. Translators: a number of files that could not be read.
 #: crates/ui-gtk/src/tools/verify_files.rs:423
 #, rust-format
 msgid "{} could not be read."
 msgid_plural "{} could not be read."
-msgstr[0] ""
+msgstr[0] "{} 个无法读取。"
 
 #: crates/ui-gtk/src/tools/verify_files.rs:464
 msgid "Nothing has been checked yet."
@@ -7401,7 +7401,7 @@ msgstr[0] "{} 次播放（自 {} 起）"
 #. and punctuation as your language writes a date.
 #: crates/ui-gtk/src/views/history.rs:826
 msgid "%e %b %Y"
-msgstr ""
+msgstr "%Y年%b%e日"
 
 #: crates/ui-gtk/src/views/history.rs:839
 #, rust-format
@@ -7561,14 +7561,14 @@ msgstr "任一"
 #. dropdown of "Match {} of these rules".
 #: crates/ui-gtk/src/views/smart_playlist.rs:282
 msgid "Which rules must match"
-msgstr ""
+msgstr "需满足的规则"
 
 #. Translators: the first line of the smart playlist editor; {} is a
 #. dropdown with "all" or "any".
 #: crates/ui-gtk/src/views/smart_playlist.rs:286
 #, rust-format
 msgid "Match {} of these rules"
-msgstr ""
+msgstr "满足以下 {} 规则"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:305
 msgid "Limit"
@@ -7595,7 +7595,7 @@ msgstr "排序"
 #: crates/ui-gtk/src/views/smart_playlist.rs:325
 #, rust-format
 msgid "Limit to {} {} sorted by {}"
-msgstr ""
+msgstr "限制为 {0} {1}，排序方式 {2}"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:339
 msgid "The same rules as query text"
@@ -7628,7 +7628,7 @@ msgstr "组内匹配方式"
 #: crates/ui-gtk/src/views/smart_playlist.rs:962
 #, rust-format
 msgid "{} of these"
-msgstr ""
+msgstr "满足以下 {} 规则"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:981
 msgid "Add rule to group"
@@ -7689,91 +7689,91 @@ msgstr "顺序由规则决定。如需手动调整顺序，请将副本另存为
 #: crates/ui-gtk/src/views/smart_rules.rs:63
 msgctxt "rule condition"
 msgid "contains"
-msgstr ""
+msgstr "包含"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:64
 msgctxt "rule condition"
 msgid "is"
-msgstr ""
+msgstr "是"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:65
 msgctxt "rule condition"
 msgid "is not"
-msgstr ""
+msgstr "不是"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:66
 msgctxt "rule condition"
 msgid "does not contain"
-msgstr ""
+msgstr "不包含"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:67
 msgctxt "rule condition"
 msgid "matches"
-msgstr ""
+msgstr "匹配"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:68
 msgctxt "rule condition"
 msgid "is at least"
-msgstr ""
+msgstr "至少为"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:69
 msgctxt "rule condition"
 msgid "is at most"
-msgstr ""
+msgstr "至多为"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:70
 msgctxt "rule condition"
 msgid "is more than"
-msgstr ""
+msgstr "大于"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:71
 msgctxt "rule condition"
 msgid "is less than"
-msgstr ""
+msgstr "小于"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:72
 msgctxt "rule condition"
 msgid "in the last"
-msgstr ""
+msgstr "在最近"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:73
 msgctxt "rule condition"
 msgid "not in the last"
-msgstr ""
+msgstr "不在最近"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:74
 msgctxt "rule condition"
 msgid "is before"
-msgstr ""
+msgstr "早于"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:75
 msgctxt "rule condition"
 msgid "is after"
-msgstr ""
+msgstr "晚于"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:76
 msgctxt "rule condition"
 msgid "is set"
-msgstr ""
+msgstr "已设置"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:77
 msgctxt "rule condition"
 msgid "is not set"
-msgstr ""
+msgstr "未设置"
 
 #. Translators: a condition of a codec or container rule; it finds
 #. every file of this kind (FLAC, MP3, …).
 #: crates/ui-gtk/src/views/smart_rules.rs:87
 msgctxt "codec rule condition"
 msgid "is"
-msgstr ""
+msgstr "是"
 
 #. Translators: a condition of a codec or container rule; it finds
 #. only files whose codec has exactly this name.
 #: crates/ui-gtk/src/views/smart_rules.rs:91
 msgctxt "codec rule condition"
 msgid "is exactly"
-msgstr ""
+msgstr "完全是"
 
 #. Translators: a sentence of the rule line of a smart playlist:
 #. {0} is the field (Codec or Container), {1} the value (FLAC or
@@ -7783,7 +7783,7 @@ msgstr ""
 #, rust-format
 msgctxt "codec rule"
 msgid "{} is {}"
-msgstr ""
+msgstr "{} 是 {}"
 
 #. Translators: as above, but it finds only files whose codec has
 #. exactly this name.
@@ -7791,7 +7791,7 @@ msgstr ""
 #, rust-format
 msgctxt "codec rule"
 msgid "{} is exactly {}"
-msgstr ""
+msgstr "{} 完全是 {}"
 
 #. Translators: the sentences of the rule line of a smart playlist
 #. (context "smart rule"): {0} is the field (Title, Rating, Added,
@@ -7801,91 +7801,91 @@ msgstr ""
 #, rust-format
 msgctxt "smart rule"
 msgid "{} contains {}"
-msgstr ""
+msgstr "{} 包含 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:114
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is {}"
-msgstr ""
+msgstr "{} 是 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:115
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is not {}"
-msgstr ""
+msgstr "{} 不是 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:116
 #, rust-format
 msgctxt "smart rule"
 msgid "{} does not contain {}"
-msgstr ""
+msgstr "{} 不包含 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:117
 #, rust-format
 msgctxt "smart rule"
 msgid "{} matches {}"
-msgstr ""
+msgstr "{} 匹配 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:118
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is at least {}"
-msgstr ""
+msgstr "{} 至少为 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:119
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is at most {}"
-msgstr ""
+msgstr "{} 至多为 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:120
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is more than {}"
-msgstr ""
+msgstr "{} 大于 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:121
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is less than {}"
-msgstr ""
+msgstr "{} 小于 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:122
 #, rust-format
 msgctxt "smart rule"
 msgid "{} in the last {}"
-msgstr ""
+msgstr "{} 在最近 {} 内"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:123
 #, rust-format
 msgctxt "smart rule"
 msgid "{} not in the last {}"
-msgstr ""
+msgstr "{} 不在最近 {} 内"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:124
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is before {}"
-msgstr ""
+msgstr "{} 早于 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:125
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is after {}"
-msgstr ""
+msgstr "{} 晚于 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:126
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is set"
-msgstr ""
+msgstr "{} 已设置"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:127
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is not set"
-msgstr ""
+msgstr "{} 未设置"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:206
 msgid "Movement"
@@ -7960,13 +7960,13 @@ msgstr[0] "{} 年"
 #, rust-format
 msgctxt "smart rule"
 msgid "{} or {}"
-msgstr ""
+msgstr "{} 或 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:522
 #, rust-format
 msgctxt "smart rule"
 msgid "{} and {}"
-msgstr ""
+msgstr "{} 且 {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:537
 msgid "Album order"
@@ -8047,27 +8047,27 @@ msgstr "随机顺序"
 #: crates/ui-gtk/src/views/smart_rules.rs:605
 msgctxt "limit unit"
 msgid "tracks"
-msgstr ""
+msgstr "首曲目"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:606
 msgctxt "limit unit"
 msgid "minutes"
-msgstr ""
+msgstr "分钟"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:607
 msgctxt "limit unit"
 msgid "hours"
-msgstr ""
+msgstr "小时"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:608
 msgctxt "limit unit"
 msgid "MB"
-msgstr ""
+msgstr "MB"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:609
 msgctxt "limit unit"
 msgid "GB"
-msgstr ""
+msgstr "GB"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:692
 msgid "In the order of the text"
@@ -8160,32 +8160,32 @@ msgstr "新建文件夹…"
 #: crates/ui-gtk/src/window/playlists.rs:377
 msgctxt "album"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "已固定到侧边栏"
 
 #: crates/ui-gtk/src/window/playlists.rs:378
 msgctxt "artist"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "已固定到侧边栏"
 
 #: crates/ui-gtk/src/window/playlists.rs:379
 msgctxt "playlist"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "已固定到侧边栏"
 
 #: crates/ui-gtk/src/window/playlists.rs:380
 msgctxt "album"
 msgid "Unpinned"
-msgstr ""
+msgstr "已取消固定"
 
 #: crates/ui-gtk/src/window/playlists.rs:381
 msgctxt "artist"
 msgid "Unpinned"
-msgstr ""
+msgstr "已取消固定"
 
 #: crates/ui-gtk/src/window/playlists.rs:382
 msgctxt "playlist"
 msgid "Unpinned"
-msgstr ""
+msgstr "已取消固定"
 
 #. Translators: a playlist was moved into a folder; {}
 #. is the folder's name.
@@ -8197,7 +8197,7 @@ msgstr "已移到“{}”"
 #. Translators: a playlist was moved out of its folders.
 #: crates/ui-gtk/src/window/playlists.rs:459
 msgid "Moved to the top level"
-msgstr ""
+msgstr "已移到顶层"
 
 #: crates/ui-gtk/src/window/playlists.rs:498
 msgid "Unlocked"
@@ -8356,7 +8356,7 @@ msgstr "非同步歌词"
 #. "Nov 2026"; keep the % codes, change their order as needed.
 #: crates/ui-gtk/src/views/home.rs:160
 msgid "%b %Y"
-msgstr ""
+msgstr "%Y年%b"
 
 #: crates/ui-gtk/src/views/home.rs:344
 msgid "Show all"
@@ -8408,7 +8408,7 @@ msgstr "全部重置"
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:292
 msgctxt "shortcut"
 msgid "Changed"
-msgstr ""
+msgstr "已更改"
 
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:399
 #, rust-format
@@ -8622,7 +8622,7 @@ msgstr "统计于今天 {}"
 #: crates/ui-gtk/src/views/statistics.rs:405
 msgctxt "statistics column"
 msgid "tracks"
-msgstr ""
+msgstr "曲目"
 
 #: crates/ui-gtk/src/views/statistics.rs:450
 #, rust-format
@@ -8640,7 +8640,7 @@ msgstr "{}：{} 首曲目"
 #: crates/ui-gtk/src/views/statistics.rs:507
 msgctxt "statistics column"
 msgid "plays"
-msgstr ""
+msgstr "播放次数"
 
 #: crates/ui-gtk/src/views/statistics.rs:489
 #, rust-format
@@ -8667,7 +8667,7 @@ msgstr[0] "{} 个驱动器"
 #, rust-format
 msgid "in {} folder and {}"
 msgid_plural "in {} folders and {}"
-msgstr[0] ""
+msgstr[0] "分布在 {} 个文件夹和 {} 中"
 
 #: crates/ui-gtk/src/views/statistics.rs:605
 #, rust-format
@@ -8711,7 +8711,7 @@ msgstr "今年"
 msgctxt "statistics caption"
 msgid "play"
 msgid_plural "plays"
-msgstr[0] ""
+msgstr[0] "次播放"
 
 #: crates/ui-gtk/src/views/statistics.rs:666
 msgid "listened"
@@ -8723,7 +8723,7 @@ msgstr "收听时长"
 msgctxt "statistics caption"
 msgid "skip"
 msgid_plural "skips"
-msgstr[0] ""
+msgstr[0] "次跳过"
 
 #: crates/ui-gtk/src/views/statistics.rs:675
 msgid "never played"
@@ -8995,7 +8995,7 @@ msgstr[0] "{} 个文件"
 #: crates/ui-gtk/src/tools/converter.rs:978
 #, rust-format
 msgid "Work on {}"
-msgstr ""
+msgstr "同时处理 {}"
 
 #: crates/ui-gtk/src/tools/converter.rs:994
 msgid "From"
@@ -9096,7 +9096,7 @@ msgstr "音乐库不会有任何改动。目标位置上不是由 Helikodu 放�
 #, rust-format
 msgid "Synced: {} file · {}"
 msgid_plural "Synced: {} files · {}"
-msgstr[0] ""
+msgstr[0] "已同步：{} 个文件 · {}"
 
 #: crates/ui-gtk/src/tools/sync_export.rs:450
 msgid "The destination is not connected. Connect it to sync."

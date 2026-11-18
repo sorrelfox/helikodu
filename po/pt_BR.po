@@ -1145,7 +1145,7 @@ msgstr "Compositor"
 #: crates/ui-gtk/src/tools/tag_preview.rs:283
 msgctxt "track number"
 msgid "Track"
-msgstr ""
+msgstr "Faixa"
 
 #: crates/ui-gtk/src/views/album.rs:894
 #, rust-format
@@ -1986,7 +1986,7 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:67
 #, rust-format
 msgid "Change tags in place for files over {}"
-msgstr ""
+msgstr "Alterar etiquetas diretamente em arquivos acima de {}"
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:81
 msgid ""
@@ -2421,7 +2421,7 @@ msgstr "Manual"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:73
 msgctxt "folder"
 msgid "Not connected"
-msgstr ""
+msgstr "Sem conexão"
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:107
 #, rust-format
@@ -2725,8 +2725,8 @@ msgstr "A biblioteca não está disponível."
 #, rust-format
 msgid "{} of {} tracks has ReplayGain or R128 values"
 msgid_plural "{} of {} tracks have ReplayGain or R128 values"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} de {} faixas tem valores de ReplayGain ou R128"
+msgstr[1] "{} de {} faixas têm valores de ReplayGain ou R128"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:279
 msgid "Every track has loudness values."
@@ -3065,7 +3065,7 @@ msgstr "{} % da faixa"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:166
 #, rust-format
 msgid "after {} or {} whichever comes first"
-msgstr ""
+msgstr "após {} ou {}, o que vier primeiro"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:172
 msgid ""
@@ -3201,7 +3201,7 @@ msgstr "Pausar e retomar"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:439
 msgctxt "fade"
 msgid "Seek"
-msgstr ""
+msgstr "Mudar de posição"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:445
 msgid "Skip to another track"
@@ -3263,7 +3263,7 @@ msgstr[1] "{} vezes"
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:588
 #, rust-format
 msgid "play the loop {} then fade out over {}"
-msgstr ""
+msgstr "tocar o loop {} e depois esmaecer ao longo de {}"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:597
 #, rust-format
@@ -3340,7 +3340,7 @@ msgstr[1] "<{} novos valores>"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:683
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:696
 msgid "<keep>"
-msgstr "<keep>"
+msgstr "<manter>"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:271
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:272
@@ -3361,8 +3361,8 @@ msgstr[1] "{} arquivos salvos"
 #, rust-format
 msgid "{} of {} files could not be saved"
 msgid_plural "{} of {} files could not be saved"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Não foi possível salvar {} de {} arquivos"
+msgstr[1] "Não foi possível salvar {} de {} arquivos"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:658
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:784
@@ -3483,7 +3483,7 @@ msgstr "ou solte uma imagem aqui"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1220
 msgctxt "heading"
 msgid "Keep the cover"
-msgstr ""
+msgstr "Guardar a capa"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1226
 msgid "Inside each file"
@@ -4074,7 +4074,7 @@ msgstr "Escolher uma foto de {}"
 #: crates/ui-gtk/src/views/folders.rs:106
 msgctxt "home folder"
 msgid "Home"
-msgstr ""
+msgstr "Pasta pessoal"
 
 #: crates/ui-gtk/src/views/folders.rs:126
 msgid "File system"
@@ -4243,7 +4243,7 @@ msgstr "O arquivo está ausente"
 #: crates/ui-gtk/src/views/playlist.rs:542
 msgctxt "track"
 msgid "Missing"
-msgstr ""
+msgstr "Ausente"
 
 #: crates/ui-gtk/src/views/playlist.rs:596
 msgid "Save as a playlist file…"
@@ -4797,7 +4797,7 @@ msgstr "Espectro"
 #: crates/ui-gtk/src/views/now_playing.rs:711
 #, rust-format
 msgid "1/5 OCTAVE · PEAK HOLD {} s"
-msgstr ""
+msgstr "1/5 DE OITAVA · RETENÇÃO DE PICO {} s"
 
 #: crates/ui-gtk/src/views/now_playing.rs:717
 #: crates/ui-gtk/src/widgets/level_meter.rs:108
@@ -5026,39 +5026,39 @@ msgstr "{} (auto)"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:86
 msgid "Flat"
-msgstr ""
+msgstr "Plano"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:87
 msgid "Bass boost"
-msgstr ""
+msgstr "Reforço de graves"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:88
 msgid "Bass cut"
-msgstr ""
+msgstr "Corte de graves"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:89
 msgid "Treble boost"
-msgstr ""
+msgstr "Reforço de agudos"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:90
 msgid "Treble cut"
-msgstr ""
+msgstr "Corte de agudos"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:92
 msgid "Vocal"
-msgstr ""
+msgstr "Vocal"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:93
 msgid "Rock"
-msgstr ""
+msgstr "Rock"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:94
 msgid "Pop"
-msgstr ""
+msgstr "Pop"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:95
 msgid "Jazz"
-msgstr ""
+msgstr "Jazz"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:96
 #: crates/ui-gtk/src/tools/organizer.rs:94
@@ -5067,11 +5067,11 @@ msgstr "Clássica"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:97
 msgid "Electronic"
-msgstr ""
+msgstr "Eletrônica"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:98
 msgid "Acoustic"
-msgstr ""
+msgstr "Acústica"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:161
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:211
@@ -5141,7 +5141,7 @@ msgstr "Remover o filtro {}"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:492
 msgid "Type"
-msgstr ""
+msgstr "Tipo"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:517
 msgid "Equalizer settings (ParametricEQ.txt)"
@@ -5701,7 +5701,7 @@ msgstr "1 hora e meia"
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:100
 msgctxt "sleep timer"
 msgid "Stop after"
-msgstr ""
+msgstr "Parar após"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:111
 msgid "Other…"
@@ -5736,7 +5736,7 @@ msgstr "Após a faixa"
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:166
 #, rust-format
 msgid "{} left"
-msgstr ""
+msgstr "{} restantes"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:174
 msgid "+10 min"
@@ -6164,14 +6164,14 @@ msgstr[1] "{} arquivos deixados no lugar"
 #: crates/ui-gtk/src/tools/tool_window.rs:60
 msgctxt "column"
 msgid "Main"
-msgstr ""
+msgstr "Principal"
 
 #. Translators: a narrow column header of the duplicate tables: the
 #. copies to move to the trash.
 #: crates/ui-gtk/src/tools/tool_window.rs:63
 msgctxt "column"
 msgid "Remove"
-msgstr ""
+msgstr "Remover"
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:81
 #, rust-format
@@ -6436,7 +6436,11 @@ msgid ""
 msgid_plural ""
 "{} of {} file names fit the pattern · values in grey are already in the tags"
 msgstr[0] ""
+"{} de {} nomes de arquivo se encaixa no padrão · os valores em cinza já "
+"estão nas etiquetas"
 msgstr[1] ""
+"{} de {} nomes de arquivo se encaixam no padrão · os valores em cinza já "
+"estão nas etiquetas"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:510
 msgid "Type the text to find."
@@ -6489,8 +6493,8 @@ msgstr "Enter salva · Tab vai para a próxima coluna · Esc cancela"
 #, rust-format
 msgid "{} of {} files could not be saved. {}: {}"
 msgid_plural "{} of {} files could not be saved. {}: {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Não foi possível salvar {} de {} arquivos. {}: {}"
+msgstr[1] "Não foi possível salvar {} de {} arquivos. {}: {}"
 
 #: crates/ui-gtk/src/window/tag_undo.rs:45
 #: crates/ui-gtk/src/window/tag_undo.rs:117
@@ -6527,8 +6531,8 @@ msgstr[1] "Etiquetas de {} arquivos restauradas"
 #, rust-format
 msgid "{} of {} files kept its tags. {}: {}"
 msgid_plural "{} of {} files kept their tags. {}: {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} de {} arquivos manteve suas etiquetas. {}: {}"
+msgstr[1] "{} de {} arquivos mantiveram suas etiquetas. {}: {}"
 
 #: crates/ui-gtk/src/window/tag_undo.rs:172
 #, rust-format
@@ -6955,8 +6959,8 @@ msgstr "Procurando os arquivos…"
 #, rust-format
 msgid "{} found in {}, matched by size and content · {}"
 msgid_plural "{} found in {}, matched by size and content · {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} encontrado em {}, por tamanho e conteúdo · {}"
+msgstr[1] "{} encontrados em {}, por tamanho e conteúdo · {}"
 
 #. Translators: the summary of the missing files: {0} is a
 #. number of files, {1} "{} not found".
@@ -6965,8 +6969,9 @@ msgstr[1] ""
 msgid "{} found in the library folders, matched by size and content · {}"
 msgid_plural ""
 "{} found in the library folders, matched by size and content · {}"
-msgstr[0] ""
+msgstr[0] "{} encontrado nas pastas da biblioteca, por tamanho e conteúdo · {}"
 msgstr[1] ""
+"{} encontrados nas pastas da biblioteca, por tamanho e conteúdo · {}"
 
 #: crates/ui-gtk/src/tools/missing_files.rs:301
 #, rust-format
@@ -7017,8 +7022,8 @@ msgstr "Não encontrado"
 #, rust-format
 msgid "{}, missing for {} day, {}"
 msgid_plural "{}, missing for {} days, {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{}, ausente há {} dia, {}"
+msgstr[1] "{}, ausente há {} dias, {}"
 
 #: crates/ui-gtk/src/tools/missing_files.rs:613
 msgid "Relink this track"
@@ -7185,31 +7190,31 @@ msgstr ""
 #: crates/ui-gtk/src/tools/verify_files.rs:409
 #, rust-format
 msgid "Every file was decoded from start to end. {} {} {}"
-msgstr ""
+msgstr "Todos os arquivos foram decodificados do início ao fim. {} {} {}"
 
 #. Translators: a number of files that decoded without a problem.
 #: crates/ui-gtk/src/tools/verify_files.rs:413
 #, rust-format
 msgid "{} is fine."
 msgid_plural "{} are fine."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} está em ordem."
+msgstr[1] "{} estão em ordem."
 
 #. Translators: a number of files that decoded with problems.
 #: crates/ui-gtk/src/tools/verify_files.rs:418
 #, rust-format
 msgid "{} has problems."
 msgid_plural "{} have problems."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} tem problemas."
+msgstr[1] "{} têm problemas."
 
 #. Translators: a number of files that could not be read.
 #: crates/ui-gtk/src/tools/verify_files.rs:423
 #, rust-format
 msgid "{} could not be read."
 msgid_plural "{} could not be read."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{} não pôde ser lido."
+msgstr[1] "{} não puderam ser lidos."
 
 #: crates/ui-gtk/src/tools/verify_files.rs:464
 msgid "Nothing has been checked yet."
@@ -7693,7 +7698,7 @@ msgstr[1] "{} reproduções desde {}"
 #. and punctuation as your language writes a date.
 #: crates/ui-gtk/src/views/history.rs:826
 msgid "%e %b %Y"
-msgstr ""
+msgstr "%e %b %Y"
 
 #: crates/ui-gtk/src/views/history.rs:839
 #, rust-format
@@ -7859,14 +7864,14 @@ msgstr "qualquer uma das"
 #. dropdown of "Match {} of these rules".
 #: crates/ui-gtk/src/views/smart_playlist.rs:282
 msgid "Which rules must match"
-msgstr ""
+msgstr "Quais regras devem corresponder"
 
 #. Translators: the first line of the smart playlist editor; {} is a
 #. dropdown with "all" or "any".
 #: crates/ui-gtk/src/views/smart_playlist.rs:286
 #, rust-format
 msgid "Match {} of these rules"
-msgstr ""
+msgstr "Corresponder a {} regras seguintes"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:305
 msgid "Limit"
@@ -7893,7 +7898,7 @@ msgstr "Ordem"
 #: crates/ui-gtk/src/views/smart_playlist.rs:325
 #, rust-format
 msgid "Limit to {} {} sorted by {}"
-msgstr ""
+msgstr "Limitar a {} {} ordenando por {}"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:339
 msgid "The same rules as query text"
@@ -7926,7 +7931,7 @@ msgstr "Correspondência no grupo"
 #: crates/ui-gtk/src/views/smart_playlist.rs:962
 #, rust-format
 msgid "{} of these"
-msgstr ""
+msgstr "{} seguintes"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:981
 msgid "Add rule to group"
@@ -7990,91 +7995,91 @@ msgstr ""
 #: crates/ui-gtk/src/views/smart_rules.rs:63
 msgctxt "rule condition"
 msgid "contains"
-msgstr ""
+msgstr "contém"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:64
 msgctxt "rule condition"
 msgid "is"
-msgstr ""
+msgstr "é"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:65
 msgctxt "rule condition"
 msgid "is not"
-msgstr ""
+msgstr "não é"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:66
 msgctxt "rule condition"
 msgid "does not contain"
-msgstr ""
+msgstr "não contém"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:67
 msgctxt "rule condition"
 msgid "matches"
-msgstr ""
+msgstr "corresponde a"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:68
 msgctxt "rule condition"
 msgid "is at least"
-msgstr ""
+msgstr "é pelo menos"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:69
 msgctxt "rule condition"
 msgid "is at most"
-msgstr ""
+msgstr "é no máximo"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:70
 msgctxt "rule condition"
 msgid "is more than"
-msgstr ""
+msgstr "é maior que"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:71
 msgctxt "rule condition"
 msgid "is less than"
-msgstr ""
+msgstr "é menor que"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:72
 msgctxt "rule condition"
 msgid "in the last"
-msgstr ""
+msgstr "nos últimos"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:73
 msgctxt "rule condition"
 msgid "not in the last"
-msgstr ""
+msgstr "não nos últimos"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:74
 msgctxt "rule condition"
 msgid "is before"
-msgstr ""
+msgstr "é antes de"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:75
 msgctxt "rule condition"
 msgid "is after"
-msgstr ""
+msgstr "é depois de"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:76
 msgctxt "rule condition"
 msgid "is set"
-msgstr ""
+msgstr "tem um valor"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:77
 msgctxt "rule condition"
 msgid "is not set"
-msgstr ""
+msgstr "não tem valor"
 
 #. Translators: a condition of a codec or container rule; it finds
 #. every file of this kind (FLAC, MP3, …).
 #: crates/ui-gtk/src/views/smart_rules.rs:87
 msgctxt "codec rule condition"
 msgid "is"
-msgstr ""
+msgstr "é"
 
 #. Translators: a condition of a codec or container rule; it finds
 #. only files whose codec has exactly this name.
 #: crates/ui-gtk/src/views/smart_rules.rs:91
 msgctxt "codec rule condition"
 msgid "is exactly"
-msgstr ""
+msgstr "é exatamente"
 
 #. Translators: a sentence of the rule line of a smart playlist:
 #. {0} is the field (Codec or Container), {1} the value (FLAC or
@@ -8084,7 +8089,7 @@ msgstr ""
 #, rust-format
 msgctxt "codec rule"
 msgid "{} is {}"
-msgstr ""
+msgstr "{} é {}"
 
 #. Translators: as above, but it finds only files whose codec has
 #. exactly this name.
@@ -8092,7 +8097,7 @@ msgstr ""
 #, rust-format
 msgctxt "codec rule"
 msgid "{} is exactly {}"
-msgstr ""
+msgstr "{} é exatamente {}"
 
 #. Translators: the sentences of the rule line of a smart playlist
 #. (context "smart rule"): {0} is the field (Title, Rating, Added,
@@ -8102,91 +8107,91 @@ msgstr ""
 #, rust-format
 msgctxt "smart rule"
 msgid "{} contains {}"
-msgstr ""
+msgstr "{} contém {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:114
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is {}"
-msgstr ""
+msgstr "{} é {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:115
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is not {}"
-msgstr ""
+msgstr "{} não é {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:116
 #, rust-format
 msgctxt "smart rule"
 msgid "{} does not contain {}"
-msgstr ""
+msgstr "{} não contém {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:117
 #, rust-format
 msgctxt "smart rule"
 msgid "{} matches {}"
-msgstr ""
+msgstr "{} corresponde a {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:118
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is at least {}"
-msgstr ""
+msgstr "{} é pelo menos {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:119
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is at most {}"
-msgstr ""
+msgstr "{} é no máximo {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:120
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is more than {}"
-msgstr ""
+msgstr "{} é maior que {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:121
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is less than {}"
-msgstr ""
+msgstr "{} é menor que {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:122
 #, rust-format
 msgctxt "smart rule"
 msgid "{} in the last {}"
-msgstr ""
+msgstr "{} nos últimos {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:123
 #, rust-format
 msgctxt "smart rule"
 msgid "{} not in the last {}"
-msgstr ""
+msgstr "{} não nos últimos {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:124
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is before {}"
-msgstr ""
+msgstr "{} é antes de {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:125
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is after {}"
-msgstr ""
+msgstr "{} é depois de {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:126
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is set"
-msgstr ""
+msgstr "{} tem um valor"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:127
 #, rust-format
 msgctxt "smart rule"
 msgid "{} is not set"
-msgstr ""
+msgstr "{} não tem valor"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:206
 msgid "Movement"
@@ -8265,13 +8270,13 @@ msgstr[1] "{} anos"
 #, rust-format
 msgctxt "smart rule"
 msgid "{} or {}"
-msgstr ""
+msgstr "{} ou {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:522
 #, rust-format
 msgctxt "smart rule"
 msgid "{} and {}"
-msgstr ""
+msgstr "{} e {}"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:537
 msgid "Album order"
@@ -8352,27 +8357,27 @@ msgstr "Em ordem aleatória"
 #: crates/ui-gtk/src/views/smart_rules.rs:605
 msgctxt "limit unit"
 msgid "tracks"
-msgstr ""
+msgstr "faixas"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:606
 msgctxt "limit unit"
 msgid "minutes"
-msgstr ""
+msgstr "minutos"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:607
 msgctxt "limit unit"
 msgid "hours"
-msgstr ""
+msgstr "horas"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:608
 msgctxt "limit unit"
 msgid "MB"
-msgstr ""
+msgstr "MB"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:609
 msgctxt "limit unit"
 msgid "GB"
-msgstr ""
+msgstr "GB"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:692
 msgid "In the order of the text"
@@ -8468,32 +8473,32 @@ msgstr "Nova pasta…"
 #: crates/ui-gtk/src/window/playlists.rs:377
 msgctxt "album"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "Fixado na barra lateral"
 
 #: crates/ui-gtk/src/window/playlists.rs:378
 msgctxt "artist"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "Fixado na barra lateral"
 
 #: crates/ui-gtk/src/window/playlists.rs:379
 msgctxt "playlist"
 msgid "Pinned to the sidebar"
-msgstr ""
+msgstr "Fixada na barra lateral"
 
 #: crates/ui-gtk/src/window/playlists.rs:380
 msgctxt "album"
 msgid "Unpinned"
-msgstr ""
+msgstr "Desafixado"
 
 #: crates/ui-gtk/src/window/playlists.rs:381
 msgctxt "artist"
 msgid "Unpinned"
-msgstr ""
+msgstr "Desafixado"
 
 #: crates/ui-gtk/src/window/playlists.rs:382
 msgctxt "playlist"
 msgid "Unpinned"
-msgstr ""
+msgstr "Desafixada"
 
 #. Translators: a playlist was moved into a folder; {}
 #. is the folder's name.
@@ -8505,7 +8510,7 @@ msgstr "Movida para {}"
 #. Translators: a playlist was moved out of its folders.
 #: crates/ui-gtk/src/window/playlists.rs:459
 msgid "Moved to the top level"
-msgstr ""
+msgstr "Movida para o nível superior"
 
 #: crates/ui-gtk/src/window/playlists.rs:498
 msgid "Unlocked"
@@ -8666,7 +8671,7 @@ msgstr "Não sincronizada"
 #. "Nov 2026"; keep the % codes, change their order as needed.
 #: crates/ui-gtk/src/views/home.rs:160
 msgid "%b %Y"
-msgstr ""
+msgstr "%b %Y"
 
 #: crates/ui-gtk/src/views/home.rs:344
 msgid "Show all"
@@ -8720,7 +8725,7 @@ msgstr "Redefinir tudo"
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:292
 msgctxt "shortcut"
 msgid "Changed"
-msgstr ""
+msgstr "Alterado"
 
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:399
 #, rust-format
@@ -8937,7 +8942,7 @@ msgstr "contado hoje às {}"
 #: crates/ui-gtk/src/views/statistics.rs:405
 msgctxt "statistics column"
 msgid "tracks"
-msgstr ""
+msgstr "faixas"
 
 #: crates/ui-gtk/src/views/statistics.rs:450
 #, rust-format
@@ -8955,7 +8960,7 @@ msgstr "{}: {} faixas"
 #: crates/ui-gtk/src/views/statistics.rs:507
 msgctxt "statistics column"
 msgid "plays"
-msgstr ""
+msgstr "reproduções"
 
 #: crates/ui-gtk/src/views/statistics.rs:489
 #, rust-format
@@ -8985,8 +8990,8 @@ msgstr[1] "{} unidades"
 #, rust-format
 msgid "in {} folder and {}"
 msgid_plural "in {} folders and {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "em {} pasta e {}"
+msgstr[1] "em {} pastas e {}"
 
 #: crates/ui-gtk/src/views/statistics.rs:605
 #, rust-format
@@ -9033,8 +9038,8 @@ msgstr "neste ano"
 msgctxt "statistics caption"
 msgid "play"
 msgid_plural "plays"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "reprodução"
+msgstr[1] "reproduções"
 
 #: crates/ui-gtk/src/views/statistics.rs:666
 msgid "listened"
@@ -9046,8 +9051,8 @@ msgstr "tempo ouvido"
 msgctxt "statistics caption"
 msgid "skip"
 msgid_plural "skips"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "pulo"
+msgstr[1] "pulos"
 
 #: crates/ui-gtk/src/views/statistics.rs:675
 msgid "never played"
@@ -9327,7 +9332,7 @@ msgstr[1] "{} arquivos por vez"
 #: crates/ui-gtk/src/tools/converter.rs:978
 #, rust-format
 msgid "Work on {}"
-msgstr ""
+msgstr "Processar {}"
 
 #: crates/ui-gtk/src/tools/converter.rs:994
 msgid "From"
@@ -9432,8 +9437,8 @@ msgstr ""
 #, rust-format
 msgid "Synced: {} file · {}"
 msgid_plural "Synced: {} files · {}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Sincronizado: {} arquivo · {}"
+msgstr[1] "Sincronizados: {} arquivos · {}"
 
 #: crates/ui-gtk/src/tools/sync_export.rs:450
 msgid "The destination is not connected. Connect it to sync."
