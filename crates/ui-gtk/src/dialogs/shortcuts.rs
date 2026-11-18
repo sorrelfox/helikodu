@@ -70,6 +70,11 @@ fn actions() -> Vec<(Group, &'static str, String)> {
             "win.track-properties",
             tr("Track properties"),
         ),
+        (
+            Group::Library,
+            "win.track-copies",
+            tr("Copies of the track's file"),
+        ),
         (Group::Library, "win.select-all", tr("Select all")),
         (Group::Library, "win.undo", tr("Undo")),
         (Group::Library, "app.new-playlist", tr("New playlist")),

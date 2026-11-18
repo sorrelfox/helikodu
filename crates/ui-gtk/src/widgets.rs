@@ -7,15 +7,18 @@
 pub(crate) mod avatar;
 pub(crate) mod bipolar_scale;
 pub(crate) mod brand_mark;
+pub(crate) mod copies_badge;
 pub(crate) mod cover_art;
 pub(crate) mod empty_state;
 pub(crate) mod eq_graph;
 pub(crate) mod lyric_lines;
+pub(crate) mod now_links;
 pub(crate) mod playing_indicator;
 pub(crate) mod rating_stars;
 pub(crate) mod signal_lamp;
 pub(crate) mod signal_path_chain;
 pub(crate) mod signal_path_list;
+pub(crate) mod title_line;
 pub(crate) mod waveform_seek_bar;
 
 use gtk::prelude::*;
@@ -28,6 +31,7 @@ pub(crate) use playing_indicator::{
 };
 pub(crate) use rating_stars::RatingStars;
 pub(crate) use signal_lamp::SignalLamp;
+pub(crate) use title_line::TitleLine;
 pub(crate) use waveform_seek_bar::WaveformSeekBar;
 
 /// Redraws `widget` whenever the look changes, for as long as it exists.

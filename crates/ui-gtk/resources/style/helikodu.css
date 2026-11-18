@@ -147,6 +147,9 @@ entry.hk-input:focus-within { border-color: var(--hk-accent-fill); box-shadow: 0
 
 button.hk-link { padding: 0; min-height: 0; border: none; background: none; box-shadow: none; color: var(--hk-t1); font-weight: 600; }
 button.hk-link:hover > label { text-decoration: underline; }
+button.hk-now-title, button.hk-now-link { padding: 0; min-height: 0; min-width: 0; border: none; border-radius: 2px; background: none; box-shadow: none; color: inherit; font: inherit; }
+button.hk-now-link:hover { color: var(--hk-accent-text); }
+button.hk-now-link:hover > label { text-decoration: underline; }
 
 menubutton.hk-sort > button { min-height: 28px; padding: 0 10px 0 12px; border-radius: 7px; border: 1px solid var(--hk-line); background: none; box-shadow: none; color: var(--hk-t1); }
 menubutton.hk-sort > button:hover { background-color: var(--hk-hover); }
@@ -264,7 +267,7 @@ windowcontrols > button:active > image {
 /* ---- 10. Resets against theme rules ------------------------------------- */
 
 button.hk-btn, button.hk-icon, .hk-seg > button, .hk-tabs > button,
-button.hk-play, button.hk-transport, button.hk-output, button.hk-link,
+button.hk-play, button.hk-transport, button.hk-output, button.hk-link, button.hk-now-title, button.hk-now-link,
 button.hk-time-toggle, .hk-toast button.action, windowcontrols > button,
 menubutton.hk-sort > button, menubutton.hk-menu > button,
 scale.hk-volume > trough > slider, entry.hk-input { background-image: none; }
@@ -331,3 +334,8 @@ dropdown > popover listview > row:selected:hover { background-color: var(--hk-se
 dropdown > popover listview > row label { color: inherit; }
 dropdown > popover listview > row image { -gtk-icon-size: 14px; color: var(--hk-accent-text); }
 dropdown > popover scrollbar.vertical slider { min-width: 4px; }
+/* The chosen value in the button is a list row of its own, and selected: no
+   theme row colour (Breeze paints selection blue) on it, hover or not; only
+   the button itself lightens. */
+dropdown > button row, dropdown > button row:hover, dropdown > button row:selected, dropdown > button row:selected:hover, dropdown > button row:focus, dropdown > button row:focus-visible { margin: 0; padding: 0; border: none; background: none; background-color: transparent; background-image: none; box-shadow: none; outline: none; color: inherit; }
+dropdown > button row label, dropdown > button row label:selected { background: none; color: inherit; }

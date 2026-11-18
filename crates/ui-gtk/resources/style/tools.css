@@ -1,0 +1,58 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * The tool windows (Find duplicates), the copies window, the confirmation
+ * before files go to the trash, and the copies badge after a track's title.
+ *
+ * Like helikodu.css, this only paints: sizes of boxes, gaps and alignment come
+ * from the widgets.
+ */
+
+/* ---- Copies badge ------------------------------------------------------- */
+
+button.hk-copies-badge {
+  min-width: 18px; min-height: 18px; padding: 0; margin: 0; border: none; border-radius: 4px;
+  background: none; background-image: none; box-shadow: none; color: var(--hk-t3);
+}
+button.hk-copies-badge:hover { background-color: var(--hk-hover); color: var(--hk-t1); }
+button.hk-copies-badge image { -gtk-icon-size: 14px; }
+row:selected button.hk-copies-badge { color: var(--hk-t2); }
+
+/* ---- Frame -------------------------------------------------------------- */
+
+.hk-tool .hk-side-name { font-size: 13px; }
+.hk-tool .hk-side-line { font-size: 11px; font-weight: 400; }
+.hk-tool .hk-settings-nav > .hk-list-section { margin-left: 8px; }
+.hk-tool list.hk-list > row .hk-count { font-weight: 400; }
+.hk-tool .hk-toolbar.hk-tool-toolbar { min-height: 54px; padding: 0 24px; border-bottom: none; }
+.hk-tool-toolbar .hk-keep-label { margin-left: 6px; }
+.hk-tool-head { min-height: 31px; padding: 0 24px; border-top: 1px solid var(--hk-line); background-color: var(--hk-win); }
+.hk-tool-footer { min-height: 51px; padding: 0 16px 0 24px; border-top: 1px solid var(--hk-line); background-color: var(--hk-win); }
+.hk-tool-results { padding: 10px 24px; border-top: 1px solid var(--hk-line); }
+.hk-tool-empty { padding: 32px 24px; }
+.hk-tool-path { font-size: 11.5px; }
+
+/* ---- Duplicate tables --------------------------------------------------- */
+
+listview.hk-dup-list, list.hk-dup-table { background: none; color: var(--hk-t1); }
+listview.hk-dup-list > row, list.hk-dup-table > row {
+  min-height: 0; padding: 0; margin: 0; border: none; border-radius: 0;
+  background: none; box-shadow: none; outline-offset: -2px;
+}
+listview.hk-dup-list > row:selected, list.hk-dup-table > row:selected { background-color: var(--hk-sel); }
+.hk-dup-head, list.hk-dup-table > row.hk-dup-head { min-height: 34px; padding: 0 24px 7px; }
+.hk-dup-file, list.hk-dup-table > row.hk-dup-file { min-height: 30px; padding: 0 24px; }
+listview.hk-dup-list > row:not(:selected) > .hk-dup-file.hk-alt,
+list.hk-dup-table > row.hk-dup-file.hk-alt:not(:selected) { background-color: var(--hk-zebra); }
+.hk-dup-file.hk-marked, .hk-dup-file.hk-marked label { color: var(--hk-t3); }
+.hk-dup-file check:disabled, .hk-dup-file radio:disabled { opacity: 0.4; }
+row:selected .hk-dup-file.hk-marked label, row.hk-dup-file.hk-marked:selected label { color: var(--hk-t2); }
+
+/* ---- Trash confirmation and results ------------------------------------- */
+
+.hk-trash-files { margin-top: 14px; border-radius: 8px; border: 1px solid var(--hk-line); background-color: var(--hk-win); }
+.hk-trash-list { padding: 8px 12px; }
+.hk-trash-list > label { min-height: 22px; }
+.hk-confirm .hk-trash-files + .hk-dialog-buttons { margin-top: 18px; }
+.hk-trash-results > box { min-height: 22px; }

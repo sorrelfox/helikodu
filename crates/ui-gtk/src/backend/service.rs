@@ -39,9 +39,9 @@ use helikodu_service::bus::Subscription;
 use helikodu_service::library::{
     AlbumFilter as ServiceAlbumFilter, AlbumId, AlbumQuality, AlbumQuery as ServiceAlbumQuery,
     AlbumSort as ServiceAlbumSort, AlbumSummary, ArtistQuery, ArtistRole, ArtistSummary, CoverHash,
-    GenreId, GenreQuery, ItemContent, LibraryEvent, MAX_PAGE, MusicLibrary, Page, PersonId,
-    PlaylistId, QueueItemInfo, Thumbnail, ThumbnailSize, TrackFilter, TrackOrder, TrackSortKey,
-    TrackSummary,
+    GenreId, GenreQuery, ItemContent, LibraryEvent, LibraryService, MAX_PAGE, MusicLibrary, Page,
+    PersonId, PlaylistId, QueueItemInfo, Thumbnail, ThumbnailSize, TrackFilter, TrackOrder,
+    TrackSortKey, TrackSummary,
 };
 use helikodu_service::player::SleepWhen as ServiceSleepWhen;
 use helikodu_service::player::{
@@ -97,6 +97,21 @@ fn size_of(pixels: u32) -> ThumbnailSize {
 }
 
 /// The seed of an album's generated cover.
+/// How many other copies the file of `track` has: the distinct files of its
+/// group of copies but its own, two paths to one file counted once.
+fn copies_count(music: &MusicLibrary, track: TrackId) -> u32 {
+    let Ok(Some(group)) = music.copies_of(track) else {
+        return 0;
+    };
+    // Of two paths to one file (each names the other), the lower id counts.
+    let files = group
+        .files
+        .iter()
+        .filter(|f| f.same_file_as.is_none_or(|other| other > f.file))
+        .count();
+    u32::try_from(files.saturating_sub(1)).unwrap_or(u32::MAX)
+}
+
 fn seed(key: AlbumKey) -> u64 {
     key.0.wrapping_mul(0x9E37_79B9_7F4A_7C15).rotate_left(17)
 }
@@ -265,6 +280,7 @@ impl ServiceLibrary {
             album_title: track.album_title.clone().unwrap_or_default(),
             year: track.year,
             missing: track.missing,
+            copies: track.copies,
             ..TrackRow::default()
         }
     }
@@ -303,6 +319,7 @@ impl ServiceLibrary {
                 channels: audio.channels,
             },
             path: Some(details.path),
+            copies: copies_count(music, track_id(key)),
             ..TrackRow::default()
         })
     }
@@ -723,6 +740,7 @@ impl LibrarySource for ServiceLibrary {
                     path: found.path.clone(),
                     cover_seed: seed(album),
                     from_context: true,
+                    copies: copies_count(music, found.hit.track),
                     ..TrackRow::default()
                 }
             })
@@ -1387,8 +1405,10 @@ impl Forwarder {
         };
         let tracks = snapshot.entries.iter().map(|e| e.track.clone()).collect();
         let updates = self.updates.clone();
+        let service = self.service.clone();
         let _ = library.describe(tracks, move |infos| {
             let Ok(infos) = infos else { return };
+            let music = service.library().map(LibraryService::library);
             let album = Self::context_album(&snapshot);
             let items = snapshot
                 .entries
@@ -1400,7 +1420,11 @@ impl Forwarder {
                     } else {
                         AlbumKey(0)
                     };
-                    track_row(info, Some(entry.id), entry.from_context, album)
+                    let mut row = track_row(info, Some(entry.id), entry.from_context, album);
+                    if let (Some(music), TrackRef::Library(id)) = (music, &info.track) {
+                        row.copies = copies_count(music, *id);
+                    }
+                    row
                 })
                 .collect();
             let _ = updates.send_blocking(Update::Queue(QueueSnapshot {
@@ -1665,6 +1689,12 @@ impl Forwarder {
             LibraryEvent::Loudness(_) => {
                 services::loudness_update(event).is_none_or(|update| self.send(update))
             }
+            LibraryEvent::DuplicatesApplied(result) => self.send(Update::DuplicatesApplied(
+                result
+                    .as_ref()
+                    .map(|summary| summary.read)
+                    .map_err(Clone::clone),
+            )),
             _ => true,
         }
     }

@@ -27,7 +27,8 @@ use helikodu_service::library::tag_editing::{
     TagField as WriterField, WriteError, load_for_editing,
 };
 use helikodu_service::library::{
-    LibraryEvent, LoudnessSelection, ScanEvent, ScanRequest, TrackInfo, WatchSettings,
+    LibraryEvent, LoudnessSelection, ScanEvent, ScanRequest, TrackInfo, TrashOutcome, TrashRefusal,
+    WatchSettings,
 };
 use helikodu_service::player::{
     PlayerCommand, list_outputs, resolve_backend as resolve, sound_backends,
@@ -37,6 +38,10 @@ use super::super::services::{
     BackendSelection, CoverEdit, DatabaseInfo, DeviceInfo, EditTrack, FileFacts, FolderState,
     FormatReport, LibraryFolder, OutputBackendKind, OutputSelection, ScanStatus, Services,
     Settings, StorageUsage, TagEdit, TagField, Versions, WriteResult,
+};
+use super::super::services::{
+    CopyGroup, DuplicateCounts, DuplicateGroup, FileId, KeepRule, MatchBy, TrashProblem,
+    TrashResult,
 };
 use super::super::services::{LimiterReading, LoudnessCoverage, LoudnessScope, LoudnessStatus};
 use super::super::{AudioFormat, BackendError, CoverKey, TrackKey, Update};
@@ -437,6 +442,65 @@ fn tag_changes(edit: &TagEdit) -> Result<TagChanges, String> {
     Ok(changes)
 }
 
+/// A trash outcome as the windows report it.
+fn trash_result(outcome: TrashOutcome) -> TrashResult {
+    let problem = match outcome.result {
+        Ok(_) => None,
+        Err(TrashRefusal::Changed) => Some(TrashProblem::Changed),
+        Err(TrashRefusal::SameFile) => Some(TrashProblem::SameFile),
+        Err(TrashRefusal::MainCopy) => Some(TrashProblem::MainCopy),
+        Err(TrashRefusal::Missing) => Some(TrashProblem::Missing),
+        Err(TrashRefusal::NotInLibrary) => Some(TrashProblem::Failed(tr(
+            "The file is no longer in the library.",
+        ))),
+        Err(TrashRefusal::NotACopy) => Some(TrashProblem::Failed(tr("The file has no copies."))),
+        Err(TrashRefusal::MainUnavailable) => Some(TrashProblem::Failed(tr(
+            "The main copy cannot be read to compare.",
+        ))),
+        Err(TrashRefusal::Trash(reason)) => Some(TrashProblem::Failed(reason)),
+        Err(other) => Some(TrashProblem::Failed(other.to_string())),
+    };
+    TrashResult {
+        file: outcome.file,
+        path: outcome.path,
+        problem,
+    }
+}
+
+impl ServiceServices {
+    /// Runs `ask` on the library service, which announces the change to every
+    /// list, and waits for its answer.
+    fn through_library<T: Send + 'static>(
+        &self,
+        ask: impl FnOnce(
+            &helikodu_service::library::LibraryService,
+            Box<dyn FnOnce(T) + Send>,
+        ) -> Result<(), helikodu_service::library::LibraryError>,
+    ) -> Result<T, BackendError> {
+        let Some(library) = self.service.library() else {
+            return Err(BackendError(tr("Helikodu runs without a library.")));
+        };
+        let (reply, answer) = std::sync::mpsc::channel();
+        ask(
+            library,
+            Box::new(move |value| {
+                let _ = reply.send(value);
+            }),
+        )
+        .map_err(error)?;
+        answer
+            .recv()
+            .map_err(|_| BackendError(tr("The library has stopped.")))
+    }
+
+    fn music(&self) -> Result<&helikodu_service::library::MusicLibrary, BackendError> {
+        self.service
+            .library()
+            .map(|l| l.library())
+            .ok_or_else(|| BackendError(tr("Helikodu runs without a library.")))
+    }
+}
+
 impl Services for ServiceServices {
     fn settings(&self) -> Arc<Settings> {
         self.service.settings().get()
@@ -765,6 +829,52 @@ impl Services for ServiceServices {
     fn limiter_activity(&self) -> Option<LimiterReading> {
         // The player does not report the limiter's activity yet.
         None
+    }
+
+    fn copies_of(&self, track: TrackKey) -> Result<Option<CopyGroup>, BackendError> {
+        if track.0 == 0 {
+            return Ok(None);
+        }
+        self.music()?
+            .copies_of(TrackId::new(track.0))
+            .map_err(error)
+    }
+
+    fn set_main_copy(&self, file: FileId) -> Result<(), BackendError> {
+        self.through_library(|library, reply| library.set_main_copy(file, reply))?
+            .map_err(error)
+    }
+
+    fn trash_files(
+        &self,
+        files: &[FileId],
+        copies: bool,
+    ) -> Result<Vec<TrashResult>, BackendError> {
+        let files = files.to_vec();
+        let outcomes = self.through_library(move |library, reply| {
+            if copies {
+                library.trash_copies(files, reply)
+            } else {
+                library.trash_duplicates(files, reply)
+            }
+        })?;
+        Ok(outcomes
+            .map_err(error)?
+            .into_iter()
+            .map(trash_result)
+            .collect())
+    }
+
+    fn find_duplicates(
+        &self,
+        by: MatchBy,
+        keep: KeepRule,
+    ) -> Result<Vec<DuplicateGroup>, BackendError> {
+        self.music()?.find_duplicates(by, keep).map_err(error)
+    }
+
+    fn duplicate_counts(&self) -> Result<DuplicateCounts, BackendError> {
+        self.music()?.duplicate_counts().map_err(error)
     }
 
     fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {

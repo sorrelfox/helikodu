@@ -3,7 +3,8 @@
 
 //! The dialogs' access to an invented core: settings kept in memory, a few
 //! made-up output devices, a library folder, tags made from the sample
-//! library, and a scan that ends at once. Nothing touches the disk or a sound
+//! library, a scan that ends at once, and copies and duplicates that are only
+//! forgotten when moved "to the trash". Nothing touches the disk or a sound
 //! device.
 
 use std::collections::{BTreeMap, HashMap};
@@ -17,6 +18,9 @@ use super::super::services::{
     DeviceSelection, EditTrack, FamilyStatus, FileFacts, FolderState, FormatFamily, FormatReport,
     LibraryFolder, OutputBackendKind, OutputMode, OutputSelection, ScanStatus, Services, Settings,
     StorageUsage, TagEdit, TagField, Versions, WriteResult,
+};
+use super::super::services::{
+    CopyGroup, DuplicateCounts, DuplicateGroup, FileId, KeepRule, MatchBy, TrashResult,
 };
 use super::super::services::{LimiterReading, LoudnessCoverage, LoudnessScope, LoudnessStatus};
 use super::super::{BackendError, OutputInfo, SignalState, TrackKey, Update};
@@ -206,6 +210,7 @@ impl Services for MemoryServices {
             .map_err(|e| BackendError(e.to_string()))?;
         let output = settings.output.selection();
         let moved = output != state.output;
+        let duplicates = settings.library.duplicates != state.settings.library.duplicates;
         state.settings = Arc::new(settings);
         if moved {
             state.output = output.clone();
@@ -213,6 +218,18 @@ impl Services for MemoryServices {
         drop(state);
         if moved {
             self.set_output(output);
+        }
+        if duplicates {
+            // As the service applies the change in the background: the copies
+            // are read (or their tracks removed), then the end is announced.
+            let total = self.library.as_ref().map_or(0, |l| l.tracks.len() / 9);
+            self.emit(Update::Scan(ScanStatus {
+                done: total / 2,
+                total: Some(total),
+                ..ScanStatus::default()
+            }));
+            self.emit(Update::DuplicatesApplied(Ok(total)));
+            self.emit(Update::LibraryChanged);
         }
         Ok(())
     }
@@ -563,6 +580,57 @@ impl Services for MemoryServices {
             largest_db: 1.8,
             times: 3,
         })
+    }
+
+    fn copies_of(&self, track: TrackKey) -> Result<Option<CopyGroup>, BackendError> {
+        Ok(self
+            .library
+            .as_ref()
+            .and_then(|l| l.sample_copies_of(track)))
+    }
+
+    fn set_main_copy(&self, file: FileId) -> Result<(), BackendError> {
+        let library = self
+            .library
+            .as_ref()
+            .ok_or_else(|| BackendError("there is no library".into()))?;
+        library.set_sample_main_copy(file).map_err(BackendError)?;
+        self.emit(Update::LibraryChanged);
+        Ok(())
+    }
+
+    fn trash_files(
+        &self,
+        files: &[FileId],
+        copies: bool,
+    ) -> Result<Vec<TrashResult>, BackendError> {
+        let library = self
+            .library
+            .as_ref()
+            .ok_or_else(|| BackendError("there is no library".into()))?;
+        let results = library.sample_trash(files, copies);
+        self.emit(Update::LibraryChanged);
+        Ok(results)
+    }
+
+    fn find_duplicates(
+        &self,
+        by: MatchBy,
+        keep: KeepRule,
+    ) -> Result<Vec<DuplicateGroup>, BackendError> {
+        Ok(self
+            .library
+            .as_ref()
+            .map(|l| l.sample_duplicates(by, keep))
+            .unwrap_or_default())
+    }
+
+    fn duplicate_counts(&self) -> Result<DuplicateCounts, BackendError> {
+        Ok(self
+            .library
+            .as_ref()
+            .map(|l| l.sample_duplicate_counts())
+            .unwrap_or_default())
     }
 
     fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {

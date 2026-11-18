@@ -179,6 +179,46 @@ fn nothing_is_drawn_while_paused(app: &gtk::Application) {
 }
 
 /// Writes the tab and the view, dark and light, when asked to.
+/// The deck's artist and album links open their pages, the title opens the
+/// album at the playing track, and right click on the title opens the
+/// track's menu.
+fn deck_links_navigate(app: &gtk::Application) {
+    let (window, _backend) = window(app);
+    wait_for("the deck's links", 2, || window.deck_links().len() >= 3);
+    let links = window.deck_links();
+    let find = |prefix: &str| {
+        links
+            .iter()
+            .find(|n| n.starts_with(prefix))
+            .cloned()
+            .unwrap_or_else(|| panic!("no link {prefix}: {links:?}"))
+    };
+    let artist = find("Go to artist ");
+    let album = find("Go to album ");
+    let title = find("Show ");
+    assert!(window.click_deck_link(&artist));
+    wait_for("the artist page", 2, || {
+        window.page_text().starts_with("Artist(")
+    });
+    assert!(window.click_deck_link(&album));
+    wait_for("the album page", 2, || {
+        window.page_text().starts_with("Album(")
+    });
+    window.go_back();
+    assert!(window.click_deck_link(&title));
+    wait_for("the playing track selected", 2, || {
+        window
+            .album_selected_track()
+            .is_some_and(|t| title == format!("Show {t} in its album"))
+    });
+    assert!(window.page_text().starts_with("Album("));
+    let menu = window.demo_deck_title_menu().unwrap();
+    wait_for("the track menu", 2, || menu.is_visible());
+    menu.popdown();
+    spin(50);
+    window.close();
+}
+
 fn screenshots(app: &gtk::Application) {
     let Some(folder) = std::env::var_os("HELIKODU_LYRICS_SHOTS").map(PathBuf::from) else {
         println!("screenshots: skipped; set HELIKODU_LYRICS_SHOTS");
@@ -224,6 +264,7 @@ const TESTS: &[Test] = &[
         "nothing_is_drawn_while_paused",
         nothing_is_drawn_while_paused,
     ),
+    ("deck_links_navigate", deck_links_navigate),
     ("screenshots", screenshots),
 ];
 

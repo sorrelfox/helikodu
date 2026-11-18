@@ -18,7 +18,7 @@ use crate::models::CoverCache;
 use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
-use crate::widgets::{CoverArt, PlayingIndicator, RatingStars, label};
+use crate::widgets::{CoverArt, PlayingIndicator, RatingStars, TitleLine, label};
 use crate::window::MainWindow;
 
 mod imp {
@@ -49,6 +49,8 @@ mod imp {
         pub(super) album: Cell<Option<AlbumKey>>,
         pub(super) detail: RefCell<Option<AlbumDetail>>,
         pub(super) playing: Cell<Option<TrackKey>>,
+        /// A track to select once the album is shown.
+        pub(super) select: Cell<Option<TrackKey>>,
         pub(super) generation: Cell<u64>,
         pub(super) covers: RefCell<Option<Rc<CoverCache>>>,
     }
@@ -131,9 +133,8 @@ fn track_row(index: usize, track: &TrackRow, playing: bool) -> gtk::ListBoxRow {
         number.set_size_request(24, -1);
         line.append(&number);
     }
-    let title = label(&track.title, if playing { &["hk-playing"] } else { &[] });
-    title.set_hexpand(true);
-    title.set_max_width_chars(1);
+    let title = TitleLine::new(&track.title, if playing { &["hk-playing"] } else { &[] });
+    title.set_copies(track.key, track.copies);
     line.append(&title);
     let plays = label(&track.plays.to_string(), &["hk-t3", "hk-numeric"]);
     plays.set_xalign(1.0);
@@ -380,6 +381,58 @@ impl AlbumPage {
         }
         imp.detail.replace(Some(detail));
         self.show_tracks();
+        self.apply_select();
+    }
+
+    /// Selects `track`, and scrolls to it, once its album is shown.
+    pub(crate) fn select_track(&self, track: TrackKey) {
+        self.imp().select.set(Some(track));
+        self.apply_select();
+    }
+
+    fn apply_select(&self) {
+        let imp = self.imp();
+        let Some(track) = imp.select.get() else {
+            return;
+        };
+        let index = {
+            let detail = imp.detail.borrow();
+            let Some(detail) = detail
+                .as_ref()
+                .filter(|d| Some(d.row.key) == imp.album.get())
+            else {
+                return;
+            };
+            detail.tracks().position(|t| t.key == track)
+        };
+        imp.select.set(None);
+        let Some(index) = index.map(|i| i.to_string()) else {
+            return;
+        };
+        let mut child = imp.tracks.first_child();
+        while let Some(widget) = child {
+            child = widget.next_sibling();
+            if let Some(row) = widget.downcast_ref::<gtk::ListBoxRow>()
+                && row.widget_name() == index
+            {
+                imp.tracks.select_row(Some(row));
+                row.grab_focus();
+                return;
+            }
+        }
+    }
+
+    /// The title of the selected track.
+    pub(crate) fn selected_title(&self) -> Option<String> {
+        let imp = self.imp();
+        let index = imp
+            .tracks
+            .selected_row()?
+            .widget_name()
+            .parse::<usize>()
+            .ok()?;
+        let detail = imp.detail.borrow();
+        Some(detail.as_ref()?.tracks().nth(index)?.title.clone())
     }
 
     fn show_tracks(&self) {

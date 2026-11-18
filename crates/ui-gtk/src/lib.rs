@@ -21,6 +21,7 @@ mod playback;
 mod popovers;
 pub mod snapshot;
 pub mod style;
+mod tools;
 mod views;
 mod widgets;
 mod window;

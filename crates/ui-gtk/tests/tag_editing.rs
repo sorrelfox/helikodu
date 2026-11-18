@@ -183,6 +183,12 @@ fn library(dir: &Path) -> (Backend, Vec<PathBuf>) {
             ],
         );
     }
+    let backend = scanned(dir);
+    (backend, files)
+}
+
+/// The backend over the files under `dir/music`, scanned.
+fn scanned(dir: &Path) -> Backend {
     let worker = worker_program();
     let database = dir.join("library.db");
     let scanned = MusicLibrary::open(&database).unwrap();
@@ -211,15 +217,14 @@ fn library(dir: &Path) -> (Backend, Vec<PathBuf>) {
     config.thumbnails = false;
     config.worker_program = Some(worker);
     let running = Service::start(config).unwrap();
-    let backend = service::connect(
+    service::connect(
         running,
         service::ServiceOptions {
             mpris: false,
             inhibit_suspend: false,
         },
     )
-    .unwrap();
-    (backend, files)
+    .unwrap()
 }
 
 /// The track keys by file name.
@@ -335,9 +340,98 @@ fn writes_tags_into_the_files(app: &gtk::Application) {
     window.destroy();
 }
 
+/// An MP4 file whose `©day` is an iTunes timestamp: the Year field shows the
+/// date alone, saving another field keeps the timestamp, and a new year is
+/// written as typed. The track number sits at the middle of its row's lines.
+fn shows_mp4_dates_and_centres_numbers(app: &gtk::Application) {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("ui-tag-dates");
+    let _ = std::fs::remove_dir_all(&dir);
+    let file = dir.join("music").join("Album").join("06 Ecstasy.m4a");
+    let stamp = "2004-07-02T12:00:00Z";
+    encode(
+        &file,
+        "aac",
+        &[
+            ("title", "Ecstasy"),
+            ("album", "All the Best"),
+            ("track", "6"),
+            ("date", stamp),
+        ],
+    );
+    assert_eq!(
+        read_file_info(&file).unwrap().tags.date.as_deref(),
+        Some(stamp)
+    );
+    let backend = scanned(&dir);
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    window.set_default_size(1440, 900);
+    window.present();
+    spin(100);
+    let key = keys(&backend)[0].1;
+
+    window.edit_tags(&[key]);
+    wait_for("the tag editor", || toplevel("tag-editor").is_some());
+    let editor = toplevel("tag-editor").unwrap();
+    spin(200);
+    let number = descendants(editor.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Label>().ok())
+        .find(|l| l.has_css_class("hk-file-number"))
+        .expect("the track number");
+    assert_eq!(number.text(), "6");
+    let lines = number.next_sibling().unwrap();
+    let row = number.parent().unwrap();
+    let middle = |w: &gtk::Widget| {
+        let b = w.compute_bounds(&row).unwrap();
+        b.y() + b.height() / 2.0
+    };
+    let (n, l, r) = (
+        middle(number.upcast_ref()),
+        middle(&lines),
+        row.height() as f32 / 2.0,
+    );
+    assert!(
+        (n - l).abs() <= 1.0 && (l - r).abs() <= 1.0,
+        "number {n}, lines {l}, row {r}"
+    );
+
+    let year = album_entry(&editor, "2004-07-02");
+    album_entry(&editor, "Ecstasy").set_text("Ecstasy (Mix)");
+    button(&editor, "Save 1 file").emit_clicked();
+    wait_for("the save", || toplevel("tag-editor").is_none());
+    drop(year);
+    let read = read_file_info(&file).unwrap();
+    assert_eq!(read.tags.title.as_deref(), Some("Ecstasy (Mix)"));
+    assert_eq!(read.tags.date.as_deref(), Some(stamp), "the date is kept");
+
+    window.edit_tags(&[key]);
+    wait_for("the tag editor", || toplevel("tag-editor").is_some());
+    let editor = toplevel("tag-editor").unwrap();
+    let year = album_entry(&editor, "2004-07-02");
+    let save = button(&editor, "Save 1 file");
+    year.set_text("2004-7");
+    assert!(!save.is_sensitive(), "a date the tag cannot take");
+    year.set_text("2005");
+    assert!(save.is_sensitive());
+    save.emit_clicked();
+    wait_for("the save", || toplevel("tag-editor").is_none());
+    assert_eq!(
+        read_file_info(&file).unwrap().tags.date.as_deref(),
+        Some("2005")
+    );
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
-const TESTS: &[Test] = &[("writes_tags_into_the_files", writes_tags_into_the_files)];
+const TESTS: &[Test] = &[
+    ("writes_tags_into_the_files", writes_tags_into_the_files),
+    (
+        "shows_mp4_dates_and_centres_numbers",
+        shows_mp4_dates_and_centres_numbers,
+    ),
+];
 
 fn main() -> ExitCode {
     if std::env::var_os("HELIKODU_GTK_TESTS").is_none() {
@@ -361,7 +455,12 @@ fn main() -> ExitCode {
     let f = failures.clone();
     application.connect_activate(move |application| {
         let _hold = application.hold();
+        // `cargo test --test tag_editing -- NAME` runs the tests whose name holds NAME.
+        let filter = std::env::args().skip(1).find(|a| !a.starts_with('-'));
         for (name, test) in TESTS {
+            if filter.as_deref().is_some_and(|f| !name.contains(f)) {
+                continue;
+            }
             match catch_unwind(AssertUnwindSafe(|| test(application))) {
                 Ok(()) => println!("test {name} ... ok"),
                 Err(_) => {
@@ -381,7 +480,7 @@ fn main() -> ExitCode {
     application.run_with_args(&["tag_editing"]);
     let failures = failures.borrow();
     if failures.is_empty() {
-        println!("tag_editing: {} passed", TESTS.len());
+        println!("tag_editing: passed");
         ExitCode::SUCCESS
     } else {
         println!("tag_editing: failed: {}", failures.join(", "));

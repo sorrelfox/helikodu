@@ -97,6 +97,64 @@ fn parse(field: &TagField, text: &str) -> Vec<String> {
     }
 }
 
+/// A date as its tag means it: the year, the year and month, or the full
+/// date, without the time and zone some formats add (MP4 `©day` is often
+/// `2004-07-02T12:00:00Z`). Anything else is shown as it is.
+pub(crate) fn shown_date(raw: &str) -> String {
+    let raw = raw.trim();
+    let date_end = raw.find(['T', ' ']).unwrap_or(raw.len());
+    let (date, rest) = raw.split_at(date_end);
+    if valid_date(date) && (rest.is_empty() || rest.len() > 1) {
+        date.to_owned()
+    } else {
+        raw.to_owned()
+    }
+}
+
+/// Whether `text` is a date every tag format takes: `YYYY`, `YYYY-MM` or
+/// `YYYY-MM-DD`.
+pub(crate) fn valid_date(text: &str) -> bool {
+    let parts: Vec<&str> = text.split('-').collect();
+    let number = |part: &str, len: usize| {
+        (part.len() == len && part.bytes().all(|b| b.is_ascii_digit()))
+            .then(|| part.parse::<u32>().ok())
+            .flatten()
+    };
+    let year = parts.first().and_then(|p| number(p, 4));
+    let month = parts.get(1).map(|p| number(p, 2));
+    let day = parts.get(2).map(|p| number(p, 2));
+    match (year, month, day, parts.len()) {
+        (Some(y), None, None, 1) => y > 0,
+        (Some(y), Some(Some(m)), None, 2) => y > 0 && (1..=12).contains(&m),
+        (Some(y), Some(Some(m)), Some(Some(d)), 3) => {
+            let days = match m {
+                2 if y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) => 29,
+                2 => 28,
+                4 | 6 | 9 | 11 => 30,
+                _ => 31,
+            };
+            y > 0 && (1..=12).contains(&m) && (1..=days).contains(&d)
+        }
+        _ => false,
+    }
+}
+
+/// The text a field shows for `values`.
+fn shown(field: &TagField, values: &[String]) -> String {
+    if *field == TagField::Year {
+        let dates: Vec<String> = values.iter().map(|v| shown_date(v)).collect();
+        dates.join(SEPARATOR)
+    } else {
+        values.join(SEPARATOR)
+    }
+}
+
+/// Whether `now`, typed into `field`, is what it started with: the stored
+/// `values`, or the same values as shown.
+fn unchanged(field: &TagField, values: &[String], now: &[String]) -> bool {
+    values == now || parse(field, &shown(field, values)) == now
+}
+
 /// One field of the form: its entry (or genre chips), its label row and the
 /// value it started with.
 struct FieldInput {
@@ -128,12 +186,37 @@ impl FieldInput {
             (None, None) => return None,
         };
         match &self.start {
-            Shared::Same(values) if *values == now => None,
+            // A value shown shorter than it is stored (a date without its
+            // time) and left as shown keeps what the file holds.
+            Shared::Same(values) if unchanged(&self.field, values, &now) => None,
             _ => Some(now),
         }
     }
 
+    /// Whether the field holds a value its tag cannot take.
+    fn invalid(&self) -> bool {
+        self.field == TagField::Year
+            && self
+                .change()
+                .is_some_and(|values| values.iter().any(|v| !valid_date(v)))
+    }
+
     fn refresh(&self) {
+        if let Some(entry) = &self.entry {
+            let invalid = self.invalid();
+            if invalid {
+                entry.add_css_class("error");
+                entry.set_tooltip_text(Some(&tr("A year, or a date as YYYY-MM-DD")));
+            } else {
+                entry.remove_css_class("error");
+                entry.set_tooltip_text(None);
+            }
+            entry.update_state(&[gtk::accessible::State::Invalid(if invalid {
+                gtk::AccessibleInvalidState::True
+            } else {
+                gtk::AccessibleInvalidState::False
+            })]);
+        }
         let edited = self.change().is_some();
         self.edited_mark.set_visible(edited);
         if edited {
@@ -319,7 +402,8 @@ impl Editor {
             input.refresh();
         }
         let edit = self.edit();
-        self.save.set_sensitive(!edit.is_empty());
+        let invalid = self.inputs.borrow().iter().any(FieldInput::invalid);
+        self.save.set_sensitive(!edit.is_empty() && !invalid);
         let marks = [
             !edit.fields.is_empty() || edit.rating.is_some(),
             edit.cover.is_some(),
@@ -454,7 +538,7 @@ fn form_field(
         entry.set_sensitive(sensitive);
         entry.update_property(&[gtk::accessible::Property::Label(&field_title(field))]);
         match start {
-            Shared::Same(values) => entry.set_text(&values.join(SEPARATOR)),
+            Shared::Same(values) => entry.set_text(&shown(field, values)),
             Shared::Mixed(_) => {
                 entry.set_placeholder_text(Some(&tr("<keep>")));
                 entry.add_css_class("hk-keep");
@@ -1214,9 +1298,14 @@ fn file_list(editor: &Rc<Editor>) -> gtk::Box {
             .unwrap_or_default();
         let lead = label(&number, &["hk-t3", "hk-numeric"]);
         lead.set_size_request(18, -1);
+        // The number sits at the middle of the two lines, and the two lines
+        // at the middle of the row.
+        lead.set_valign(gtk::Align::Center);
+        lead.add_css_class("hk-file-number");
         line.append(&lead);
         let text = gtk::Box::new(gtk::Orientation::Vertical, 1);
         text.set_hexpand(true);
+        text.set_valign(gtk::Align::Center);
         let title = track
             .values(&TagField::Title)
             .first()
@@ -1501,6 +1590,26 @@ mod tests {
             vec!["Ada Lind".to_owned(), "Brann Orme".to_owned()]
         );
         assert_eq!(parse(&TagField::Title, "  "), Vec::<String>::new());
+    }
+
+    #[test]
+    fn dates_show_without_time_and_zone() {
+        assert_eq!(shown_date("2004-07-02T12:00:00Z"), "2004-07-02");
+        assert_eq!(shown_date("2004-07-02 12:00"), "2004-07-02");
+        assert_eq!(shown_date("2004T10"), "2004");
+        assert_eq!(shown_date("2004"), "2004");
+        assert_eq!(shown_date("2004-07"), "2004-07");
+        assert_eq!(shown_date("  1999-04-01 "), "1999-04-01");
+        assert_eq!(shown_date("summer 69"), "summer 69");
+        assert_eq!(shown_date("2004-13-02T12:00:00Z"), "2004-13-02T12:00:00Z");
+        assert!(valid_date("2004") && valid_date("2004-07") && valid_date("2004-02-29"));
+        assert!(!valid_date("2003-02-29") && !valid_date("04") && !valid_date("2004-7-2"));
+        assert!(!valid_date("2004-07-02T12:00:00Z") && !valid_date("0000") && !valid_date(""));
+        // A stored date left as shown is no change; another date is.
+        let stored = vec!["2004-07-02T12:00:00Z".to_owned()];
+        let year = |text: &str| unchanged(&TagField::Year, &stored, &parse(&TagField::Year, text));
+        assert!(year("2004-07-02"));
+        assert!(!year("2004"));
         assert_eq!(parse(&TagField::Title, "A; B"), vec!["A; B".to_owned()]);
     }
 }

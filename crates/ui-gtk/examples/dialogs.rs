@@ -5,7 +5,10 @@
 //! the Settings pages, the full-output confirmation, the output switcher, the
 //! tag editor, the first run, a scan in progress, Supported formats and
 //! About; and DSP and EQ with each editor (`--dsp` renders only those and the
-//! pages with sound-processing controls). Run it headless:
+//! pages with sound-processing controls); and the copies (`--copies` renders
+//! only those): Settings › Library, the track table with its badges, the
+//! copies window with its confirmation and results, and Find duplicates.
+//! Run it headless:
 //!
 //! ```sh
 //! crates/ui-gtk/tests/headless.sh cargo run -p helikodu-ui-gtk --example dialogs -- --out target/screenshots
@@ -295,9 +298,80 @@ fn shoot_dsp(application: &gtk::Application, dir: &Path, suffix: &str) {
     main.destroy();
 }
 
+fn named<T: IsA<gtk::Widget>>(root: &impl IsA<gtk::Widget>, name: &str) -> Option<T> {
+    descendants(root.upcast_ref())
+        .into_iter()
+        .find(|w| w.widget_name() == name)
+        .and_then(|w| w.downcast::<T>().ok())
+}
+
+fn shoot_copies(application: &gtk::Application, dir: &Path, suffix: &str) {
+    let options = sample::SampleOptions {
+        albums: 120,
+        playing: None,
+    };
+    let backend = sample::backend(&options);
+    let main = window(application, &backend);
+
+    let settings = main.open_settings("library");
+    settings.set_default_size(1080, 780);
+    save(&settings, dir, &format!("settings-library{suffix}"));
+    if let Some(skip) = named::<gtk::ToggleButton>(&settings, "copies-skip") {
+        skip.set_active(true);
+        save(&settings, dir, &format!("settings-library-skip{suffix}"));
+        if let Some(add) = named::<gtk::ToggleButton>(&settings, "copies-add") {
+            add.set_active(true);
+        }
+    }
+    settings.close();
+
+    main.open_page("tracks");
+    save(&main, dir, &format!("tracks-badges{suffix}"));
+
+    if let Some(copies) = main.open_copies(5) {
+        spin(300);
+        if let Some(row) = named::<gtk::Widget>(&copies, "copy-51")
+            && let Some(tick) = named::<gtk::CheckButton>(&row, "trash-tick")
+        {
+            tick.set_active(true);
+        }
+        save(&copies, dir, &format!("copies{suffix}"));
+        if let Some(button) = named::<gtk::Button>(&copies, "trash-copies") {
+            button.emit_clicked();
+            spin(300);
+            if let Some(confirm) = toplevel("trash-confirm") {
+                save(&confirm, dir, &format!("trash-confirm{suffix}"));
+                if let Some(yes) = named::<gtk::Button>(&confirm, "trash-confirm-yes") {
+                    yes.emit_clicked();
+                }
+            }
+            spin(300);
+            save(&copies, dir, &format!("copies-results{suffix}"));
+        }
+        copies.close();
+    }
+
+    for by in ["same-recording", "identical-files", "same-file"] {
+        if let Some(finder) = main.open_find_duplicates(by) {
+            spin(400);
+            if by != "same-file"
+                && let Some(mark) = named::<gtk::Button>(&finder, "mark")
+            {
+                mark.emit_clicked();
+            }
+            save(&finder, dir, &format!("find-duplicates-{by}{suffix}"));
+        }
+    }
+    if let Some(finder) = toplevel("find-duplicates") {
+        finder.close();
+    }
+    main.close();
+}
+
 fn main() -> ExitCode {
     let mut out = PathBuf::from("target/screenshots");
     let dsp_only = std::env::args().any(|a| a == "--dsp");
+    let copies_only = std::env::args().any(|a| a == "--copies");
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--out"
@@ -322,6 +396,14 @@ fn main() -> ExitCode {
     application.connect_activate(move |application| {
         let _hold = application.hold();
         set_choice(SchemeChoice::Dark, AccentChoice::Amber);
+        if copies_only {
+            shoot_copies(application, &out, "");
+            set_choice(SchemeChoice::Light, AccentChoice::Amber);
+            spin(200);
+            shoot_copies(application, &out, ".light");
+            application.quit();
+            return;
+        }
         if dsp_only {
             shoot_dsp(application, &out, "");
             set_choice(SchemeChoice::Light, AccentChoice::Amber);
@@ -335,9 +417,11 @@ fn main() -> ExitCode {
         spin(200);
         shoot(application, &out, ".light");
         shoot_dsp(application, &out, ".light");
+        shoot_copies(application, &out, ".light");
         set_choice(SchemeChoice::Dark, AccentChoice::Amber);
         spin(200);
         shoot_dsp(application, &out, "");
+        shoot_copies(application, &out, "");
         application.quit();
     });
     application.run_with_args(&["dialogs"]);

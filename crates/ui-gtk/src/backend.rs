@@ -220,6 +220,9 @@ pub struct TrackRow {
     pub path: Option<PathBuf>,
     /// Whether it is missing: a playlist entry whose track left the library.
     pub missing: bool,
+    /// How many other byte-identical copies of its file the library has (other
+    /// paths to the same file not counted).
+    pub copies: u32,
 }
 
 /// One disc of an album.
@@ -1003,6 +1006,10 @@ pub enum Update {
     SleepTimer(Option<SleepTimer>),
     /// The queue entry selected for "Continue from the selected track".
     Cursor(Option<u64>),
+    /// A change of how copies are treated (Settings › Library) has been applied
+    /// to the library: how many files were read for it, or why it failed.
+    /// [`Update::LibraryChanged`] follows.
+    DuplicatesApplied(Result<usize, String>),
     /// The playback flags of a library track changed.
     TrackFlags {
         /// The track.

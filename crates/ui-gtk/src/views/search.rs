@@ -20,7 +20,7 @@ use crate::models::CoverCache;
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
 use crate::widgets::avatar::Avatar;
-use crate::widgets::{CoverArt, label};
+use crate::widgets::{CoverArt, TitleLine, label};
 use crate::window::Page;
 
 /// How many tracks are listed before "Show all".
@@ -395,6 +395,14 @@ impl SearchView {
                     &track.duration.map(format::duration).unwrap_or_default(),
                     &words,
                 );
+                if let Some(line) = self.list.last_child().and_then(|r| r.first_child())
+                    && let Some(name) = line
+                        .first_child()
+                        .and_then(|lead| lead.next_sibling())
+                        .and_downcast::<TitleLine>()
+                {
+                    name.set_copies(track.key, track.copies);
+                }
                 entries.push(Entry::Track(i));
             }
             if results.track_total > TRACKS_SHOWN {
@@ -456,10 +464,9 @@ impl SearchView {
         row.set_widget_name(&index.to_string());
         let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
         line.append(lead);
-        let name = label(title, &["hk-medium"]);
-        name.set_attributes(Some(&highlighted(title, words)));
-        name.set_hexpand(true);
-        name.set_max_width_chars(1);
+        let name = TitleLine::new(title, &["hk-medium"]);
+        name.label()
+            .set_attributes(Some(&highlighted(title, words)));
         line.append(&name);
         let detail = label(description, &["hk-t2"]);
         detail.set_hexpand(true);

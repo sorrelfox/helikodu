@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Settings › Library: the library folders with their state, rescan and
-//! remove; the names to skip; how folders are scanned; and the size limits
-//! of the caches and stores.
+//! remove; the names to skip; how folders are scanned; what is done with
+//! byte-identical copies, applied to the library at once with its progress;
+//! and the size limits of the caches and stores.
 
+use std::cell::Cell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -12,13 +14,15 @@ use gtk::prelude::*;
 use gtk::{gio, glib};
 
 use super::{Context, page_body};
+use crate::backend::Update;
 use crate::backend::services::{FolderState, LibraryFolder, StorageUsage};
 use crate::dialogs::common::{
-    OWN_LABEL, bytes, compact_button, divider, dropdown, on_selected, row, switch_row, tilde,
-    with_note,
+    OWN_LABEL, bind_segmented, bytes, compact_button, divider, dropdown, note, on_selected, row,
+    segmented, switch_row, tilde, with_note,
 };
 use crate::i18n::{fill, ntr, tr};
 use crate::widgets::{icon_button, label};
+use helikodu_model::settings::DuplicateScan;
 
 /// Asks for a folder with the desktop's folder chooser and calls `chosen`.
 pub(crate) fn choose_folder(parent: &gtk::Window, chosen: impl FnOnce(PathBuf) + 'static) {
@@ -316,6 +320,182 @@ fn scanning(context: &Rc<Context>) -> gtk::Box {
     column
 }
 
+/// What is done with copies: added or skipped by the scan, and shown once.
+/// A change is applied to the library at once; the line under the rows
+/// follows it until the library reports it applied.
+fn copies(context: &Rc<Context>) -> gtk::Box {
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    let settings = context.settings();
+    let duplicates = settings.library.duplicates;
+
+    let scan_line = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+    scan_line.add_css_class("hk-switch-row");
+    let text = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    text.set_hexpand(true);
+    text.set_valign(gtk::Align::Center);
+    let title = gtk::Label::new(Some(&tr("Copies of the same file")));
+    title.set_xalign(0.0);
+    text.append(&title);
+    text.append(&note(&tr(
+        "Skipped copies get no tracks; one takes over if the main copy goes.",
+    )));
+    scan_line.append(&text);
+    let (group, buttons) = segmented(&[tr("Add them"), tr("Skip them")]);
+    group.set_widget_name("copies-on-scan");
+    group.update_property(&[gtk::accessible::Property::Label(&tr(
+        "Copies of the same file",
+    ))]);
+    if let [add, skip] = buttons.as_slice() {
+        add.set_widget_name("copies-add");
+        skip.set_widget_name("copies-skip");
+    }
+    scan_line.append(&group);
+    column.append(&scan_line);
+
+    let (show_line, show_one) = switch_row(
+        &tr("Show one track for identical copies"),
+        Some(&tr(
+            "Lists, counts and search show only the main copy; a badge marks the track.",
+        )),
+    );
+    show_one.set_widget_name("copies-show-one");
+    show_one.set_active(duplicates.show_one);
+    column.append(&show_line);
+    let skipped_note = note(&tr(
+        "Not used while copies are skipped: they have no tracks to show.",
+    ));
+    skipped_note.set_widget_name("copies-show-one-note");
+    column.append(&skipped_note);
+
+    let status = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    status.set_visible(false);
+    let meter = gtk::LevelBar::new();
+    meter.add_css_class("hk-meter");
+    meter.set_size_request(180, -1);
+    meter.set_valign(gtk::Align::Center);
+    meter.update_property(&[gtk::accessible::Property::Label(&tr("Applying"))]);
+    status.append(&meter);
+    let status_text = label("", &["hk-t2", "hk-secondary"]);
+    status_text.set_widget_name("copies-status");
+    status_text.set_hexpand(true);
+    status.append(&status_text);
+    column.append(&status);
+
+    let applying = Rc::new(Cell::new(false));
+    let skip_chosen = duplicates.on_scan == DuplicateScan::Skip;
+    let show_state = {
+        let (show_line, skipped_note) = (show_line.downgrade(), skipped_note.downgrade());
+        move |skipping: bool| {
+            if let Some(line) = show_line.upgrade() {
+                line.set_sensitive(!skipping);
+            }
+            if let Some(note) = skipped_note.upgrade() {
+                note.set_visible(skipping);
+            }
+        }
+    };
+    show_state(skip_chosen);
+    let started = {
+        let (status, meter, text) = (
+            status.downgrade(),
+            meter.downgrade(),
+            status_text.downgrade(),
+        );
+        let applying = applying.clone();
+        move || {
+            applying.set(true);
+            if let (Some(status), Some(meter), Some(text)) =
+                (status.upgrade(), meter.upgrade(), text.upgrade())
+            {
+                status.set_visible(true);
+                meter.set_visible(true);
+                meter.set_value(0.0);
+                text.set_text(&tr("Applying to the library…"));
+            }
+        }
+    };
+    let weak = Rc::downgrade(context);
+    let started_scan = started.clone();
+    let show_scan = show_state.clone();
+    bind_segmented(&buttons, usize::from(skip_chosen), move |index| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let on_scan = if index == 1 {
+            DuplicateScan::Skip
+        } else {
+            DuplicateScan::Add
+        };
+        if context.settings().library.duplicates.on_scan == on_scan {
+            return;
+        }
+        started_scan();
+        if context.update(|s| s.library.duplicates.on_scan = on_scan) {
+            show_scan(on_scan == DuplicateScan::Skip);
+        }
+    });
+    let weak = Rc::downgrade(context);
+    show_one.connect_active_notify(move |switch| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let on = switch.is_active();
+        if context.settings().library.duplicates.show_one == on {
+            return;
+        }
+        started();
+        if !context.update(|s| s.library.duplicates.show_one = on) {
+            switch.set_active(!on);
+        }
+    });
+    // Follow the change as the library applies it.
+    if let Some(playback) = &context.playback {
+        let (status, meter, text) = (
+            status.downgrade(),
+            meter.downgrade(),
+            status_text.downgrade(),
+        );
+        playback.connect_event(move |update| {
+            let (Some(status), Some(meter), Some(text)) =
+                (status.upgrade(), meter.upgrade(), text.upgrade())
+            else {
+                return;
+            };
+            match update {
+                Update::Scan(scan) if applying.get() && !scan.finished => {
+                    if let Some(fraction) = scan.fraction() {
+                        meter.set_value(fraction);
+                        let percent = (fraction * 100.0).floor() as u32;
+                        text.set_text(&fill(
+                            &tr("Applying to the library… {}%"),
+                            &[&percent.to_string()],
+                        ));
+                    }
+                }
+                Update::DuplicatesApplied(result) => {
+                    applying.set(false);
+                    status.set_visible(true);
+                    meter.set_visible(false);
+                    text.set_text(&match result {
+                        Ok(0) => tr("Applied to the library."),
+                        Ok(read) => fill(
+                            &ntr(
+                                "Applied to the library: {} file read.",
+                                "Applied to the library: {} files read.",
+                                *read,
+                            ),
+                            &[&read.to_string()],
+                        ),
+                        Err(error) => fill(&tr("Not applied: {}"), &[error]),
+                    });
+                }
+                _ => {}
+            }
+        });
+    }
+    column
+}
+
 /// The limits offered for a store, in MiB, and the one chosen.
 fn limits(options: &[u32], value: u32) -> (Vec<u32>, usize) {
     let mut options = options.to_vec();
@@ -453,6 +633,11 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     ));
     body.append(&row(&tr("Skip"), None, &skip(context)));
     body.append(&row(&tr("Scanning"), None, &scanning(context)));
+    body.append(&row(
+        &tr("Copies"),
+        Some(&tr("Files whose bytes are identical, tags included.")),
+        &copies(context),
+    ));
     body.append(&divider());
     body.append(&row(
         &tr("Storage"),

@@ -31,6 +31,7 @@ use crate::models::lyrics::{LyricsChange, LyricsModel};
 use crate::playback::{Change, Playback, PlayerView};
 use crate::style::color::Rgba;
 use crate::widgets::lyric_lines::{LinesStyle, LyricLines};
+use crate::widgets::now_links::NowLinks;
 use crate::widgets::signal_path_chain::SignalPathChain;
 use crate::widgets::signal_path_list::state_label;
 use crate::widgets::{CoverArt, RatingStars, SignalLamp, label};
@@ -147,6 +148,9 @@ pub(crate) struct NowPlayingView {
     title: gtk::Label,
     artist: gtk::Label,
     album: gtk::Label,
+    /// The artists and the album as links, in place of the two labels.
+    artist_links: NowLinks,
+    album_links: NowLinks,
     rating: RatingStars,
     plays: gtk::Label,
     segment_lyrics: gtk::ToggleButton,
@@ -260,6 +264,13 @@ impl NowPlayingView {
         let album = label("", &["hk-np-album"]);
         album.set_max_width_chars(1);
         left.append(&album);
+        let artist_links = NowLinks::new(&["hk-np-artist"]);
+        artist_links.set_backend(backend);
+        left.insert_child_after(artist_links.widget(), Some(&artist));
+        artist.set_visible(false);
+        let album_links = NowLinks::new(&["hk-np-album"]);
+        album_links.widget().set_visible(false);
+        left.insert_child_after(album_links.widget(), Some(&album));
         let stars = gtk::Box::new(gtk::Orientation::Horizontal, 12);
         stars.add_css_class("hk-np-stars");
         let rating = RatingStars::default();
@@ -355,6 +366,8 @@ impl NowPlayingView {
             title,
             artist,
             album,
+            artist_links,
+            album_links,
             rating,
             plays,
             segment_lyrics,
@@ -504,6 +517,9 @@ impl NowPlayingView {
             self.title.set_text(&tr("Nothing playing"));
             self.artist.set_text("");
             self.album.set_text("");
+            self.artist_links.set("", None, &[]);
+            self.album_links.widget().set_visible(false);
+            self.album.set_visible(true);
             self.rating.set_rating(None);
             self.plays.set_text("");
             self.backdrop.set_tint(None);
@@ -524,6 +540,14 @@ impl NowPlayingView {
             parts.push(fill(&tr("Track {}"), &[&number.to_string()]));
         }
         self.album.set_text(&parts.join(" · "));
+        self.artist_links.set(&now.track.artist, None, &[]);
+        let linked = now.track.album.0 != 0 && !now.album_title.is_empty();
+        if linked {
+            self.album_links
+                .set("", Some((&now.album_title, now.track.album)), &parts[1..]);
+        }
+        self.album.set_visible(!linked);
+        self.album_links.widget().set_visible(linked);
         self.rating.set_rating(now.track.rating);
         self.plays.set_text(&fill(
             &ntr("{} play", "{} plays", now.track.plays as usize),

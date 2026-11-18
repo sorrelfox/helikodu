@@ -47,6 +47,15 @@ impl MainWindow {
         }
         let weak = self.downgrade();
         playback.connect_event(move |update| {
+            // Applying the copies setting reads files as a scan does, and
+            // ends without a scan's end.
+            if let Update::DuplicatesApplied(_) = update {
+                footer.update(&crate::backend::services::ScanStatus {
+                    finished: true,
+                    ..Default::default()
+                });
+                return;
+            }
             let Update::Scan(status) = update else { return };
             footer.update(status);
             if status.finished
@@ -65,6 +74,23 @@ impl MainWindow {
             );
         }
         first_run::show_if_needed(self);
+    }
+
+    /// Opens the copies window of the track `track` (for tests and
+    /// screenshots).
+    #[doc(hidden)]
+    pub fn open_copies(&self, track: u64) -> Option<gtk::Window> {
+        crate::tools::copies::open(self, crate::backend::TrackKey(track))
+    }
+
+    /// Opens Find duplicates, matching by `by` (`same-recording`,
+    /// `same-album-track`, `identical-files` or `same-file`), for tests and
+    /// screenshots.
+    #[doc(hidden)]
+    pub fn open_find_duplicates(&self, by: &str) -> Option<gtk::Window> {
+        let window = crate::tools::duplicates::open(self)?;
+        crate::tools::duplicates::choose(&window, by);
+        Some(window)
     }
 
     /// The deck's output button.

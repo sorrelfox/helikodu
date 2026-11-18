@@ -601,6 +601,294 @@ fn formats_need_a_soundfont(app: &gtk::Application) {
     window.destroy();
 }
 
+/// The text of every label under `root`, joined.
+fn texts(root: &impl IsA<gtk::Widget>) -> String {
+    descendants(root.upcast_ref())
+        .iter()
+        .filter_map(|w| w.downcast_ref::<gtk::Label>().map(|l| l.text().to_string()))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Settings › Library: "Copies of the same file" and "Show one track for
+/// identical copies" are stored, applied with their progress, and the second
+/// is insensitive with a note while copies are skipped.
+fn copies_settings_rows(app: &gtk::Application) {
+    use helikodu_model::settings::DuplicateScan;
+    let (window, backend) = window(app);
+    let services = backend.services();
+    let settings = window.open_settings("library");
+    wait_for("the library page", || {
+        window.settings_page().as_deref() == Some("library")
+    });
+    let add: gtk::ToggleButton = named(&settings, "copies-add");
+    let skip: gtk::ToggleButton = named(&settings, "copies-skip");
+    let show_one: gtk::Switch = named(&settings, "copies-show-one");
+    let note: gtk::Label = named(&settings, "copies-show-one-note");
+    let status: gtk::Label = named(&settings, "copies-status");
+    assert!(add.is_active() && !skip.is_active());
+    assert!(show_one.is_sensitive() && !note.is_visible());
+    assert!(!show_one.is_active());
+
+    skip.set_active(true);
+    assert_eq!(
+        services.settings().library.duplicates.on_scan,
+        DuplicateScan::Skip
+    );
+    assert!(
+        !show_one.is_sensitive(),
+        "insensitive while copies are skipped"
+    );
+    assert!(note.is_visible(), "the note says why");
+    wait_for("the change applied", || {
+        status.text().starts_with("Applied")
+    });
+    assert!(status.is_visible());
+
+    add.set_active(true);
+    assert_eq!(
+        services.settings().library.duplicates.on_scan,
+        DuplicateScan::Add
+    );
+    assert!(show_one.is_sensitive() && !note.is_visible());
+    show_one.set_active(true);
+    assert!(services.settings().library.duplicates.show_one);
+    wait_for("the second change applied", || {
+        status.text().starts_with("Applied")
+    });
+    settings.close();
+    spin(50);
+    let settings = window.open_settings("library");
+    wait_for("the library page again", || {
+        window.settings_page().as_deref() == Some("library")
+    });
+    let show_one: gtk::Switch = named(&settings, "copies-show-one");
+    assert!(show_one.is_active(), "the stored value shows again");
+    window.destroy();
+}
+
+/// A copies badge in the track table names the copies and opens the copies
+/// window; the context menu offers "Copies…" for the same track.
+fn copies_badge_opens_the_window(app: &gtk::Application) {
+    let (window, _backend) = window(app);
+    window.open_page("tracks");
+    wait_for("the track table", || window.track_table_stats().0 > 0);
+    let badge = || {
+        descendants(window.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::Button>().ok())
+            .find(|b| b.has_css_class("hk-copies-badge") && b.is_visible() && b.is_mapped())
+    };
+    wait_for("a copies badge", || badge().is_some());
+    let badge = badge().unwrap();
+    let tooltip = badge.tooltip_text().unwrap_or_default().to_string();
+    assert!(
+        tooltip.ends_with("identical copy") || tooltip.ends_with("identical copies"),
+        "the tooltip names the copies: {tooltip}"
+    );
+    assert!(
+        !badge.is_focusable(),
+        "the rows keep their keyboard navigation"
+    );
+    let track = badge
+        .action_target_value()
+        .and_then(|v| v.get::<u64>())
+        .unwrap();
+    badge.emit_clicked();
+    wait_for("the copies window", || toplevel("copies").is_some());
+    let copies = toplevel("copies").unwrap();
+    wait_for("its file rows", || {
+        has_named(&copies, &format!("copy-{}", track * 10))
+    });
+    copies.close();
+    // The keyboard path: Alt+C on the selected track, as the menu shows.
+    let accels = app.accels_for_action("win.track-copies");
+    assert!(accels.iter().any(|a| a == "<Alt>c"));
+    window.destroy();
+}
+
+/// The copies window: the main copy changes with the radio and "Make main
+/// copy"; a ticked copy goes to the trash only after the confirmation, and
+/// each file's result is listed (the archive copy "changed" and stays).
+fn copies_window_main_copy_and_trash(app: &gtk::Application) {
+    use helikodu_ui_gtk::backend::services::FileId;
+    let (window, backend) = window(app);
+    let services = backend.services();
+    // Track 5 has two copies and a second path to the main copy's file.
+    let copies = window.open_copies(5).unwrap();
+    wait_for("the rows", || has_named(&copies, "copy-51"));
+    let row = |name: &str| -> gtk::ListBoxRow { named(&copies, name) };
+    let radio = |name: &str| -> gtk::CheckButton { named(&row(name), "main-copy") };
+    let tick = |name: &str| -> gtk::CheckButton { named(&row(name), "trash-tick") };
+    let make_main: gtk::Button = named(&copies, "make-main-copy");
+    let trash: gtk::Button = named(&copies, "trash-copies");
+    assert!(radio("copy-50").is_active());
+    assert!(
+        !tick("copy-50").is_sensitive(),
+        "the main copy can't be ticked"
+    );
+    assert!(
+        !tick("copy-53").is_sensitive(),
+        "nor a second path to a file"
+    );
+    assert!(!make_main.is_sensitive() && !trash.is_sensitive());
+
+    radio("copy-51").set_active(true);
+    assert!(make_main.is_sensitive());
+    make_main.emit_clicked();
+    wait_for("the new main copy", || {
+        services
+            .copies_of(TrackKey(5))
+            .unwrap()
+            .is_some_and(|g| g.main == FileId::from_raw(51))
+    });
+    // Shown again, the new main copy can't be ticked.
+    wait_for("the rows again", || {
+        has_named(&copies, "copy-51")
+            && radio("copy-51").is_active()
+            && !tick("copy-51").is_sensitive()
+    });
+    assert!(tick("copy-50").is_visible() && !make_main.is_sensitive());
+
+    tick("copy-52").set_active(true);
+    assert!(trash.is_sensitive());
+    assert_eq!(trash.label().as_deref(), Some("Move 1 file to the trash…"));
+    // Cancel leaves everything as it was.
+    trash.emit_clicked();
+    wait_for("the confirmation", || toplevel("trash-confirm").is_some());
+    let confirm = toplevel("trash-confirm").unwrap();
+    assert!(texts(&confirm).contains("/mnt/archive/Lossless"));
+    assert!(texts(&confirm).contains("desktop Trash"));
+    button(&confirm, "Cancel").emit_clicked();
+    spin(50);
+    assert!(toplevel("trash-confirm").is_none());
+    assert_eq!(
+        services
+            .copies_of(TrackKey(5))
+            .unwrap()
+            .unwrap()
+            .files
+            .len(),
+        4
+    );
+    // Confirmed, the archive copy is checked and reported as changed.
+    trash.emit_clicked();
+    wait_for("the confirmation again", || {
+        toplevel("trash-confirm").is_some()
+    });
+    let confirm = toplevel("trash-confirm").unwrap();
+    named::<gtk::Button>(&confirm, "trash-confirm-yes").emit_clicked();
+    wait_for("the results", || has_named(&copies, "trash-results"));
+    let results: gtk::Box = named(&copies, "trash-results");
+    let text = texts(&results);
+    assert!(text.contains("1 file left in place"), "{text}");
+    assert!(text.contains("it changed"), "{text}");
+    copies.close();
+
+    // Track 2 has one copy; it goes, and no copy is left.
+    let copies = window.open_copies(2).unwrap();
+    wait_for("the rows of track 2", || has_named(&copies, "copy-21"));
+    let tick: gtk::CheckButton = named(&named::<gtk::ListBoxRow>(&copies, "copy-21"), "trash-tick");
+    tick.set_active(true);
+    named::<gtk::Button>(&copies, "trash-copies").emit_clicked();
+    wait_for("the confirmation", || toplevel("trash-confirm").is_some());
+    let confirm = toplevel("trash-confirm").unwrap();
+    named::<gtk::Button>(&confirm, "trash-confirm-yes").emit_clicked();
+    wait_for("the results", || has_named(&copies, "trash-results"));
+    assert!(
+        texts(&named::<gtk::Box>(&copies, "trash-results")).contains("1 file moved to the trash")
+    );
+    assert!(services.copies_of(TrackKey(2)).unwrap().is_none());
+    wait_for("no copy left", || texts(&copies).contains("no other copy"));
+    window.destroy();
+}
+
+/// Find duplicates: the counts of the four ways, Mark by the keep rule
+/// (never the main copy, nothing by hand), and files reached by two paths
+/// listed but never markable.
+fn copies_finder_marks(app: &gtk::Application) {
+    let (window, _backend) = window(app);
+    let finder = window.open_find_duplicates("identical-files").unwrap();
+    let view: gtk::ListView = named(&finder, "duplicates-table");
+    let rows = || view.model().map_or(0, |m| m.n_items());
+    wait_for("the groups", || rows() > 0);
+    let checks = || -> Vec<gtk::CheckButton> {
+        descendants(view.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::CheckButton>().ok())
+            .filter(|c| c.widget_name().starts_with("file-") && c.is_mapped())
+            .collect()
+    };
+    wait_for("the rows drawn", || !checks().is_empty());
+    let mark: gtk::Button = named(&finder, "mark");
+    let trash: gtk::Button = named(&finder, "trash-duplicates");
+    assert!(mark.is_sensitive());
+    assert!(!trash.is_sensitive(), "nothing is marked at first");
+    mark.emit_clicked();
+    wait_for("the marks", || trash.is_sensitive());
+    let label = trash.label().unwrap_or_default().to_string();
+    assert!(
+        label.starts_with("Move ") && label.ends_with(" to the trash"),
+        "{label}"
+    );
+    for check in checks() {
+        let id: i64 = check.widget_name()["file-".len()..].parse().unwrap();
+        if id % 10 == 0 {
+            assert!(
+                !check.is_active() && !check.is_sensitive(),
+                "the main copy {id} stays"
+            );
+        }
+        if id % 10 == 1 {
+            assert!(check.is_active(), "the copy {id} is marked");
+        }
+    }
+    // Unticking a file updates the footer.
+    let before = trash.label().unwrap_or_default().to_string();
+    let ticked = checks().into_iter().find(|c| c.is_active()).unwrap();
+    ticked.set_active(false);
+    assert_ne!(trash.label().unwrap_or_default().to_string(), before);
+    // By hand there is nothing to mark with.
+    let keep: gtk::DropDown = named(&finder, "keep-rule");
+    keep.set_selected(3);
+    assert!(!mark.is_sensitive());
+    keep.set_selected(0);
+    assert!(mark.is_sensitive());
+    // One file, two paths: listed, never markable.
+    window.open_find_duplicates("same-file");
+    wait_for("the same-file groups", || {
+        !checks().is_empty() && !mark.is_sensitive()
+    });
+    spin(50);
+    assert!(checks().iter().all(|c| !c.is_sensitive() && !c.is_active()));
+    assert!(!trash.is_sensitive());
+    window.destroy();
+}
+
+/// The copies window and Find duplicates draw no frames while nothing changes.
+fn copies_windows_idle(app: &gtk::Application) {
+    use std::cell::Cell;
+    let (window, _backend) = window(app);
+    let finder = window.open_find_duplicates("identical-files").unwrap();
+    let view: gtk::ListView = named(&finder, "duplicates-table");
+    wait_for("the groups", || {
+        view.model().is_some_and(|m| m.n_items() > 0)
+    });
+    let copies = window.open_copies(5).unwrap();
+    wait_for("the rows", || has_named(&copies, "copy-51"));
+    spin(600);
+    for shown in [&finder, &copies] {
+        let frames = Rc::new(Cell::new(0u32));
+        let clock = shown.frame_clock().expect("a frame clock");
+        let f = frames.clone();
+        let id = clock.connect_after_paint(move |_| f.set(f.get() + 1));
+        spin(1200);
+        clock.disconnect(id);
+        assert_eq!(frames.get(), 0, "frames drawn while idle");
+    }
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
@@ -621,6 +909,17 @@ const TESTS: &[Test] = &[
     ("dsp_editors_apply_live", dsp_editors_apply_live),
     ("m4_settings_controls", m4_settings_controls),
     ("formats_need_a_soundfont", formats_need_a_soundfont),
+    ("copies_settings_rows", copies_settings_rows),
+    (
+        "copies_badge_opens_the_window",
+        copies_badge_opens_the_window,
+    ),
+    (
+        "copies_window_main_copy_and_trash",
+        copies_window_main_copy_and_trash,
+    ),
+    ("copies_finder_marks", copies_finder_marks),
+    ("copies_windows_idle", copies_windows_idle),
 ];
 
 fn main() -> ExitCode {

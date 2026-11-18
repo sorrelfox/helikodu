@@ -26,7 +26,7 @@ use crate::views::actions::{self, Origin, Target};
 use crate::views::artists::button;
 use crate::views::drag::DraggedTracks;
 use crate::views::table::{TableCell, cell_at, selected_positions};
-use crate::widgets::{CoverArt, PlayingIndicator, label};
+use crate::widgets::{CoverArt, PlayingIndicator, TitleLine, label};
 
 /// "edited yesterday", from when a playlist last changed.
 fn edited(modified: Option<SystemTime>) -> Option<String> {
@@ -265,9 +265,7 @@ impl PlaylistView {
             let cover = CoverArt::new(24, 4.0);
             cover.add_css_class("small");
             title_box.append(&cover);
-            let title = label("", &["hk-medium"]);
-            title.set_max_width_chars(1);
-            title.set_hexpand(true);
+            let title = TitleLine::new("", &["hk-medium"]);
             title_box.append(&title);
             line.append(&title_box);
             for _ in 0..2 {
@@ -343,12 +341,13 @@ impl PlaylistView {
         if let Some(cover) = title_box.first_child().and_downcast::<CoverArt>() {
             self.covers.show(&cover, row.cover, row.cover_seed, 24);
         }
-        if let Some(title) = title_box.last_child().and_downcast::<gtk::Label>() {
+        if let Some(title) = title_box.last_child().and_downcast::<TitleLine>() {
             if row.missing {
                 title.set_text(&fill(&tr("{} · Missing"), &[&row.title]));
             } else {
                 title.set_text(&row.title);
             }
+            title.set_copies(row.key, if row.missing { 0 } else { row.copies });
         }
         if let Some(l) = artist.downcast_ref::<gtk::Label>() {
             l.set_text(&row.artist);

@@ -791,6 +791,50 @@ impl MainWindow {
         self.go(Page::Album(key), true);
     }
 
+    /// Opens the page of `key`, selecting and showing `track` there.
+    pub(crate) fn open_album_at(&self, key: AlbumKey, track: Option<crate::backend::TrackKey>) {
+        self.go(Page::Album(key), true);
+        if let (Some(track), Some(album)) = (track, self.imp().album.borrow().as_ref()) {
+            album.select_track(track);
+        }
+    }
+
+    /// The page shown, in words: "Album(AlbumKey(3))".
+    #[doc(hidden)]
+    pub fn page_text(&self) -> String {
+        let imp = self.imp();
+        imp.history
+            .borrow()
+            .get(imp.index.get())
+            .map(|p| format!("{p:?}"))
+            .unwrap_or_default()
+    }
+
+    /// The deck's links, by accessible name: the title, the artists, the
+    /// album.
+    #[doc(hidden)]
+    pub fn deck_links(&self) -> Vec<String> {
+        self.imp().deck.link_names()
+    }
+
+    /// Clicks the deck's link named `name`; whether there is one.
+    #[doc(hidden)]
+    pub fn click_deck_link(&self, name: &str) -> bool {
+        self.imp().deck.click_link(name)
+    }
+
+    /// Opens the context menu of the deck's title.
+    #[doc(hidden)]
+    pub fn demo_deck_title_menu(&self) -> Option<gtk::Popover> {
+        self.imp().deck.popup_title_menu().map(|p| p.upcast())
+    }
+
+    /// The selected track on the album page, by title.
+    #[doc(hidden)]
+    pub fn album_selected_track(&self) -> Option<String> {
+        self.imp().album.borrow().as_ref()?.selected_title()
+    }
+
     /// Goes back in the view history.
     #[doc(hidden)]
     pub fn go_back(&self) {

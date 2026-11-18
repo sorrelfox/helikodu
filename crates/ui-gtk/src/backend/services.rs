@@ -3,7 +3,8 @@
 
 //! What the dialogs need from the core besides the library lists and the
 //! player: the settings store, the output devices, the library folders and
-//! their scans, tag editing, and the facts for Supported formats and About.
+//! their scans, tag editing, copies and the duplicate finder with the desktop
+//! trash, and the facts for Supported formats and About.
 //!
 //! [`Services`] is implemented over the running service (`service.rs`) and
 //! over invented content (`sample.rs`). Methods marked "blocking" are called
@@ -23,6 +24,9 @@ pub use helikodu_model::audio::{
 pub use helikodu_model::settings::Settings;
 pub use helikodu_service::formats::{
     Availability, Decoder, DecoderStatus, FamilyStatus, FormatFamily, FormatReport,
+};
+pub use helikodu_service::library::{
+    CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId, KeepRule, MatchBy,
 };
 
 use super::{AudioFormat, BackendError, CoverKey, TrackKey};
@@ -346,6 +350,35 @@ pub struct Versions {
     pub sqlite: Option<String>,
 }
 
+/// Why a file asked to go to the trash stayed where it was.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TrashProblem {
+    /// It changed since the library read it, or is no longer identical to the
+    /// main copy.
+    Changed,
+    /// It is the same file as another path in the library (a hard link, a
+    /// folder mounted twice).
+    SameFile,
+    /// It is the main copy of its group.
+    MainCopy,
+    /// It is missing.
+    Missing,
+    /// The trash did not take it, or the library could not check it; the text
+    /// says why.
+    Failed(String),
+}
+
+/// What happened to one file asked to go to the trash.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrashResult {
+    /// The file.
+    pub file: FileId,
+    /// Its path, if the library knew it.
+    pub path: Option<PathBuf>,
+    /// Why it stayed, or `None` when it is in the trash now.
+    pub problem: Option<TrashProblem>,
+}
+
 /// The dialogs' access to the core. See the module documentation.
 pub trait Services: fmt::Debug + Send + Sync {
     /// The settings as they are now.
@@ -402,6 +435,27 @@ pub trait Services: fmt::Debug + Send + Sync {
     fn is_measuring_loudness(&self) -> bool;
     /// What the limiter did lately, when the player reports it.
     fn limiter_activity(&self) -> Option<LimiterReading>;
+
+    /// The group of byte-identical copies of the file of `track`, the main
+    /// copy first; `None` when it has no copies. Blocking.
+    fn copies_of(&self, track: TrackKey) -> Result<Option<CopyGroup>, BackendError>;
+    /// Makes `file` the main copy of its group. Blocking.
+    fn set_main_copy(&self, file: FileId) -> Result<(), BackendError>;
+    /// Moves `files`, which the owner confirmed, to the desktop trash, never
+    /// deleting one: copies of a group (`copies`, checked to be identical to
+    /// the main copy right before) or files the duplicate finder found by
+    /// another measure. Each file's result says whether it went. Blocking.
+    fn trash_files(&self, files: &[FileId], copies: bool)
+    -> Result<Vec<TrashResult>, BackendError>;
+    /// The groups of duplicates by `by`, with the files `keep` suggests moving
+    /// to the trash marked. Blocking.
+    fn find_duplicates(
+        &self,
+        by: MatchBy,
+        keep: KeepRule,
+    ) -> Result<Vec<DuplicateGroup>, BackendError>;
+    /// How many groups each measure of the duplicate finder finds. Blocking.
+    fn duplicate_counts(&self) -> Result<DuplicateCounts, BackendError>;
 
     /// The playback flags of a library track (the tag editor's Playback
     /// group); `None` when the track is not in the library. Blocking.

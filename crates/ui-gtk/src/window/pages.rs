@@ -774,6 +774,20 @@ impl MainWindow {
                 }
             })
             .build();
+        let copies = gio::ActionEntry::builder("track-copies")
+            .activate(|window: &Self, _, _| {
+                let track = window
+                    .current_target()
+                    .as_ref()
+                    .and_then(crate::views::actions::with_copies);
+                match track {
+                    Some(track) => {
+                        crate::tools::copies::open(window, track);
+                    }
+                    None => window.toast(&tr("The selected track has no copies."), false),
+                }
+            })
+            .build();
         let select_all = gio::ActionEntry::builder("select-all")
             .activate(|window: &Self, _, _| {
                 let Some(pages) = window.pages() else { return };
@@ -813,7 +827,7 @@ impl MainWindow {
                 actions::add_to_playlist(window, backend, Target::tracks(rows), None, None);
             })
             .build();
-        self.add_action_entries([search, properties, select_all, undo, save_queue]);
+        self.add_action_entries([search, properties, copies, select_all, undo, save_queue]);
 
         // The main menu's file actions belong to the application; the window
         // that is open answers them.

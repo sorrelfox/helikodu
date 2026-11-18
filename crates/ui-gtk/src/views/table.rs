@@ -19,6 +19,9 @@ use gtk::subclass::prelude::*;
 
 use crate::models::TrackItem;
 
+/// The gap between the text and the copies badge.
+const BADGE_GAP: i32 = 6;
+
 mod imp {
     use super::*;
 
@@ -32,6 +35,8 @@ mod imp {
         /// OpenType features, as the CSS `font-feature-settings` of the
         /// classes would give a label.
         pub(super) features: Cell<Option<&'static str>>,
+        /// The copies badge after the text, once a row with copies was shown.
+        pub(super) badge: RefCell<Option<gtk::Button>>,
     }
 
     #[glib::object_subclass]
@@ -60,9 +65,8 @@ mod imp {
         }
 
         fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
-            let obj = self.obj();
             let (mut min, mut nat) = (0, 0);
-            if let Some(child) = obj.first_child() {
+            if let Some(child) = self.main_child() {
                 let (m, n, _, _) = child.measure(orientation, for_size);
                 min = m;
                 nat = n;
@@ -78,12 +82,42 @@ mod imp {
                     }
                 }
             }
+            if let Some(badge) = self.shown_badge() {
+                let (m, n, _, _) = badge.measure(orientation, -1);
+                match orientation {
+                    gtk::Orientation::Horizontal => {
+                        min += m + BADGE_GAP;
+                        nat += n + BADGE_GAP;
+                    }
+                    _ => {
+                        min = min.max(m);
+                        nat = nat.max(n);
+                    }
+                }
+            }
             (min, nat, -1, -1)
         }
 
         fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
-            if let Some(child) = self.obj().first_child() {
+            if let Some(child) = self.main_child() {
                 child.allocate(width, height, baseline, None);
+            }
+            if let Some(badge) = self.shown_badge() {
+                let (w, h) = (
+                    badge.measure(gtk::Orientation::Horizontal, -1).1,
+                    badge.measure(gtk::Orientation::Vertical, -1).1,
+                );
+                let text = self.text_width(width - w - BADGE_GAP);
+                let left = (text + BADGE_GAP).min(width - w).max(0);
+                let x = if self.obj().direction() == gtk::TextDirection::Rtl {
+                    width - left - w
+                } else {
+                    left
+                };
+                badge.size_allocate(
+                    &gtk::Allocation::new(x, ((height - h) / 2).max(0), w, h),
+                    -1,
+                );
             }
         }
 
@@ -91,7 +125,11 @@ mod imp {
             let obj = self.obj();
             if !self.text.borrow().is_empty() {
                 let layout = self.layout();
-                let width = obj.width();
+                let width = match self.shown_badge() {
+                    Some(badge) => obj.width() - badge.width() - BADGE_GAP,
+                    None => obj.width(),
+                }
+                .max(0);
                 layout.set_width(width * pango::SCALE);
                 layout.set_ellipsize(pango::EllipsizeMode::End);
                 let (text_width, text_height) = layout.pixel_size();
@@ -108,13 +146,40 @@ mod imp {
                 snapshot.append_layout(&layout, &obj.color());
                 snapshot.restore();
             }
-            if let Some(child) = obj.first_child() {
-                obj.snapshot_child(&child, snapshot);
+            let mut child = obj.first_child();
+            while let Some(c) = child {
+                obj.snapshot_child(&c, snapshot);
+                child = c.next_sibling();
             }
         }
     }
 
     impl TableCell {
+        /// The child that fills the cell: any but the badge.
+        pub(super) fn main_child(&self) -> Option<gtk::Widget> {
+            let badge = self.badge.borrow().clone().map(Cast::upcast::<gtk::Widget>);
+            let mut child = self.obj().first_child();
+            while let Some(c) = child {
+                if Some(&c) != badge.as_ref() {
+                    return Some(c);
+                }
+                child = c.next_sibling();
+            }
+            None
+        }
+
+        pub(super) fn shown_badge(&self) -> Option<gtk::Button> {
+            self.badge.borrow().clone().filter(WidgetExt::is_visible)
+        }
+
+        /// The width the text takes, at most `room`.
+        fn text_width(&self, room: i32) -> i32 {
+            if self.text.borrow().is_empty() {
+                return 0;
+            }
+            self.layout().pixel_size().0.min(room.max(0))
+        }
+
         /// A layout of the text in the cell's font; made when needed, not
         /// kept, as the cell's render node keeps the glyphs.
         fn layout(&self) -> pango::Layout {
@@ -186,15 +251,38 @@ impl TableCell {
 
     /// The child widget.
     pub(crate) fn child(&self) -> Option<gtk::Widget> {
-        self.first_child()
+        self.imp().main_child()
     }
 
     /// Puts `child` in the cell, replacing the one before.
     pub(crate) fn set_child(&self, child: &impl IsA<gtk::Widget>) {
-        if let Some(old) = self.first_child() {
+        if let Some(old) = self.imp().main_child() {
             old.unparent();
         }
         child.set_parent(self);
+    }
+
+    /// Shows the copies badge of `copies` copies of `track` after the text;
+    /// none for 0.
+    pub(crate) fn set_copies(&self, track: crate::backend::TrackKey, copies: u32) {
+        let imp = self.imp();
+        if copies == 0 && imp.badge.borrow().is_none() {
+            return;
+        }
+        let badge = imp
+            .badge
+            .borrow_mut()
+            .get_or_insert_with(|| {
+                let badge = crate::widgets::copies_badge::new();
+                badge.set_parent(self);
+                badge
+            })
+            .clone();
+        let was = badge.is_visible();
+        crate::widgets::copies_badge::show(&badge, track, copies);
+        if was != badge.is_visible() {
+            self.queue_resize();
+        }
     }
 
     /// Shows the row at `position`; odd positions get the stripe.

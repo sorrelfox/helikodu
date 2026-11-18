@@ -68,3 +68,7 @@ crates/ui-gtk/src/play_modes.rs
 crates/ui-gtk/src/popovers/sleep_timer.rs
 crates/ui-gtk/src/widgets/eq_graph.rs
 crates/ui-gtk/src/window/play_modes.rs
+crates/ui-gtk/src/tools/copies.rs
+crates/ui-gtk/src/tools/duplicates.rs
+crates/ui-gtk/src/tools/trash.rs
+crates/ui-gtk/src/widgets/copies_badge.rs

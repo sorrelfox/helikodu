@@ -7,7 +7,8 @@
 //! artist or a genre) and pops the menu up; the window keeps the target while
 //! the menu is open, and its `win.sel-*` actions act on it: play, play next,
 //! add to the queue or a playlist, go to the album or artist, edit tags, rate,
-//! open the containing folder, and remove from a playlist or the queue.
+//! open the containing folder, show the copies of a track's file, and remove
+//! from a playlist or the queue.
 
 use std::rc::Rc;
 
@@ -38,6 +39,8 @@ pub(crate) enum Origin {
         /// The selected entries.
         entries: Vec<u64>,
     },
+    /// The playing track, shown in the deck: nothing to play next.
+    Playing,
 }
 
 /// What a context menu acts on.
@@ -164,12 +167,29 @@ fn item(label: &str, action: &str) -> gio::MenuItem {
     gio::MenuItem::new(Some(label), Some(action))
 }
 
+/// The one selected track of `target`, when the library has copies of its file.
+pub(crate) fn with_copies(target: &Target) -> Option<TrackKey> {
+    match target.rows().as_slice() {
+        [one] if one.copies > 0 => Some(one.key),
+        _ => None,
+    }
+}
+
 /// The context menu of `target`, with `playlists` in "Add to playlist".
 pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     let menu = gio::Menu::new();
     let play = gio::Menu::new();
-    play.append_item(&item(&tr("Play"), "win.sel-play"));
-    play.append_item(&item(&tr("Play next"), "win.sel-play-next"));
+    let playing = matches!(
+        target,
+        Target::Tracks {
+            origin: Origin::Playing,
+            ..
+        }
+    );
+    if !playing {
+        play.append_item(&item(&tr("Play"), "win.sel-play"));
+        play.append_item(&item(&tr("Play next"), "win.sel-play-next"));
+    }
     play.append_item(&item(&tr("Add to queue"), "win.sel-enqueue"));
     let add = gio::Menu::new();
     let new = gio::MenuItem::new(Some(&tr("New playlist")), None);
@@ -235,6 +255,15 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         menu.append_section(None, &edit);
         let folder = gio::Menu::new();
         folder.append_item(&item(&tr("Open containing folder"), "win.sel-open-folder"));
+        if let Some(track) = with_copies(target) {
+            let copies = gio::MenuItem::new(Some(&tr("Copies…")), None);
+            copies.set_action_and_target_value(
+                Some(crate::widgets::copies_badge::ACTION),
+                Some(&track.0.to_variant()),
+            );
+            copies.set_attribute_value("accel", Some(&"<Alt>c".to_variant()));
+            folder.append_item(&copies);
+        }
         menu.append_section(None, &folder);
     }
     let remove_label = match target {
@@ -494,7 +523,7 @@ fn remove(window: &MainWindow, backend: Backend, target: Target) {
                 });
             });
         }
-        Origin::Library => {}
+        Origin::Library | Origin::Playing => {}
     }
 }
 
@@ -587,6 +616,11 @@ fn go_to_artist(window: &MainWindow, backend: Backend, target: Target) {
         _ => target.artist_name(),
     };
     let Some(name) = name else { return };
+    go_to_artist_named(window, backend, name);
+}
+
+/// Goes to the artist called `name`, or says there is no page.
+pub(crate) fn go_to_artist_named(window: &MainWindow, backend: Backend, name: String) {
     let weak = window.downgrade();
     glib::spawn_future_local(async move {
         // A track artist "A & B" may only be found as "A".
@@ -655,6 +689,16 @@ pub(crate) fn install(window: &MainWindow) {
         open_folder(w, path);
     });
     let remove_entries = simple("sel-remove", remove);
+    let copies = gio::ActionEntry::builder("show-copies")
+        .parameter_type(Some(glib::VariantTy::UINT64))
+        .activate(|window: &MainWindow, _, target| {
+            let key = target.and_then(|t| t.get::<u64>()).unwrap_or(0);
+            if key != 0 {
+                window.take_target();
+                crate::tools::copies::open(window, TrackKey(key));
+            }
+        })
+        .build();
     let add = gio::ActionEntry::builder("sel-add-to-playlist")
         .parameter_type(Some(glib::VariantTy::UINT64))
         .activate(|window: &MainWindow, _, target| {
@@ -685,5 +729,6 @@ pub(crate) fn install(window: &MainWindow) {
         remove_entries,
         add,
         rating,
+        copies,
     ]);
 }

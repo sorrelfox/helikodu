@@ -21,7 +21,8 @@ use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
 use crate::playback::{Change, Playback, PlayerView};
-use crate::widgets::{CoverArt, RatingStars, label};
+use crate::widgets::now_links::NowLinks;
+use crate::widgets::{CoverArt, RatingStars, TitleLine, label};
 
 mod imp {
     use super::*;
@@ -53,6 +54,8 @@ mod imp {
         pub(super) artist: TemplateChild<gtk::Label>,
         #[template_child]
         pub(super) album: TemplateChild<gtk::Label>,
+        /// The artists and the album as links, in place of the two labels.
+        pub(super) links: RefCell<Option<(NowLinks, NowLinks)>>,
         #[template_child]
         pub(super) rating: TemplateChild<RatingStars>,
         #[template_child]
@@ -159,9 +162,8 @@ fn track_row(track: &TrackRow, classes: &[&str]) -> gtk::ListBoxRow {
     } else {
         fill(&tr("{} · {}"), &[&track.title, &track.artist])
     };
-    let title = label(&text, &[]);
-    title.set_hexpand(true);
-    title.set_max_width_chars(1);
+    let title = TitleLine::new(&text, &[]);
+    title.set_copies(track.key, track.copies);
     line.append(&title);
     let length = label(
         &track.duration.map(format::duration).unwrap_or_default(),
@@ -179,6 +181,16 @@ impl Panel {
     pub(crate) fn bind(&self, backend: &Backend, playback: &Rc<Playback>, covers: &Rc<CoverCache>) {
         let imp = self.imp();
         imp.covers.replace(Some(covers.clone()));
+        let artists = NowLinks::new(&["hk-t2"]);
+        artists.set_backend(backend);
+        imp.artist.set_visible(false);
+        if let Some(parent) = imp.artist.parent().and_downcast::<gtk::Box>() {
+            parent.insert_child_after(artists.widget(), Some(&imp.artist.get()));
+            let album = NowLinks::new(&["hk-t3", "hk-secondary"]);
+            album.widget().set_visible(false);
+            parent.insert_child_after(album.widget(), Some(&imp.album.get()));
+            imp.links.replace(Some((artists, album)));
+        }
         let b = backend.clone();
         imp.clear_button
             .connect_clicked(move |_| b.send(PlayerRequest::ClearQueue));
@@ -286,6 +298,16 @@ impl Panel {
                     Some(year) => fill(&tr("{} · {}"), &[&now.album_title, &year.to_string()]),
                     None => now.album_title.clone(),
                 });
+                if let Some((artists, album)) = imp.links.borrow().as_ref() {
+                    artists.set(&now.track.artist, None, &[]);
+                    let year: Vec<String> = now.year.iter().map(|y| y.to_string()).collect();
+                    let linked = now.track.album.0 != 0;
+                    if linked {
+                        album.set("", Some((&now.album_title, now.track.album)), &year);
+                    }
+                    imp.album.set_visible(!linked);
+                    album.widget().set_visible(linked);
+                }
                 imp.rating.set_rating(now.track.rating);
                 let f = &now.format;
                 let mut parts: Vec<String> = Vec::new();

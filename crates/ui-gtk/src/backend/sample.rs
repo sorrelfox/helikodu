@@ -8,6 +8,7 @@
 //! a fixed seed, so two runs show the same library. Its files do not exist; the
 //! folders are made up from the tracks' paths.
 
+mod copies;
 mod lyrics;
 mod services;
 mod signal;
@@ -162,6 +163,8 @@ pub struct SampleLibrary {
     cover_file: Option<PathBuf>,
     /// The playback flags set through the player.
     flags: Mutex<HashMap<TrackKey, super::TrackFlags>>,
+    /// The copies moved to the trash and the main copies chosen.
+    copies: Mutex<copies::CopyState>,
 }
 
 fn format(r: &mut Random) -> AudioFormat {
@@ -313,6 +316,7 @@ impl SampleLibrary {
                         format: format.clone(),
                         path: Some(folder.join(name)),
                         missing: false,
+                        copies: copies::initial_copies(TrackKey(track_key)),
                     });
                     track_key += 1;
                 }
@@ -350,6 +354,7 @@ impl SampleLibrary {
             loaded: usize::MAX,
             cover_file: None,
             flags: Mutex::new(HashMap::new()),
+            copies: Mutex::new(copies::CopyState::default()),
         };
         library.add_sample_playlists(&mut r);
         library
@@ -397,10 +402,18 @@ impl SampleLibrary {
         self.albums.get(index)
     }
 
-    fn track(&self, key: TrackKey) -> Option<TrackRow> {
+    /// The track of `key` as it was generated.
+    fn track_row_unpatched(&self, key: TrackKey) -> Option<TrackRow> {
         let index = usize::try_from(key.0).ok()?.checked_sub(1)?;
         let (album, track) = self.tracks.get(index)?;
-        let mut row = self.albums[*album as usize].tracks[*track as usize].clone();
+        Some(self.albums[*album as usize].tracks[*track as usize].clone())
+    }
+
+    fn track(&self, key: TrackKey) -> Option<TrackRow> {
+        let mut row = self.track_row_unpatched(key)?;
+        if row.copies > 0 {
+            row.copies = self.copies_now(key);
+        }
         if let Some(rating) = self
             .ratings
             .lock()

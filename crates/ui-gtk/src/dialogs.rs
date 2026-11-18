@@ -83,6 +83,9 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
             }
         });
     });
+    add(application, "find-duplicates", |main| {
+        crate::tools::duplicates::open(main);
+    });
     add(application, "rescan", |main| {
         if let Some(backend) = main.backend()
             && let Err(error) = backend.services().scan(&[])

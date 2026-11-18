@@ -27,7 +27,7 @@ use crate::views::genres::list_pane;
 use crate::views::tracks::TracksView;
 use crate::widgets::avatar::Avatar;
 use crate::widgets::empty_state::empty_state;
-use crate::widgets::label;
+use crate::widgets::{TitleLine, label};
 
 type Open = Box<dyn Fn(ArtistKey)>;
 type OpenAlbum = Rc<dyn Fn(AlbumKey)>;
@@ -706,9 +706,8 @@ impl ArtistsView {
             let row = gtk::ListBoxRow::new();
             let line = gtk::Box::new(gtk::Orientation::Horizontal, 16);
             let on = Some(track.key) == playing;
-            let title = label(&track.title, if on { &["hk-playing"] } else { &[] });
-            title.set_hexpand(true);
-            title.set_max_width_chars(1);
+            let title = TitleLine::new(&track.title, if on { &["hk-playing"] } else { &[] });
+            title.set_copies(track.key, track.copies);
             line.append(&title);
             let album = label(&track.album_title, &["hk-t2"]);
             album.set_hexpand(true);

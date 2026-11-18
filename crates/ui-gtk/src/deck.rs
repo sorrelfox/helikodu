@@ -18,6 +18,7 @@ use crate::format;
 use crate::i18n::{fill, tr};
 use crate::models::CoverCache;
 use crate::playback::{Change, Playback, PlayerView};
+use crate::widgets::now_links::{self, NowLinks};
 use crate::widgets::{CoverArt, SignalLamp, WaveformSeekBar};
 
 mod imp {
@@ -36,6 +37,10 @@ mod imp {
         pub(super) remaining: TemplateChild<gtk::Label>,
         #[template_child]
         pub(super) cover: TemplateChild<CoverArt>,
+        #[template_child]
+        pub(super) now_box: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub(super) title_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub(super) title: TemplateChild<gtk::Label>,
         #[template_child]
@@ -81,6 +86,10 @@ mod imp {
         pub(super) sleep_tick: RefCell<Option<glib::SourceId>>,
         /// The player's state, for the mode buttons' handlers.
         pub(super) playback: RefCell<std::rc::Weak<Playback>>,
+        /// "Artist · Album" as links, in place of the subtitle while playing.
+        pub(super) links: RefCell<Option<NowLinks>>,
+        /// The playing track, for the title's link and menu.
+        pub(super) now: RefCell<Option<crate::backend::NowPlaying>>,
     }
 
     #[glib::object_subclass]
@@ -171,6 +180,116 @@ impl Deck {
             }
         });
         self.setup_play_menu();
+        self.setup_links(backend);
+    }
+
+    /// The title opens the album at the playing track; "Artist · Album" are
+    /// links; right click or the Menu key on them opens the track's menu.
+    fn setup_links(&self, backend: &Backend) {
+        let imp = self.imp();
+        let links = NowLinks::new(&["hk-deck-subtitle"]);
+        links.set_backend(backend);
+        links.widget().set_visible(false);
+        imp.now_box.append(links.widget());
+        imp.links.replace(Some(links));
+        imp.title_button.set_cursor_from_name(Some("pointer"));
+        let weak = self.downgrade();
+        imp.title_button.connect_clicked(move |button| {
+            let Some(deck) = weak.upgrade() else { return };
+            let now = deck.imp().now.borrow().clone();
+            if let Some(now) = now {
+                now_links::go_to_album(button, now.track.album, Some(now.track.key));
+            }
+        });
+        let weak = self.downgrade();
+        now_links::add_track_menu(&imp.now_box.get(), move || {
+            let deck = weak.upgrade()?;
+            let track = deck.imp().now.borrow().as_ref()?.track.clone();
+            Some(track)
+        });
+    }
+
+    /// Shows the playing track's title and links, or the idle lines.
+    fn show_now(&self, now: Option<&crate::backend::NowPlaying>) {
+        let imp = self.imp();
+        if imp.now.borrow().as_ref() == now {
+            return;
+        }
+        imp.now.replace(now.cloned());
+        let links = imp.links.borrow();
+        let button = &imp.title_button;
+        match now {
+            Some(now) => {
+                imp.title.set_text(&now.track.title);
+                imp.subtitle.set_text(&fill(
+                    &tr("{} · {}"),
+                    &[&now.track.artist, &now.album_title],
+                ));
+                let linked = now.track.album.0 != 0;
+                button.set_focusable(linked);
+                button.set_can_target(linked);
+                if linked {
+                    button.add_css_class("hk-now-link");
+                    let name = fill(&tr("Show {} in its album"), &[&now.track.title]);
+                    button.set_tooltip_text(Some(&name));
+                    button.update_property(&[gtk::accessible::Property::Label(&name)]);
+                } else {
+                    button.remove_css_class("hk-now-link");
+                    button.set_tooltip_text(None);
+                    button.update_property(&[gtk::accessible::Property::Label(&now.track.title)]);
+                }
+                if let Some(links) = links.as_ref() {
+                    let album = linked.then_some((now.album_title.as_str(), now.track.album));
+                    links.set(&now.track.artist, album, &[]);
+                    links.widget().set_visible(true);
+                    imp.subtitle.set_visible(false);
+                }
+            }
+            None => {
+                imp.title.set_text(&tr("Nothing playing"));
+                imp.subtitle
+                    .set_text(&tr("Pick an album, or drop files on the window"));
+                imp.subtitle.set_visible(true);
+                button.set_focusable(false);
+                button.set_can_target(false);
+                button.remove_css_class("hk-now-link");
+                button.set_tooltip_text(None);
+                if let Some(links) = links.as_ref() {
+                    links.widget().set_visible(false);
+                }
+            }
+        }
+    }
+
+    /// The accessible names of the title and the links.
+    pub(crate) fn link_names(&self) -> Vec<String> {
+        let imp = self.imp();
+        let mut names = Vec::new();
+        if imp.title_button.is_focusable() {
+            names.extend(imp.title_button.tooltip_text().map(String::from));
+        }
+        if let Some(links) = imp.links.borrow().as_ref() {
+            names.extend(links.link_names());
+        }
+        names
+    }
+
+    /// Clicks the title or link named `name`; whether there is one.
+    pub(crate) fn click_link(&self, name: &str) -> bool {
+        let imp = self.imp();
+        if imp.title_button.tooltip_text().as_deref() == Some(name) {
+            imp.title_button.emit_clicked();
+            return true;
+        }
+        let links = imp.links.borrow().clone();
+        links.is_some_and(|l| l.click(name))
+    }
+
+    /// Opens the playing track's context menu on the title.
+    pub(crate) fn popup_title_menu(&self) -> Option<gtk::PopoverMenu> {
+        let imp = self.imp();
+        let track = imp.now.borrow().as_ref()?.track.clone();
+        now_links::popup_track_menu(&imp.title_button.get(), track, None)
     }
 
     /// The play button's menu: right click, long press or the Menu key.
@@ -315,21 +434,10 @@ impl Deck {
                 imp.play.set_sensitive(has_track);
                 imp.previous.set_sensitive(has_track);
                 imp.next.set_sensitive(has_track);
+                self.show_now(view.now.as_ref());
                 match &view.now {
-                    Some(now) => {
-                        imp.title.set_text(&now.track.title);
-                        imp.subtitle.set_text(&fill(
-                            &tr("{} · {}"),
-                            &[&now.track.artist, &now.album_title],
-                        ));
-                        self.show_cover(now.cover, now.cover_seed);
-                    }
-                    None => {
-                        imp.title.set_text(&tr("Nothing playing"));
-                        imp.subtitle
-                            .set_text(&tr("Pick an album, or drop files on the window"));
-                        self.show_cover(None, 0);
-                    }
+                    Some(now) => self.show_cover(now.cover, now.cover_seed),
+                    None => self.show_cover(None, 0),
                 }
                 self.show_times(view);
             }

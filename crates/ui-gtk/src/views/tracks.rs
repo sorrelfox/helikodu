@@ -377,6 +377,13 @@ impl TracksView {
                     text(row.as_ref())
                 });
             }
+            TrackColumn::Title => {
+                cell.set_text(&text(row.as_ref()));
+                match row.as_ref() {
+                    Some(row) => cell.set_copies(row.key, row.copies),
+                    None => cell.set_copies(TrackKey(0), 0),
+                }
+            }
             _ => cell.set_text(&text(row.as_ref())),
         }
     }

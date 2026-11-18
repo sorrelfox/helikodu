@@ -106,6 +106,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
         </item>
       </submenu>
       <submenu>
+        <attribute name="label" translatable="yes">Tools</attribute>
+        <item>
+          <attribute name="label" translatable="yes">Find Duplicates…</attribute>
+          <attribute name="action">app.find-duplicates</attribute>
+        </item>
+      </submenu>
+      <submenu>
         <attribute name="label" translatable="yes">Help</attribute>
         <item>
           <attribute name="label" translatable="yes">Keyboard Shortcuts</attribute>
