@@ -62,7 +62,7 @@ const QUERY_COLUMNS: &[(TrackColumn, i32, bool)] = &[
     (TrackColumn::Album, 100, true),
     (TrackColumn::Genre, 80, false),
     (TrackColumn::Added, 90, false),
-    (TrackColumn::Length, 64, false),
+    (TrackColumn::Length, 80, false),
 ];
 
 /// How many tracks are listed before "Show all".

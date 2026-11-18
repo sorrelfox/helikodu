@@ -28,6 +28,7 @@ label { color: inherit; }
 /* GTK marks the ancestors of the focus widget :focus-visible too; only the
    focus widget itself gets the ring. */
 .hk *:focus:focus-visible { outline: 2px solid var(--hk-accent-text); outline-offset: 1px; }
+.hk entry > text:focus:focus-visible { outline: none; }
 
 .hk-t1 { color: var(--hk-t1); }
 .hk-t2 { color: var(--hk-t2); }

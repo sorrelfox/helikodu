@@ -46,7 +46,7 @@ const COLUMNS: &[(TrackColumn, bool, i32, bool)] = &[
     (TrackColumn::Rating, true, 86, false),
     (TrackColumn::Plays, false, 62, false),
     (TrackColumn::Added, false, 96, false),
-    (TrackColumn::Length, true, 64, false),
+    (TrackColumn::Length, true, 80, false),
 ];
 
 /// The name of a column as its header shows it.
