@@ -37,7 +37,7 @@ High-contrast and reduced-motion preferences of the desktop are followed as well
 
 - **Tags in MP3 files**: **ID3v2.4** (the default) or **ID3v2.3**, for new tags that the [tag editor](tags.md) writes into MP3 files. Choose ID3v2.3 if an old car stereo or portable player shows no tags.
 - **Very large files**: **Change tags in place for files over** a size (2 GiB by default). Smaller files are changed through a checked copy, which is safe even if the power fails; a change in place is faster for huge files but has no such safety net. The tag editor tells you before it happens.
-- **Ratings**: **Also write ratings to the tags of the files** is shown, but cannot be turned on in this version; ratings stay in the library.
+- **Ratings**: **Also write ratings to the tags of the files** (off by default) writes a rating you give into the file as well, so that other players can read it; see [Ratings](tags.md#ratings). Ratings are kept in the library either way.
 - **Library database**: where the library is stored, its size and the result of its last check, with **Open folder**.
 - **Backups**: a backup of the library is made once a day while Helikodu runs, and the last 7 are kept in `~/.local/share/helikodu/backups/`. **Back up now** makes one at once. **Restore…** puts a backup back: choose the file, confirm, and Helikodu starts again with the library as it was then. The library as it was before is kept in the backups folder.
 - **Slow drives**: **Load each track into memory before it plays**, for drives that are slow or go to sleep (up to 512 MiB per track).

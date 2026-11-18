@@ -75,7 +75,7 @@ Settings are in `~/.config/helikodu/settings.toml`, the library (with ratings, p
 
 ## Does Helikodu change my music files?
 
-Only when you ask it to. It reads your files and keeps everything it learns, including your ratings and play counts, in its own library database. The files change only when you save tags in the [tag editor](guide/tags.md), write loudness values to the tags, organize files (renaming and moving them, which can be undone) or move copies to the desktop trash; Convert and Sync and Export write new files and leave the originals alone. Ratings are not written into the files.
+Only when you ask it to. It reads your files and keeps everything it learns, including your ratings and play counts, in its own library database. The files change only when you save tags in the [tag editor](guide/tags.md), write loudness values to the tags, organize files (renaming and moving them, which can be undone) or move copies to the desktop trash; Convert and Sync and Export write new files and leave the originals alone. Ratings are written into the files only if you turn that on in **Settings → Advanced**.
 
 ## Can I use Helikodu with only the keyboard, or with a screen reader?
 

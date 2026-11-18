@@ -70,6 +70,6 @@ Any other extension writes M3U8.
 
 ## Ratings
 
-Give a track one to five stars with **Rate** in its right-click menu, by clicking the stars in the **Rating** column of a track table, or in the [tag editor](tags.md); choose **Not rated** to clear it. Ratings are kept in Helikodu's library and survive moves and renames of the file. They are not written into the files.
+Give a track one to five stars with **Rate** in its right-click menu, by clicking the stars in the **Rating** column of a track table, or in the [tag editor](tags.md); choose **Not rated** to clear it. Ratings are kept in Helikodu's library and survive moves and renames of the file. They are written into the files only if you turn that on; see [Ratings](tags.md#ratings).
 
 When Helikodu first reads a file, it takes over a rating that another player wrote into the tags (for example with MusicBee, Quod Libet, foobar2000 or Picard).
