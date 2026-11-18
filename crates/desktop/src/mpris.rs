@@ -4,8 +4,10 @@
 //! MPRIS2 on the session bus: shell media widgets, lock screens, media keys,
 //! KDE Connect, playerctl.
 //!
-//! [`Mpris::start`] serves `org.mpris.MediaPlayer2` and
-//! `org.mpris.MediaPlayer2.Player` at `/org/mpris/MediaPlayer2` under the bus
+//! [`Mpris::start`] serves `org.mpris.MediaPlayer2`,
+//! `org.mpris.MediaPlayer2.Player`, `org.mpris.MediaPlayer2.TrackList` and, when
+//! the front end lists playlists ([`MprisHooks::with_playlists`]),
+//! `org.mpris.MediaPlayer2.Playlists` at `/org/mpris/MediaPlayer2` under the bus
 //! name [`BUS_NAME`]. The player's events drive it: either the front end hands
 //! each [`PlayerEvent`] to [`Mpris::handle`] from its main loop, or
 //! [`Mpris::follow`] does so on a thread of its own. Calls from clients become
@@ -27,6 +29,15 @@
 //!   queue: no next track at the end of a queue that does not repeat, no seeking
 //!   without a known length.
 //! - `OpenUri` takes `file://` URIs only.
+//! - The track list is the queue in play order (for a long queue, the part of
+//!   it around the current entry: [`TRACK_LIST_LIMIT`] entries). A single entry
+//!   added or removed is announced with `TrackAdded` or `TrackRemoved`, any other
+//!   change with `TrackListReplaced`; `Tracks` is invalidated with each. The
+//!   metadata of entries that are not current is looked up when a client asks
+//!   ([`MprisHooks::with_describe`]). Tracks cannot be added or removed through
+//!   MPRIS (`CanEditTracks` is false); `GoTo` plays an entry.
+//! - The active playlist is the playlist the queue came from; a playlist's id is
+//!   an object path made from its number ([`playlist_id`]).
 //!
 //! The calls block for a D-Bus round trip at most; zbus runs its own small
 //! executor, not tokio.
@@ -41,8 +52,9 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
+use helikodu_model::library::TrackRef;
 use helikodu_model::player::EntryId;
 use helikodu_service::bus::Subscription;
 use helikodu_service::library::QueueItemInfo;
@@ -56,7 +68,8 @@ use zbus::names::BusName;
 
 use self::art::ArtExport;
 pub use self::art::default_art_dir;
-use self::state::{Announcement, Changed, State};
+pub use self::state::TRACK_LIST_LIMIT;
+use self::state::{Announcement, Changed, State, TrackListChange};
 
 /// The well-known bus name.
 pub const BUS_NAME: &str = "org.mpris.MediaPlayer2.io.github.sorrelfox.Helikodu";
@@ -66,8 +79,45 @@ pub const OBJECT_PATH: &str = "/org/mpris/MediaPlayer2";
 pub const ROOT_INTERFACE: &str = "org.mpris.MediaPlayer2";
 /// The player interface.
 pub const PLAYER_INTERFACE: &str = "org.mpris.MediaPlayer2.Player";
+/// The track list interface.
+pub const TRACKLIST_INTERFACE: &str = "org.mpris.MediaPlayer2.TrackList";
+/// The playlists interface.
+pub const PLAYLISTS_INTERFACE: &str = "org.mpris.MediaPlayer2.Playlists";
 /// The start of every `mpris:trackid`; the queue entry's number follows.
 pub const TRACK_ID_PREFIX: &str = "/io/github/sorrelfox/Helikodu/Track/";
+/// The start of every playlist id; the playlist's number follows.
+pub const PLAYLIST_ID_PREFIX: &str = "/io/github/sorrelfox/Helikodu/Playlist/";
+
+/// The object path that names a playlist.
+pub fn playlist_id(playlist: u64) -> String {
+    format!("{PLAYLIST_ID_PREFIX}{playlist}")
+}
+
+/// One playlist as MPRIS lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MprisPlaylist {
+    /// Its number in the library.
+    pub id: u64,
+    /// Its name.
+    pub name: String,
+    /// When it was made, for the `CreationDate` ordering.
+    pub created: Option<SystemTime>,
+    /// When it last changed, for the `ModifiedDate` ordering.
+    pub modified: Option<SystemTime>,
+}
+
+/// Where the playlists come from. Both calls run on zbus's executor thread and
+/// must return soon.
+pub trait PlaylistSource: Send + Sync {
+    /// Every playlist, in the order the window lists them (`UserDefined`).
+    fn playlists(&self) -> Vec<MprisPlaylist>;
+    /// Plays the playlist `id`, replacing the queue.
+    fn activate(&self, id: u64);
+}
+
+/// Looks up the entries of the track list that are not current: one
+/// [`TrackDetails`] per track, in order.
+pub type DescribeHook = Arc<dyn Fn(&[TrackRef]) -> Vec<TrackDetails> + Send + Sync>;
 
 /// The `mpris:trackid` of a queue entry: an object path, unique within the
 /// queue, also when one track is queued twice.
@@ -104,6 +154,8 @@ pub struct TrackDetails {
     /// An image file of the cover, such as the thumbnail the window shows. It is
     /// copied to the art folder for `mpris:artUrl`.
     pub cover: Option<PathBuf>,
+    /// The track's file, for `xesam:url` in the track list.
+    pub path: Option<PathBuf>,
 }
 
 impl From<&QueueItemInfo> for TrackDetails {
@@ -116,6 +168,7 @@ impl From<&QueueItemInfo> for TrackDetails {
             album: info.album.clone(),
             track_number: info.track_no,
             length: info.duration,
+            path: info.path.clone(),
             ..Self::default()
         }
     }
@@ -162,6 +215,11 @@ pub struct MprisHooks {
     /// `OpenUri` with a local file. Without it the file replaces the queue and
     /// plays (`PlayerCommand::PlayFiles`).
     pub open: Option<Arc<dyn Fn(PathBuf) + Send + Sync>>,
+    /// Looks up the entries of the track list. Without it they show their file
+    /// names only.
+    pub describe: Option<DescribeHook>,
+    /// The playlists. Without them the `Playlists` interface is not served.
+    pub playlists: Option<Arc<dyn PlaylistSource>>,
 }
 
 impl MprisHooks {
@@ -172,6 +230,8 @@ impl MprisHooks {
             raise: None,
             quit: None,
             open: None,
+            describe: None,
+            playlists: None,
         }
     }
 
@@ -203,6 +263,23 @@ impl MprisHooks {
         self.open = Some(Arc::new(open));
         self
     }
+
+    /// The same hooks with a lookup for the entries of the track list.
+    #[must_use]
+    pub fn with_describe(
+        mut self,
+        describe: impl Fn(&[TrackRef]) -> Vec<TrackDetails> + Send + Sync + 'static,
+    ) -> Self {
+        self.describe = Some(Arc::new(describe));
+        self
+    }
+
+    /// The same hooks with playlists, which serves the `Playlists` interface.
+    #[must_use]
+    pub fn with_playlists(mut self, playlists: impl PlaylistSource + 'static) -> Self {
+        self.playlists = Some(Arc::new(playlists));
+        self
+    }
 }
 
 impl fmt::Debug for MprisHooks {
@@ -211,6 +288,8 @@ impl fmt::Debug for MprisHooks {
             .field("raise", &self.raise.is_some())
             .field("quit", &self.quit.is_some())
             .field("open", &self.open.is_some())
+            .field("describe", &self.describe.is_some())
+            .field("playlists", &self.playlists.is_some())
             .finish_non_exhaustive()
     }
 }
@@ -259,11 +338,49 @@ pub(crate) struct Shared {
     config: MprisConfig,
     hooks: MprisHooks,
     state: Mutex<State>,
+    /// The playlists as last announced.
+    playlists: Mutex<Vec<MprisPlaylist>>,
 }
 
 impl Shared {
     pub(crate) fn state(&self) -> MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(crate) fn playlists(&self) -> MutexGuard<'_, Vec<MprisPlaylist>> {
+        self.playlists
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// The details of `tracks`, as far as the front end looks them up.
+    pub(crate) fn describe(&self, tracks: &[TrackRef]) -> Vec<Option<TrackDetails>> {
+        let mut found = match &self.hooks.describe {
+            Some(describe) if !tracks.is_empty() => describe(tracks),
+            _ => Vec::new(),
+        }
+        .into_iter()
+        .map(Some)
+        .collect::<Vec<_>>();
+        found.resize(tracks.len(), None);
+        found
+    }
+
+    /// The `ActivePlaylist` value: whether one plays, and its id, name and icon.
+    pub(crate) fn active_playlist(&self) -> (bool, (String, String, String)) {
+        let active = self.state().active_playlist();
+        let playlists = self.playlists();
+        match active.and_then(|id| playlists.iter().find(|p| p.id == id)) {
+            Some(playlist) => (
+                true,
+                (
+                    playlist_id(playlist.id),
+                    playlist.name.clone(),
+                    String::new(),
+                ),
+            ),
+            None => (false, ("/".to_owned(), String::new(), String::new())),
+        }
     }
 }
 
@@ -315,13 +432,20 @@ impl Mpris {
         hooks: MprisHooks,
     ) -> Result<Self, MprisError> {
         let art = ArtExport::new(config.art_dir.clone());
+        let playlists = hooks
+            .playlists
+            .as_ref()
+            .map(|source| source.playlists())
+            .unwrap_or_default();
+        let serve_playlists = hooks.playlists.is_some();
         let shared = Arc::new(Shared {
             config,
             hooks,
             state: Mutex::new(State::new()),
+            playlists: Mutex::new(playlists),
         });
         let (connection, bus_name) = zbus::block_on(async {
-            let connection = builder
+            let mut builder = builder
                 .serve_at(
                     OBJECT_PATH,
                     interfaces::Root {
@@ -334,8 +458,21 @@ impl Mpris {
                         shared: Arc::clone(&shared),
                     },
                 )
-                .build()
-                .await?;
+                .serve_at(
+                    OBJECT_PATH,
+                    interfaces::TrackList {
+                        shared: Arc::clone(&shared),
+                    },
+                );
+            if serve_playlists {
+                builder = builder.serve_at(
+                    OBJECT_PATH,
+                    interfaces::Playlists {
+                        shared: Arc::clone(&shared),
+                    },
+                );
+            }
+            let connection = builder.build().await?;
             let instance = format!("{BUS_NAME}.instance{}", std::process::id());
             for name in [BUS_NAME.to_owned(), instance] {
                 match connection
@@ -448,6 +585,67 @@ impl Mpris {
         })
     }
 
+    /// Reads the playlists again after they changed, and announces new names
+    /// (`PlaylistChanged`), a new count and a changed active playlist.
+    pub fn playlists_changed(&self) {
+        let Some(source) = &self.inner.shared.hooks.playlists else {
+            return;
+        };
+        let new = source.playlists();
+        let _order = self
+            .inner
+            .announcing
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        let before = self.inner.shared.active_playlist();
+        let old = std::mem::replace(&mut *self.inner.shared.playlists(), new.clone());
+        let after = self.inner.shared.active_playlist();
+        let renamed: Vec<&MprisPlaylist> = new
+            .iter()
+            .filter(|p| old.iter().any(|o| o.id == p.id && o.name != p.name))
+            .collect();
+        let mut changed: HashMap<&str, zbus::OwnedVariant> = HashMap::new();
+        if old.len() != new.len() {
+            changed.insert(
+                "PlaylistCount",
+                zbus::OwnedVariant::from(u32::try_from(new.len()).unwrap_or(u32::MAX)),
+            );
+        }
+        if before != after
+            && let Some(value) = interfaces::active_playlist_variant(&after)
+        {
+            changed.insert("ActivePlaylist", value);
+        }
+        let connection = &self.inner.connection;
+        // As for the other signals: a lost update is followed by a later one.
+        let _ = zbus::block_on(async {
+            for playlist in renamed {
+                let id = zbus::ObjectPath::try_from(playlist_id(playlist.id))?;
+                connection
+                    .emit_signal(
+                        None::<BusName<'_>>,
+                        OBJECT_PATH,
+                        PLAYLISTS_INTERFACE,
+                        "PlaylistChanged",
+                        &((id, playlist.name.as_str(), ""),),
+                    )
+                    .await?;
+            }
+            if !changed.is_empty() {
+                connection
+                    .emit_signal(
+                        None::<BusName<'_>>,
+                        OBJECT_PATH,
+                        "org.freedesktop.DBus.Properties",
+                        "PropertiesChanged",
+                        &(PLAYLISTS_INTERFACE, changed, Vec::<&str>::new()),
+                    )
+                    .await?;
+            }
+            zbus::Result::Ok(())
+        });
+    }
+
     fn export_art(&self, cover: Option<&Path>) -> Option<String> {
         let mut art = self
             .inner
@@ -470,16 +668,51 @@ impl Mpris {
             let seeked = change(&mut state);
             state.announce(seeked)
         };
-        if !announcement.is_empty() {
-            // A client that is gone or a full socket loses one update; the next
-            // one carries the current values again.
-            let _ = zbus::block_on(announce(&self.inner.connection, announcement));
+        if announcement.is_empty() {
+            return;
         }
+        // The metadata of an added entry is looked up without the state locked.
+        let added = match &announcement.tracks {
+            Some(TrackListChange::Added { entry, track, .. }) => {
+                let details = self
+                    .inner
+                    .shared
+                    .describe(std::slice::from_ref(track))
+                    .pop()
+                    .flatten();
+                Some(
+                    self.inner
+                        .shared
+                        .state()
+                        .entry_metadata(*entry, track, details.as_ref()),
+                )
+            }
+            _ => None,
+        };
+        let active = announcement
+            .active_playlist
+            .is_some()
+            .then(|| self.inner.shared.active_playlist())
+            .filter(|_| self.inner.shared.hooks.playlists.is_some());
+        // A client that is gone or a full socket loses one update; the next
+        // one carries the current values again.
+        let _ = zbus::block_on(announce(
+            &self.inner.connection,
+            announcement,
+            added.as_ref(),
+            active.as_ref(),
+        ));
     }
 }
 
-/// Sends `PropertiesChanged` and `Seeked`.
-async fn announce(connection: &Connection, announcement: Announcement) -> zbus::Result<()> {
+/// Sends `PropertiesChanged` and `Seeked`, then the changes of the track list
+/// and of the active playlist.
+async fn announce(
+    connection: &Connection,
+    announcement: Announcement,
+    added: Option<&state::Metadata>,
+    active: Option<&(bool, (String, String, String))>,
+) -> zbus::Result<()> {
     if !announcement.changed.is_empty() {
         let mut changed: HashMap<&str, zbus::OwnedVariant> = HashMap::new();
         for change in &announcement.changed {
@@ -517,7 +750,95 @@ async fn announce(connection: &Connection, announcement: Announcement) -> zbus::
             )
             .await?;
     }
+    if let Some(change) = &announcement.tracks {
+        announce_tracks(connection, change, added).await?;
+    }
+    if let Some((id, metadata)) = &announcement.track_metadata {
+        connection
+            .emit_signal(
+                None::<BusName<'_>>,
+                OBJECT_PATH,
+                TRACKLIST_INTERFACE,
+                "TrackMetadataChanged",
+                &(
+                    zbus::ObjectPath::try_from(id.as_str())?,
+                    interfaces::to_dbus(metadata),
+                ),
+            )
+            .await?;
+    }
+    if let Some(value) = active.and_then(interfaces::active_playlist_variant) {
+        let changed = HashMap::from([("ActivePlaylist", value)]);
+        connection
+            .emit_signal(
+                None::<BusName<'_>>,
+                OBJECT_PATH,
+                "org.freedesktop.DBus.Properties",
+                "PropertiesChanged",
+                &(PLAYLISTS_INTERFACE, changed, Vec::<&str>::new()),
+            )
+            .await?;
+    }
     Ok(())
+}
+
+/// Sends the signal of a track list change and invalidates `Tracks`.
+async fn announce_tracks(
+    connection: &Connection,
+    change: &TrackListChange,
+    added: Option<&state::Metadata>,
+) -> zbus::Result<()> {
+    let path = |id: &str| zbus::ObjectPath::try_from(id.to_owned());
+    match change {
+        TrackListChange::Added { after, .. } => {
+            let metadata = added.map(interfaces::to_dbus).unwrap_or_default();
+            connection
+                .emit_signal(
+                    None::<BusName<'_>>,
+                    OBJECT_PATH,
+                    TRACKLIST_INTERFACE,
+                    "TrackAdded",
+                    &(metadata, path(after)?),
+                )
+                .await?;
+        }
+        TrackListChange::Removed(id) => {
+            connection
+                .emit_signal(
+                    None::<BusName<'_>>,
+                    OBJECT_PATH,
+                    TRACKLIST_INTERFACE,
+                    "TrackRemoved",
+                    &(path(id)?,),
+                )
+                .await?;
+        }
+        TrackListChange::Replaced { tracks, current } => {
+            let tracks = tracks
+                .iter()
+                .map(|id| path(id))
+                .collect::<Result<Vec<_>, _>>()?;
+            connection
+                .emit_signal(
+                    None::<BusName<'_>>,
+                    OBJECT_PATH,
+                    TRACKLIST_INTERFACE,
+                    "TrackListReplaced",
+                    &(tracks, path(current)?),
+                )
+                .await?;
+        }
+    }
+    let changed: HashMap<&str, zbus::OwnedVariant> = HashMap::new();
+    connection
+        .emit_signal(
+            None::<BusName<'_>>,
+            OBJECT_PATH,
+            "org.freedesktop.DBus.Properties",
+            "PropertiesChanged",
+            &(TRACKLIST_INTERFACE, changed, vec!["Tracks"]),
+        )
+        .await
 }
 
 /// The thread of [`Mpris::follow`]; dropping it ends the thread.
@@ -628,9 +949,10 @@ mod tests {
             track_no: Some(2),
             duration: Some(Duration::from_secs(61)),
             cover: None,
-            path: None,
+            path: Some(PathBuf::from("/music/a.flac")),
         };
         let details = TrackDetails::from(&info);
+        assert_eq!(details.path.as_deref(), Some(Path::new("/music/a.flac")));
         assert_eq!(details.title.as_deref(), Some("Title"));
         assert_eq!(details.artists, ["Artist"]);
         assert_eq!(details.track_number, Some(2));

@@ -28,7 +28,8 @@ use crate::playlists::{
 use crate::scan::{self, CancelToken, ScanError, ScanEvent, ScanOptions, ScanSummary};
 use crate::search::{self, SearchRequest, SearchResults};
 use crate::stats::{
-    HistoryEntry, HistoryQuery, Listen, ListenOutcome, PlayRules, Rating, TrackStats, store,
+    HistoryEntry, HistoryQuery, HistoryTotals, Listen, ListenOutcome, PlayRules, Rating,
+    TrackStats, store,
 };
 
 /// The music library.
@@ -609,6 +610,11 @@ impl Library {
             .map(|track| self.identity_of(track))
             .transpose()?;
         self.db.read(|c| store::history(c, identity, query))
+    }
+
+    /// The totals of the whole listening history.
+    pub fn history_totals(&self) -> Result<HistoryTotals, DbError> {
+        self.db.read(store::history_totals)
     }
 
     /// Runs `job` with the identity of `track` on the writer.

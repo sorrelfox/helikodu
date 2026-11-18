@@ -10,20 +10,22 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use helikodu_desktop::mpris::{
-    BUS_NAME, Mpris, MprisConfig, MprisHooks, OBJECT_PATH, PLAYER_INTERFACE, PlayerView,
-    ROOT_INTERFACE, TrackDetails, track_id,
+    BUS_NAME, Mpris, MprisConfig, MprisHooks, MprisPlaylist, OBJECT_PATH, PLAYER_INTERFACE,
+    PLAYLISTS_INTERFACE, PlayerView, PlaylistSource, ROOT_INTERFACE, TRACKLIST_INTERFACE,
+    TrackDetails, playlist_id, track_id,
 };
 use helikodu_model::audio::{
     AudioSpec, ChannelLayout, Endianness, MediaTime, SampleFormat, SampleRate,
 };
 use helikodu_model::library::{MediaSource, TrackRef};
 use helikodu_model::player::{
-    EntryId, PlaybackState, QueueEntry, RepeatMode, TransportState, Volume,
+    ContextSource, EntryId, PlaybackState, QueueContext, QueueEntry, RepeatMode, TransportState,
+    Volume,
 };
 use helikodu_service::player::{
     NowPlaying, PlayerCommand, PlayerEvent, PlayerStatus, QueueSnapshot,
 };
-use zbus::{Connection, Message, ObjectPath, OwnedVariant};
+use zbus::{Connection, Message, ObjectPath, OwnedObjectPath, OwnedVariant};
 
 use super::private_bus::{PrivateBus, Signals};
 
@@ -115,6 +117,10 @@ struct Fixture {
 
 impl Fixture {
     fn start(name: &str) -> Option<Self> {
+        Self::start_with(name, |hooks| hooks)
+    }
+
+    fn start_with(name: &str, more: impl FnOnce(MprisHooks) -> MprisHooks) -> Option<Self> {
         let bus = PrivateBus::start()?;
         let commands = Arc::new(Mutex::new(Vec::new()));
         let raised = Arc::new(AtomicUsize::new(0));
@@ -124,6 +130,7 @@ impl Fixture {
             .with_raise(move || {
                 raises.fetch_add(1, Ordering::SeqCst);
             });
+        let hooks = more(hooks);
         let art_dir =
             std::env::temp_dir().join(format!("helikodu-mpris-test-{name}-{}", std::process::id()));
         let config = MprisConfig {
@@ -203,6 +210,19 @@ fn properties_changed(message: &Message) -> Changes {
     changed
 }
 
+/// The next `PropertiesChanged` of the player interface, skipping those of the
+/// other interfaces.
+fn player_changes(signals: &Signals) -> Changes {
+    loop {
+        let message = signals.next("PropertiesChanged", WAIT).unwrap();
+        let (interface, _, _): (String, Changes, Vec<String>) =
+            message.body().deserialize().unwrap();
+        if interface == PLAYER_INTERFACE {
+            return properties_changed(&message);
+        }
+    }
+}
+
 fn seeked(message: &Message) -> i64 {
     message.body().deserialize::<i64>().unwrap()
 }
@@ -259,7 +279,7 @@ fn properties_before_anything_plays() {
     );
     assert!(flag(&fixture.get(ROOT_INTERFACE, "CanRaise")));
     assert!(!flag(&fixture.get(ROOT_INTERFACE, "CanQuit")));
-    assert!(!flag(&fixture.get(ROOT_INTERFACE, "HasTrackList")));
+    assert!(flag(&fixture.get(ROOT_INTERFACE, "HasTrackList")));
     let schemes: Vec<String> = fixture
         .get(ROOT_INTERFACE, "SupportedUriSchemes")
         .try_into()
@@ -296,7 +316,7 @@ fn events_are_announced_once_and_seeks_are_signalled() {
 
     // A track starts: its metadata and capabilities, then a Seeked to 0.
     fixture.mpris.handle(&play_entry(view, 1, 2), view);
-    let changed = properties_changed(&signals.next("PropertiesChanged", WAIT).unwrap());
+    let changed = player_changes(&signals);
     let meta = metadata(&changed["Metadata"]);
     let id: ObjectPath<'_> = meta["mpris:trackid"].downcast_ref().unwrap();
     assert_eq!(id.as_str(), track_id(EntryId::new(1)));
@@ -320,7 +340,7 @@ fn events_are_announced_once_and_seeks_are_signalled() {
     fixture
         .mpris
         .handle(&set_state(view, PlaybackState::Playing), view);
-    let changed = properties_changed(&signals.next("PropertiesChanged", WAIT).unwrap());
+    let changed = player_changes(&signals);
     assert_eq!(changed.len(), 1);
     assert_eq!(text(&changed["PlaybackStatus"]), "Playing");
 
@@ -352,7 +372,7 @@ fn events_are_announced_once_and_seeks_are_signalled() {
 
     // The last track: no next one, other metadata.
     fixture.mpris.handle(&play_entry(view, 2, 2), view);
-    let changed = properties_changed(&signals.next("PropertiesChanged", WAIT).unwrap());
+    let changed = player_changes(&signals);
     assert!(!flag(&changed["CanGoNext"]));
     assert_eq!(
         text(&metadata(&changed["Metadata"])["xesam:title"]),
@@ -373,7 +393,7 @@ fn events_are_announced_once_and_seeks_are_signalled() {
             ..TrackDetails::default()
         },
     );
-    let changed = properties_changed(&signals.next("PropertiesChanged", WAIT).unwrap());
+    let changed = player_changes(&signals);
     let meta = metadata(&changed["Metadata"]);
     assert_eq!(text(&meta["xesam:title"]), "Second");
     let art = text(&meta["mpris:artUrl"]);
@@ -486,4 +506,310 @@ fn calls_reach_the_player() {
         .mpris
         .handle(&PlayerEvent::ModesChanged(modes), view);
     assert!(signals.drain(QUIET).is_empty());
+}
+
+/// Sets the fake player's queue to the entries `ids` (in play order), with
+/// `current` playing, from `context`; returns an event that makes MPRIS look.
+fn set_queue(view: &FakeView, ids: &[u64], current: u64, context: ContextSource) -> PlayerEvent {
+    let entries = ids
+        .iter()
+        .map(|id| QueueEntry {
+            id: EntryId::new(*id),
+            track: TrackRef::File(MediaSource::file(path(*id))),
+            from_context: true,
+        })
+        .collect();
+    let index = ids.iter().position(|id| *id == current);
+    let version = view.queue.lock().unwrap().version + 1;
+    *view.queue.lock().unwrap() = Arc::new(QueueSnapshot {
+        version,
+        context: QueueContext {
+            source: context,
+            title: None,
+        },
+        entries,
+        current: index,
+        ..QueueSnapshot::default()
+    });
+    view.status.lock().unwrap().now_playing = Some(NowPlaying {
+        entry: EntryId::new(current),
+        track: TrackRef::File(MediaSource::file(path(current))),
+        path: path(current),
+        spec: spec(),
+        length: Some(MediaTime::from_millis(200_000)),
+    });
+    PlayerEvent::QueueChanged { version }
+}
+
+fn path_of(id: u64) -> ObjectPath<'static> {
+    ObjectPath::try_from(track_id(EntryId::new(id))).unwrap()
+}
+
+fn ids(paths: &[OwnedObjectPath]) -> Vec<String> {
+    paths.iter().map(|p| p.as_str().to_owned()).collect()
+}
+
+fn id_strings(ids: &[u64]) -> Vec<String> {
+    ids.iter().map(|id| track_id(EntryId::new(*id))).collect()
+}
+
+#[test]
+fn the_track_list_follows_the_queue() {
+    let Some(fixture) = Fixture::start_with("tracklist", |hooks| {
+        hooks.with_describe(|tracks| {
+            tracks
+                .iter()
+                .map(|track| TrackDetails {
+                    title: Some(match track {
+                        TrackRef::File(source) => format!(
+                            "Described {}",
+                            source.path().file_name().unwrap().to_string_lossy()
+                        ),
+                        _ => "Library".into(),
+                    }),
+                    artists: vec!["Someone".into()],
+                    length: Some(Duration::from_secs(61)),
+                    ..TrackDetails::default()
+                })
+                .collect()
+        })
+    }) else {
+        return;
+    };
+    let view = &fixture.view;
+    let signals = Signals::record(&fixture.client, OBJECT_PATH);
+
+    // A new queue replaces the list.
+    fixture
+        .mpris
+        .handle(&set_queue(view, &[1, 2, 3], 1, ContextSource::Files), view);
+    let replaced = signals.next("TrackListReplaced", WAIT).unwrap();
+    let (tracks, current): (Vec<OwnedObjectPath>, OwnedObjectPath) =
+        replaced.body().deserialize().unwrap();
+    assert_eq!(ids(&tracks), id_strings(&[1, 2, 3]));
+    assert_eq!(current.as_str(), track_id(EntryId::new(1)));
+    let invalidated = signals.next("PropertiesChanged", WAIT).unwrap();
+    let (interface, changed, gone): (String, Changes, Vec<String>) =
+        invalidated.body().deserialize().unwrap();
+    assert_eq!(interface, TRACKLIST_INTERFACE);
+    assert!(changed.is_empty());
+    assert_eq!(gone, ["Tracks"]);
+    let shown: Vec<OwnedObjectPath> = fixture
+        .get(TRACKLIST_INTERFACE, "Tracks")
+        .try_into()
+        .unwrap();
+    assert_eq!(ids(&shown), id_strings(&[1, 2, 3]));
+    assert!(!flag(&fixture.get(TRACKLIST_INTERFACE, "CanEditTracks")));
+
+    // Metadata: the current entry as the player shows it, others looked up;
+    // unknown ids are left out.
+    let unknown = ObjectPath::try_from("/io/github/sorrelfox/Helikodu/Track/99").unwrap();
+    let reply = zbus::block_on(fixture.client.call_method(
+        Some(BUS_NAME),
+        OBJECT_PATH,
+        Some(TRACKLIST_INTERFACE),
+        "GetTracksMetadata",
+        &(vec![path_of(2), unknown, path_of(1)],),
+    ))
+    .unwrap();
+    let found: Vec<HashMap<String, OwnedVariant>> = reply.body().deserialize().unwrap();
+    assert_eq!(found.len(), 2);
+    assert_eq!(text(&found[0]["xesam:title"]), "Described Track 2.flac");
+    assert_eq!(text(&found[0]["xesam:url"]), "file:///music/Track%202.flac");
+    let length: i64 = found[0]["mpris:length"].downcast_ref().unwrap();
+    assert_eq!(length, 61_000_000);
+    let id: ObjectPath<'_> = found[1]["mpris:trackid"].downcast_ref().unwrap();
+    assert_eq!(id.as_str(), track_id(EntryId::new(1)));
+    assert_eq!(text(&found[1]["xesam:title"]), "Track 1");
+
+    // One entry added at the end, then one removed: their own signals.
+    fixture.mpris.handle(
+        &set_queue(view, &[1, 2, 3, 4], 1, ContextSource::Files),
+        view,
+    );
+    let added = signals.next("TrackAdded", WAIT).unwrap();
+    let (metadata, after): (HashMap<String, OwnedVariant>, OwnedObjectPath) =
+        added.body().deserialize().unwrap();
+    assert_eq!(after.as_str(), track_id(EntryId::new(3)));
+    assert_eq!(text(&metadata["xesam:title"]), "Described Track 4.flac");
+    fixture
+        .mpris
+        .handle(&set_queue(view, &[1, 3, 4], 1, ContextSource::Files), view);
+    let removed = signals.next("TrackRemoved", WAIT).unwrap();
+    let (gone,): (OwnedObjectPath,) = removed.body().deserialize().unwrap();
+    assert_eq!(gone.as_str(), track_id(EntryId::new(2)));
+    // At the start: after NoTrack.
+    fixture.mpris.handle(
+        &set_queue(view, &[5, 1, 3, 4], 1, ContextSource::Files),
+        view,
+    );
+    let added = signals.next("TrackAdded", WAIT).unwrap();
+    let (_, after): (HashMap<String, OwnedVariant>, OwnedObjectPath) =
+        added.body().deserialize().unwrap();
+    assert_eq!(after.as_str(), "/org/mpris/MediaPlayer2/TrackList/NoTrack");
+
+    // GoTo plays a listed entry; other ids reach nobody.
+    fixture.take_commands();
+    fixture.call(TRACKLIST_INTERFACE, "GoTo", &(path_of(3),));
+    fixture.call(TRACKLIST_INTERFACE, "GoTo", &(path_of(2),));
+    assert_eq!(
+        fixture.take_commands(),
+        [PlayerCommand::PlayEntry(EntryId::new(3))]
+    );
+}
+
+#[derive(Default)]
+struct FakePlaylists {
+    lists: Arc<Mutex<Vec<MprisPlaylist>>>,
+    activated: Arc<Mutex<Vec<u64>>>,
+}
+
+impl PlaylistSource for FakePlaylists {
+    fn playlists(&self) -> Vec<MprisPlaylist> {
+        self.lists.lock().unwrap().clone()
+    }
+
+    fn activate(&self, id: u64) {
+        self.activated.lock().unwrap().push(id);
+    }
+}
+
+fn playlist(id: u64, name: &str, created: u64) -> MprisPlaylist {
+    let at = std::time::SystemTime::UNIX_EPOCH + Duration::from_secs(created);
+    MprisPlaylist {
+        id,
+        name: name.into(),
+        created: Some(at),
+        modified: Some(at),
+    }
+}
+
+type PlaylistTuple = (OwnedObjectPath, String, String);
+
+#[test]
+fn playlists_are_listed_activated_and_followed() {
+    let lists = Arc::new(Mutex::new(vec![
+        playlist(1, "workouts", 30),
+        playlist(2, "Late evening", 10),
+        playlist(3, "Favourites", 20),
+    ]));
+    let activated = Arc::new(Mutex::new(Vec::new()));
+    let source = FakePlaylists {
+        lists: Arc::clone(&lists),
+        activated: Arc::clone(&activated),
+    };
+    let Some(fixture) = Fixture::start_with("playlists", |hooks| hooks.with_playlists(source))
+    else {
+        return;
+    };
+    let view = &fixture.view;
+    let count: u32 = fixture
+        .get(PLAYLISTS_INTERFACE, "PlaylistCount")
+        .downcast_ref()
+        .unwrap();
+    assert_eq!(count, 3);
+    let orderings: Vec<String> = fixture
+        .get(PLAYLISTS_INTERFACE, "Orderings")
+        .try_into()
+        .unwrap();
+    assert!(orderings.contains(&"Alphabetical".to_owned()));
+    assert!(orderings.contains(&"UserDefined".to_owned()));
+
+    let get = |index: u32, max: u32, order: &str, reverse: bool| -> Vec<String> {
+        let reply = zbus::block_on(fixture.client.call_method(
+            Some(BUS_NAME),
+            OBJECT_PATH,
+            Some(PLAYLISTS_INTERFACE),
+            "GetPlaylists",
+            &(index, max, order, reverse),
+        ))
+        .unwrap();
+        let found: Vec<PlaylistTuple> = reply.body().deserialize().unwrap();
+        found.into_iter().map(|(_, name, _)| name).collect()
+    };
+    assert_eq!(
+        get(0, 10, "Alphabetical", false),
+        ["Favourites", "Late evening", "workouts"]
+    );
+    assert_eq!(get(0, 2, "CreationDate", true), ["workouts", "Favourites"]);
+    assert_eq!(get(1, 1, "UserDefined", false), ["Late evening"]);
+
+    let active = |fixture: &Fixture| -> (bool, PlaylistTuple) {
+        fixture
+            .get(PLAYLISTS_INTERFACE, "ActivePlaylist")
+            .try_into()
+            .unwrap()
+    };
+    assert!(!active(&fixture).0);
+
+    // The queue comes from a playlist: it is the active one, and that is announced.
+    let signals = Signals::record(&fixture.client, OBJECT_PATH);
+    fixture.mpris.handle(
+        &set_queue(view, &[1, 2], 1, ContextSource::Playlist(2)),
+        view,
+    );
+    let changed = loop {
+        let message = signals.next("PropertiesChanged", WAIT).unwrap();
+        let (interface, changed, _): (String, Changes, Vec<String>) =
+            message.body().deserialize().unwrap();
+        if interface == PLAYLISTS_INTERFACE {
+            break changed;
+        }
+    };
+    let (valid, (id, name, _)): (bool, PlaylistTuple) = changed["ActivePlaylist"]
+        .try_clone()
+        .unwrap()
+        .try_into()
+        .unwrap();
+    assert!(valid);
+    assert_eq!(id.as_str(), playlist_id(2));
+    assert_eq!(name, "Late evening");
+    assert_eq!(active(&fixture).1.1, "Late evening");
+
+    // Activation reaches the front end for known playlists only.
+    let known = ObjectPath::try_from(playlist_id(3)).unwrap();
+    let unknown = ObjectPath::try_from(playlist_id(42)).unwrap();
+    fixture.call(PLAYLISTS_INTERFACE, "ActivatePlaylist", &(&known,));
+    fixture.call(PLAYLISTS_INTERFACE, "ActivatePlaylist", &(&unknown,));
+    assert_eq!(*activated.lock().unwrap(), [3]);
+
+    // A rename and a new playlist: PlaylistChanged, then the count and the
+    // active playlist's new name.
+    {
+        let mut lists = lists.lock().unwrap();
+        lists[1].name = "Night".into();
+        lists.push(playlist(4, "New", 40));
+    }
+    fixture.mpris.playlists_changed();
+    let renamed = signals.next("PlaylistChanged", WAIT).unwrap();
+    let ((id, name, _),): ((OwnedObjectPath, String, String),) =
+        renamed.body().deserialize().unwrap();
+    assert_eq!(id.as_str(), playlist_id(2));
+    assert_eq!(name, "Night");
+    let message = signals.next("PropertiesChanged", WAIT).unwrap();
+    let (interface, changed, _): (String, Changes, Vec<String>) =
+        message.body().deserialize().unwrap();
+    assert_eq!(interface, PLAYLISTS_INTERFACE);
+    let count: u32 = changed["PlaylistCount"].downcast_ref().unwrap();
+    assert_eq!(count, 4);
+    assert!(changed.contains_key("ActivePlaylist"));
+}
+
+#[test]
+fn without_playlists_the_interface_is_not_served() {
+    let Some(fixture) = Fixture::start("noplaylists") else {
+        return;
+    };
+    let reply = zbus::block_on(fixture.client.call_method(
+        Some(BUS_NAME),
+        OBJECT_PATH,
+        Some("org.freedesktop.DBus.Introspectable"),
+        "Introspect",
+        &(),
+    ))
+    .unwrap();
+    let xml: String = reply.body().deserialize().unwrap();
+    assert!(xml.contains("interface name=\"org.mpris.MediaPlayer2.TrackList\""));
+    assert!(xml.contains("signal name=\"TrackListReplaced\""));
+    assert!(!xml.contains("org.mpris.MediaPlayer2.Playlists"));
 }

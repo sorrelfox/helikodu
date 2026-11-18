@@ -80,7 +80,8 @@ pub use scan::{
 };
 pub use search::{MatchRank, SearchHit, SearchRequest, SearchResults, fold};
 pub use stats::{
-    HistoryEntry, HistoryQuery, Listen, ListenEnd, ListenOutcome, PlayRules, Rating, TrackStats,
+    HistoryEntry, HistoryQuery, HistoryTotals, Listen, ListenEnd, ListenOutcome, PlayRules, Rating,
+    TrackStats,
 };
 pub use tag_writes::{RateError, RatingOutcome, TagWriteReport, TagWriteSettings};
 pub use track_source::TrackSource;

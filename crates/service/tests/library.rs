@@ -200,6 +200,41 @@ fn missing_library_and_scan_without_folders() {
 }
 
 #[test]
+fn the_history_is_exported_to_a_file() {
+    let path = database("history-export");
+    drop(MusicLibrary::open(&path).unwrap());
+    {
+        let library = Library::open(&DatabaseConfig::file(&path)).unwrap();
+        let river = record(
+            &library,
+            "/nonexistent-music/h/river.flac",
+            "River",
+            "Water",
+        );
+        play(&library, river, 2);
+    }
+    let library = MusicLibrary::open_existing(&path).unwrap();
+    let folder = path.parent().unwrap();
+    let json = folder.join("listens.jsonl");
+    assert_eq!(library.export_history(&json, None).unwrap(), 2);
+    let text = fs::read_to_string(&json).unwrap();
+    assert_eq!(text.lines().count(), 2);
+    assert!(text.contains("\"artist_name\":\"Ann, Bo\""), "{text}");
+    assert!(text.contains("\"track_name\":\"River\""), "{text}");
+    let log = folder.join(".scrobbler.log");
+    assert_eq!(library.export_history(&log, None).unwrap(), 2);
+    let text = fs::read_to_string(&log).unwrap();
+    assert!(text.starts_with("#AUDIOSCROBBLER/1.1\n"), "{text}");
+    assert!(
+        text.contains("Ann, Bo\tWater\tRiver\t3\t200\tL\t"),
+        "{text}"
+    );
+    // Nothing since the future.
+    let later = SystemTime::now() + Duration::from_secs(3600);
+    assert_eq!(library.export_history(&json, Some(later)).unwrap(), 0);
+}
+
+#[test]
 fn sorted_tracks_and_playlist_formats() {
     use helikodu_service::library::{TrackFilter, TrackOrder, TrackSortKey};
 

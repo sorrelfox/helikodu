@@ -9,6 +9,7 @@
 //! folders are made up from the tracks' paths.
 
 mod copies;
+mod history;
 mod lyrics;
 mod query;
 mod services;
@@ -957,6 +958,22 @@ impl LibrarySource for SampleLibrary {
         Ok((key, name))
     }
 
+    fn history(&self, since: Option<SystemTime>) -> Result<Vec<super::HistoryRow>, BackendError> {
+        Ok(self.sample_history(since))
+    }
+
+    fn history_totals(&self) -> Result<super::HistoryTotals, BackendError> {
+        Ok(self.sample_history_totals())
+    }
+
+    fn export_history(
+        &self,
+        path: &Path,
+        since: Option<SystemTime>,
+    ) -> Result<usize, BackendError> {
+        self.sample_export_history(path, since)
+    }
+
     fn export_playlist(&self, key: PlaylistKey, path: &Path) -> Result<usize, BackendError> {
         let items = self.playlist_items(key)?;
         let mut text = String::from("#EXTM3U\n");
@@ -1256,6 +1273,12 @@ impl PlayerControl for FakePlayer {
                 self.play(&keys, start, detail.row.title.clone());
             }
             PlayerRequest::PlayTracks {
+                tracks,
+                start,
+                title,
+                ..
+            }
+            | PlayerRequest::PlayPlaylist {
                 tracks,
                 start,
                 title,

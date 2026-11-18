@@ -3,8 +3,8 @@
 
 //! What the MPRIS interfaces show, kept apart from D-Bus so that the mapping can
 //! be tested on its own: the player's state as the events tell it, the values of
-//! the `org.mpris.MediaPlayer2.Player` properties derived from it, and which of
-//! them changed.
+//! the `org.mpris.MediaPlayer2.Player` properties derived from it, the track list
+//! and the playlist that plays, and which of them changed.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -12,13 +12,23 @@ use std::time::{Duration, Instant};
 
 use helikodu_model::audio::MediaTime;
 use helikodu_model::library::TrackRef;
-use helikodu_model::player::{EntryId, PlayModes, PlaybackState, RepeatMode, ShuffleMode, Volume};
+use helikodu_model::player::{
+    ContextSource, EntryId, PlayModes, PlaybackState, QueueEntry, RepeatMode, ShuffleMode, Volume,
+};
 use helikodu_service::player::{PlayerEvent, PlayerStatus, QueueSnapshot};
 
 use super::{TrackDetails, file_uri, track_id};
 
 /// The `mpris:trackid` when nothing is current, as the specification reserves it.
 pub(crate) const NO_TRACK: &str = "/org/mpris/MediaPlayer2/TrackList/NoTrack";
+
+/// The most entries the track list shows. A longer queue shows a part of it
+/// that holds the current entry and what follows.
+pub const TRACK_LIST_LIMIT: usize = 1000;
+
+/// The step by which the shown part of a long queue moves: it starts at a
+/// multiple of this, so it moves seldom as playback goes on.
+const TRACK_LIST_STEP: usize = 500;
 
 /// A position that differs this much from where it should be is a seek.
 const SEEK_TOLERANCE: Duration = Duration::from_millis(1000);
@@ -68,6 +78,24 @@ pub(crate) enum Changed {
     Metadata(Metadata),
 }
 
+/// How the track list changed.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum TrackListChange {
+    /// One entry came in after the track with this id (`NoTrack` for the start).
+    Added {
+        entry: EntryId,
+        track: TrackRef,
+        after: String,
+    },
+    /// The track with this id left.
+    Removed(String),
+    /// Anything else: the whole list and the current track's id.
+    Replaced {
+        tracks: Vec<String>,
+        current: String,
+    },
+}
+
 /// What an update asks to announce, in this order.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub(crate) struct Announcement {
@@ -75,11 +103,22 @@ pub(crate) struct Announcement {
     pub(crate) changed: Vec<Changed>,
     /// A `Seeked` signal with the new position in microseconds.
     pub(crate) seeked: Option<i64>,
+    /// A change of the track list (`Tracks` is invalidated with it).
+    pub(crate) tracks: Option<TrackListChange>,
+    /// `TrackMetadataChanged`: the current track's metadata changed while it
+    /// stayed current.
+    pub(crate) track_metadata: Option<(String, Metadata)>,
+    /// The playlist that plays changed (its id, if one plays).
+    pub(crate) active_playlist: Option<Option<u64>>,
 }
 
 impl Announcement {
     pub(crate) fn is_empty(&self) -> bool {
-        self.changed.is_empty() && self.seeked.is_none()
+        self.changed.is_empty()
+            && self.seeked.is_none()
+            && self.tracks.is_none()
+            && self.track_metadata.is_none()
+            && self.active_playlist.is_none()
     }
 }
 
@@ -108,6 +147,13 @@ pub(crate) struct State {
     /// What the front end looked up for an entry, and the `file://` URL of its
     /// exported cover.
     details: Option<(EntryId, TrackDetails, Option<String>)>,
+    /// The entries the track list shows, in play order.
+    tracks: Vec<QueueEntry>,
+    /// The ids of the track list as last announced.
+    published_tracks: Vec<EntryId>,
+    /// The playlist the queue came from, and the one last announced.
+    playlist: Option<u64>,
+    published_playlist: Option<u64>,
     /// The values last announced.
     published: Properties,
 }
@@ -124,6 +170,10 @@ impl State {
             position: Duration::ZERO,
             position_at: Instant::now(),
             details: None,
+            tracks: Vec::new(),
+            published_tracks: Vec::new(),
+            playlist: None,
+            published_playlist: None,
             published: Properties {
                 playback_status: "Stopped",
                 loop_status: "None",
@@ -197,6 +247,11 @@ impl State {
         self.volume = f64::from(status.volume.position());
         self.count = queue.entries.len();
         self.index = queue.current;
+        self.tracks = shown_entries(&queue.entries, queue.current).to_vec();
+        self.playlist = match queue.context.source {
+            ContextSource::Playlist(id) => Some(id),
+            _ => None,
+        };
         let current = status.now_playing.as_ref().map(|now| Current {
             entry: now.entry,
             track: Some(now.track.clone()),
@@ -313,10 +368,88 @@ impl State {
         self.published = self.properties();
     }
 
+    /// The entries the track list shows, as last announced.
+    pub(crate) fn published_tracks(&self) -> &[EntryId] {
+        &self.published_tracks
+    }
+
+    /// The shown entry with the `mpris:trackid` `id`.
+    pub(crate) fn shown_entry(&self, id: &str) -> Option<&QueueEntry> {
+        self.tracks.iter().find(|entry| track_id(entry.id) == id)
+    }
+
+    /// The playlist the queue came from, as last announced.
+    pub(crate) fn active_playlist(&self) -> Option<u64> {
+        self.published_playlist
+    }
+
+    /// The metadata of `entry` playing `track`: the published metadata for the
+    /// current entry, otherwise what `details` say.
+    pub(crate) fn entry_metadata(
+        &self,
+        entry: EntryId,
+        track: &TrackRef,
+        details: Option<&TrackDetails>,
+    ) -> Metadata {
+        if self.current.as_ref().is_some_and(|c| c.entry == entry) {
+            return self.published.metadata.clone();
+        }
+        entry_metadata(entry, track, details)
+    }
+
+    /// How the track list changed since it was last announced.
+    fn track_list_change(&self) -> Option<TrackListChange> {
+        let old = &self.published_tracks;
+        let new: Vec<EntryId> = self.tracks.iter().map(|e| e.id).collect();
+        if *old == new {
+            return None;
+        }
+        let ids = |list: &[EntryId]| list.iter().map(|id| track_id(*id)).collect::<Vec<_>>();
+        let first_difference = old
+            .iter()
+            .zip(&new)
+            .position(|(a, b)| a != b)
+            .unwrap_or(old.len().min(new.len()));
+        if new.len() == old.len() + 1 && new[first_difference + 1..] == old[first_difference..] {
+            let after = first_difference
+                .checked_sub(1)
+                .map_or_else(|| NO_TRACK.to_owned(), |i| track_id(new[i]));
+            let added = &self.tracks[first_difference];
+            return Some(TrackListChange::Added {
+                entry: added.id,
+                track: added.track.clone(),
+                after,
+            });
+        }
+        if old.len() == new.len() + 1 && old[first_difference + 1..] == new[first_difference..] {
+            return Some(TrackListChange::Removed(track_id(old[first_difference])));
+        }
+        Some(TrackListChange::Replaced {
+            tracks: ids(&new),
+            current: self
+                .current
+                .as_ref()
+                .map_or_else(|| NO_TRACK.to_owned(), |c| track_id(c.entry)),
+        })
+    }
+
     /// What changed since the last announcement, now counted as announced.
     pub(crate) fn announce(&mut self, seeked: Option<i64>) -> Announcement {
+        let tracks = self.track_list_change();
+        self.published_tracks = self.tracks.iter().map(|e| e.id).collect();
+        let active_playlist = (self.playlist != self.published_playlist).then_some(self.playlist);
+        self.published_playlist = self.playlist;
         let now = self.properties();
         let old = &self.published;
+        let same_track = now.metadata.get("mpris:trackid") == old.metadata.get("mpris:trackid");
+        let track_metadata = match now.metadata.get("mpris:trackid") {
+            Some(MetaValue::Path(id))
+                if same_track && id != NO_TRACK && now.metadata != old.metadata =>
+            {
+                Some((id.clone(), now.metadata.clone()))
+            }
+            _ => None,
+        };
         let mut changed = Vec::new();
         if now.playback_status != old.playback_status {
             changed.push(Changed::Text("PlaybackStatus", now.playback_status));
@@ -346,7 +479,13 @@ impl State {
             }
         }
         self.published = now;
-        Announcement { changed, seeked }
+        Announcement {
+            changed,
+            seeked,
+            tracks,
+            track_metadata,
+            active_playlist,
+        }
     }
 
     fn details_for(&self, entry: EntryId) -> Option<&TrackDetails> {
@@ -404,6 +543,49 @@ impl State {
         }
         metadata
     }
+}
+
+/// The part of the queue the track list shows: all of it, or for a long queue
+/// [`TRACK_LIST_LIMIT`] entries from a multiple of [`TRACK_LIST_STEP`] before
+/// the current entry.
+fn shown_entries(entries: &[QueueEntry], current: Option<usize>) -> &[QueueEntry] {
+    if entries.len() <= TRACK_LIST_LIMIT {
+        return entries;
+    }
+    let start = current.map_or(0, |c| c / TRACK_LIST_STEP * TRACK_LIST_STEP);
+    let start = start.min(entries.len() - TRACK_LIST_LIMIT);
+    &entries[start..start + TRACK_LIST_LIMIT]
+}
+
+/// The metadata of an entry that is not current, from what was looked up about
+/// it (`details`) or else from its file.
+pub(crate) fn entry_metadata(
+    entry: EntryId,
+    track: &TrackRef,
+    details: Option<&TrackDetails>,
+) -> Metadata {
+    let mut metadata = Metadata::new();
+    metadata.insert("mpris:trackid", MetaValue::Path(track_id(entry)));
+    let path = match track {
+        TrackRef::File(source) => Some(source.path().to_path_buf()),
+        _ => details.and_then(|d| d.path.clone()),
+    };
+    if let Some(url) = path.as_deref().and_then(file_uri) {
+        metadata.insert("xesam:url", MetaValue::Text(url));
+    }
+    let title = details
+        .and_then(|d| d.title.clone())
+        .or_else(|| path.as_deref().map(file_title));
+    if let Some(title) = title {
+        metadata.insert("xesam:title", MetaValue::Text(title));
+    }
+    if let Some(details) = details {
+        if let Some(length) = details.length {
+            metadata.insert("mpris:length", MetaValue::Long(micros(length)));
+        }
+        map_details(details, &mut metadata);
+    }
+    metadata
 }
 
 /// Adds the looked-up fields to `metadata`.
@@ -568,6 +750,25 @@ mod tests {
             position: MediaTime::from_millis(millis),
             length: Some(MediaTime::from_millis(180_000)),
         }
+    }
+
+    #[test]
+    fn a_long_queue_shows_the_part_around_the_current_entry() {
+        let entries: Vec<QueueEntry> = (1..=2500)
+            .map(|id| QueueEntry {
+                id: EntryId::new(id),
+                track: TrackRef::Library(TrackId::new(id)),
+                from_context: true,
+            })
+            .collect();
+        assert_eq!(shown_entries(&entries[..10], Some(3)).len(), 10);
+        let shown = shown_entries(&entries, Some(1203));
+        assert_eq!(shown.len(), TRACK_LIST_LIMIT);
+        assert_eq!(shown[0].id, EntryId::new(1001));
+        // Near the end the part ends with the queue.
+        let shown = shown_entries(&entries, Some(2400));
+        assert_eq!(shown[0].id, EntryId::new(1501));
+        assert_eq!(shown_entries(&entries, None)[0].id, EntryId::new(1));
     }
 
     #[test]

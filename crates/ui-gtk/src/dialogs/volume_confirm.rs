@@ -71,6 +71,7 @@ pub(crate) fn starts_playback(request: &PlayerRequest, state: PlaybackState) -> 
         PlayerRequest::PlayFiles { enqueue, .. } => !enqueue,
         PlayerRequest::PlayAlbum { .. }
         | PlayerRequest::PlayTracks { .. }
+        | PlayerRequest::PlayPlaylist { .. }
         | PlayerRequest::PlayArtist { .. }
         | PlayerRequest::PlayGenre { .. }
         | PlayerRequest::PlayEntry(_) => true,

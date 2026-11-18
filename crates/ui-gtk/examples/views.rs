@@ -3,7 +3,8 @@
 
 //! Renders the library views to PNG files, dark and light, over the sample
 //! backend, for comparison with the design: Tracks, Artists, Genres, Folders,
-//! a playlist, search with and without results, the empty library, and the
+//! a playlist, search with and without results, the play history, the empty
+//! library, and the
 //! main menu, the track context menu and the play button menu. Run it
 //! headless:
 //!
@@ -77,6 +78,10 @@ fn steps() -> Vec<Step> {
         ("context-menu", |w| {
             w.search_text("");
             w.open_first_playlist();
+            None
+        }),
+        ("history", |w| {
+            WidgetExt::activate_action(w, "win.show-history", None).ok();
             None
         }),
         ("main-menu", |w| w.demo_main_menu()),

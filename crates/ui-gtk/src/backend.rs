@@ -593,6 +593,115 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
             "Searches cannot be saved here.",
         )))
     }
+    /// The listens since `since` (all with `None`), newest first.
+    fn history(&self, _since: Option<SystemTime>) -> Result<Vec<HistoryRow>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// The totals of the whole history and the rule for counting a play.
+    fn history_totals(&self) -> Result<HistoryTotals, BackendError> {
+        Ok(HistoryTotals::default())
+    }
+    /// Writes the listens since `since` to `path` in the format its extension
+    /// names (`.log`: the scrobbler log; otherwise ListenBrainz JSON Lines);
+    /// returns how many were written.
+    fn export_history(
+        &self,
+        _path: &Path,
+        _since: Option<SystemTime>,
+    ) -> Result<usize, BackendError> {
+        Ok(0)
+    }
+}
+
+/// Where a listen in the play history came from.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum PlayedFrom {
+    /// Not known.
+    #[default]
+    Unknown,
+    /// An album.
+    Album,
+    /// An artist's tracks.
+    Artist,
+    /// A genre's tracks.
+    Genre,
+    /// A playlist, by name.
+    Playlist(String),
+    /// A search, by its text.
+    Search(String),
+    /// A folder, by name.
+    Folder(String),
+    /// Queued from elsewhere.
+    Queue,
+    /// Loose files.
+    Files,
+}
+
+impl PlayedFrom {
+    /// Reads the context the history stores (`album:…`, `playlist:…`,
+    /// `search:…`, `folder:…`, `queue`, `files`); `playlist` names a playlist
+    /// by its number.
+    pub fn parse(context: Option<&str>, playlist: impl Fn(u64) -> Option<String>) -> Self {
+        let Some(context) = context else {
+            return Self::Unknown;
+        };
+        let (kind, rest) = context.split_once(':').unwrap_or((context, ""));
+        match kind {
+            "album" => Self::Album,
+            "artist" => Self::Artist,
+            "genre" => Self::Genre,
+            "playlist" => Self::Playlist(rest.parse().ok().and_then(playlist).unwrap_or_default()),
+            "search" => Self::Search(rest.to_owned()),
+            "folder" => Self::Folder(
+                Path::new(rest)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| rest.to_owned()),
+            ),
+            "queue" => Self::Queue,
+            "files" => Self::Files,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// One listen in the play history.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HistoryRow {
+    /// When playback started.
+    pub started_at: SystemTime,
+    /// The time actually played.
+    pub listened: Duration,
+    /// Whether it counted as a play; otherwise it was skipped.
+    pub counted: bool,
+    /// Where it came from.
+    pub from: PlayedFrom,
+    /// The track; `missing` when it left the library.
+    pub track: TrackRow,
+}
+
+/// The totals of the whole play history.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HistoryTotals {
+    /// The listens that counted as plays.
+    pub plays: u64,
+    /// When the oldest listen started.
+    pub first: Option<SystemTime>,
+    /// A play counts after this share of the track, in percent …
+    pub play_percent: u8,
+    /// … or after this many minutes, whichever comes first.
+    pub play_minutes: u32,
+}
+
+impl Default for HistoryTotals {
+    fn default() -> Self {
+        Self {
+            plays: 0,
+            first: None,
+            play_percent: 50,
+            play_minutes: 4,
+        }
+    }
 }
 
 /// The window state kept between runs.
@@ -644,6 +753,20 @@ pub enum PlayerRequest {
         /// The index of the first to play.
         start: usize,
         /// Where they came from, as the queue panel shows it.
+        title: String,
+        /// Play them in random order.
+        shuffle: bool,
+    },
+    /// Play the tracks of a playlist, replacing the queue; the queue then
+    /// comes from that playlist (for the history and MPRIS).
+    PlayPlaylist {
+        /// The playlist.
+        key: PlaylistKey,
+        /// Its tracks, in order.
+        tracks: Vec<TrackKey>,
+        /// The index of the first to play.
+        start: usize,
+        /// Its name, as the queue panel shows it.
         title: String,
         /// Play them in random order.
         shuffle: bool,
@@ -1083,6 +1206,10 @@ pub trait PlayerControl: fmt::Debug {
     /// not, they are not sent, and the current position follows when it is
     /// shown again.
     fn follow_position(&self, _shown: bool) {}
+
+    /// The playlists were changed in the window: desktop integrations that
+    /// list them read them again.
+    fn playlists_changed(&self) {}
 }
 
 /// The front end's handle on the core.
@@ -1195,6 +1322,12 @@ impl Backend {
             return;
         }
         self.player.send(request);
+    }
+
+    /// Tells desktop integrations that the playlists changed (see
+    /// [`PlayerControl::playlists_changed`]).
+    pub fn playlists_changed(&self) {
+        self.player.playlists_changed();
     }
 
     /// Tells the player whether the window shows the position (see

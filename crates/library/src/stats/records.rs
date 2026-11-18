@@ -73,6 +73,17 @@ impl Default for HistoryQuery {
     }
 }
 
+/// Totals of the whole history.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct HistoryTotals {
+    /// The listens that counted as plays.
+    pub plays: u64,
+    /// The listens that did not.
+    pub skips: u64,
+    /// When the oldest listen started.
+    pub first: Option<SystemTime>,
+}
+
 /// One listen in the history.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HistoryEntry {

@@ -12,7 +12,9 @@
 //! playback come back to the window as [`Update::Request`], so they pass the
 //! full-output gate.
 
+mod history;
 mod lyrics;
+mod mpris;
 mod services;
 
 use std::collections::{HashMap, HashSet};
@@ -962,6 +964,25 @@ impl LibrarySource for ServiceLibrary {
             .map_err(error)
     }
 
+    fn history(
+        &self,
+        since: Option<std::time::SystemTime>,
+    ) -> Result<Vec<super::HistoryRow>, BackendError> {
+        self.history_rows(since)
+    }
+
+    fn history_totals(&self) -> Result<super::HistoryTotals, BackendError> {
+        self.totals()
+    }
+
+    fn export_history(
+        &self,
+        path: &Path,
+        since: Option<std::time::SystemTime>,
+    ) -> Result<usize, BackendError> {
+        self.export(path, since)
+    }
+
     fn import_playlist(&self, path: &Path) -> Result<(PlaylistKey, String), BackendError> {
         let report = self.library()?.import_playlist(path).map_err(error)?;
         let key = PlaylistKey(u64::try_from(report.playlist.get()).unwrap_or(0));
@@ -1126,6 +1147,8 @@ pub struct ServicePlayer {
     updates: async_channel::Sender<Update>,
     /// Whether position updates reach the window (only while it is shown).
     positions: Arc<AtomicBool>,
+    /// MPRIS, which lists the playlists.
+    mpris: Option<Arc<Mpris>>,
 }
 
 impl ServicePlayer {
@@ -1147,6 +1170,15 @@ impl ServicePlayer {
 }
 
 impl PlayerControl for ServicePlayer {
+    fn playlists_changed(&self) {
+        if let Some(mpris) = self.mpris.clone() {
+            // It reads the library and talks to the bus: not on the main thread.
+            let _ = thread::Builder::new()
+                .name("helikodu-mpris-playlists".into())
+                .spawn(move || mpris.playlists_changed());
+        }
+    }
+
     fn follow_position(&self, shown: bool) {
         if self.positions.swap(shown, Ordering::Relaxed) || !shown {
             return;
@@ -1214,6 +1246,26 @@ impl PlayerControl for ServicePlayer {
                 self.command(PlayerCommand::PlayTracks {
                     context: QueueContext {
                         source: ContextSource::Query(title.clone()),
+                        title: Some(title),
+                    },
+                    tracks: tracks
+                        .into_iter()
+                        .map(|t| TrackRef::Library(track_id(t)))
+                        .collect(),
+                    start,
+                });
+            }
+            PlayerRequest::PlayPlaylist {
+                key,
+                tracks,
+                start,
+                title,
+                shuffle,
+            } => {
+                self.shuffle(shuffle);
+                self.command(PlayerCommand::PlayTracks {
+                    context: QueueContext {
+                        source: ContextSource::Playlist(key.0),
                         title: Some(title),
                     },
                     tracks: tracks
@@ -1921,6 +1973,11 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         let commands = service.player().sender();
         // What would start playback goes to the window, through the full-output
         // gate; the rest goes straight to the player.
+        let describing = Arc::clone(&service);
+        let playlists = mpris::Playlists {
+            service: Arc::clone(&service),
+            updates: sender.clone(),
+        };
         let hooks = MprisHooks::new(move |command| {
             let request = match command {
                 PlayerCommand::Play => PlayerRequest::Play,
@@ -1942,7 +1999,9 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         })
         .with_quit(move || {
             let _ = quit.try_send(Update::Quit);
-        });
+        })
+        .with_describe(move |tracks| mpris::describe(&describing, tracks))
+        .with_playlists(playlists);
         match Mpris::start(MprisConfig::default(), hooks) {
             Ok(mpris) => Some(Arc::new(mpris)),
             Err(e) => {
@@ -1975,7 +2034,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
     let forwarder = Forwarder {
         service: Arc::clone(&service),
         updates: sender.clone(),
-        mpris,
+        mpris: mpris.clone(),
         output: OutputInfo::default(),
         pending_cover: Arc::new(Mutex::new(None)),
         positions: Arc::clone(&positions),
@@ -2002,6 +2061,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         library: Arc::clone(&library),
         updates: sender,
         positions,
+        mpris,
     });
     services::follow_folders(&service, true);
     let services = Arc::new(services::ServiceServices {

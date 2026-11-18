@@ -9,7 +9,7 @@ Everything here talks D-Bus through zbus with its own small executor (`default-r
 
 | Module | What it does |
 |---|---|
-| `mpris.rs`, `mpris/` | MPRIS2 (`org.mpris.MediaPlayer2` and `.Player`) under `org.mpris.MediaPlayer2.io.github.sorrelfox.Helikodu` |
+| `mpris.rs`, `mpris/` | MPRIS2 (`org.mpris.MediaPlayer2`, `.Player`, `.TrackList` and `.Playlists`) under `org.mpris.MediaPlayer2.io.github.sorrelfox.Helikodu` |
 | `power.rs` | Suspend inhibition while playing: the Inhibit portal, logind outside a sandbox |
 | `portals.rs` | Colour scheme, accent colour, contrast and reduced motion from the Settings portal |
 | `open_folder.rs` | "Open containing folder": `org.freedesktop.FileManager1.ShowItems`, or the OpenURI portal |
@@ -17,7 +17,7 @@ Everything here talks D-Bus through zbus with its own small executor (`default-r
 
 ## MPRIS
 
-`Mpris::start(MprisConfig, MprisHooks)` serves both interfaces at `/org/mpris/MediaPlayer2` and takes the bus name (a second instance falls back to `….instance<pid>`, as the specification suggests). Client calls become `PlayerCommand`s through `MprisHooks::command` (`MprisHooks::for_player(player.sender())` sends them to the player); `Raise`, `Quit` and `OpenUri` go to optional hooks, and `CanRaise`/`CanQuit` say whether they are set. `OpenUri` accepts `file://` URIs only; without an `open` hook the file replaces the queue and plays.
+`Mpris::start(MprisConfig, MprisHooks)` serves the interfaces at `/org/mpris/MediaPlayer2` and takes the bus name (a second instance falls back to `….instance<pid>`, as the specification suggests). Client calls become `PlayerCommand`s through `MprisHooks::command` (`MprisHooks::for_player(player.sender())` sends them to the player); `Raise`, `Quit` and `OpenUri` go to optional hooks, and `CanRaise`/`CanQuit` say whether they are set. `OpenUri` accepts `file://` URIs only; without an `open` hook the file replaces the queue and plays.
 
 The player's events drive it, in one of two ways:
 
@@ -34,7 +34,15 @@ What it keeps to:
 - `CanGoNext` is false at the end of a queue that does not repeat; `CanGoPrevious` and `CanPause` are true while an entry is current; `CanPlay` while the queue has entries; `CanSeek` while the length is known; `CanControl` is always true. Calls the capabilities rule out are ignored. `Seek` past the end goes to the next track; `SetPosition` with another track's ID or past the end is ignored.
 - Setting `Volume`, `LoopStatus` or `Shuffle` announces the new value at once and sends the command; the player's confirmation then changes nothing.
 
-`SupportedMimeTypes` is whatever `MprisConfig::supported_mime_types` holds; the application fills it from the decoder registry. `TrackList` and `Playlists` are not implemented yet (`HasTrackList` is false).
+`SupportedMimeTypes` is whatever `MprisConfig::supported_mime_types` holds; the application fills it from the decoder registry.
+
+### Track list
+
+`HasTrackList` is true. `Tracks` is the queue in play order; a queue longer than `TRACK_LIST_LIMIT` (1000) shows 1000 entries starting at a multiple of 500 before the current entry, so the shown part moves seldom. One entry added or removed is announced with `TrackAdded` (after the entry before it, or `NoTrack` at the start) or `TrackRemoved`, any other change with `TrackListReplaced`; each also invalidates `Tracks` in a `PropertiesChanged` of the track list interface. A metadata change of the current track while it stays current also sends `TrackMetadataChanged`. `GetTracksMetadata` returns the published metadata for the current entry; for the others it asks `MprisHooks::with_describe` (the application answers from the library, as the queue panel does) and falls back to the file name. `GoTo` plays a listed entry (`PlayerCommand::PlayEntry`). `CanEditTracks` is false: `AddTrack` and `RemoveTrack` do nothing.
+
+### Playlists
+
+Served only with `MprisHooks::with_playlists(source)`, where `source: PlaylistSource` lists the playlists (`MprisPlaylist`: number, name, creation and change times) and plays one. Ids are `/io/github/sorrelfox/Helikodu/Playlist/<number>`; icons are empty. `Orderings` are `Alphabetical`, `CreationDate`, `ModifiedDate` and `UserDefined` (the source's order; an unknown ordering falls back to it). `ActivePlaylist` is the playlist the queue came from (`ContextSource::Playlist`), announced when it changes. After the playlists change, `mpris.playlists_changed()` reads them again and announces renamed ones (`PlaylistChanged`), a new `PlaylistCount` and a changed active playlist.
 
 ## Suspend inhibition
 

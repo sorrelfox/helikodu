@@ -12,7 +12,7 @@ The SQLite schema and its migrations, the scan coordinator and file watcher, the
 | Area | Operations |
 |---|---|
 | Catalogue | `add_root`, `upsert_track` / `upsert_tracks` (a `TrackRecord`: path, `FileStamp`, sub-track and `TrackSection`, `AudioProperties`, `TrackTags`, `CatalogTags`, a rating from the tags, `ReplayGain`, `TrackCovers`; a batch regroups its albums once), `move_file`, `move_folder`, `mark_file_missing`, `remove_missing_files` (the end of the grace period), `remove_file`, `remove_track`, `track_at`, `identity_of`, `identities_with` |
-| Statistics | `record_listen` (a `Listen` judged by `PlayRules`), `stats`, `set_rating` (`Option<Rating>`), `rate_track` (whole stars, written into the file too when `TagWriteSettings::write_ratings_to_tags` is on; `RatingOutcome`, `RateError`), `set_resume_position`, `history` (`HistoryQuery`) |
+| Statistics | `record_listen` (a `Listen` judged by `PlayRules`), `stats`, `set_rating` (`Option<Rating>`), `rate_track` (whole stars, written into the file too when `TagWriteSettings::write_ratings_to_tags` is on; `RatingOutcome`, `RateError`), `set_resume_position`, `history` (`HistoryQuery`), `history_totals` (`HistoryTotals`: plays, skips, the oldest listen) |
 | Tag edits | `write_tags` (`BatchItem`s from `meta`, re-exported with the rest of the tag editor's types in the module `tag_editing`, `TagWriteSettings`, the `ScanOptions` of the workers, progress and a `CancelToken` → `TagWriteReport`: each file's result and the re-read), `refresh_files` (re-read files whose tags changed); `TagWriteSettings::from_settings` takes the `[advanced]` settings |
 | Search | `search` (`SearchRequest` → `SearchResults`; tracks of masked library folders are left out unless `include_masked`), `rebuild_search_index` |
 | Query language | `parse_query` (strict: the first `SyntaxError` with its byte range, `SyntaxErrorKind` and an example), `parse_query_lenient` (a `ParsedQuery`: a plain search of the words when the text cannot be read, and the error), `print_query`; `query_tracks` (a `QueryRequest`: the tree of `helikodu_model::query`, a `Page`, `include_masked` and the seed of `sort:random` → `Paged<TrackSummary>`), `query_track_ids`, `query_count`. Errors are `QueryError` |
@@ -129,7 +129,7 @@ A track's statistics, rating and history belong to its identity (`identities`), 
 - A **play** when the time actually played (seeks excluded) reaches the threshold: half the track or 4 minutes, whichever comes first; without a known length, 4 minutes. Both numbers are configurable. A play raises `play_count` and sets `first_played` and `last_played` (the start of the listen).
 - A **skip** when the user moved to another track before the threshold. It raises `skip_count` and sets `last_skipped`.
 - Anything else (stopped, or finished after seeking past most of it) counts as neither.
-- Every listen that played some audio is appended to `history`, with `counted` telling whether it was a play.
+- Every listen that played some audio is appended to `history`, with `counted` telling whether it was a play, and its `context`: where it was played from (`album:<id>`, `artist:<id>`, `genre:<id>`, `playlist:<id>`, `search:<text>`, `folder:<path>`, `files`, or `queue` for an entry queued from elsewhere).
 - Audiobooks and tracks over 20 minutes remember where listening stopped (`resume_ms`) and forget it when they finish.
 
 ### Search

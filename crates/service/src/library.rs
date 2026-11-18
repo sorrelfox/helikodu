@@ -24,6 +24,7 @@
 //! ```
 
 mod duplicates;
+mod history_export;
 mod info;
 mod location;
 mod query;
@@ -46,6 +47,7 @@ use helikodu_model::player::TrackFlags;
 use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
 use std::collections::HashMap;
 
+pub use self::history_export::{ExportedListen, HistoryFormat, write_history};
 pub use self::info::{LibraryEntry, TagOrigin, TrackInfo, read_file_info};
 pub use self::location::{DATA_FOLDER, DATABASE_FILE, default_database_path};
 pub use self::query::{
@@ -65,11 +67,11 @@ pub use helikodu_library::{
     AlbumDetail, AlbumFilter, AlbumId, AlbumQuery, AlbumSort, AlbumSummary, ArtistQuery, ArtistRef,
     ArtistRole, ArtistSummary, AudioProperties, CoverHash, Disc, ExcludeRule, FailureKind,
     FileFailure, GenreId, GenreQuery, GenreRef, GenreSummary, HistoryEntry, HistoryQuery,
-    IdentityId, LibraryTotals, Listen, ListenEnd, ListenOutcome, MAX_PAGE, MatchRank, Page, Paged,
-    PersonId, PlayRules, PlayedTrack, PollReason, Rating, RescanReason, RootState, ScanEvent,
-    ScanHandle, ScanSummary, SearchHit, Thumbnail, ThumbnailSize, TrackFilter, TrackKind,
-    TrackOrder, TrackQuery, TrackSection, TrackSortKey, TrackStats, TrackSummary, TrackTags,
-    WatchEvent, WatchMode,
+    HistoryTotals, IdentityId, LibraryTotals, Listen, ListenEnd, ListenOutcome, MAX_PAGE,
+    MatchRank, Page, Paged, PersonId, PlayRules, PlayedTrack, PollReason, Rating, RescanReason,
+    RootState, ScanEvent, ScanHandle, ScanSummary, SearchHit, Thumbnail, ThumbnailSize,
+    TrackFilter, TrackKind, TrackOrder, TrackQuery, TrackSection, TrackSortKey, TrackStats,
+    TrackSummary, TrackTags, WatchEvent, WatchMode,
 };
 pub use helikodu_library::{
     AlbumFormat, AlbumQuality, DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions,
@@ -457,6 +459,11 @@ impl MusicLibrary {
     /// The listening history, newest first.
     pub fn history(&self, query: &HistoryQuery) -> Result<Vec<HistoryEntry>, LibraryError> {
         Ok(self.library.history(query)?)
+    }
+
+    /// The totals of the whole listening history.
+    pub fn history_totals(&self) -> Result<HistoryTotals, LibraryError> {
+        Ok(self.library.history_totals()?)
     }
 
     /// What the library holds about `track` without reading its file: its path, tags

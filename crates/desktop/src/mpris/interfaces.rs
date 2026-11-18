@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! `org.mpris.MediaPlayer2` and `org.mpris.MediaPlayer2.Player` at
+//! `org.mpris.MediaPlayer2`, `org.mpris.MediaPlayer2.Player`,
+//! `org.mpris.MediaPlayer2.TrackList` and `org.mpris.MediaPlayer2.Playlists` at
 //! `/org/mpris/MediaPlayer2`.
 //!
 //! The getters read the values last announced, so a client never sees a value
@@ -16,10 +17,10 @@ use helikodu_model::audio::MediaTime;
 use helikodu_model::player::{ShuffleMode, Volume};
 use helikodu_service::player::PlayerCommand;
 use zbus::object_server::SignalEmitter;
-use zbus::{ObjectPath, OwnedVariant, fdo, interface};
+use zbus::{ObjectPath, OwnedObjectPath, OwnedVariant, fdo, interface};
 
 use super::state::{self, MetaValue, Metadata};
-use super::{Shared, path_from_uri};
+use super::{MprisPlaylist, PLAYLIST_ID_PREFIX, Shared, path_from_uri, playlist_id};
 
 /// The root interface.
 pub(crate) struct Root {
@@ -52,7 +53,7 @@ impl Root {
 
     #[zbus(property(emits_changed_signal = "const"))]
     fn has_track_list(&self) -> bool {
-        false
+        true
     }
 
     #[zbus(property(emits_changed_signal = "const"))]
@@ -311,6 +312,214 @@ impl Player {
     fn can_control(&self) -> bool {
         true
     }
+}
+
+/// The track list interface: the queue in play order.
+pub(crate) struct TrackList {
+    pub(crate) shared: Arc<Shared>,
+}
+
+#[interface(name = "org.mpris.MediaPlayer2.TrackList", introspection_docs = false)]
+impl TrackList {
+    /// The metadata of the shown entries among `track_ids`, in that order;
+    /// other ids are left out.
+    fn get_tracks_metadata(
+        &self,
+        track_ids: Vec<ObjectPath<'_>>,
+    ) -> Vec<HashMap<String, OwnedVariant>> {
+        let wanted: Vec<_> = {
+            let state = self.shared.state();
+            track_ids
+                .iter()
+                .filter_map(|id| state.shown_entry(id.as_str()).cloned())
+                .collect()
+        };
+        let tracks: Vec<_> = wanted.iter().map(|entry| entry.track.clone()).collect();
+        let details = self.shared.describe(&tracks);
+        let state = self.shared.state();
+        wanted
+            .iter()
+            .zip(&details)
+            .map(|(entry, details)| {
+                to_dbus(&state.entry_metadata(entry.id, &entry.track, details.as_ref()))
+            })
+            .collect()
+    }
+
+    /// Tracks cannot be added through MPRIS (`CanEditTracks` is false).
+    fn add_track(&self, _uri: String, _after_track: ObjectPath<'_>, _set_as_current: bool) {}
+
+    /// Tracks cannot be removed through MPRIS (`CanEditTracks` is false).
+    fn remove_track(&self, _track_id: ObjectPath<'_>) {}
+
+    /// Plays the entry `track_id`; ignored when it is not in the list.
+    fn go_to(&self, track_id: ObjectPath<'_>) {
+        let entry = self
+            .shared
+            .state()
+            .shown_entry(track_id.as_str())
+            .map(|entry| entry.id);
+        if let Some(entry) = entry {
+            (self.shared.hooks.command)(PlayerCommand::PlayEntry(entry));
+        }
+    }
+
+    #[zbus(signal)]
+    pub(crate) async fn track_list_replaced(
+        emitter: &SignalEmitter<'_>,
+        tracks: Vec<ObjectPath<'_>>,
+        current_track: ObjectPath<'_>,
+    ) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    pub(crate) async fn track_added(
+        emitter: &SignalEmitter<'_>,
+        metadata: HashMap<String, OwnedVariant>,
+        after_track: ObjectPath<'_>,
+    ) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    pub(crate) async fn track_removed(
+        emitter: &SignalEmitter<'_>,
+        track_id: ObjectPath<'_>,
+    ) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    pub(crate) async fn track_metadata_changed(
+        emitter: &SignalEmitter<'_>,
+        track_id: ObjectPath<'_>,
+        metadata: HashMap<String, OwnedVariant>,
+    ) -> zbus::Result<()>;
+
+    #[zbus(property(emits_changed_signal = "invalidates"))]
+    fn tracks(&self) -> Vec<OwnedObjectPath> {
+        self.shared
+            .state()
+            .published_tracks()
+            .iter()
+            .filter_map(|entry| OwnedObjectPath::try_from(super::track_id(*entry)).ok())
+            .collect()
+    }
+
+    #[zbus(property(emits_changed_signal = "const"))]
+    fn can_edit_tracks(&self) -> bool {
+        false
+    }
+}
+
+/// The orderings `GetPlaylists` takes.
+const ORDERINGS: [&str; 4] = [
+    "Alphabetical",
+    "CreationDate",
+    "ModifiedDate",
+    "UserDefined",
+];
+
+/// The playlists interface.
+pub(crate) struct Playlists {
+    pub(crate) shared: Arc<Shared>,
+}
+
+/// A playlist as the interface returns it: id, name and icon (none).
+type PlaylistTuple = (OwnedObjectPath, String, String);
+
+fn playlist_tuple(playlist: &MprisPlaylist) -> Option<PlaylistTuple> {
+    Some((
+        OwnedObjectPath::try_from(playlist_id(playlist.id)).ok()?,
+        playlist.name.clone(),
+        String::new(),
+    ))
+}
+
+/// The playlists in `order` (an unknown one is `UserDefined`), reversed if asked.
+pub(crate) fn ordered(
+    mut playlists: Vec<MprisPlaylist>,
+    order: &str,
+    reverse: bool,
+) -> Vec<MprisPlaylist> {
+    match order {
+        "Alphabetical" => playlists.sort_by_cached_key(|p| p.name.to_lowercase()),
+        "CreationDate" => playlists.sort_by_key(|p| p.created),
+        "ModifiedDate" => playlists.sort_by_key(|p| p.modified),
+        _ => {}
+    }
+    if reverse {
+        playlists.reverse();
+    }
+    playlists
+}
+
+#[interface(name = "org.mpris.MediaPlayer2.Playlists", introspection_docs = false)]
+impl Playlists {
+    /// Plays the playlist `playlist_id`; ignored when there is no such playlist.
+    fn activate_playlist(&self, playlist_id: ObjectPath<'_>) {
+        let Some(source) = &self.shared.hooks.playlists else {
+            return;
+        };
+        let id = playlist_id
+            .as_str()
+            .strip_prefix(PLAYLIST_ID_PREFIX)
+            .and_then(|n| n.parse::<u64>().ok());
+        if let Some(id) = id
+            && source.playlists().iter().any(|p| p.id == id)
+        {
+            source.activate(id);
+        }
+    }
+
+    /// Up to `max_count` playlists from `index` in `order`.
+    fn get_playlists(
+        &self,
+        index: u32,
+        max_count: u32,
+        order: String,
+        reverse_order: bool,
+    ) -> Vec<PlaylistTuple> {
+        let Some(source) = &self.shared.hooks.playlists else {
+            return Vec::new();
+        };
+        ordered(source.playlists(), &order, reverse_order)
+            .iter()
+            .skip(usize::try_from(index).unwrap_or(usize::MAX))
+            .take(usize::try_from(max_count).unwrap_or(usize::MAX))
+            .filter_map(playlist_tuple)
+            .collect()
+    }
+
+    #[zbus(signal)]
+    pub(crate) async fn playlist_changed(
+        emitter: &SignalEmitter<'_>,
+        playlist: (ObjectPath<'_>, &str, &str),
+    ) -> zbus::Result<()>;
+
+    #[zbus(property)]
+    fn playlist_count(&self) -> u32 {
+        u32::try_from(self.shared.playlists().len()).unwrap_or(u32::MAX)
+    }
+
+    #[zbus(property(emits_changed_signal = "const"))]
+    fn orderings(&self) -> Vec<String> {
+        ORDERINGS.iter().map(|o| (*o).to_owned()).collect()
+    }
+
+    #[zbus(property)]
+    fn active_playlist(&self) -> (bool, PlaylistTuple) {
+        let (valid, (id, name, icon)) = self.shared.active_playlist();
+        let id = OwnedObjectPath::try_from(id)
+            .unwrap_or_else(|_| OwnedObjectPath::try_from("/").expect("the root is a path"));
+        (valid, (id, name, icon))
+    }
+}
+
+/// The `ActivePlaylist` value as a variant (`(b(oss))`).
+pub(crate) fn active_playlist_variant(
+    value: &(bool, (String, String, String)),
+) -> Option<OwnedVariant> {
+    let (valid, (id, name, icon)) = value;
+    let id = ObjectPath::try_from(id.as_str()).ok()?;
+    let inner = zbus::Structure::from((id, name.as_str(), icon.as_str()));
+    let outer = zbus::Structure::from((*valid, inner));
+    OwnedVariant::try_from(zbus::Variant::from(outer)).ok()
 }
 
 /// The metadata as a D-Bus dictionary (`a{sv}`).

@@ -9,7 +9,7 @@ use helikodu_model::library::TrackId;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use super::rating::Rating;
-use super::records::{HistoryEntry, HistoryQuery, Listen, TrackStats};
+use super::records::{HistoryEntry, HistoryQuery, HistoryTotals, Listen, TrackStats};
 use super::rules::{ListenEnd, ListenOutcome, PlayRules};
 use crate::catalog::{IdentityId, TrackKind, sql_track_id, track_id_from_sql};
 use crate::db::unix_time::{from_millis, from_unix_seconds, to_millis, to_unix_seconds};
@@ -188,4 +188,19 @@ pub(crate) fn history(
         },
     )?
     .collect()
+}
+
+/// The totals of the whole history.
+pub(crate) fn history_totals(c: &Connection) -> rusqlite::Result<HistoryTotals> {
+    c.prepare_cached(
+        "SELECT coalesce(sum(counted), 0), coalesce(sum(1 - counted), 0), min(started_at)
+         FROM history",
+    )?
+    .query_row([], |row| {
+        Ok(HistoryTotals {
+            plays: u64::try_from(row.get::<_, i64>(0)?).unwrap_or(0),
+            skips: u64::try_from(row.get::<_, i64>(1)?).unwrap_or(0),
+            first: row.get::<_, Option<i64>>(2)?.map(from_unix_seconds),
+        })
+    })
 }

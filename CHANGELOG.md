@@ -14,6 +14,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Search understands the query language: text with fields such as `genre:jazz -genre:fusion` or `added<30d sort:added desc` lists the tracks it selects in a table, with completion of field names and values under the search field, and a notice with an example when part of the query cannot be read. The Tracks filter takes queries too.
 - Saved searches: save a search under a name, and open, rename or delete it from the right column of the search page, which also shows example queries.
 - The Tracks table can show **Genre** and **Added** columns.
+- Play history (**Library ▸ History**): every listen by day with its time, source and listening time, skips dimmed, for today, 7 days, 30 days or all, with a filter and **Save as playlist**.
+- **Library ▸ Export History…** writes the play history to a local file as ListenBrainz listens (JSON Lines) or as a `.scrobbler.log`, for submitting later; nothing is sent.
+- MPRIS: the track list (the queue, with metadata and jumping to a track) and the playlists (listed in several orders, started from desktop controls, the one playing shown as active).
 
 ### Fixed
 

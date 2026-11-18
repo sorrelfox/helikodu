@@ -371,6 +371,7 @@ impl MainWindow {
             "folders" => pages.folders.focus_target(),
             "playlist" => pages.playlist.focus_target(),
             "search" => pages.search_entry.clone().upcast(),
+            "history" => self.history_view()?.focus_target(),
             _ => return None,
         })
     }
@@ -486,6 +487,8 @@ impl MainWindow {
     fn load_playlists(&self, then_rename: Option<PlaylistKey>) {
         let Some(pages) = self.pages() else { return };
         let backend = pages.backend.clone();
+        // Desktop integrations that list the playlists read them again.
+        backend.playlists_changed();
         let weak = self.downgrade();
         glib::spawn_future_local(async move {
             let lists = backend.query(|l| l.playlists()).await;
@@ -1079,7 +1082,8 @@ impl MainWindow {
                 .filter(|t| !t.missing && t.key.0 != 0)
                 .map(|t| t.key)
                 .collect();
-            backend.send(PlayerRequest::PlayTracks {
+            backend.send(PlayerRequest::PlayPlaylist {
+                key,
                 tracks,
                 start: 0,
                 title: name,

@@ -14,8 +14,8 @@ mod support;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use helikodu_library::{
-    DbError, HistoryQuery, Listen, ListenEnd, ListenOutcome, PlayRules, Rating, TrackChange,
-    TrackFingerprint, TrackKind, TrackStats,
+    DbError, HistoryQuery, HistoryTotals, Listen, ListenEnd, ListenOutcome, PlayRules, Rating,
+    TrackChange, TrackFingerprint, TrackKind, TrackStats,
 };
 use helikodu_model::library::TrackId;
 use support::{library, record, tagged};
@@ -376,6 +376,16 @@ fn history_is_appended_and_queried_newest_first() {
         .unwrap();
     assert_eq!(limited.len(), 1);
     assert_eq!(limited[0].started_at, at(200));
+
+    let totals = library.history_totals().unwrap();
+    assert_eq!((totals.plays, totals.skips), (2, 1));
+    assert_eq!(totals.first, Some(at(100)));
+}
+
+#[test]
+fn an_empty_history_has_no_totals() {
+    let (library, _) = library();
+    assert_eq!(library.history_totals().unwrap(), HistoryTotals::default());
 }
 
 #[test]

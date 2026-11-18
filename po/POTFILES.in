@@ -75,3 +75,5 @@ crates/ui-gtk/src/widgets/copies_badge.rs
 crates/ui-gtk/src/backend.rs
 crates/ui-gtk/src/query_text.rs
 crates/ui-gtk/src/popovers/query_completion.rs
+crates/ui-gtk/src/views/history.rs
+crates/ui-gtk/src/window/history.rs

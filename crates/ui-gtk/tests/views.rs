@@ -681,6 +681,20 @@ fn rating_from_the_context_menu_updates_the_rows(app: &gtk::Application) {
 
 type Test = (&'static str, fn(&gtk::Application));
 
+fn history_lists_listens_by_day(app: &gtk::Application) {
+    let (window, _backend) = window(app);
+    WidgetExt::activate_action(&window, "win.show-history", None).unwrap();
+    wait_for("the history", 5, || {
+        window
+            .history_counts()
+            .is_some_and(|(_, listens)| listens > 0)
+    });
+    let (days, listens) = window.history_counts().unwrap();
+    assert!(days >= 1, "the listens come under their days");
+    assert!(listens > days, "{days} days, {listens} listens");
+    window.close();
+}
+
 const TESTS: &[Test] = &[
     ("tracks_load_lazily_and_sort", tracks_load_lazily_and_sort),
     (
@@ -712,6 +726,7 @@ const TESTS: &[Test] = &[
         window_styles_ask_for_their_decorations,
     ),
     ("frame_times", frame_times),
+    ("history_lists_listens_by_day", history_lists_listens_by_day),
     (
         "rating_from_the_table_updates_the_row",
         rating_from_the_table_updates_the_row,

@@ -177,3 +177,25 @@ list.hk-completion-list > row:selected { background-color: var(--hk-hover); colo
 .hk-completion-example { font-size: 11px; }
 popover.hk-completion separator { margin: 6px 0; background-color: var(--hk-line); }
 .hk-completion-hint { padding: 0 8px 2px; font-size: 12px; }
+
+/* ---- Play history --------------------------------------------------------- */
+
+.hk-history-view .hk-toolbar .hk-seg { margin-right: 6px; }
+entry.hk-history-filter { min-height: 30px; }
+entry.hk-history-filter > image { margin-right: 6px; }
+.hk-table-header.hk-history-row {
+  min-height: 32px; padding: 0 24px; background-color: var(--hk-win);
+  border-top: 1px solid var(--hk-line); border-bottom: 1px solid var(--hk-line);
+}
+listview.hk-history { background: none; color: var(--hk-t1); }
+listview.hk-history > row { padding: 0; border-radius: 0; background: none; color: var(--hk-t1); }
+listview.hk-history > row:hover { background-color: var(--hk-hover); }
+listview.hk-history > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
+.hk-history .hk-cell { padding: 0 24px; }
+.hk-history-row { min-height: 34px; }
+.hk-history-day { min-height: 38px; }
+.hk-history-day-title { font-weight: 600; }
+.hk-history-day-summary { font-size: 12px; }
+.hk-history-time { font-size: 11.5px; }
+.hk-history .hk-cell.hk-skip label { color: var(--hk-t3); }
+.hk-history .hk-cell.hk-missing label.hk-medium { color: var(--hk-t3); }

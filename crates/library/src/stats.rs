@@ -14,5 +14,5 @@ mod rules;
 pub(crate) mod store;
 
 pub use rating::Rating;
-pub use records::{HistoryEntry, HistoryQuery, Listen, TrackStats};
+pub use records::{HistoryEntry, HistoryQuery, HistoryTotals, Listen, TrackStats};
 pub use rules::{ListenEnd, ListenOutcome, PlayRules};

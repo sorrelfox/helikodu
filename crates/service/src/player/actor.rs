@@ -1538,7 +1538,7 @@ impl Actor {
                 track,
                 self.clock.now(),
                 length,
-                Some(context_label(self.queue.context())),
+                Some(self.listen_context(slot.entry)),
             ));
         }
         let index = self.queue.index_of(slot.entry).unwrap_or(0);
@@ -1685,6 +1685,17 @@ impl Skipper {
             return true;
         }
         false
+    }
+}
+
+impl Actor {
+    /// Where the listen of `entry` came from, for the history: the queue's
+    /// context, or the queue itself for an entry queued from elsewhere.
+    fn listen_context(&self, entry: EntryId) -> String {
+        if self.queue.entry(entry).is_some_and(|e| !e.from_context) {
+            return "queue".into();
+        }
+        context_label(self.queue.context())
     }
 }
 

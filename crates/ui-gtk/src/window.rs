@@ -9,6 +9,7 @@
 //! desktop draws its title bar, and the menu bar can be shown (Ctrl+M).
 
 pub(crate) mod dialog_hooks;
+pub(crate) mod history;
 pub(crate) mod now_playing;
 pub(crate) mod pages;
 pub(crate) mod pane_handle;
@@ -163,6 +164,8 @@ mod imp {
         pub(super) placeholders: RefCell<HashSet<&'static str>>,
         pub(super) notifications: Cell<bool>,
         pub(super) pages: RefCell<Option<Rc<pages::Pages>>>,
+        /// The Play history page.
+        pub(super) history_view: RefCell<Option<Rc<crate::views::history::HistoryView>>>,
         /// Whether the queue panel is wanted, as remembered or as last set.
         pub(super) panel_wanted: Cell<bool>,
         /// Whether the user has shown or hidden the panel: then that choice
@@ -294,6 +297,7 @@ impl MainWindow {
         imp.albums.replace(Some(albums));
         imp.album.replace(Some(album));
         self.setup_pages(backend, &playback, &covers);
+        self.setup_history(backend, &playback, &covers);
 
         imp.deck.bind(backend, &playback, &covers);
         self.setup_dialogs(backend, &playback);
@@ -604,6 +608,7 @@ impl MainWindow {
             }
         }
         let selected: String = match page {
+            Page::Library(history::PAGE) => self.show_history(),
             Page::Library(name) if self.has_page(name) => self.show_page(page),
             Page::Artist(_) | Page::Genre(_) | Page::Playlist(_) | Page::Search => {
                 self.show_page(page)
@@ -633,14 +638,14 @@ impl MainWindow {
         self.update_history_actions();
     }
 
-    /// Tracks, Artists and Genres open without the queue panel, as designed,
+    /// Tracks, Artists, Genres and History open without the queue panel, as designed,
     /// until the user shows or hides it; from then on their choice holds.
     fn show_panel_for(&self, page: Page) {
         let imp = self.imp();
         let wide = matches!(
             page,
             Page::Library("tracks" | "artists" | "genres") | Page::Artist(_) | Page::Genre(_)
-        );
+        ) || page == Page::Library(history::PAGE);
         let shown = imp.panel_wanted.get() && (imp.panel_chosen.get() || !wide);
         if imp.panel_revealer.reveals_child() != shown {
             imp.panel_revealer.set_reveal_child(shown);

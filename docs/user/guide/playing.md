@@ -62,8 +62,16 @@ If Helikodu is already running, the files go to the running window.
 
 A track counts as played once you have listened to half of it or four minutes of it, whichever comes first. Skipping ahead does not count as listening. Both limits can be changed under **Count a play** in the **Playback** settings.
 
+## Play history
+
+**Library ▸ History** in the main menu lists everything you listened to, newest first and by day, with the time it started, where it was played from (an album, a playlist, a search, a folder or the queue) and how long you listened. A track you skipped before it counted as a play is dimmed and shows where you skipped it. Choose **Today**, **7 days**, **30 days** or **All** at the top, and type in **Filter** to find a track, artist, album or source. Double-click a track (or press Enter) to play it; right-click it for the usual menu.
+
+**Save as playlist** makes a new playlist of what is shown, without the skipped tracks and with each track once.
+
+**Library ▸ Export History…** writes the whole history to a file on your computer; nothing is sent anywhere. Name the file with `.jsonl` for ListenBrainz listens (one JSON object per line, in the listen format of the ListenBrainz API, plays only), or with `.log` for a `.scrobbler.log` (the Audioscrobbler portable format that Last.fm tools read; plays are marked `L` and skips `S`). You can submit such a file to a listening service later with a tool of your choice.
+
 ## Media keys and desktop controls
 
-Helikodu works with your keyboard's media keys, the media controls of GNOME and KDE Plasma, and other MPRIS remote controls. It keeps the computer from going to sleep while music plays (the screen can still lock); turn this off with **Keep the computer awake while music plays** in the **Playback** settings.
+Helikodu works with your keyboard's media keys, the media controls of GNOME and KDE Plasma, and other MPRIS remote controls. Remote controls that show a track list see the queue (for a very long queue, the part around the playing track) and can jump to a track in it; those that list playlists can start one of your playlists. It keeps the computer from going to sleep while music plays (the screen can still lock); turn this off with **Keep the computer awake while music plays** in the **Playback** settings.
 
 With the volume **Fixed at 100 % (bit-perfect)**, playback started from media keys, desktop controls or by opening files also waits for the full-output question; see [Volume](audio-output.md#volume).
