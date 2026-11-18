@@ -14,7 +14,7 @@ use helikodu_model::player::TrackFlags;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::Library;
-use crate::catalog::{AlbumId, IdentityId, PersonId, sql_track_id};
+use crate::catalog::{AlbumId, IdentityId, PersonId, TrackKind, sql_track_id};
 use crate::db::{DbError, path_from_blob};
 
 /// The blocks a track belongs to, and its playback flags.
@@ -28,7 +28,7 @@ pub struct PlayKeys {
     pub grouping: Option<String>,
     /// Its first artist.
     pub artist: Option<PersonId>,
-    /// The per-track playback flags.
+    /// The per-track playback flags. An audiobook is always left out of shuffle.
     pub flags: TrackFlags,
 }
 
@@ -91,6 +91,14 @@ impl Library {
     }
 }
 
+/// The playback flags of a track of `kind`: an audiobook is left out of shuffle.
+fn flags_of_kind(mut flags: TrackFlags, kind: TrackKind) -> TrackFlags {
+    if kind == TrackKind::Audiobook {
+        flags.skip_in_shuffle = true;
+    }
+    flags
+}
+
 fn play_keys_of(c: &Connection, track: TrackId) -> rusqlite::Result<Option<PlayKeys>> {
     c.prepare_cached(
         "SELECT t.album_id, d.path,
@@ -98,7 +106,7 @@ fn play_keys_of(c: &Connection, track: TrackId) -> rusqlite::Result<Option<PlayK
                           WHERE g.track_id = t.id AND g.key = 'GROUPING' LIMIT 1), t.work),
                 (SELECT p.person_id FROM track_people p
                  WHERE p.track_id = t.id AND p.role = 0 ORDER BY p.position LIMIT 1),
-                s.flags
+                s.flags, t.kind
          FROM tracks t
          JOIN files f ON f.id = t.file_id
          JOIN dirs d ON d.id = f.dir_id
@@ -113,7 +121,10 @@ fn play_keys_of(c: &Connection, track: TrackId) -> rusqlite::Result<Option<PlayK
                 .get::<_, Option<String>>(2)?
                 .filter(|g| !g.trim().is_empty()),
             artist: row.get::<_, Option<i64>>(3)?.map(PersonId::from_raw),
-            flags: TrackFlags::from_bits(row.get::<_, Option<i64>>(4)?.unwrap_or(0)),
+            flags: flags_of_kind(
+                TrackFlags::from_bits(row.get::<_, Option<i64>>(4)?.unwrap_or(0)),
+                TrackKind::from_sql(row.get(5)?),
+            ),
         })
     })
     .optional()

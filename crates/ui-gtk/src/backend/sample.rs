@@ -8,6 +8,7 @@
 //! a fixed seed, so two runs show the same library. Its files do not exist; the
 //! folders are made up from the tracks' paths.
 
+mod browse;
 mod copies;
 mod history;
 mod lyrics;
@@ -174,6 +175,8 @@ pub struct SampleLibrary {
     copies: Mutex<copies::CopyState>,
     /// The saved searches.
     searches: Mutex<Vec<query::SampleSearch>>,
+    /// The media kinds chosen for albums.
+    kinds: Mutex<HashMap<AlbumKey, super::MediaKind>>,
 }
 
 fn format(r: &mut Random) -> AudioFormat {
@@ -367,6 +370,7 @@ impl SampleLibrary {
             flags: Mutex::new(HashMap::new()),
             copies: Mutex::new(copies::CopyState::default()),
             searches: Mutex::new(query::sample_searches()),
+            kinds: Mutex::new(HashMap::new()),
         };
         library.add_sample_playlists(&mut r);
         library
@@ -472,6 +476,10 @@ impl SampleLibrary {
                         .any(|t| t.artist.ends_with(&format!("& {}", self.artists[i])))
             }),
             AlbumScope::Genre(key) => key.0 == album.genre as u64 + 1,
+            AlbumScope::Composer(key) => {
+                browse::composer_index(key).is_some_and(|i| album.composer() == Some(i))
+            }
+            AlbumScope::Years(range) => range.contains(album.row.year),
         }
     }
 
@@ -530,6 +538,9 @@ impl SampleLibrary {
             size: Some(album.tracks.len() as u64 * 31_000_000),
             folder: Some(display(&album.folder)),
             album_gain_db: Some(-6.3),
+            kind: self.kind_of(key),
+            resume: None,
+            reader: None,
         })
     }
 
@@ -596,6 +607,8 @@ impl LibrarySource for SampleLibrary {
             artists,
             tracks: self.tracks.len(),
             genres,
+            composers: self.composer_rows().len(),
+            years: self.year_rows().len(),
         })
     }
 
@@ -986,6 +999,30 @@ impl LibrarySource for SampleLibrary {
         Ok(items.len())
     }
 
+    fn composers(&self) -> Result<Vec<ArtistRow>, BackendError> {
+        Ok(self.composer_rows())
+    }
+
+    fn years(&self) -> Result<Vec<super::YearRow>, BackendError> {
+        Ok(self.year_rows())
+    }
+
+    fn composer_duration(&self, composer: ArtistKey) -> Result<Duration, BackendError> {
+        Ok(self
+            .sorted(&AlbumQuery {
+                scope: AlbumScope::Composer(composer),
+                ..AlbumQuery::default()
+            })
+            .iter()
+            .flat_map(|a| a.tracks.iter().filter_map(|t| t.duration))
+            .sum())
+    }
+
+    fn set_album_kind(&self, album: AlbumKey, kind: super::MediaKind) -> Result<(), BackendError> {
+        self.set_kind(album, kind);
+        Ok(())
+    }
+
     fn folder_roots(&self) -> Result<Vec<FolderRow>, BackendError> {
         Ok(self
             .roots
@@ -1028,6 +1065,8 @@ impl LibrarySource for SampleLibrary {
                         .unwrap_or_default(),
                     size: seconds * 4_100_000 / 10 + 1_000_000,
                     track: self.track(track.key),
+                    title: None,
+                    duration: None,
                     path: file,
                 });
             }
@@ -1300,6 +1339,16 @@ impl PlayerControl for FakePlayer {
                     .map(|a| a.row.name)
                     .unwrap_or_default();
                 self.play(&keys, 0, name);
+            }
+            PlayerRequest::PlayComposer { composer, .. } => {
+                let scope = AlbumScope::Composer(composer);
+                let keys = self.library.scope_tracks(scope);
+                self.play(&keys, 0, SampleLibrary::scope_name(scope));
+            }
+            PlayerRequest::PlayYears { years, .. } => {
+                let scope = AlbumScope::Years(years);
+                let keys = self.library.scope_tracks(scope);
+                self.play(&keys, 0, SampleLibrary::scope_name(scope));
             }
             PlayerRequest::PlayGenre { genre, .. } => {
                 let keys = self

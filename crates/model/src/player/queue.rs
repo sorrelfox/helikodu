@@ -101,6 +101,11 @@ pub enum ContextSource {
     Artist(u64),
     /// The tracks of a genre.
     Genre(u64),
+    /// The tracks of a composer.
+    Composer(u64),
+    /// The tracks of a span of release years, as the first and last year; `None`
+    /// for the tracks without a year.
+    Years(Option<(i32, i32)>),
     /// A playlist.
     Playlist(u64),
     /// The results of a search.

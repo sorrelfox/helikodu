@@ -588,7 +588,8 @@ fn write_track_columns(
                      compilation, release_type, release_mbid, release_group_mbid,
                      album_dir_id, artists_fold, added_at, rg_track_gain, rg_track_peak,
                      rg_album_gain, rg_album_peak)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
+                 VALUES (?1, ?2, ?3, ?4, ?5,
+                         coalesce((SELECT kind FROM chosen_kinds WHERE identity_id = ?5), ?6), ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
                          ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28,
                          ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40, ?41, ?42,
                          ?43, ?44, ?45, ?46, ?47)
@@ -598,7 +599,9 @@ fn write_track_columns(
         Some(track) => {
             c.prepare_cached(
                 "UPDATE tracks SET file_id = ?1, sub_index = ?2, start_frame = ?3,
-                     end_frame = ?4, identity_id = ?5, kind = ?6, section = ?7, title = ?8,
+                     end_frame = ?4, identity_id = ?5,
+                     kind = coalesce((SELECT kind FROM chosen_kinds WHERE identity_id = ?5), ?6),
+                     section = ?7, title = ?8,
                      title_sort = ?9, title_fold = ?10, artist = ?11, track_no = ?12,
                      track_total = ?13, disc_no = ?14, disc_total = ?15,
                      disc_subtitle = ?16, date = ?17, year = ?18, original_year = ?19,

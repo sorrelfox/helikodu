@@ -12,6 +12,7 @@
 //! playback come back to the window as [`Update::Request`], so they pass the
 //! full-output gate.
 
+mod browse;
 mod history;
 mod lyrics;
 mod mpris;
@@ -54,12 +55,12 @@ use helikodu_service::{Event, Service, SubscribeOptions};
 
 use super::{
     AlbumDetail, AlbumFilter, AlbumKey, AlbumQuery, AlbumRow, AlbumScope, AlbumSort, ArtistDetail,
-    ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, CoverKey, DiscGroup, FolderFile,
-    FolderListing, FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts, LibrarySource,
-    NowPlaying, OutputInfo, PlaybackState, PlayerControl, PlayerRequest, PlaylistKey, PlaylistRow,
-    QueueSnapshot, Repeat, SavedSearchKey, SavedSearchRow, SearchResults, SignalState,
-    ThumbnailState, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort,
-    UiStateAccess, Update,
+    ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, ChapterRow, CoverKey, DiscGroup,
+    FolderFile, FolderListing, FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts,
+    LibrarySource, MediaKind, NowPlaying, OutputInfo, PlaybackState, PlayerControl, PlayerRequest,
+    PlaylistKey, PlaylistRow, QueueSnapshot, Repeat, SavedSearchKey, SavedSearchRow, SearchResults,
+    SignalState, ThumbnailState, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope,
+    TrackSort, UiStateAccess, Update, YearRow,
 };
 use crate::i18n::{fill, tr};
 
@@ -268,6 +269,10 @@ impl ServiceLibrary {
                 AlbumScope::Artist(key) => ServiceAlbumFilter::ByArtist(person(key)),
                 AlbumScope::AppearsOn(key) => ServiceAlbumFilter::AppearsOn(person(key)),
                 AlbumScope::Genre(key) => ServiceAlbumFilter::Genre(genre_id(key)),
+                AlbumScope::Composer(key) => {
+                    ServiceAlbumFilter::Credited(person(key), ArtistRole::Composer)
+                }
+                AlbumScope::Years(range) => ServiceAlbumFilter::Years(browse::year_span(range)),
             },
             quality: match query.filter {
                 AlbumFilter::All => AlbumQuality::Any,
@@ -482,6 +487,8 @@ impl LibrarySource for ServiceLibrary {
             artists: totals.artists,
             tracks: totals.tracks,
             genres: totals.genres,
+            composers: browse::composer_count(music),
+            years: music.years().map_or(0, |y| y.len()),
         })
     }
 
@@ -535,10 +542,14 @@ impl LibrarySource for ServiceLibrary {
         let mut size = 0;
         let several = detail.discs.len() > 1;
         let mut discs = Vec::new();
+        let mut resume = None;
         for disc in &detail.discs {
             let mut tracks = Vec::new();
             for track in &disc.tracks {
                 let stats = music.stats(track.id).ok();
+                if let Some(at) = stats.as_ref().and_then(|s| s.resume_position) {
+                    resume = Some((TrackKey(track.id.get()), at));
+                }
                 if let Ok(Some(source)) = music.track_source(track.id) {
                     size += std::fs::metadata(source.source.path()).map_or(0, |m| m.len());
                     if folder.is_none() {
@@ -569,9 +580,11 @@ impl LibrarySource for ServiceLibrary {
         // The list has no audio format; the first track gives the album's.
         let first = detail.discs.iter().flat_map(|d| &d.tracks).next();
         let mut album_gain_db = None;
+        let mut reader = None;
         if let Some(first) = first
             && let Ok(Some(info)) = music.track_info(first.id)
         {
+            reader = (!info.tags.composers.is_empty()).then(|| info.tags.composers.join(", "));
             let audio = &info.audio;
             row.format = AudioFormat {
                 codec: audio.codec.as_ref().map(|c| c.to_uppercase()),
@@ -597,6 +610,9 @@ impl LibrarySource for ServiceLibrary {
             size: (size > 0).then_some(size),
             folder: folder.map(|f| f.display().to_string()),
             album_gain_db,
+            kind: browse::album_kind(detail.discs.iter().flat_map(|d| &d.tracks)),
+            resume,
+            reader,
         }))
     }
 
@@ -1074,7 +1090,16 @@ impl LibrarySource for ServiceLibrary {
                 .ok()
                 .flatten()
                 .and_then(|id| self.track_row(music, TrackKey(id.get())));
+            // A file outside the library is read for its title and length;
+            // nothing is stored.
+            let (title, duration) = if track.is_none() {
+                browse::file_tags(&file)
+            } else {
+                (None, None)
+            };
             files.push(FolderFile {
+                title,
+                duration,
                 name: file_name(&file),
                 size: entry.metadata().map_or(0, |m| m.len()),
                 track,
@@ -1118,6 +1143,46 @@ impl LibrarySource for ServiceLibrary {
         self.library()?
             .delete_saved_search(saved_search_id(key))
             .map_err(error)
+    }
+
+    fn composers(&self) -> Result<Vec<ArtistRow>, BackendError> {
+        browse::composers(self.library()?)
+    }
+
+    fn years(&self) -> Result<Vec<YearRow>, BackendError> {
+        browse::years(self.library()?)
+    }
+
+    fn composer_duration(&self, composer: ArtistKey) -> Result<Duration, BackendError> {
+        browse::composer_duration(self.library()?, composer)
+    }
+
+    fn set_album_kind(&self, album: AlbumKey, kind: MediaKind) -> Result<(), BackendError> {
+        let music = self.library()?;
+        let id = lock(&self.ids).get(&album).copied();
+        let Some(detail) = id
+            .map(|id| music.album(id))
+            .transpose()
+            .map_err(error)?
+            .flatten()
+        else {
+            return Ok(());
+        };
+        let tracks: Vec<TrackId> = detail
+            .discs
+            .iter()
+            .flat_map(|d| &d.tracks)
+            .map(|t| t.id)
+            .collect();
+        browse::set_kind(music, &tracks, kind)
+    }
+
+    fn forget_resume(&self, tracks: &[TrackKey]) -> Result<(), BackendError> {
+        browse::forget_resume(self.library()?, tracks)
+    }
+
+    fn chapters(&self, track: TrackKey) -> Result<Vec<ChapterRow>, BackendError> {
+        browse::chapters(self.library()?, track)
     }
 
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {
@@ -1287,6 +1352,22 @@ impl PlayerControl for ServicePlayer {
                 self.shuffle(shuffle);
                 self.command(PlayerCommand::PlayContext {
                     context: ContextRequest::Genre(genre_id(genre)),
+                    title: None,
+                    start: 0,
+                });
+            }
+            PlayerRequest::PlayComposer { composer, shuffle } => {
+                self.shuffle(shuffle);
+                self.command(PlayerCommand::PlayContext {
+                    context: ContextRequest::Composer(person(composer)),
+                    title: None,
+                    start: 0,
+                });
+            }
+            PlayerRequest::PlayYears { years, shuffle } => {
+                self.shuffle(shuffle);
+                self.command(PlayerCommand::PlayContext {
+                    context: ContextRequest::Years(browse::year_span(years)),
                     title: None,
                     start: 0,
                 });

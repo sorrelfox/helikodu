@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The album page: cover, title, artist, badges and the play buttons; the
-//! tracks disc by disc; the details column.
+//! tracks disc by disc; the details column with the media kind.
+//!
+//! An audiobook uses the same page: "Play" continues where listening stopped,
+//! "Start again" goes back to the start, a meter shows how much has been heard,
+//! and the track table lists the chapters with where each starts.
+
+mod book;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -11,7 +17,9 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{CompositeTemplate, gdk, gio, glib};
 
-use crate::backend::{AlbumDetail, AlbumKey, Backend, PlayerRequest, TrackKey, TrackRow};
+use crate::backend::{
+    AlbumDetail, AlbumKey, Backend, MediaKind, PlayerRequest, TrackKey, TrackRow,
+};
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
@@ -29,6 +37,34 @@ mod imp {
     pub(crate) struct AlbumPage {
         #[template_child]
         pub(super) cover: TemplateChild<CoverArt>,
+        #[template_child]
+        pub(super) section: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) play_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) restart: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) progress: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub(super) heard: TemplateChild<gtk::LevelBar>,
+        #[template_child]
+        pub(super) heard_text: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) title_column: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) plays_column: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) rating_column: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) length_column: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) kind: TemplateChild<gtk::DropDown>,
+        #[template_child]
+        pub(super) kind_text: TemplateChild<gtk::Label>,
+        /// Set while the page sets the Kind dropdown itself.
+        pub(super) kind_quiet: Cell<bool>,
+        /// Where an audiobook stands, while one is shown.
+        pub(super) book: RefCell<Option<book::Progress>>,
         #[template_child]
         pub(super) title: TemplateChild<gtk::Label>,
         #[template_child]
@@ -81,10 +117,31 @@ mod imp {
                 let weak = obj.downgrade();
                 button.connect_clicked(move |_| {
                     if let Some(page) = weak.upgrade() {
-                        page.play_from(0, shuffle);
+                        // An audiobook continues where listening stopped.
+                        let start = page
+                            .imp()
+                            .book
+                            .borrow()
+                            .as_ref()
+                            .map_or(0, |b| b.continue_at);
+                        page.play_from(start, shuffle);
                     }
                 });
             }
+            let names = book::kind_names();
+            let names: Vec<&str> = names.iter().map(String::as_str).collect();
+            self.kind.set_model(Some(&gtk::StringList::new(&names)));
+            let weak = obj.downgrade();
+            self.kind.connect_selected_notify(move |dropdown| {
+                if let Some(page) = weak.upgrade()
+                    && !page.imp().kind_quiet.get()
+                    && let Some(kind) = usize::try_from(dropdown.selected())
+                        .ok()
+                        .and_then(|i| book::KINDS.get(i))
+                {
+                    page.set_kind(*kind);
+                }
+            });
             let weak = obj.downgrade();
             self.tracks.connect_row_activated(move |_, row| {
                 if let Some(page) = weak.upgrade()
@@ -207,7 +264,7 @@ impl AlbumPage {
     /// track rows' context menu and dragging.
     fn install_actions(&self) {
         let group = gio::SimpleActionGroup::new();
-        for name in ["enqueue", "more", "edit-tags", "open-folder"] {
+        for name in ["enqueue", "more", "edit-tags", "open-folder", "restart"] {
             let action = gio::SimpleAction::new(name, None);
             let weak = self.downgrade();
             action.connect_activate(move |action, _| {
@@ -232,6 +289,7 @@ impl AlbumPage {
                         actions::popup(&page.imp().play.get(), Target::Album(album), None);
                     }
                     "edit-tags" => window.open_tag_editor(tracks),
+                    "restart" => page.start_again(&backend, album, tracks),
                     _ => {
                         let path = page
                             .imp()
@@ -324,12 +382,26 @@ impl AlbumPage {
         imp.title.set_text(&row.title);
         imp.title.set_tooltip_text(Some(&row.title));
         imp.artist.set_text(&row.artist);
+        let is_book = detail.kind == MediaKind::Audiobook;
+        let progress = is_book.then(|| book::Progress::of(&detail));
+        self.show_kind(&detail, progress.as_ref());
+        imp.book.replace(progress);
         let count = detail.tracks().count();
-        let tracks = fill(
-            &ntr("{} track", "{} tracks", count),
-            &[&crate::format::count(count)],
-        );
+        let tracks = if is_book {
+            fill(
+                &ntr("{} chapter", "{} chapters", count),
+                &[&crate::format::count(count)],
+            )
+        } else {
+            fill(
+                &ntr("{} track", "{} tracks", count),
+                &[&crate::format::count(count)],
+            )
+        };
         let mut parts = Vec::new();
+        if is_book && let Some(reader) = &detail.reader {
+            parts.push(fill(&tr("read by {}"), &[reader]));
+        }
         if let Some(year) = row.year {
             parts.push(year.to_string());
         }
@@ -339,7 +411,15 @@ impl AlbumPage {
         while let Some(child) = imp.badges.first_child() {
             imp.badges.remove(&child);
         }
-        for badge in format::badges(&row.format, detail.album_gain_db) {
+        let container = if is_book {
+            book::container_badge(&detail)
+        } else {
+            None
+        };
+        for badge in container
+            .into_iter()
+            .chain(format::badges(&row.format, detail.album_gain_db))
+        {
             let badge = gtk::Label::new(Some(&badge));
             badge.add_css_class("hk-badge");
             imp.badges.append(&badge);
@@ -348,7 +428,12 @@ impl AlbumPage {
             imp.details.remove(&child);
         }
         let mut entries: Vec<(String, String, bool)> = Vec::new();
-        if let Some(genre) = &detail.genre {
+        if is_book {
+            entries.push((tr("Author"), row.artist.clone(), false));
+            if let Some(reader) = &detail.reader {
+                entries.push((tr("Read by"), reader.clone(), false));
+            }
+        } else if let Some(genre) = &detail.genre {
             entries.push((tr("Genre"), genre.clone(), false));
         }
         if let Some(year) = row.year {
@@ -360,8 +445,20 @@ impl AlbumPage {
         if let Some(size) = detail.size {
             entries.push((tr("Size"), format::size(size), false));
         }
-        if let Some(folder) = &detail.folder {
-            entries.push((tr("Folder"), folder.clone(), true));
+        // An audiobook in one file names the file, anything else its folder.
+        let first = detail.tracks().find_map(|t| t.path.clone());
+        let file = first.filter(|file| {
+            is_book
+                && detail
+                    .tracks()
+                    .all(|t| t.path.as_deref().is_none_or(|p| p == file.as_path()))
+        });
+        match (&file, &detail.folder) {
+            (Some(file), _) => {
+                entries.push((tr("File"), file.display().to_string(), true));
+            }
+            (_, Some(folder)) => entries.push((tr("Folder"), folder.clone(), true)),
+            _ => {}
         }
         for (i, (name, value, mono)) in entries.into_iter().enumerate() {
             let name = label(&name, &["hk-t3"]);
@@ -443,6 +540,18 @@ impl AlbumPage {
             return;
         };
         let playing = imp.playing.get();
+        if let Some(progress) = imp.book.borrow().as_ref() {
+            for (index, track) in detail.tracks().enumerate() {
+                imp.tracks.append(&book::chapter_row(
+                    index,
+                    track,
+                    progress.starts.get(index).copied().unwrap_or_default(),
+                    progress.heard.get(index).copied().unwrap_or(false),
+                    Some(track.key) == playing,
+                ));
+            }
+            return;
+        }
         let several = detail.discs.len() > 1;
         let mut index = 0;
         for disc in &detail.discs {
@@ -508,6 +617,89 @@ impl AlbumPage {
                 shuffle,
             });
         }
+    }
+
+    /// Shows the parts of the page that depend on the media kind: the section
+    /// label, the play buttons, the meter, the table's columns and the Kind
+    /// dropdown.
+    fn show_kind(&self, detail: &AlbumDetail, progress: Option<&book::Progress>) {
+        let imp = self.imp();
+        let is_book = progress.is_some();
+        imp.section.set_text(&if is_book {
+            tr("Audiobook")
+        } else {
+            tr("Album")
+        });
+        imp.shuffle.set_visible(!is_book);
+        imp.restart.set_visible(is_book);
+        imp.progress.set_visible(is_book);
+        if let Some(progress) = progress {
+            imp.heard.set_value(progress.fraction());
+            imp.heard_text.set_text(&progress.text());
+        }
+        imp.title_column
+            .set_text(&if is_book { tr("Chapter") } else { tr("Title") });
+        imp.plays_column.set_text(&if is_book {
+            tr("Starts at")
+        } else {
+            tr("Plays")
+        });
+        imp.plays_column
+            .set_size_request(if is_book { 70 } else { 56 }, -1);
+        imp.rating_column.set_visible(!is_book);
+        imp.length_column
+            .set_size_request(if is_book { 56 } else { 48 }, -1);
+        imp.kind_quiet.set(true);
+        let position = book::KINDS
+            .iter()
+            .position(|k| *k == detail.kind)
+            .unwrap_or(1);
+        imp.kind.set_selected(u32::try_from(position).unwrap_or(1));
+        imp.kind_quiet.set(false);
+        imp.kind_text.set_text(&book::kind_text(detail.kind));
+    }
+
+    /// Gives the album shown the media kind `kind`, then shows it again.
+    fn set_kind(&self, kind: MediaKind) {
+        let imp = self.imp();
+        let (Some(backend), Some(album)) = (imp.backend.borrow().clone(), imp.album.get()) else {
+            return;
+        };
+        let weak = self.downgrade();
+        glib::spawn_future_local(async move {
+            let done = backend
+                .query(move |library| library.set_album_kind(album, kind))
+                .await;
+            let Some(page) = weak.upgrade() else { return };
+            match done {
+                Ok(()) => page.show_album(album),
+                Err(error) => {
+                    if let Some(window) = page.root().and_downcast::<MainWindow>() {
+                        window.toast(&error.0, true);
+                    }
+                }
+            }
+        });
+    }
+
+    /// Forgets where listening to the audiobook stopped and plays it from the
+    /// start.
+    fn start_again(&self, backend: &Backend, album: AlbumKey, tracks: Vec<TrackKey>) {
+        let weak = self.downgrade();
+        let backend = backend.clone();
+        glib::spawn_future_local(async move {
+            let _ = backend
+                .query(move |library| library.forget_resume(&tracks))
+                .await;
+            backend.send(PlayerRequest::PlayAlbum {
+                album,
+                start: 0,
+                shuffle: false,
+            });
+            if let Some(page) = weak.upgrade() {
+                page.show_album(album);
+            }
+        });
     }
 
     /// The play button, for keyboard focus.

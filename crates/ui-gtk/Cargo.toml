@@ -61,5 +61,11 @@ harness = false
 name = "play_modes"
 harness = false
 
+[[test]]
+# Composers, Years, the audiobook page and folders outside the library against the
+# sample backend; GTK needs its own main function.
+name = "browse"
+harness = false
+
 [lints]
 workspace = true

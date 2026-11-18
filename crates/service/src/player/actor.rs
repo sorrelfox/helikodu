@@ -33,7 +33,7 @@ use super::{EndReason, Notice, PlayerEvent};
 use crate::Event;
 use crate::bus::EventBus;
 use crate::clock::SharedClock;
-use crate::library::{MAX_PAGE, MusicLibrary, TrackFilter};
+use crate::library::{ArtistRole, MAX_PAGE, MusicLibrary, TrackFilter, TrackKind, YearSpan};
 
 /// The most search results a search context plays.
 const SEARCH_LIMIT: usize = 5000;
@@ -1020,11 +1020,15 @@ impl Actor {
             .as_ref()
             .ok_or_else(|| "there is no library".to_owned())?;
         let number = |id: i64| u64::try_from(id).unwrap_or(0);
+        // An audiobook plays from its own page only, never as part of a larger
+        // context.
         let tracks_of = |filter| -> Result<Vec<TrackRef>, String> {
+            let whole_album = matches!(filter, TrackFilter::Album(_));
             Ok(library
                 .all_tracks(filter)
                 .map_err(|e| e.to_string())?
                 .into_iter()
+                .filter(|t| whole_album || t.kind != TrackKind::Audiobook)
                 .map(|t| TrackRef::Library(t.id))
                 .collect())
         };
@@ -1052,6 +1056,19 @@ impl Actor {
                 ContextSource::Genre(number(genre.get())),
                 title,
                 tracks_of(TrackFilter::Genre(*genre))?,
+            ),
+            ContextRequest::Composer(person) => (
+                ContextSource::Composer(number(person.get())),
+                title,
+                tracks_of(TrackFilter::Artist(*person, Some(ArtistRole::Composer)))?,
+            ),
+            ContextRequest::Years(span) => (
+                ContextSource::Years(match *span {
+                    YearSpan::Years { first, last } => Some((first, last)),
+                    YearSpan::Unknown => None,
+                }),
+                title,
+                tracks_of(TrackFilter::Years(*span))?,
             ),
             ContextRequest::Search(text) => {
                 let mut tracks = Vec::new();
@@ -1705,6 +1722,9 @@ fn context_label(context: &QueueContext) -> String {
         ContextSource::Album(id) => format!("album:{id}"),
         ContextSource::Artist(id) => format!("artist:{id}"),
         ContextSource::Genre(id) => format!("genre:{id}"),
+        ContextSource::Composer(id) => format!("composer:{id}"),
+        ContextSource::Years(Some((first, last))) => format!("years:{first}-{last}"),
+        ContextSource::Years(None) => "years:unknown".into(),
         ContextSource::Playlist(id) => format!("playlist:{id}"),
         ContextSource::Query(text) => format!("search:{text}"),
         ContextSource::Folder(path) => format!("folder:{}", path.display()),

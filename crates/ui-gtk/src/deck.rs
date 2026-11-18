@@ -11,6 +11,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{CompositeTemplate, glib};
 
+mod chapters;
 mod modes;
 
 use crate::backend::{Backend, CoverKey, PlaybackState, PlayerRequest, SignalState};
@@ -90,6 +91,9 @@ mod imp {
         pub(super) links: RefCell<Option<NowLinks>>,
         /// The playing track, for the title's link and menu.
         pub(super) now: RefCell<Option<crate::backend::NowPlaying>>,
+        /// The chapters of the playing file, while a chapter plays.
+        pub(super) chapters: RefCell<Option<super::chapters::ChapterSpan>>,
+        pub(super) backend: RefCell<Option<Backend>>,
     }
 
     #[glib::object_subclass]
@@ -145,9 +149,14 @@ impl Deck {
         imp.covers.replace(Some(covers.clone()));
         imp.playback.replace(Rc::downgrade(playback));
         self.setup_modes(backend, playback);
+        imp.backend.replace(Some(backend.clone()));
         let b = backend.clone();
-        imp.seek_bar
-            .connect_seek(move |to| b.send(PlayerRequest::Seek(to)));
+        let weak = self.downgrade();
+        imp.seek_bar.connect_seek(move |to| {
+            if let Some(deck) = weak.upgrade() {
+                deck.seek_to(to, &b);
+            }
+        });
         let b = backend.clone();
         let weak = self.downgrade();
         imp.volume.connect_value_changed(move |scale| {
@@ -220,7 +229,14 @@ impl Deck {
         let button = &imp.title_button;
         match now {
             Some(now) => {
-                imp.title.set_text(&now.track.title);
+                let chapter = imp
+                    .chapters
+                    .borrow()
+                    .as_ref()
+                    .filter(|c| c.track() == now.track.key)
+                    .map(|c| c.title(&now.track.title));
+                imp.title
+                    .set_text(chapter.as_deref().unwrap_or(&now.track.title));
                 imp.subtitle.set_text(&fill(
                     &tr("{} · {}"),
                     &[&now.track.artist, &now.album_title],
@@ -384,18 +400,19 @@ impl Deck {
 
     fn show_times(&self, view: &PlayerView) {
         let imp = self.imp();
-        match (view.now.is_some(), view.length) {
+        let (elapsed, length) = self.shown_times(view);
+        match (view.now.is_some(), length) {
             (true, Some(length)) => {
-                imp.elapsed.set_text(&format::duration(view.elapsed));
+                imp.elapsed.set_text(&format::duration(elapsed));
                 let right = if imp.show_total.get() {
                     format::duration(length)
                 } else {
-                    format::remaining(view.elapsed, length)
+                    format::remaining(elapsed, length)
                 };
                 imp.remaining.set_text(&right);
             }
             (true, None) => {
-                imp.elapsed.set_text(&format::duration(view.elapsed));
+                imp.elapsed.set_text(&format::duration(elapsed));
                 imp.remaining.set_text("-:--");
             }
             _ => {
@@ -410,7 +427,7 @@ impl Deck {
                 tr("Show the total length")
             }));
         imp.seek_bar
-            .set_position(view.elapsed, view.now.as_ref().and(view.length));
+            .set_position(elapsed, view.now.as_ref().and(length));
     }
 
     fn update(&self, view: &PlayerView, change: Change) {
@@ -435,6 +452,11 @@ impl Deck {
                 imp.previous.set_sensitive(has_track);
                 imp.next.set_sensitive(has_track);
                 self.show_now(view.now.as_ref());
+                if change == Change::Track
+                    && let Some(backend) = imp.backend.borrow().clone()
+                {
+                    self.follow_chapters(view, &backend);
+                }
                 match &view.now {
                     Some(now) => self.show_cover(now.cover, now.cover_seed),
                     None => self.show_cover(None, 0),

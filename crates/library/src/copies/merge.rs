@@ -202,6 +202,11 @@ pub(crate) fn merge(
                 .execute(params![other, target])?
                 > 0;
         }
+        c.prepare_cached(
+            "INSERT OR IGNORE INTO chosen_kinds (identity_id, kind)
+             SELECT ?2, kind FROM chosen_kinds WHERE identity_id = ?1",
+        )?
+        .execute(params![other, target])?;
         c.prepare_cached("UPDATE tracks SET identity_id = ?2 WHERE identity_id = ?1")?
             .execute(params![other, target])?;
         c.prepare_cached("DELETE FROM identities WHERE id = ?1")?

@@ -12,6 +12,7 @@
 //! content for tests, screenshots and the demonstration mode. When the
 //! service's interface changes, only `service.rs` follows it.
 
+pub mod browse;
 pub mod sample;
 pub mod service;
 pub mod services;
@@ -24,6 +25,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
+pub use browse::{ChapterRow, MediaKind, YearRange, YearRow};
 pub use helikodu_model::player::{
     PlayModes, PlayScope, RepeatMode, ShuffleMode, StopAfter, TrackFlags,
 };
@@ -122,6 +124,10 @@ pub enum AlbumScope {
     AppearsOn(ArtistKey),
     /// The albums with a track of a genre.
     Genre(GenreKey),
+    /// The albums with a track by a composer.
+    Composer(ArtistKey),
+    /// The albums released in a span of years.
+    Years(YearRange),
 }
 
 /// Which albums, in which order.
@@ -146,6 +152,10 @@ pub struct LibraryCounts {
     pub tracks: usize,
     /// Genres.
     pub genres: usize,
+    /// Composers.
+    pub composers: usize,
+    /// Release years.
+    pub years: usize,
 }
 
 /// The audio format of a track or album, as far as it is known.
@@ -261,6 +271,13 @@ pub struct AlbumDetail {
     pub folder: Option<String>,
     /// The album gain in dB.
     pub album_gain_db: Option<f64>,
+    /// What kind of recording it is.
+    pub kind: MediaKind,
+    /// The track where listening last stopped, and where in it, for an album
+    /// whose tracks remember that (audiobooks and long tracks).
+    pub resume: Option<(TrackKey, Duration)>,
+    /// Who reads an audiobook: its composer tag, where audiobooks keep it.
+    pub reader: Option<String>,
 }
 
 impl AlbumDetail {
@@ -457,6 +474,10 @@ pub struct FolderFile {
     pub name: String,
     /// Its track, when it is in the library.
     pub track: Option<TrackRow>,
+    /// Its title, read from the file when it is not in the library.
+    pub title: Option<String>,
+    /// Its length, read from the file when it is not in the library.
+    pub duration: Option<Duration>,
     /// Its size in bytes.
     pub size: u64,
 }
@@ -610,6 +631,35 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
         _since: Option<SystemTime>,
     ) -> Result<usize, BackendError> {
         Ok(0)
+    }
+    /// The people in the composer role, by sort name.
+    fn composers(&self) -> Result<Vec<ArtistRow>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// The release years, newest first, then "Unknown".
+    fn years(&self) -> Result<Vec<YearRow>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// The length of all tracks of a composer.
+    fn composer_duration(&self, composer: ArtistKey) -> Result<Duration, BackendError> {
+        let _ = composer;
+        Ok(Duration::ZERO)
+    }
+    /// Gives every track of `album` the kind `kind`.
+    fn set_album_kind(&self, album: AlbumKey, kind: MediaKind) -> Result<(), BackendError> {
+        let _ = (album, kind);
+        Err(BackendError("media kinds cannot be changed here".into()))
+    }
+    /// Forgets where listening to `tracks` stopped, to start them again.
+    fn forget_resume(&self, tracks: &[TrackKey]) -> Result<(), BackendError> {
+        let _ = tracks;
+        Ok(())
+    }
+    /// The chapters of the file of `track` in file order, when it is one of them;
+    /// empty otherwise.
+    fn chapters(&self, track: TrackKey) -> Result<Vec<ChapterRow>, BackendError> {
+        let _ = track;
+        Ok(Vec::new())
     }
 }
 
@@ -782,6 +832,20 @@ pub enum PlayerRequest {
     PlayGenre {
         /// The genre.
         genre: GenreKey,
+        /// In random order.
+        shuffle: bool,
+    },
+    /// Play all tracks of a composer, album by album.
+    PlayComposer {
+        /// The composer.
+        composer: ArtistKey,
+        /// In random order.
+        shuffle: bool,
+    },
+    /// Play all tracks of a span of release years.
+    PlayYears {
+        /// The years.
+        years: YearRange,
         /// In random order.
         shuffle: bool,
     },

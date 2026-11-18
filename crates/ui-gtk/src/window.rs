@@ -585,6 +585,8 @@ impl MainWindow {
             "artists" => "artists",
             "tracks" => "tracks",
             "genres" => "genres",
+            "composers" => "composers",
+            "years" => "years",
             "folders" => "folders",
             other => {
                 self.open_sidebar_row(other);
@@ -644,7 +646,9 @@ impl MainWindow {
         let imp = self.imp();
         let wide = matches!(
             page,
-            Page::Library("tracks" | "artists" | "genres") | Page::Artist(_) | Page::Genre(_)
+            Page::Library("tracks" | "artists" | "genres" | "composers" | "years")
+                | Page::Artist(_)
+                | Page::Genre(_)
         ) || page == Page::Library(history::PAGE);
         let shown = imp.panel_wanted.get() && (imp.panel_chosen.get() || !wide);
         if imp.panel_revealer.reveals_child() != shown {

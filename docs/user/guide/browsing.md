@@ -2,7 +2,7 @@
 
 The main window has three parts: the **sidebar** on the left, the **content** in the middle and the **panel** on the right, which shows the queue. Drag the borders between them to change their widths. **F9** hides or shows the sidebar, the **Show the queue** button in the header shows or hides the panel, and **F6** moves the keyboard focus from one part to the next. The **View** submenu of the main menu has the same switches: **Sidebar**, **Queue Panel** and **Menu Bar**.
 
-The sidebar lists the views of your library (**Albums**, **Artists**, **Tracks**, **Genres** and **Folders**) and your playlists. **Alt+Left** and **Alt+Right**, or the **Back** and **Forward** buttons in the header, go back and forward between the pages you visited.
+The sidebar lists the views of your library (**Albums**, **Artists**, **Tracks**, **Genres**, **Composers**, **Years** and **Folders**) and your playlists. **Alt+Left** and **Alt+Right**, or the **Back** and **Forward** buttons in the header, go back and forward between the pages you visited.
 
 ## Search
 
@@ -55,6 +55,22 @@ On the album page, **Play** plays the album from the start, **Shuffle** in rando
 
 **Genres** lists the genres on the left, sorted by **Name** or **Number of albums**. Choose a genre to see its albums as a grid, with **Play all** and **Shuffle**. The albums can be sorted by **Album artist**, **Title**, **Year** or **Date added**.
 
+## Composers
+
+**Composers** lists the people tagged as composers, in the order of their sort names, so "Maurice Ravel" is under R. Choose a composer to see every album with at least one track by them; the second line of a cover names the album artist, that is, the performer. An album with several composers is listed under each of them. **Play all** and **Shuffle** play only the composer's tracks, album by album.
+
+## Years
+
+**Years** lists the decades and, under each, its years, newest first, with the number of albums of each. Choose a year to see its albums, or a decade to see every album of the decade. The year of an album is its original release year when the tags give one, otherwise the year of the release; albums without a year are under **Unknown**, the last row. **Play all** and **Shuffle** play the tracks of the year or decade.
+
+## Audiobooks
+
+Files with the extension `.m4b` are audiobooks in the library, and the audio of video files (when **Include video files** is on) is **Audio from a video**. Under **Kind** in the **Details** column of an album page you can change what kind an album is (**Audiobook**, **Music** or **Audio from a video**); the choice survives rescans.
+
+An audiobook's page shows its chapters with where each starts, a check mark on the chapters you have heard, and how much is left. **Play** continues where you stopped, and **Start again** plays it from the start. Audiobooks are left out of shuffle, and **Play all** in Genres, Composers, Years and on an artist's page leaves them out too.
+
+While a chapter plays, the deck shows the chapter's number and title, and the seek bar covers the whole file with a gap at each chapter; **Previous** and **Next** move by chapter, and a click in another chapter plays it from there.
+
 ## Tracks
 
 **Tracks** lists every track of the library in a table. The **Filter** field narrows it, and **Columns** shows or hides columns: **#**, **Title**, **Artist**, **Album**, **Year**, **Format**, **Rating**, **Plays** (hidden at first) and **Length**. Drag a column header to move the column, and its edge to change its width. Click the stars in the **Rating** column to rate a track.
@@ -66,6 +82,8 @@ Double-click a track, or press **Enter**, to play from that track. **Ctrl+A** se
 ## Folders
 
 **Folders** shows your library folders and the folders inside them as they are on disk, as a tree on the left; the **+** button (**Add a library folder**) adds another library folder. Choose a folder to see the audio files in it, with **File name**, **Title**, **Length** and **Size**, and whether the folder is in the library (**In the library · watched for changes**, **In the library · rescanned now and then**, **In the library · not connected**, or **Not in the library**). **Play** and **Add to queue** act on the files of that folder, and **Open in file manager** shows it in your file manager.
+
+Under **This computer** the tree also shows your home folder, connected drives and the whole **File system**, so you can play folders that are not in the library; a folder that is already in the library is marked **in the library**. Such a folder is read when you open it and nothing about it is stored: plays from there are not counted and ratings are not kept. **Add to library** adds the folder to your library folders.
 
 ## The track menu
 

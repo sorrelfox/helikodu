@@ -17,6 +17,7 @@ mod details;
 mod library;
 mod loudness;
 mod maintenance;
+mod media_kinds;
 mod play_keys;
 mod playlists;
 mod query;
@@ -37,6 +38,7 @@ pub use catalog::{
     AudioProperties, CoverInfo, CoverLocation, FileStamp, IdentityId, ReplayGain, RootId,
     TrackChange, TrackCovers, TrackFingerprint, TrackKind, TrackRecord, TrackTags, TrackWrite,
 };
+pub use catalog::{YearQuery, YearSpan, YearSummary};
 pub use copies::{
     BACKUP_SUFFIX, CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId,
     KeepRule, MainCopyError, MatchBy, TrashOutcome, TrashRefusal, backup_path,
@@ -65,6 +67,7 @@ pub use loudness::{
     REFERENCE_LUFS, StoredLoudness,
 };
 pub use maintenance::{Trash, TrashError, Trashed};
+pub use media_kinds::FileSection;
 pub use play_keys::PlayKeys;
 pub use playlists::{
     DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions, ImportReport, ItemContent,

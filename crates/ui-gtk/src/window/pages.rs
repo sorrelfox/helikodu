@@ -25,6 +25,7 @@ use crate::playback::Playback;
 use crate::popovers::query_completion::QueryCompletion;
 use crate::views::actions::{self, Origin, Target};
 use crate::views::artists::ArtistsView;
+use crate::views::category::{Category, CategoryView};
 use crate::views::drag::{self, DraggedTracks};
 use crate::views::folders::FoldersView;
 use crate::views::genres::GenresView;
@@ -38,6 +39,8 @@ pub(crate) struct Pages {
     tracks: Rc<TracksView>,
     artists: Rc<ArtistsView>,
     genres: Rc<GenresView>,
+    composers: Rc<CategoryView>,
+    years: Rc<CategoryView>,
     folders: Rc<FoldersView>,
     playlist: Rc<PlaylistView>,
     search: Rc<SearchView>,
@@ -56,7 +59,14 @@ impl std::fmt::Debug for Pages {
 }
 
 /// The library pages this module shows.
-const NAMES: &[&str] = &["artists", "tracks", "genres", "folders"];
+const NAMES: &[&str] = &[
+    "artists",
+    "tracks",
+    "genres",
+    "composers",
+    "years",
+    "folders",
+];
 
 impl MainWindow {
     fn pages(&self) -> Option<Rc<Pages>> {
@@ -79,12 +89,28 @@ impl MainWindow {
         let tracks = TracksView::new(backend, playback, false);
         let artists = ArtistsView::new(backend, playback, covers, open_album.clone());
         let genres = GenresView::new(backend, playback, covers, open_album.clone());
+        let composers = CategoryView::new(
+            Category::Composers,
+            backend,
+            playback,
+            covers,
+            open_album.clone(),
+        );
+        let years = CategoryView::new(
+            Category::Years,
+            backend,
+            playback,
+            covers,
+            open_album.clone(),
+        );
         let folders = FoldersView::new(backend, playback);
         let playlist = PlaylistView::new(backend, playback, covers);
         let search = SearchView::new(backend, covers, playback);
         imp.views.add_named(&tracks.root, Some("tracks"));
         imp.views.add_named(&artists.root, Some("artists"));
         imp.views.add_named(&genres.root, Some("genres"));
+        imp.views.add_named(&composers.root, Some("composers"));
+        imp.views.add_named(&years.root, Some("years"));
         imp.views.add_named(&folders.root, Some("folders"));
         imp.views.add_named(&playlist.root, Some("playlist"));
         imp.views.add_named(&search.root, Some("search"));
@@ -100,6 +126,8 @@ impl MainWindow {
             tracks,
             artists,
             genres,
+            composers,
+            years,
             folders,
             playlist,
             search,
@@ -343,6 +371,16 @@ impl MainWindow {
                 views.set_visible_child_name("genres");
                 "genres".into()
             }
+            Page::Library("composers") => {
+                pages.composers.show();
+                views.set_visible_child_name("composers");
+                "composers".into()
+            }
+            Page::Library("years") => {
+                pages.years.show();
+                views.set_visible_child_name("years");
+                "years".into()
+            }
             Page::Library("folders") => {
                 pages.folders.show();
                 views.set_visible_child_name("folders");
@@ -368,6 +406,8 @@ impl MainWindow {
             "tracks" => pages.tracks.focus_target(),
             "artists" => pages.artists.focus_target(),
             "genres" => pages.genres.focus_target(),
+            "composers" => pages.composers.focus_target(),
+            "years" => pages.years.focus_target(),
             "folders" => pages.folders.focus_target(),
             "playlist" => pages.playlist.focus_target(),
             "search" => pages.search_entry.clone().upcast(),
@@ -382,6 +422,8 @@ impl MainWindow {
         pages.tracks.library_changed();
         pages.artists.library_changed();
         pages.genres.library_changed();
+        pages.composers.library_changed();
+        pages.years.library_changed();
         pages.folders.library_changed();
         pages.playlist.reload();
         self.load_playlists(None);
@@ -1315,6 +1357,29 @@ impl MainWindow {
         self.pages().map_or((0, 0, 0), |p| {
             (p.artists.count(), p.genres.count(), p.folders.count())
         })
+    }
+
+    /// The rows of the Composers and the Years lists (for tests).
+    #[doc(hidden)]
+    pub fn browse_counts(&self) -> (usize, usize) {
+        self.pages()
+            .map_or((0, 0), |p| (p.composers.count(), p.years.count()))
+    }
+
+    /// Chooses row `index` of the Composers (`years` false) or Years list and
+    /// returns the name its detail shows (for tests).
+    #[doc(hidden)]
+    pub fn browse_choose(&self, years: bool, index: usize) -> String {
+        let Some(pages) = self.pages() else {
+            return String::new();
+        };
+        let view = if years {
+            &pages.years
+        } else {
+            &pages.composers
+        };
+        view.choose(index);
+        view.shown_name()
     }
 }
 

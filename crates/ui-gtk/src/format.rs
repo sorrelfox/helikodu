@@ -18,6 +18,12 @@ pub(crate) fn duration(d: Duration) -> String {
     }
 }
 
+/// `h:mm:ss` always, for times that are compared in a column of long ones.
+pub(crate) fn duration_hours(d: Duration) -> String {
+    let s = d.as_secs();
+    format!("{}:{:02}:{:02}", s / 3600, s / 60 % 60, s % 60)
+}
+
 /// The time left, with a minus sign: `−3:12`.
 pub(crate) fn remaining(elapsed: Duration, length: Duration) -> String {
     format!("\u{2212}{}", duration(length.saturating_sub(elapsed)))

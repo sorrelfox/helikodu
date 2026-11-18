@@ -14,6 +14,11 @@
 //! the top that carries "A" or "B". Bars outside the loop are dimmed; inside
 //! it, played bars keep the accent and the others are lighter. Dragging a flag
 //! moves that end of the loop (requested on release).
+//!
+//! For a chapter of a file the bar covers the whole file: the deck gives the
+//! positions in the file, the start of the playing chapter (the loop's points
+//! are within the chapter) and the chapter boundaries, each a 3 px gap in the
+//! bars.
 
 use std::cell::{Cell, RefCell};
 use std::time::{Duration, Instant};
@@ -29,6 +34,8 @@ const BAR: f32 = 5.0;
 const GAP: f32 = 2.0;
 const FLAT: f32 = 0.28;
 const MIN: f32 = 0.08;
+/// The width of the gap at a chapter boundary.
+const CHAPTER_GAP: f32 = 3.0;
 /// How far the arrow keys move.
 const STEP: Duration = Duration::from_secs(5);
 
@@ -55,6 +62,11 @@ mod imp {
         /// The flag being dragged (`true` for B) and where it is now.
         pub(super) flag_drag: Cell<Option<(bool, Duration)>>,
         pub(super) loop_handler: RefCell<Option<LoopHandler>>,
+        /// Where the playing chapter starts in the file; the loop's points are
+        /// within the chapter.
+        pub(super) offset: Cell<Duration>,
+        /// The chapter boundaries, as fractions of the file.
+        pub(super) gaps: RefCell<Vec<f64>>,
     }
 
     #[glib::object_subclass]
@@ -149,6 +161,15 @@ mod imp {
             let section = obj.fractions(a, b);
             let outside = glass::LOOP_OUTSIDE.to_gdk();
             let inside = glass::LOOP_INSIDE.to_gdk();
+            let gaps: Vec<(f32, f32)> = self
+                .gaps
+                .borrow()
+                .iter()
+                .map(|g| {
+                    let x = (*g as f32 * w).round();
+                    (x - CHAPTER_GAP / 2.0, x + CHAPTER_GAP / 2.0)
+                })
+                .collect();
             for i in 0..count {
                 let peak = if peaks.is_empty() {
                     FLAT
@@ -169,9 +190,11 @@ mod imp {
                     None if i < played => &accent,
                     None => &rest,
                 };
-                snapshot.push_rounded_clip(&gsk::RoundedRect::from_rect(rect, 1.0));
-                snapshot.append_color(color, &rect);
-                snapshot.pop();
+                for piece in without_gaps(rect, &gaps) {
+                    snapshot.push_rounded_clip(&gsk::RoundedRect::from_rect(piece, 1.0));
+                    snapshot.append_color(color, &piece);
+                    snapshot.pop();
+                }
             }
             drop(peaks);
             obj.draw_flags(snapshot, a, b);
@@ -184,6 +207,30 @@ glib::wrapper! {
     pub(crate) struct WaveformSeekBar(ObjectSubclass<imp::WaveformSeekBar>)
         @extends gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
+
+/// The parts of `rect` outside the horizontal ranges `gaps`.
+fn without_gaps(rect: graphene::Rect, gaps: &[(f32, f32)]) -> Vec<graphene::Rect> {
+    let mut pieces = vec![(rect.x(), rect.x() + rect.width())];
+    for &(from, to) in gaps {
+        pieces = pieces
+            .into_iter()
+            .flat_map(|(left, right)| {
+                if to <= left || from >= right {
+                    vec![(left, right)]
+                } else {
+                    [(left, from.max(left)), (to.min(right), right)]
+                        .into_iter()
+                        .filter(|(l, r)| r - l >= 1.0)
+                        .collect()
+                }
+            })
+            .collect();
+    }
+    pieces
+        .into_iter()
+        .map(|(left, right)| graphene::Rect::new(left, rect.y(), right - left, rect.height()))
+        .collect()
 }
 
 impl Default for WaveformSeekBar {
@@ -203,6 +250,17 @@ impl WaveformSeekBar {
         self.imp().loop_handler.replace(Some(Box::new(handler)));
     }
 
+    /// Covers a whole file of chapters: the playing chapter starts at `offset`,
+    /// and `gaps` are the chapter boundaries as fractions of the file. Positions
+    /// given to [`set_position`](Self::set_position) and asked for by a seek are
+    /// then in the file. No offset and no gaps for a track of its own.
+    pub(crate) fn set_chapters(&self, offset: Duration, gaps: Vec<f64>) {
+        let imp = self.imp();
+        imp.offset.set(offset);
+        imp.gaps.replace(gaps);
+        self.queue_draw();
+    }
+
     /// Shows the A-B loop's points, as far as they are set.
     pub(crate) fn set_loop(&self, start: Option<Duration>, end: Option<Duration>) {
         let imp = self.imp();
@@ -213,10 +271,18 @@ impl WaveformSeekBar {
         self.queue_draw();
     }
 
+    /// The loop's points in the bar's positions (in the file for a chapter).
+    fn loop_points(&self) -> (Option<Duration>, Option<Duration>) {
+        let imp = self.imp();
+        let offset = imp.offset.get();
+        let (a, b) = imp.ab.get();
+        (a.map(|a| a + offset), b.map(|b| b + offset))
+    }
+
     /// The loop's points, with a dragged flag where it is now.
     fn shown_loop(&self) -> (Option<Duration>, Option<Duration>) {
         let imp = self.imp();
-        let (a, b) = imp.ab.get();
+        let (a, b) = self.loop_points();
         match imp.flag_drag.get() {
             Some((false, at)) => (Some(at), b),
             Some((true, at)) => (a, Some(at)),
@@ -272,7 +338,7 @@ impl WaveformSeekBar {
     /// A press: on a flag it takes the flag, elsewhere it seeks.
     fn press(&self, x: f64, _y: f64) {
         let imp = self.imp();
-        let (a, b) = imp.ab.get();
+        let (a, b) = self.loop_points();
         let near = |at: Option<Duration>| {
             at.and_then(|at| self.flag_x(at))
                 .map(|fx| (fx - x).abs())
@@ -307,6 +373,8 @@ impl WaveformSeekBar {
             imp.flag_drag.set(None);
             if let (Some(a), Some(b)) = (a, b) {
                 let (start, end) = if a <= b { (a, b) } else { (b, a) };
+                let offset = imp.offset.get();
+                let (start, end) = (start.saturating_sub(offset), end.saturating_sub(offset));
                 if start < end {
                     imp.ab.set((Some(start), Some(end)));
                     if let Some(handler) = imp.loop_handler.borrow().as_ref() {

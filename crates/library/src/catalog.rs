@@ -24,10 +24,11 @@ pub(crate) mod write;
 pub use browse::{
     AlbumDetail, AlbumFilter, AlbumFormat, AlbumQuality, AlbumQuery, AlbumSort, AlbumSummary,
     ArtistQuery, ArtistRef, ArtistSummary, Disc, GenreQuery, GenreRef, GenreSummary, MAX_PAGE,
-    Page, Paged, TrackFilter, TrackOrder, TrackQuery, TrackSortKey, TrackSummary,
+    Page, Paged, TrackFilter, TrackOrder, TrackQuery, TrackSortKey, TrackSummary, YearQuery,
+    YearSpan, YearSummary,
 };
 pub(crate) use browse::{BY_ALBUM_ARTIST, COLUMNS, LOSSLESS, summary};
-pub(crate) use browse::{album, albums, artists, genres, track_order, tracks};
+pub(crate) use browse::{album, albums, artists, genres, track_order, tracks, years};
 pub use covers::{CoverInfo, CoverLocation};
 pub use fingerprint::TrackFingerprint;
 pub use ids::{AlbumId, GenreId, IdentityId, PersonId, RootId};

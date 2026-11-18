@@ -10,6 +10,7 @@
 mod albums;
 mod people;
 mod tracks;
+mod years;
 
 use std::time::Duration;
 
@@ -22,6 +23,7 @@ pub(crate) use albums::{album, albums};
 pub(crate) use people::{artists, genres};
 pub(crate) use tracks::{BY_ALBUM_ARTIST, COLUMNS, summary};
 pub(crate) use tracks::{track_order, tracks};
+pub(crate) use years::years;
 
 use super::ids::{AlbumId, GenreId, PersonId};
 use super::track_record::{ArtistRole, TrackKind, TrackSection};
@@ -93,6 +95,8 @@ pub enum AlbumFilter {
     Compilations,
     /// The albums with a track of the genre.
     Genre(GenreId),
+    /// The albums released in a span of years, or those without a year.
+    Years(YearSpan),
 }
 
 /// The order of an album list.
@@ -300,6 +304,59 @@ pub struct GenreSummary {
     pub track_count: usize,
 }
 
+/// A span of release years, or the albums and tracks without a year.
+///
+/// The year of an album is its original release year where the tags give one,
+/// otherwise the year of the release.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum YearSpan {
+    /// The years from `first` to `last`, both included.
+    Years {
+        /// The first year.
+        first: i32,
+        /// The last year.
+        last: i32,
+    },
+    /// No year.
+    Unknown,
+}
+
+impl YearSpan {
+    /// One year.
+    pub fn year(year: i32) -> Self {
+        Self::Years {
+            first: year,
+            last: year,
+        }
+    }
+
+    /// The decade that starts with `first`, such as 2010 for 2010 to 2019.
+    pub fn decade(first: i32) -> Self {
+        Self::Years {
+            first,
+            last: first + 9,
+        }
+    }
+}
+
+/// A request for the list of years.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub struct YearQuery {
+    /// Whether the tracks of masked library folders count.
+    pub include_masked: bool,
+}
+
+/// A release year in a list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct YearSummary {
+    /// The year; `None` for the albums and tracks without one.
+    pub year: Option<i32>,
+    /// The albums of the year.
+    pub album_count: usize,
+    /// The tracks of the year.
+    pub track_count: usize,
+}
+
 /// Which tracks to list.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -314,6 +371,10 @@ pub enum TrackFilter {
     Artist(PersonId, Option<ArtistRole>),
     /// The tracks of a genre, by album artist, year, album and track number.
     Genre(GenreId),
+    /// The tracks released in a span of years, or those without a year, by album
+    /// artist, year, album and track number. A track on an album has the album's
+    /// year.
+    Years(YearSpan),
 }
 
 /// A key a list of tracks can be sorted by.

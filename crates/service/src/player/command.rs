@@ -18,7 +18,7 @@ use helikodu_model::settings::{
 
 use super::config::PlayerPrefs;
 use super::timers::SleepWhen;
-use crate::library::{AlbumId, GenreId, PersonId};
+use crate::library::{AlbumId, GenreId, PersonId, YearSpan};
 
 /// A context the service turns into tracks by asking the library.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -30,6 +30,10 @@ pub enum ContextRequest {
     Artist(PersonId),
     /// Every track of a genre.
     Genre(GenreId),
+    /// Every track on which the person is a composer.
+    Composer(PersonId),
+    /// Every track of a span of release years.
+    Years(YearSpan),
     /// The results of a search, best first (at most 5000).
     Search(String),
 }
@@ -48,7 +52,8 @@ pub enum PlayerCommand {
         start: usize,
     },
     /// Play the tracks of `context` from the one at `start`. The service looks the
-    /// tracks up in the library: albums, artists, genres and searches. Folders,
+    /// tracks up in the library: albums, artists, genres, composers, years and
+    /// searches. Audiobooks are left out of every context but their album. Folders,
     /// playlists and loose files need [`PlayTracks`](Self::PlayTracks).
     ///
     /// The queue is replaced, or the tracks are added to its end, as the setting

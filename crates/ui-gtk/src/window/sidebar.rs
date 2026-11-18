@@ -20,6 +20,8 @@ const LIBRARY: &[(&str, &str)] = &[
     ("artists", "avatar-default-symbolic"),
     ("tracks", "audio-x-generic-symbolic"),
     ("genres", "helikodu-tag-symbolic"),
+    ("composers", "helikodu-composer-symbolic"),
+    ("years", "helikodu-calendar-symbolic"),
     ("folders", "folder-symbolic"),
 ];
 
@@ -31,6 +33,8 @@ pub(crate) fn page_title(page: &str) -> String {
         "artists" => tr("Artists"),
         "tracks" => tr("Tracks"),
         "genres" => tr("Genres"),
+        "composers" => tr("Composers"),
+        "years" => tr("Years"),
         "folders" => tr("Folders"),
         _ => String::new(),
     }
@@ -315,6 +319,8 @@ impl Sidebar {
                 "artists" => Some(counts.artists),
                 "tracks" => Some(counts.tracks),
                 "genres" => Some(counts.genres),
+                "composers" => Some(counts.composers),
+                "years" => Some(counts.years),
                 _ => None,
             };
             label.set_text(

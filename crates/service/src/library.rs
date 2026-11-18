@@ -26,6 +26,7 @@
 mod duplicates;
 mod history_export;
 mod info;
+mod kinds;
 mod location;
 mod query;
 mod service;
@@ -86,6 +87,7 @@ pub use helikodu_library::{
     CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId, KeepRule,
     MainCopyError, MatchBy, Trash, TrashError, TrashOutcome, TrashRefusal, Trashed, backup_path,
 };
+pub use helikodu_library::{FileSection, YearSpan, YearSummary};
 pub use helikodu_library::{SavedSearch, SavedSearchId};
 
 /// Why a library operation failed.

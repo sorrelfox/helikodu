@@ -17,6 +17,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Play history (**Library ▸ History**): every listen by day with its time, source and listening time, skips dimmed, for today, 7 days, 30 days or all, with a filter and **Save as playlist**.
 - **Library ▸ Export History…** writes the play history to a local file as ListenBrainz listens (JSON Lines) or as a `.scrobbler.log`, for submitting later; nothing is sent.
 - MPRIS: the track list (the queue, with metadata and jumping to a track) and the playlists (listed in several orders, started from desktop controls, the one playing shown as active).
+- Composers and Years in the sidebar: the albums of a composer, and of a year or a decade (by the original release year where the tags give one), with **Play all** and **Shuffle**.
+- Audiobooks: the album page of an audiobook lists its chapters with where each starts and which have been heard, shows how much is left, continues where you stopped and can start again. Audiobooks are left out of shuffle and of **Play all** in other views. The kind of an album (music, audiobook, audio from a video) can be changed on its page and survives rescans.
+- Chapters: while a chapter plays, the deck shows its number and title, and the seek bar covers the whole file with a gap at each chapter boundary.
+- Folders outside the library: the Folders view also shows the home folder, connected drives and the file system, plays from them without storing anything, and adds a folder to the library with **Add to library**.
 
 ### Fixed
 

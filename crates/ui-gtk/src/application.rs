@@ -95,6 +95,8 @@ fn check_icons(display: &gtk::gdk::Display) {
         "emblem-favorite-symbolic",
         "helikodu-sidebar-symbolic",
         "helikodu-tag-symbolic",
+        "helikodu-composer-symbolic",
+        "helikodu-calendar-symbolic",
         "helikodu-playlist-symbolic",
     ];
     let theme = gtk::IconTheme::for_display(display);

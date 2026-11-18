@@ -3,6 +3,8 @@
 
 //! Lists of albums, and one album with its discs and tracks.
 
+use std::borrow::Cow;
+
 use helikodu_meta::covers::CoverHash;
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
@@ -147,9 +149,9 @@ fn album_format(
 }
 
 /// The condition and parameters of `filter` on the albums `a`.
-fn filter_sql(filter: AlbumFilter) -> (&'static str, Params) {
+fn filter_sql(filter: AlbumFilter) -> (Cow<'static, str>, Params) {
     let person = |p: PersonId| Value::Integer(p.0);
-    match filter {
+    let (condition, params): (&'static str, Params) = match filter {
         AlbumFilter::All => ("1", Vec::new()),
         AlbumFilter::ByArtist(p) | AlbumFilter::Credited(p, ArtistRole::AlbumArtist) => (
             "a.id IN (SELECT album_id FROM album_people WHERE person_id = ?1)",
@@ -172,7 +174,13 @@ fn filter_sql(filter: AlbumFilter) -> (&'static str, Params) {
                       WHERE tg.genre_id = ?1)",
             vec![Value::Integer(g)],
         ),
-    }
+        AlbumFilter::Years(span) => {
+            let mut params = Vec::new();
+            let condition = super::years::album_condition(span, &mut params);
+            return (Cow::Owned(condition), params);
+        }
+    };
+    (Cow::Borrowed(condition), params)
 }
 
 fn order_sql(sort: AlbumSort) -> &'static str {

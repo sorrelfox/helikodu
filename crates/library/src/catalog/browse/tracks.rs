@@ -155,6 +155,7 @@ fn filter_and_order(filter: TrackFilter, params: &mut Params) -> (String, &'stat
                 BY_ALBUM_ARTIST,
             )
         }
+        TrackFilter::Years(span) => (super::years::track_condition(span, params), BY_ALBUM_ARTIST),
     }
 }
 

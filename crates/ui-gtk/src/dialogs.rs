@@ -42,6 +42,24 @@ fn add(application: &gtk::Application, name: &str, run: impl Fn(&MainWindow) + '
     application.add_action(&action);
 }
 
+/// Adds `path` to the library folders and scans it.
+pub(crate) fn add_library_folder(main: &MainWindow, path: std::path::PathBuf) {
+    let Some(backend) = main.backend() else {
+        return;
+    };
+    let services = backend.services();
+    let added = path.clone();
+    let stored = services.update_settings(&mut |s| {
+        if !s.library.folders.contains(&added) {
+            s.library.folders.push(added.clone());
+        }
+    });
+    match stored.and_then(|()| services.scan(&[path])) {
+        Ok(()) => first_run::hide(main),
+        Err(error) => main.toast(&error.0, true),
+    }
+}
+
 /// Adds the actions that open the dialogs, and their shortcuts.
 pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend) {
     add(application, "preferences", |main| {
@@ -66,20 +84,8 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
     add(application, "add-folder", |main| {
         let weak = main.downgrade();
         settings::library::choose_folder(main.upcast_ref(), move |path| {
-            let Some(main) = weak.upgrade() else { return };
-            let Some(backend) = main.backend() else {
-                return;
-            };
-            let services = backend.services();
-            let added = path.clone();
-            let stored = services.update_settings(&mut |s| {
-                if !s.library.folders.contains(&added) {
-                    s.library.folders.push(added.clone());
-                }
-            });
-            match stored.and_then(|()| services.scan(&[path])) {
-                Ok(()) => first_run::hide(&main),
-                Err(error) => main.toast(&error.0, true),
+            if let Some(main) = weak.upgrade() {
+                add_library_folder(&main, path);
             }
         });
     });

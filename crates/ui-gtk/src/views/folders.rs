@@ -1,10 +1,14 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Library, Folders: the tree of library folders at the left, and the audio
-//! files of the chosen folder at the right. A level of the tree is read when it
-//! is opened. File names are shown from their bytes, lossily where they are not
-//! valid UTF-8.
+//! Library, Folders: the tree of library folders and of the rest of the computer
+//! at the left, and the audio files of the chosen folder at the right. A level of
+//! the tree is read when it is opened. File names are shown from their bytes,
+//! lossily where they are not valid UTF-8.
+//!
+//! A folder outside the library is read when it is opened and nothing is stored:
+//! its files play as loose files, so their plays are not counted and they cannot
+//! be rated until the folder is added to the library.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -31,6 +35,14 @@ mod imp {
     #[derive(Debug, Default)]
     pub(crate) struct FolderItem {
         pub(super) row: RefCell<Option<FolderRow>>,
+        /// The text of a section label row ("Library folders", "This computer").
+        pub(super) heading: RefCell<Option<String>>,
+        /// Whether it is under "This computer".
+        pub(super) outside: Cell<bool>,
+        /// Whether it is a drive or the file system, drawn with a drive icon.
+        pub(super) drive: Cell<bool>,
+        /// Whether it is a folder of "This computer" that is in the library.
+        pub(super) in_library: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -57,6 +69,61 @@ impl FolderItem {
     fn row(&self) -> Option<FolderRow> {
         self.imp().row.borrow().clone()
     }
+
+    /// A section label row.
+    fn heading(text: &str) -> Self {
+        let obj: Self = glib::Object::new();
+        obj.imp().heading.replace(Some(text.to_owned()));
+        obj
+    }
+
+    /// A folder of "This computer"; `roots` are the library folders.
+    fn outside(row: FolderRow, drive: bool, roots: &[PathBuf]) -> Self {
+        let in_library = roots.iter().any(|r| row.path.starts_with(r));
+        let obj = Self::new(row);
+        obj.imp().outside.set(true);
+        obj.imp().drive.set(drive);
+        obj.imp().in_library.set(in_library);
+        obj
+    }
+
+    fn heading_text(&self) -> Option<String> {
+        self.imp().heading.borrow().clone()
+    }
+}
+
+/// The places of "This computer": the home folder, the drives mounted for the
+/// user, and the file system, with whether each is a drive.
+fn computer_places() -> Vec<(FolderRow, bool)> {
+    let place = |path: PathBuf, name: String| FolderRow {
+        has_children: true,
+        name,
+        root: true,
+        state: FolderState::Watched,
+        path,
+    };
+    let mut places = vec![(place(glib::home_dir(), tr("Home")), false)];
+    let user = glib::user_name();
+    let mut drives: Vec<PathBuf> = [
+        PathBuf::from("/run/media").join(&user),
+        PathBuf::from("/media").join(&user),
+    ]
+    .iter()
+    .filter_map(|dir| std::fs::read_dir(dir).ok())
+    .flat_map(|entries| entries.flatten())
+    .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
+    .map(|e| e.path())
+    .collect();
+    drives.sort();
+    for drive in drives {
+        let name = drive
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        places.push((place(drive, name), true));
+    }
+    places.push((place(PathBuf::from("/"), tr("File system")), true));
+    places
 }
 
 /// The Folders view.
@@ -72,6 +139,8 @@ pub(crate) struct FoldersView {
     files: gtk::ListBox,
     status_left: gtk::Label,
     status_right: gtk::Label,
+    add_to_library: gtk::Button,
+    library_roots: Rc<RefCell<Vec<PathBuf>>>,
     backend: Backend,
     listing: RefCell<FolderListing>,
     folder: RefCell<Option<PathBuf>>,
@@ -118,11 +187,16 @@ impl FoldersView {
         let roots = gio::ListStore::new::<FolderItem>();
         let roots_for_tree = roots.clone();
         let backend_for_tree = backend.clone();
+        let library_roots: Rc<RefCell<Vec<PathBuf>>> = Rc::default();
+        let roots_for_children = library_roots.clone();
         let tree_model = gtk::TreeListModel::new(roots_for_tree, false, false, move |item| {
-            let row = item.downcast_ref::<FolderItem>()?.row()?;
+            let folder = item.downcast_ref::<FolderItem>()?;
+            let row = folder.row()?;
             if !row.has_children || row.state == FolderState::Absent {
                 return None;
             }
+            let outside = folder.imp().outside.get();
+            let library_roots = roots_for_children.clone();
             let children = gio::ListStore::new::<FolderItem>();
             let store = children.downgrade();
             let backend = backend_for_tree.clone();
@@ -133,7 +207,17 @@ impl FoldersView {
                     .await
                     .unwrap_or_default();
                 if let Some(store) = store.upgrade() {
-                    let items: Vec<FolderItem> = rows.into_iter().map(FolderItem::new).collect();
+                    let roots = library_roots.borrow();
+                    let items: Vec<FolderItem> = rows
+                        .into_iter()
+                        .map(|row| {
+                            if outside {
+                                FolderItem::outside(row, false, &roots)
+                            } else {
+                                FolderItem::new(row)
+                            }
+                        })
+                        .collect();
                     store.splice(0, 0, &items);
                 }
             });
@@ -170,8 +254,10 @@ impl FoldersView {
         header.append(&titles);
         let play = button(&tr("Play"), Some("media-playback-start-symbolic"), true);
         let enqueue = button(&tr("Add to queue"), Some("list-add-symbolic"), false);
+        let add_to_library = button(&tr("Add to library"), Some("folder-new-symbolic"), false);
+        add_to_library.set_visible(false);
         let open = button(&tr("Open in file manager"), None, false);
-        for b in [&play, &enqueue, &open] {
+        for b in [&play, &enqueue, &add_to_library, &open] {
             b.set_valign(gtk::Align::Center);
             header.append(b);
         }
@@ -242,6 +328,8 @@ impl FoldersView {
             files,
             status_left,
             status_right,
+            add_to_library: add_to_library.clone(),
+            library_roots,
             backend: backend.clone(),
             listing: RefCell::new(FolderListing::default()),
             folder: RefCell::new(None),
@@ -250,6 +338,16 @@ impl FoldersView {
             playing: Cell::new(None),
         });
         view.connect(playback, &play, &enqueue, &open);
+        let weak = Rc::downgrade(&view);
+        add_to_library.connect_clicked(move |_| {
+            let Some(view) = weak.upgrade() else { return };
+            let Some(window) = view.root.root().and_downcast::<crate::window::MainWindow>() else {
+                return;
+            };
+            if let Some(folder) = view.folder.borrow().clone() {
+                crate::dialogs::add_library_folder(&window, folder);
+            }
+        });
         view
     }
 
@@ -283,11 +381,7 @@ impl FoldersView {
                 return;
             };
             expander.set_list_row(Some(&tree_row));
-            let Some(row) = tree_row
-                .item()
-                .and_downcast::<FolderItem>()
-                .and_then(|f| f.row())
-            else {
+            let Some(folder) = tree_row.item().and_downcast::<FolderItem>() else {
                 return;
             };
             let Some(line) = expander.child() else { return };
@@ -297,9 +391,41 @@ impl FoldersView {
                 .and_then(|i| i.next_sibling())
                 .and_downcast::<gtk::Label>();
             let tag = line.last_child().and_downcast::<gtk::Label>();
+            let set_class = |widget: &gtk::Label, class: &str, on: bool| {
+                if on {
+                    widget.add_css_class(class);
+                } else {
+                    widget.remove_css_class(class);
+                }
+            };
+            if let Some(heading) = folder.heading_text() {
+                if let Some(icon) = &icon {
+                    icon.set_visible(false);
+                }
+                if let Some(name) = &name {
+                    name.set_text(&heading);
+                    set_class(name, "hk-section-label", true);
+                    set_class(name, "hk-medium", false);
+                    set_class(name, "hk-t3", false);
+                }
+                if let Some(tag) = &tag {
+                    tag.set_text("");
+                }
+                item.set_selectable(false);
+                item.set_activatable(false);
+                expander.set_indent_for_icon(false);
+                expander.update_property(&[gtk::accessible::Property::Label(&heading)]);
+                return;
+            }
+            expander.set_indent_for_icon(true);
+            let Some(row) = folder.row() else {
+                return;
+            };
             let absent = row.state == FolderState::Absent;
+            let drive = absent || folder.imp().drive.get();
             if let Some(icon) = icon {
-                icon.set_icon_name(Some(if absent {
+                icon.set_visible(true);
+                icon.set_icon_name(Some(if drive {
                     "drive-harddisk-symbolic"
                 } else {
                     "folder-symbolic"
@@ -307,19 +433,23 @@ impl FoldersView {
             }
             if let Some(name) = name {
                 name.set_text(&row.name);
-                for (class, on) in [("hk-medium", row.root), ("hk-t3", absent)] {
-                    if on {
-                        name.add_css_class(class);
-                    } else {
-                        name.remove_css_class(class);
-                    }
-                }
+                set_class(&name, "hk-section-label", false);
+                set_class(&name, "hk-medium", row.root);
+                set_class(&name, "hk-t3", absent);
             }
             if let Some(tag) = tag {
-                tag.set_text(&match row.state {
-                    FolderState::Polled if row.root => tr("NFS"),
-                    FolderState::Absent => tr("not connected"),
-                    _ => String::new(),
+                tag.set_text(&if folder.imp().outside.get() {
+                    if folder.imp().in_library.get() {
+                        tr("in the library")
+                    } else {
+                        String::new()
+                    }
+                } else {
+                    match row.state {
+                        FolderState::Polled if row.root => tr("NFS"),
+                        FolderState::Absent => tr("not connected"),
+                        _ => String::new(),
+                    }
                 });
             }
             item.set_selectable(!absent);
@@ -440,12 +570,31 @@ impl FoldersView {
                 .query(|l| l.folder_roots())
                 .await
                 .unwrap_or_default();
+            let places = gio::spawn_blocking(computer_places)
+                .await
+                .unwrap_or_default();
             let Some(view) = weak.upgrade() else { return };
-            let items: Vec<FolderItem> = roots.into_iter().map(FolderItem::new).collect();
+            view.library_roots
+                .replace(roots.iter().map(|r| r.path.clone()).collect());
+            let mut items = vec![FolderItem::heading(&tr("Library folders"))];
+            items.extend(roots.into_iter().map(FolderItem::new));
+            items.push(FolderItem::heading(&tr("This computer")));
+            {
+                let library_roots = view.library_roots.borrow();
+                items.extend(
+                    places
+                        .into_iter()
+                        .map(|(row, drive)| FolderItem::outside(row, drive, &library_roots)),
+                );
+            }
             view.roots.splice(0, view.roots.n_items(), &items);
             // Open the first library folder.
             if let Some(model) = view.selection.model()
-                && let Some(first) = model.item(0).and_downcast::<gtk::TreeListRow>()
+                && let Some(first) = model.item(1).and_downcast::<gtk::TreeListRow>()
+                && first
+                    .item()
+                    .and_downcast::<FolderItem>()
+                    .is_some_and(|f| !f.imp().outside.get())
             {
                 first.set_expanded(true);
             }
@@ -511,8 +660,11 @@ impl FoldersView {
             Some(FolderState::Watched) => tr("In the library · watched for changes"),
             Some(FolderState::Polled) => tr("In the library · rescanned now and then"),
             Some(FolderState::Absent) => tr("In the library · not connected"),
-            None => tr("Not in the library"),
+            None => {
+                tr("Not in the library · plays from here are not counted, and ratings are not kept")
+            }
         });
+        self.add_to_library.set_visible(listing.state.is_none());
         self.status_right.set_text(&if listing.other_files > 0 {
             fill(
                 &ntr(
@@ -555,7 +707,11 @@ impl FoldersView {
             name.set_max_width_chars(1);
             line.append(&name);
             let title = label(
-                file.track.as_ref().map_or("", |t| t.title.as_str()),
+                file.track
+                    .as_ref()
+                    .map(|t| t.title.as_str())
+                    .or(file.title.as_deref())
+                    .unwrap_or(""),
                 &["hk-t2"],
             );
             title.set_hexpand(true);
@@ -566,6 +722,7 @@ impl FoldersView {
                     file.track
                         .as_ref()
                         .and_then(|t| t.duration)
+                        .or(file.duration)
                         .map(format::duration)
                         .unwrap_or_default(),
                     48,
@@ -658,6 +815,13 @@ impl FoldersView {
             let Some(row) = model.item(position).and_downcast::<gtk::TreeListRow>() else {
                 continue;
             };
+            let outside = row
+                .item()
+                .and_downcast::<FolderItem>()
+                .is_none_or(|f| f.imp().outside.get() || f.heading_text().is_some());
+            if outside {
+                continue;
+            }
             if row.depth() < 2 && row.is_expandable() && !row.is_expanded() {
                 row.set_expanded(true);
                 return;
@@ -676,6 +840,9 @@ impl FoldersView {
 
     /// The number of library folders (for tests).
     pub(crate) fn count(&self) -> usize {
-        self.roots.n_items() as usize
+        (0..self.roots.n_items())
+            .filter_map(|i| self.roots.item(i).and_downcast::<FolderItem>())
+            .filter(|f| f.heading_text().is_none() && !f.imp().outside.get())
+            .count()
     }
 }

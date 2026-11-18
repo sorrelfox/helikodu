@@ -77,3 +77,7 @@ crates/ui-gtk/src/query_text.rs
 crates/ui-gtk/src/popovers/query_completion.rs
 crates/ui-gtk/src/views/history.rs
 crates/ui-gtk/src/window/history.rs
+crates/ui-gtk/src/views/category.rs
+crates/ui-gtk/src/views/album/book.rs
+crates/ui-gtk/src/deck/chapters.rs
+crates/ui-gtk/src/backend/service/browse.rs
