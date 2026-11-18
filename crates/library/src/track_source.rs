@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! What plays for a library track: its file, and for a CUE sheet track or a chapter
-//! the span of the file.
+//! the span of the file, for a subsong the subsong.
 
 use std::path::PathBuf;
 
@@ -19,8 +19,8 @@ use crate::db::{DbError, path_from_blob};
 pub struct TrackSource {
     /// The file.
     pub path: PathBuf,
-    /// The span of the file for a CUE sheet track or a chapter; `None` for a whole
-    /// file.
+    /// The span of the file for a CUE sheet track or a chapter, the subsong for a
+    /// subsong; `None` for a whole file.
     pub section: Option<SourceSection>,
 }
 
@@ -56,7 +56,8 @@ type StoredSpan = (Option<i64>, Option<i64>, Option<i64>);
 fn track_source(c: &Connection, track: TrackId) -> rusqlite::Result<Option<TrackSource>> {
     let found = c
         .prepare_cached(
-            "SELECT d.path, f.name, t.section, t.start_frame, t.end_frame, t.sample_rate
+            "SELECT d.path, f.name, t.section, t.start_frame, t.end_frame, t.sample_rate,
+                    t.sub_index
              FROM tracks t
              JOIN files f ON f.id = t.file_id
              JOIN dirs d ON d.id = f.dir_id
@@ -67,18 +68,33 @@ fn track_source(c: &Connection, track: TrackId) -> rusqlite::Result<Option<Track
             let name = path_from_blob(row.get(1)?);
             let section = TrackSection::from_sql(row.get(2)?);
             let span: StoredSpan = (row.get(3)?, row.get(4)?, row.get(5)?);
-            Ok((dir.join(name), section, span))
+            let sub_index: i64 = row.get(6)?;
+            Ok((dir.join(name), section, span, sub_index))
         })
         .optional()?;
-    Ok(found.map(|(path, section, span)| TrackSource {
+    Ok(found.map(|(path, section, span, sub_index)| TrackSource {
         path,
-        section: span_of(section, span),
+        section: section_of(section, span, sub_index),
     }))
 }
 
+/// The part of the file a track of `section` with the stored `span` and
+/// `sub_index` plays.
+pub(crate) fn section_of(
+    section: TrackSection,
+    span: StoredSpan,
+    sub_index: i64,
+) -> Option<SourceSection> {
+    if section == TrackSection::Subsong {
+        let index = u32::try_from(sub_index).ok()?.checked_sub(1)?;
+        return Some(SourceSection::Subsong(index));
+    }
+    span_of(section, span)
+}
+
 /// The span a track of `section` with the stored `span` plays.
-pub(crate) fn span_of(section: TrackSection, span: StoredSpan) -> Option<SourceSection> {
-    if section == TrackSection::Whole {
+fn span_of(section: TrackSection, span: StoredSpan) -> Option<SourceSection> {
+    if matches!(section, TrackSection::Whole | TrackSection::Subsong) {
         return None;
     }
     let (Some(start), end, Some(rate)) = span else {
@@ -118,6 +134,18 @@ mod tests {
             })
         );
         assert_eq!(span_of(TrackSection::CueSheet, (Some(5), None, None)), None);
+        assert_eq!(
+            section_of(TrackSection::Subsong, (None, None, Some(44_100)), 3),
+            Some(SourceSection::Subsong(2))
+        );
+        assert_eq!(
+            section_of(TrackSection::Subsong, (None, None, None), 0),
+            None
+        );
+        assert_eq!(
+            section_of(TrackSection::Chapter, (Some(0), None, Some(44_100)), 4),
+            span_of(TrackSection::Chapter, (Some(0), None, Some(44_100)))
+        );
         assert_eq!(
             span_of(TrackSection::Chapter, (None, None, Some(48_000))),
             None

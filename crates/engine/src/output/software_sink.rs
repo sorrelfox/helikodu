@@ -211,7 +211,9 @@ impl Worker {
                     self.period_frames
                 }
                 Pacing::Freewheel => {
-                    let frames = self.reader.read_available(&mut samples);
+                    let frames =
+                        self.reader
+                            .read_available_encoded(&mut samples, &self.encoder, &mut bytes);
                     if frames == 0 {
                         thread::park_timeout(Duration::from_millis(1));
                         continue;
@@ -219,11 +221,11 @@ impl Worker {
                     frames
                 }
             };
-            let samples = &mut samples[..frames * channels];
             if self.pacing == Pacing::RealTime {
-                self.reader.read(samples);
+                let samples = &mut samples[..frames * channels];
+                self.reader.read_encoded(samples, &self.encoder, &mut bytes);
             }
-            let len = self.encoder.encode(samples, &mut bytes);
+            let len = frames * self.encoder.bytes_per_frame();
             if let Err(error) = target.write(&bytes[..len]) {
                 self.shared.set_state(StreamState::Failed);
                 return Err(error);

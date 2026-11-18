@@ -18,7 +18,8 @@ use crate::stats::Rating;
 
 /// The tracks of the file `found`, read by a worker into `report`: one per track of
 /// its CUE sheet; or else, when the container has two chapters or more, one per
-/// chapter; or else one for the whole file.
+/// chapter; or else, when the file has two subsongs or more, one per subsong; or
+/// else one for the whole file.
 ///
 /// The file's stamp is the one the walk saw, so a file that changed while it was
 /// being read is read again by the next scan. With `covers`, the covers of the
@@ -73,6 +74,27 @@ pub(crate) fn tracks_of(
         .collect();
     if chapters.len() > 1 {
         return chapters;
+    }
+    if report.subsongs.len() > 1 {
+        return report
+            .subsongs
+            .iter()
+            .map(|subsong| {
+                let mut audio = base.audio.clone();
+                audio.duration = subsong.duration;
+                TrackRecord {
+                    // Counted from 1, as the subsong of `sub_index - 1` plays.
+                    sub_index: subsong.index.saturating_add(1),
+                    section: TrackSection::Subsong,
+                    audio,
+                    tags: track_tags(&subsong.tags),
+                    catalog: catalog_tags(&subsong.tags),
+                    rating_from_tags: rating(&subsong.tags),
+                    replay_gain: replay_gain(&subsong.tags),
+                    ..base.clone()
+                }
+            })
+            .collect();
     }
     let tags = &report.tags.tags;
     vec![TrackRecord {
@@ -277,6 +299,7 @@ mod tests {
             cover: None,
             folder_cover: None,
             notes: Vec::new(),
+            subsongs: Vec::new(),
         }
     }
 
@@ -325,6 +348,64 @@ mod tests {
             false,
         );
         assert_eq!(without[0].covers, None);
+    }
+
+    #[test]
+    fn subsongs_become_tracks() {
+        let mut report = report(None);
+        report.subsongs = (0..3)
+            .map(|index| helikodu_meta::worker::SubsongReport {
+                index,
+                tags: meta_tags::TrackTags {
+                    title: Some(format!("Song {index}")),
+                    album: Some("Game".into()),
+                    track_number: Some(index + 1),
+                    ..Default::default()
+                },
+                duration: Some(Duration::from_secs(u64::from(10 + index))),
+            })
+            .collect();
+        let records = tracks_of(RootId(1), &found("g.nsf", FileClass::Audio), &report, false);
+        let summary: Vec<_> = records
+            .iter()
+            .map(|r| {
+                (
+                    r.sub_index,
+                    r.section,
+                    r.tags.title.clone().unwrap(),
+                    r.audio.duration,
+                )
+            })
+            .collect();
+        assert_eq!(
+            summary,
+            [
+                (
+                    1,
+                    TrackSection::Subsong,
+                    "Song 0".into(),
+                    Some(Duration::from_secs(10))
+                ),
+                (
+                    2,
+                    TrackSection::Subsong,
+                    "Song 1".into(),
+                    Some(Duration::from_secs(11))
+                ),
+                (
+                    3,
+                    TrackSection::Subsong,
+                    "Song 2".into(),
+                    Some(Duration::from_secs(12))
+                ),
+            ]
+        );
+        assert!(records.iter().all(|r| r.frames.is_none()));
+        // One subsong is the whole file.
+        report.subsongs.truncate(1);
+        let records = tracks_of(RootId(1), &found("g.nsf", FileClass::Audio), &report, false);
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].section, TrackSection::Whole);
     }
 
     #[test]

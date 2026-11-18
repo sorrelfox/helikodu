@@ -35,10 +35,10 @@ impl LoudnessTags {
         self.read.clear();
     }
 
-    /// `item`, which plays the file at `path`, with its loudness values and whether
-    /// it plays as part of its album: whether the file before or after it in the
-    /// queue (`neighbours`) has the same album. The engine looks at the album only in
-    /// the automatic mode.
+    /// `item`, which plays the file at `path`, with its loudness values, its album
+    /// (from the tags, for the crossfade policy) and whether it plays as part of its
+    /// album: whether the file before or after it in the queue (`neighbours`) has the
+    /// same album. The engine looks at that only in the automatic loudness mode.
     ///
     /// `measured` is the library's current measurement of the track, if it has
     /// one: its values win over those of the tags, which fill what it lacks.
@@ -59,7 +59,15 @@ impl LoudnessTags {
             Some(measured) => measured.over_tags(tagged.loudness),
             None => tagged.loudness,
         };
+        // The album as a key: title and album artists, apart by a unit separator.
+        let album = tagged.album.map(|(title, artists)| {
+            std::iter::once(title)
+                .chain(artists)
+                .collect::<Vec<_>>()
+                .join("\u{1f}")
+        });
         item.with_loudness(loudness, album_context)
+            .with_album(album)
     }
 
     /// The tags of the file at `path`; nothing for a file whose tags cannot be read
@@ -101,6 +109,7 @@ mod tests {
             track_peak: Some(0.5),
             album_gain_db: Some(-3.0),
             album_peak: Some(0.6),
+            true_peak: false,
         };
         loudness.read.insert(
             path.clone(),
@@ -137,6 +146,7 @@ mod tests {
                 track_peak: Some(1.04),
                 album_gain_db: Some(-8.0),
                 album_peak: Some(1.08),
+                true_peak: true,
             }
         );
     }

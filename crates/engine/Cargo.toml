@@ -10,7 +10,7 @@ repository.workspace = true
 publish.workspace = true
 
 [features]
-default = ["pipewire", "alsa", "pulseaudio", "jack", "dsd"]
+default = ["pipewire", "alsa", "pulseaudio", "jack", "dsd", "openmpt", "gme", "sid", "midi"]
 # The native PipeWire output backend.
 pipewire = ["dep:pipewire"]
 # The native ALSA output backend.
@@ -21,8 +21,23 @@ pulseaudio = ["dep:cpal", "cpal/pulseaudio"]
 # The JACK output backend, through cpal; the `jack` crate connects its ports. Building
 # it needs `jack.pc`.
 jack = ["dep:cpal", "cpal/jack", "dep:jack"]
-# The DSF/DFF reader of `extra-decoders`, which decodes DSD files to PCM.
+# The DSF/DFF reader of `extra-decoders`, which decodes DSD files to PCM or packs
+# them into DoP.
 dsd = ["dep:helikodu-extra-decoders", "helikodu-extra-decoders/dsd"]
+# Tracker modules through libopenmpt (needs `libopenmpt.pc`).
+openmpt = ["song", "helikodu-extra-decoders/openmpt"]
+# Game console music through libgme (needs `libgme.pc`).
+gme = ["song", "helikodu-extra-decoders/gme"]
+# Commodore 64 SID tunes through libsidplayfp (needs `libsidplayfp.pc` and a C++
+# compiler).
+sid = ["song", "helikodu-extra-decoders/sid"]
+# MIDI files through rustysynth and a SoundFont. Pure Rust.
+midi = ["song", "helikodu-extra-decoders/midi"]
+# Game audio streams through vgmstream. Off by default: few distributions package
+# the library; see the README of `extra-decoders`.
+vgmstream = ["song", "helikodu-extra-decoders/vgmstream"]
+# The common part of the synthesizing decoders.
+song = ["dep:helikodu-extra-decoders", "helikodu-extra-decoders/song"]
 
 [dependencies]
 alsa = { workspace = true, optional = true }
@@ -38,6 +53,8 @@ rubato.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+# The project's own long-tail sample files.
+helikodu-testkit.workspace = true
 # Reading the corpus manifest and recipes in tests/corpus.
 serde.workspace = true
 toml.workspace = true

@@ -25,7 +25,9 @@ use crate::tags::mapping::id3v2;
 use crate::tags::rating::Rating;
 
 use super::changes::{CoverChange, TagField};
-use super::editor::{Pair, PairKind, Skip, TagEditor, pair_fields, rating_values, replaced_fields};
+use super::editor::{
+    ONLY_OPUS, Pair, PairKind, Skip, TagEditor, pair_fields, rating_values, replaced_fields,
+};
 
 const MUSICBRAINZ_UFID_OWNER: &str = "http://musicbrainz.org";
 
@@ -138,6 +140,9 @@ fn target(field: TagField, v23: bool, has_grp1: bool) -> Target {
         TagField::ReplayGainTrackPeak => UserText("replaygain_track_peak"),
         TagField::ReplayGainAlbumGain => UserText("replaygain_album_gain"),
         TagField::ReplayGainAlbumPeak => UserText("replaygain_album_peak"),
+        // Refused before this is asked; R128 gains belong to Opus.
+        TagField::R128TrackGain => UserText("R128_TRACK_GAIN"),
+        TagField::R128AlbumGain => UserText("R128_ALBUM_GAIN"),
     }
 }
 
@@ -339,6 +344,9 @@ fn split_performer(text: &str) -> Option<(&str, &str)> {
 
 impl TagEditor for Id3Editor<'_> {
     fn set_field(&mut self, field: TagField, values: &[String]) -> Result<(), Skip> {
+        if field.is_r128() {
+            return Err(ONLY_OPUS);
+        }
         self.remove_fields(&replaced_fields(field));
         if field == TagField::Date {
             // ID3v2.3 date parts that the tag library does not fold into TDRC.

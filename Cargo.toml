@@ -27,6 +27,8 @@ ashpd = { version = "0.14", default-features = false, features = ["async-io", "i
 async-channel = "2.5"
 # Guesses the legacy charset of tag text that is not valid in its declared encoding.
 chardetng = "1"
+# Compiles the C++ shim of the libsidplayfp bindings (build dependency only).
+cc = "1.2"
 # Argument parsing of the command-line tool.
 clap = { version = "4.6", features = ["derive"] }
 # The PulseAudio and JACK output backends go through cpal's hosts. No default
@@ -55,11 +57,16 @@ helikodu-desktop = { path = "crates/desktop" }
 helikodu-engine = { path = "crates/engine", default-features = false }
 helikodu-extra-decoders = { path = "crates/extra-decoders", default-features = false }
 helikodu-ffmpeg-bridge = { path = "crates/ffmpeg-bridge" }
+helikodu-gme-sys = { path = "crates/gme-sys" }
 helikodu-library = { path = "crates/library" }
 helikodu-meta = { path = "crates/meta" }
 helikodu-model = { path = "crates/model" }
+helikodu-openmpt-sys = { path = "crates/openmpt-sys" }
 helikodu-service = { path = "crates/service", default-features = false }
+helikodu-sidplayfp-sys = { path = "crates/sidplayfp-sys" }
+helikodu-testkit = { path = "crates/testkit" }
 helikodu-ui-gtk = { path = "crates/ui-gtk" }
+helikodu-vgmstream-sys = { path = "crates/vgmstream-sys" }
 # Locale-aware sort order of the library: a custom SQLite collation. Unicode-3.0.
 # The compiled data is the CLDR collation data for every locale.
 icu_collator = "2.4"
@@ -81,6 +88,9 @@ lofty = "0.25.5"
 # Library folder watching. inotify only (no async runtime); periodic rescans where it
 # cannot see changes.
 notify = { version = "8.2.2", default-features = false }
+# Finds the long-tail decoder libraries (libopenmpt, libgme, libsidplayfp, vgmstream)
+# for the binding crates' build scripts.
+pkg-config = "0.3.30"
 # Native PipeWire output; the crate is young, so the version is exact.
 pipewire = { version = "=0.10.1", features = ["v1_2_0"] }
 # Property tests (development only). No default features: no forking or regex strategies.
@@ -90,6 +100,8 @@ proptest = { version = "1.11", default-features = false, features = ["std"] }
 quick-xml = { version = "0.42", default-features = false }
 # The `regexp()` SQL function behind the query language's `~` operator.
 regex = "1.12"
+# MIDI synthesis with a SoundFont 2 file, in pure Rust.
+rustysynth = "1.3"
 # Resource limits (address space, core dumps) that scan workers set on themselves.
 rlimit = "0.11"
 # Lock-free ring buffer between render thread and output; 0.4.1 fixed a double-free.

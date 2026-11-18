@@ -393,6 +393,14 @@ fn tags_are_written_only_when_asked() {
             ogg_measured.track_gain_db().unwrap(),
             0.005,
         );
+        // Opus gets R128 gains (to 1/256 dB), which carry no peak.
+        assert_eq!(ogg_tags.track_peak, None, "R128, not ReplayGain");
+        assert_near(
+            "Opus album gain",
+            ogg_tags.album_gain_db.unwrap(),
+            ogg_measured.album.unwrap().gain_db().unwrap(),
+            0.005,
+        );
     }
     let unmeasured = LoudnessRequest::unmeasured().selection;
     assert!(library.loudness_targets(&unmeasured).unwrap().is_empty());

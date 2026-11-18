@@ -15,7 +15,11 @@ use crate::pipeline::Transition;
 
 impl Worker {
     pub(super) fn load(&mut self, item: PlaybackItem, start: MediaTime, paused: bool) {
-        self.interrupt(Transition::Stop);
+        // A load while playing is the listener skipping to another track.
+        if !paused && self.state == TransportState::Playing && self.skip_crossfade(&item, start) {
+            return;
+        }
+        self.interrupt(Transition::Skip);
         self.reset_items();
         self.set_state(TransportState::Loading);
         let id = item.id;
@@ -36,8 +40,8 @@ impl Worker {
             follower: None,
             position,
         };
-        self.emit(resume.segment.started_event());
         self.current = Some(source);
+        self.emit(resume.segment.started_event());
         if paused {
             self.close_output();
             self.pause_at(resume);
@@ -198,17 +202,78 @@ impl Worker {
         {
             return;
         }
+        let heard_at = self.heard_now();
+        let Some(heard) = self.timeline.heard().cloned() else {
+            return;
+        };
+        // The incoming item of a crossfade is the follower being replaced.
+        self.drop_crossfade();
         let Some(output) = &mut self.output else {
             return;
         };
         let until = output.writer.frames_written();
-        let Some(from) = self.timeline.cut_after_heard() else {
+        let Some(mut from) = self.timeline.cut_after_heard() else {
             return;
         };
-        // Joins are seamless, so the jump to the new item needs no fade.
-        let _ = output
-            .writer
-            .schedule(from, DeviceAction::Discard { until, hold: false });
+        match heard.mix_from {
+            Some(mix) if heard_at < mix => {
+                // The crossfade into the follower is not heard yet: the heard item
+                // plays on from where it began, and meets the new item afterwards.
+                from = mix;
+                let _ = output
+                    .writer
+                    .schedule(from, DeviceAction::Discard { until, hold: false });
+                self.timeline.skip(from, until);
+                if let Some(segment) = self.timeline.segment_mut(heard.item.id) {
+                    segment.mix_from = None;
+                }
+                self.staged = 0..0;
+                let position = heard.position_at(from);
+                let reused = self.current.take().filter(|s| s.item().id == heard.item.id);
+                let source = match reused {
+                    Some(source) => Ok(source),
+                    None => Source::open(&self.registry, heard.item.clone()),
+                };
+                self.current = source
+                    .and_then(|mut source| source.seek(position).map(|_| source))
+                    .ok();
+                self.next = None;
+                self.next_answered = true;
+                self.drain = None;
+                if let Some(item) = item {
+                    self.open_next(item);
+                }
+                return;
+            }
+            Some(_) => {
+                // The crossfade is heard already: a short dip around the jump.
+                let dip = self.config.processing.fades.of(Transition::DeviceSwitch);
+                let dip_frames = (dip.as_secs_f64() * f64::from(output.spec().rate.hz())) as u64;
+                let _ = output.writer.schedule(
+                    from.saturating_sub(dip_frames),
+                    DeviceAction::Fade {
+                        open: false,
+                        duration: dip,
+                    },
+                );
+                let _ = output
+                    .writer
+                    .schedule(from, DeviceAction::Discard { until, hold: false });
+                let _ = output.writer.schedule(
+                    until,
+                    DeviceAction::Fade {
+                        open: true,
+                        duration: dip,
+                    },
+                );
+            }
+            None => {
+                // Joins are seamless, so the jump to the new item needs no fade.
+                let _ = output
+                    .writer
+                    .schedule(from, DeviceAction::Discard { until, hold: false });
+            }
+        }
         self.timeline.skip(from, until);
         self.staged = 0..0;
         self.current = None;
@@ -239,7 +304,7 @@ impl Worker {
     }
 
     /// Continues playback at `resume`, fading in with `transition`.
-    fn continue_at(&mut self, resume: Resume, transition: Option<Transition>) {
+    pub(super) fn continue_at(&mut self, resume: Resume, transition: Option<Transition>) {
         if let Err(error) = self.restart_sources(&resume) {
             self.item_failed(resume.segment.item.id, error);
             return;

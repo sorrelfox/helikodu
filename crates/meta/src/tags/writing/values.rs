@@ -104,6 +104,8 @@ fn known_values(tags: &TrackTags, field: TagField) -> Vec<String> {
         TagField::ReplayGainTrackPeak => peak(rg.track_peak),
         TagField::ReplayGainAlbumGain => gain(rg.album_gain_db),
         TagField::ReplayGainAlbumPeak => peak(rg.album_peak),
+        TagField::R128TrackGain => rg.r128_track_gain.iter().map(i16::to_string).collect(),
+        TagField::R128AlbumGain => rg.r128_album_gain.iter().map(i16::to_string).collect(),
         TagField::Subtitle
         | TagField::ReleaseDate
         | TagField::Barcode

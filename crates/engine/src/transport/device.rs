@@ -37,6 +37,8 @@ pub(super) struct Backends {
     connector: SharedConnector,
     /// The default device of the connected backend, as last reported.
     pub(super) default_device: Option<DeviceId>,
+    /// The connected backend's devices, as last reported (for their descriptions).
+    pub(super) devices: Vec<DeviceInfo>,
 }
 
 impl Backends {
@@ -53,6 +55,7 @@ impl Backends {
             reservation,
             connector,
             default_device: None,
+            devices: Vec::new(),
         }
     }
 
@@ -72,6 +75,7 @@ impl Backends {
             .iter()
             .find(|device| device.is_default)
             .map(|device| device.id.clone());
+        self.devices = devices.to_vec();
     }
 
     /// The backend `selection` names, connected if it is not yet. The second value
@@ -90,6 +94,7 @@ impl Backends {
         if !reuse {
             self.connected = None;
             self.default_device = None;
+            self.devices.clear();
             let custom = self.connector.connect(kind, &self.events).transpose()?;
             let backend: Box<dyn OutputBackend> = match (custom, kind) {
                 (Some(custom), _) => custom,
@@ -144,6 +149,8 @@ pub(super) struct Output {
     pub(super) freewheel: bool,
     /// Started and not paused.
     pub(super) running: bool,
+    /// Frames of DAC warm-up silence still to write before the first audio.
+    pub(super) preroll_left: u64,
     /// The engine's counters, and what this stream has added to them.
     stats: EngineStats,
     reported: Reported,
@@ -180,6 +187,7 @@ impl Output {
             volume: plan,
             freewheel,
             running: false,
+            preroll_left: 0,
             stats,
             reported: Reported::default(),
         };
@@ -191,6 +199,12 @@ impl Output {
     /// The negotiated format.
     pub(super) fn spec(&self) -> AudioSpec {
         self.stream.spec()
+    }
+
+    /// The frames of silence the DAC warm-up (`preroll_ms`) asks for before the
+    /// first audio of the stream.
+    pub(super) fn preroll_frames(&self) -> u64 {
+        u64::from(self.settings.preroll_ms) * u64::from(self.spec().rate.hz()) / 1000
     }
 
     /// Applies `volume` where the plan says.
@@ -252,7 +266,13 @@ impl Worker {
             self.dsp = Some(DspChain::new(&self.config.dsp, device.rate.hz(), channels));
         }
         let dsp = self.dsp.as_ref().map(DspChain::plan).unwrap_or_default();
-        source.attach(plan_for(&self.config.processing, output, source).with_dsp(dsp))?;
+        let mut plan = plan_for(&self.config.processing, output, source).with_dsp(dsp);
+        if source.decoder_info().dop && !super::formats::keeps_dop(&plan) {
+            // DoP needs every bit to reach the DAC; this path would change them.
+            source.fall_back_to_pcm()?;
+            plan = plan_for(&self.config.processing, output, source).with_dsp(dsp);
+        }
+        source.attach(plan)?;
         let needed = source.max_output_frames().max(4096) * channels;
         if self.staging.len() < needed {
             self.staging.resize(needed, 0.0);
@@ -360,14 +380,14 @@ pub(super) fn plan_for(
     PathPlan::new(&request, settings)
 }
 
-/// The loudness values of an item as the path plan takes them. Tags carry sample
-/// peaks, not true peaks.
+/// The loudness values of an item as the path plan takes them. Measured values
+/// carry true peaks, tags sample peaks; the item says which.
 fn loudness_info(loudness: &Loudness) -> LoudnessInfo {
     LoudnessInfo {
         track_gain_db: loudness.track_gain_db,
         track_peak: loudness.track_peak,
         album_gain_db: loudness.album_gain_db,
         album_peak: loudness.album_peak,
-        true_peak: false,
+        true_peak: loudness.true_peak,
     }
 }

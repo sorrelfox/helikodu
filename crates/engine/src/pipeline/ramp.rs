@@ -14,6 +14,8 @@
 use std::f64::consts::PI;
 use std::time::Duration;
 
+use helikodu_model::settings::TransitionSettings;
+
 /// The number of frames `duration` lasts at `rate`, at least one.
 pub(crate) fn frames_in(duration: Duration, rate: u32) -> usize {
     let frames = (duration.as_secs_f64() * f64::from(rate)).round();
@@ -128,6 +130,8 @@ pub enum Transition {
     Stop,
     /// Playback moves to another device: a fade out before, a fade in after.
     DeviceSwitch,
+    /// The listener skips to another track, which is not crossfaded: a fade out.
+    Skip,
 }
 
 /// How long the anti-click fade of each [`Transition`] lasts.
@@ -145,6 +149,8 @@ pub struct FadeDurations {
     pub stop: Duration,
     /// The fade out and the fade in around a device switch.
     pub device_switch: Duration,
+    /// The fade out when the listener skips to another track.
+    pub skip: Duration,
 }
 
 impl FadeDurations {
@@ -160,9 +166,33 @@ impl FadeDurations {
             Transition::Seek => self.seek,
             Transition::Stop => self.stop,
             Transition::DeviceSwitch => self.device_switch,
+            Transition::Skip => self.skip,
         };
         duration.min(Self::MAX)
     }
+
+    /// The fades the settings choose: pause and resume, stop, seek and skip. The
+    /// fade in at a start position and the fades around a device switch keep their
+    /// short default.
+    pub fn from_settings(settings: &TransitionSettings) -> Self {
+        Self {
+            pause: settings.pause_fade(),
+            resume: settings.pause_fade(),
+            seek: settings.seek_fade(),
+            stop: settings.stop_fade(),
+            skip: settings.skip_fade(),
+            ..Self::default()
+        }
+    }
+}
+
+/// The gains of the outgoing and the incoming source at frame `k` of a crossfade
+/// `length` frames long: `cos(πt/2)` and `sin(πt/2)` with `t` at the middle of the
+/// frame, so that their squares always add up to one (equal power).
+pub fn equal_power(k: u64, length: u64) -> (f64, f64) {
+    let t = (k as f64 + 0.5) / length.max(1) as f64;
+    let angle = PI / 2.0 * t.clamp(0.0, 1.0);
+    (angle.cos(), angle.sin())
 }
 
 impl Default for FadeDurations {
@@ -176,6 +206,7 @@ impl Default for FadeDurations {
             seek: Duration::from_millis(5),
             stop: short,
             device_switch: short,
+            skip: short,
         }
     }
 }
@@ -442,5 +473,34 @@ mod tests {
             ..durations
         };
         assert_eq!(long.of(Transition::Stop), FadeDurations::MAX);
+    }
+
+    #[test]
+    fn the_settings_choose_the_fades_of_the_listener() {
+        let fades = FadeDurations::from_settings(&TransitionSettings::default());
+        assert_eq!(fades.of(Transition::Pause), Duration::from_millis(100));
+        assert_eq!(fades.of(Transition::Resume), Duration::from_millis(100));
+        assert_eq!(fades.of(Transition::Stop), Duration::from_millis(200));
+        assert_eq!(fades.of(Transition::Seek), Duration::from_millis(50));
+        assert_eq!(fades.of(Transition::Skip), Duration::from_millis(100));
+        assert_eq!(
+            fades.of(Transition::DeviceSwitch),
+            Duration::from_millis(10)
+        );
+    }
+
+    #[test]
+    fn equal_power_gains_keep_the_power() {
+        let length = 1000;
+        let (first_out, first_in) = equal_power(0, length);
+        assert!(first_out > 0.999 && first_in < 0.002);
+        let (last_out, last_in) = equal_power(length - 1, length);
+        assert!(last_out < 0.002 && last_in > 0.999);
+        for k in 0..length {
+            let (out, inc) = equal_power(k, length);
+            assert!((out * out + inc * inc - 1.0).abs() < 1e-12);
+        }
+        let (mid_out, mid_in) = equal_power(length / 2, length);
+        assert!((mid_out - mid_in).abs() < 0.002);
     }
 }

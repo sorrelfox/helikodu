@@ -15,8 +15,14 @@
 //! both `node.dont-reconnect` and `node.dont-fallback`, so it fails instead of
 //! moving to another device when its device is missing or goes away. "System
 //! default" sets no target and follows the desktop's default.
+//!
+//! Each sink node is bound to read its `EnumFormat` parameters, which give the
+//! device's capabilities in the device list: the sample formats, rates and channel
+//! counts of the device behind the node (for a sound card, what its ALSA device
+//! takes).
 
 mod connection;
+mod formats;
 mod stream;
 
 use std::path::PathBuf;

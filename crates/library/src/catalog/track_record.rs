@@ -175,6 +175,9 @@ pub enum TrackSection {
     CueSheet,
     /// A chapter of the container (MP4/M4B, Matroska, Ogg, ID3v2 `CHAP`).
     Chapter,
+    /// A subsong of a tracker module, game music file, SID tune or sound bank: the
+    /// subsong `sub_index - 1`.
+    Subsong,
 }
 
 impl TrackSection {
@@ -184,6 +187,7 @@ impl TrackSection {
             Self::Whole => 0,
             Self::CueSheet => 1,
             Self::Chapter => 2,
+            Self::Subsong => 3,
         }
     }
 
@@ -193,6 +197,7 @@ impl TrackSection {
         match value {
             1 => Self::CueSheet,
             2 => Self::Chapter,
+            3 => Self::Subsong,
             _ => Self::Whole,
         }
     }

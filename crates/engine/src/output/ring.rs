@@ -4,10 +4,17 @@
 //! The ring buffer between the render thread and the device, and the counters
 //! both sides share.
 //!
-//! The ring holds interleaved `f32` samples. The writer only ever adds whole
-//! frames, so the reader always finds whole frames. The reader side runs in the
-//! real-time context: it copies, runs the [`DeviceStage`] (volume, fades, dither),
-//! fills any shortfall with silence and updates atomic counters, nothing else.
+//! The ring holds interleaved 32-bit words, one per sample. For most streams a word
+//! is an `f32` sample. When the device takes 32-bit integers, a word is an `i32`
+//! sample instead, because a float carries only 24 bits exactly: integer sources
+//! then reach the device unchanged ([`SampleWriter::write_i32`]), and float samples
+//! are converted on the way in exactly as the encoder would convert them on the way
+//! out. The writer only ever adds whole frames, so the reader always finds whole
+//! frames. The reader side runs in the real-time context: it copies, runs the
+//! [`DeviceStage`] (volume, fades, dither), fills any shortfall with silence,
+//! encodes for the device and updates atomic counters, nothing else. While the
+//! device stage leaves the samples untouched, integer words go to the encoder
+//! without passing through a float.
 //!
 //! Beside the samples, a second lock-free queue carries [`DeviceAction`]s from the
 //! writer to the reader, each tagged with the ring position at which it applies.
@@ -17,10 +24,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
-use helikodu_model::audio::{AudioSpec, SampleRate};
+use helikodu_model::audio::{AudioSpec, SampleFormat, SampleRate};
 use helikodu_model::player::Volume;
 use rtrb::{Consumer, Producer, RingBuffer};
 
+use super::convert::{Encoder, f32_to_s32, s32_to_f32};
 use super::device_stage::{DeviceAction, DeviceStage};
 use super::{OutputError, StreamState, StreamTiming};
 use crate::pipeline::SharedVolume;
@@ -36,6 +44,8 @@ const ACTION_QUEUE: usize = 64;
 #[derive(Debug)]
 pub(crate) struct StreamShared {
     channels: usize,
+    /// The ring's words are `i32` samples rather than `f32` ones.
+    integer: bool,
     rate: SampleRate,
     state: AtomicU8,
     frames_written: AtomicU64,
@@ -189,10 +199,12 @@ pub(crate) fn ring(
     let buffer = buffer.clamp(MIN_BUFFER, MAX_BUFFER);
     let frames = (buffer.as_secs_f64() * f64::from(rate.hz())).ceil() as usize;
     let (producer, consumer) = RingBuffer::new(frames.max(1) * channels);
+    let integer = matches!(spec.format, SampleFormat::S32(_));
     let (actions_in, actions_out) = RingBuffer::new(ACTION_QUEUE);
     let volume = SharedVolume::new(Volume::FULL);
     let shared = Arc::new(StreamShared {
         channels,
+        integer,
         rate,
         state: AtomicU8::new(StreamState::Ready.to_u8()),
         frames_written: AtomicU64::new(0),
@@ -228,7 +240,10 @@ pub(crate) fn ring(
 ///
 /// Takes interleaved 32-bit float samples, nominally between -1.0 and 1.0, in the
 /// canonical (WAVE) channel order of the stream's layout, at the stream's
-/// negotiated rate ([`OutputStream::spec`](super::OutputStream::spec)).
+/// negotiated rate ([`OutputStream::spec`](super::OutputStream::spec)). Streams whose
+/// device takes 32-bit integers also take integer samples
+/// ([`write_i32`](Self::write_i32)) and carry them exactly
+/// ([`carries_integers`](Self::carries_integers)).
 ///
 /// The device side applies software volume ([`volume`](Self::volume)), anti-click
 /// fades and dither after the ring buffer, so that they take effect within one
@@ -237,7 +252,7 @@ pub(crate) fn ring(
 /// exactly as written.
 #[derive(Debug)]
 pub struct SampleWriter {
-    producer: Producer<f32>,
+    producer: Producer<u32>,
     actions: Producer<Scheduled>,
     scheduled: u64,
     shared: Arc<StreamShared>,
@@ -265,9 +280,36 @@ impl SampleWriter {
         self.shared.frames_written.load(Ordering::Relaxed)
     }
 
+    /// Whether the ring holds 32-bit integer samples, so that
+    /// [`write_i32`](Self::write_i32) reaches the device exactly. True when the
+    /// negotiated device format is 32-bit integer.
+    pub fn carries_integers(&self) -> bool {
+        self.shared.integer
+    }
+
     /// Writes as many whole frames of `samples` as fit, and returns how many
     /// frames that was. Never blocks. A trailing partial frame is not written.
     pub fn write(&mut self, samples: &[f32]) -> usize {
+        if self.shared.integer {
+            self.write_words(samples, |x| f32_to_s32(x) as u32)
+        } else {
+            self.write_words(samples, f32::to_bits)
+        }
+    }
+
+    /// Writes as many whole frames of 32-bit integer samples (full scale at 2^31) as
+    /// fit, and returns how many frames that was. Never blocks. Exact when the ring
+    /// [carries integers](Self::carries_integers); otherwise the samples become
+    /// floats, exact for up to 24 significant bits.
+    pub fn write_i32(&mut self, samples: &[i32]) -> usize {
+        if self.shared.integer {
+            self.write_words(samples, |v| v as u32)
+        } else {
+            self.write_words(samples, |v| s32_to_f32(v).to_bits())
+        }
+    }
+
+    fn write_words<T: Copy>(&mut self, samples: &[T], word: impl Fn(T) -> u32) -> usize {
         let channels = self.shared.channels;
         let frames = (samples.len() / channels).min(self.free_frames());
         if frames == 0 {
@@ -279,8 +321,12 @@ impl SampleWriter {
         };
         let (first, second) = chunk.as_mut_slices();
         let split = first.len();
-        first.copy_from_slice(&samples[..split]);
-        second.copy_from_slice(&samples[split..len]);
+        for (dst, src) in first.iter_mut().zip(&samples[..split]) {
+            *dst = word(*src);
+        }
+        for (dst, src) in second.iter_mut().zip(&samples[split..len]) {
+            *dst = word(*src);
+        }
         chunk.commit_all();
         self.shared.draining.store(false, Ordering::Release);
         self.shared
@@ -342,7 +388,7 @@ impl SampleWriter {
 /// The device side of a stream's ring buffer. Every method is real-time safe.
 #[derive(Debug)]
 pub(crate) struct SampleReader {
-    consumer: Consumer<f32>,
+    consumer: Consumer<u32>,
     actions: Consumer<Scheduled>,
     stage: DeviceStage,
     /// The ring position of the next frame: frames delivered plus discarded.
@@ -361,8 +407,36 @@ impl SampleReader {
     ///
     /// A shortfall counts as one underrun, unless the stream is draining or the
     /// device side is silent on purpose (faded out, or holding for a refill).
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn read(&mut self, out: &mut [f32]) -> usize {
-        let done = self.take(out);
+        self.read_into(out, None)
+    }
+
+    /// Like [`read`](Self::read), and encodes the frames for the device into the
+    /// start of `bytes` (as many frames as `scratch` holds). `scratch` is working
+    /// room; integer samples that nothing changes skip it and reach `bytes` exactly.
+    pub(crate) fn read_encoded(
+        &mut self,
+        scratch: &mut [f32],
+        encoder: &Encoder,
+        bytes: &mut [u8],
+    ) -> usize {
+        self.read_into(scratch, Some(&mut Sink { encoder, bytes }))
+    }
+
+    /// Like [`read_available`](Self::read_available), and encodes the frames taken
+    /// into the start of `bytes`.
+    pub(crate) fn read_available_encoded(
+        &mut self,
+        scratch: &mut [f32],
+        encoder: &Encoder,
+        bytes: &mut [u8],
+    ) -> usize {
+        self.take(scratch, Some(&mut Sink { encoder, bytes }))
+    }
+
+    fn read_into(&mut self, out: &mut [f32], mut sink: Option<&mut Sink<'_>>) -> usize {
+        let done = self.take(out, sink.as_deref_mut());
         let channels = self.shared.channels;
         let wanted = out.len() / channels;
         if done < wanted {
@@ -372,6 +446,9 @@ impl SampleReader {
             // when the ring has run dry.
             self.note_silence_start(wanted - done);
             self.stage.apply(rest);
+            if let Some(sink) = sink {
+                sink.encode(done, rest);
+            }
             self.publish();
             let quiet = self.stage.is_held() || self.stage.is_silent();
             let shared = &self.shared;
@@ -387,13 +464,14 @@ impl SampleReader {
 
     /// Fills the start of `out` with as many frames as the ring holds, without
     /// padding, and returns their number. For sinks that do not keep time.
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn read_available(&mut self, out: &mut [f32]) -> usize {
-        self.take(out)
+        self.take(out, None)
     }
 
     /// Takes frames into the start of `out`, applying the scheduled actions on the
     /// way, until `out` is full, the ring is empty or the device side holds.
-    fn take(&mut self, out: &mut [f32]) -> usize {
+    fn take(&mut self, out: &mut [f32], mut sink: Option<&mut Sink<'_>>) -> usize {
         let channels = self.shared.channels;
         debug_assert_eq!(out.len() % channels, 0, "partial frame requested");
         let wanted = out.len() / channels;
@@ -415,14 +493,32 @@ impl SampleReader {
                 break;
             }
             let block = &mut out[done * channels..(done + frames) * channels];
+            // Integers that nothing changes go to the encoder as they are.
+            let exact = self.shared.integer && sink.is_some() && self.stage.is_transparent();
             if let Ok(chunk) = self.consumer.read_chunk(block.len()) {
                 let (first, second) = chunk.as_slices();
-                block[..first.len()].copy_from_slice(first);
-                block[first.len()..].copy_from_slice(second);
+                match sink.as_deref_mut() {
+                    Some(sink) if exact => sink.encode_s32(done, first, second),
+                    _ => {
+                        let (a, b) = block.split_at_mut(first.len());
+                        if self.shared.integer {
+                            words_to_f32(first, a, |w| s32_to_f32(w as i32));
+                            words_to_f32(second, b, |w| s32_to_f32(w as i32));
+                        } else {
+                            words_to_f32(first, a, f32::from_bits);
+                            words_to_f32(second, b, f32::from_bits);
+                        }
+                    }
+                }
                 chunk.commit_all();
             }
             self.note_silence_start(frames);
-            self.stage.apply(block);
+            if !exact {
+                self.stage.apply(block);
+                if let Some(sink) = sink.as_deref_mut() {
+                    sink.encode(done, block);
+                }
+            }
             self.taken += frames as u64;
             done += frames;
             self.publish();
@@ -487,6 +583,39 @@ impl SampleReader {
         self.shared
             .silent
             .store(self.stage.is_silent(), Ordering::Release);
+    }
+}
+
+/// Where encoded frames go: the encoder and the device's bytes, from frame 0.
+struct Sink<'a> {
+    encoder: &'a Encoder,
+    bytes: &'a mut [u8],
+}
+
+impl Sink<'_> {
+    /// Encodes float frames starting at frame `at` of the output.
+    fn encode(&mut self, at: usize, samples: &[f32]) {
+        let start = at * self.encoder.bytes_per_frame();
+        if let Some(out) = self.bytes.get_mut(start..) {
+            self.encoder.encode(samples, out);
+        }
+    }
+
+    /// Encodes integer words, in two parts (the ring's wrap), starting at frame `at`.
+    fn encode_s32(&mut self, at: usize, first: &[u32], second: &[u32]) {
+        let start = at * self.encoder.bytes_per_frame();
+        if let Some(out) = self.bytes.get_mut(start..) {
+            let split = self.encoder.encode_s32(first, out);
+            if let Some(out) = out.get_mut(split..) {
+                self.encoder.encode_s32(second, out);
+            }
+        }
+    }
+}
+
+fn words_to_f32(words: &[u32], out: &mut [f32], sample: impl Fn(u32) -> f32) {
+    for (dst, word) in out.iter_mut().zip(words) {
+        *dst = sample(*word);
     }
 }
 
@@ -679,6 +808,63 @@ mod tests {
         assert_eq!(timing.frames_delivered, 50);
         assert_eq!(timing.underruns, 0);
         assert_eq!(timing.queued_frames(), 50);
+    }
+
+    #[test]
+    fn a_32_bit_ring_carries_integers_exactly() {
+        let spec = AudioSpec::new(
+            SampleFormat::S32(Endianness::Little),
+            SampleRate::HZ_48000,
+            ChannelLayout::STEREO,
+        );
+        let (mut writer, mut reader, _) = ring(spec, Duration::from_millis(20));
+        assert!(writer.carries_integers());
+        let encoder = Encoder::new(spec.format, 2).unwrap();
+        let words: Vec<i32> = (0..2 * 700i32)
+            .map(|i| 0x7654_3211i32.wrapping_sub(i.wrapping_mul(0x0101_0101)))
+            .collect();
+        let mut scratch = vec![0.0f32; 2 * 300];
+        let mut bytes = vec![0u8; 8 * 300];
+        let mut out = Vec::new();
+        // Across the wrap, in reads of 300 frames.
+        for chunk in words.chunks(2 * 350) {
+            assert_eq!(writer.write_i32(chunk), 350);
+            for _ in 0..2 {
+                let frames = reader.read_available_encoded(&mut scratch, &encoder, &mut bytes);
+                out.extend_from_slice(&bytes[..frames * 8]);
+            }
+        }
+        let back: Vec<i32> = out
+            .chunks(4)
+            .map(|b| i32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .collect();
+        assert_eq!(back, words);
+        // Floats become the integers the encoder would make of them.
+        writer.write(&[0.5, -1.0]);
+        assert_eq!(
+            reader.read_encoded(&mut scratch[..2], &encoder, &mut bytes),
+            1
+        );
+        assert_eq!(i32::from_le_bytes(bytes[..4].try_into().unwrap()), 1 << 30);
+        assert_eq!(
+            i32::from_le_bytes(bytes[4..8].try_into().unwrap()),
+            i32::MIN
+        );
+        // A fade goes through floats, and the shortfall is silence.
+        writer.write_i32(&[1 << 30, 1 << 30]);
+        assert!(writer.schedule(0, DeviceAction::SetOpen(false)));
+        assert_eq!(
+            reader.read_encoded(&mut scratch[..4], &encoder, &mut bytes),
+            1
+        );
+        assert!(bytes[..16].iter().all(|b| *b == 0));
+        // A float ring takes integers as floats.
+        let (mut writer, mut reader, _) = stereo_ring(20);
+        assert!(!writer.carries_integers());
+        writer.write_i32(&[1 << 30, i32::MIN]);
+        let mut out = [0.0f32; 2];
+        reader.read(&mut out);
+        assert_eq!(out, [0.5, -1.0]);
     }
 
     #[test]

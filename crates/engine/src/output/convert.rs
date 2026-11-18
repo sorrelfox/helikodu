@@ -6,3 +6,4 @@
 //! [`crate::pipeline`]; the backends use it from here.
 
 pub(crate) use crate::pipeline::Encoder;
+pub(crate) use crate::pipeline::{f32_to_s32, s32_to_f32};

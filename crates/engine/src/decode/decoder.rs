@@ -6,6 +6,7 @@
 use std::fmt;
 
 use helikodu_model::audio::{AudioSpec, MediaTime};
+use helikodu_model::player::AudioStreamInfo;
 
 use super::block::PcmBlock;
 use super::error::DecodeError;
@@ -39,13 +40,20 @@ pub trait Decoder: Send + fmt::Debug {
     /// Moves to `to`, exactly: the next block starts at that frame. A time past
     /// the end moves to the end.
     fn seek(&mut self, to: MediaTime) -> Result<(), DecodeError>;
+
+    /// For a decoder of DSD over PCM (DoP), a decoder of the same file converted to
+    /// PCM at the same position, for a path that would change the samples (the DoP
+    /// markers must reach the DAC untouched). `None` for every other decoder.
+    fn pcm_fallback(&self) -> Option<Result<Box<dyn Decoder>, DecodeError>> {
+        None
+    }
 }
 
 /// What a decoder decodes: for the signal-path view and diagnostics.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DecoderInfo {
     /// The backend, as [`DecoderFactory::name`](super::DecoderFactory::name) gives it:
-    /// `ffmpeg` or `dsd`.
+    /// `ffmpeg`, `dsd`, `openmpt`, `gme`, `sidplayfp`, `vgmstream` or `rustysynth`.
     pub backend: &'static str,
     /// The container format, such as `flac`, `mov,mp4,m4a,3gp,3g2,mj2` or `dsf`.
     pub container: String,
@@ -58,4 +66,17 @@ pub struct DecoderInfo {
     /// order, with the backend's key names. The library reads tags on its own; these
     /// are for what the engine needs from the file itself, such as `R128_TRACK_GAIN`.
     pub tags: Vec<(String, String)>,
+    /// The file's audio streams when it has more than one (for the stream selector);
+    /// empty otherwise.
+    pub streams: Vec<AudioStreamInfo>,
+    /// The index in the file of the audio stream being decoded, when the file has
+    /// streams.
+    pub stream: Option<u32>,
+    /// The subsong being decoded, counted from 0, for backends with subsongs.
+    pub subsong: Option<u32>,
+    /// Whether the samples are DSD over PCM (DoP): 24-bit words with DoP markers,
+    /// which must reach the device unchanged.
+    pub dop: bool,
+    /// Whether the file was read into memory whole before decoding.
+    pub in_memory: bool,
 }

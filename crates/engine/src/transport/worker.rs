@@ -23,7 +23,9 @@ use helikodu_model::player::{
 };
 
 use super::EngineConfig;
+use super::crossfade::{Crossfade, Ramp};
 use super::device::{Backends, Output};
+use super::signal::SignalTracker;
 use super::source::Source;
 use super::stats::EngineStats;
 use super::timeline::{Segment, Timeline};
@@ -76,6 +78,16 @@ pub(super) struct Worker {
     /// Whether the item after `current` has been decided (a `SetNext`, even of
     /// nothing, since `current` started).
     pub(super) next_answered: bool,
+    /// A crossfade from `current` into the next item, under way.
+    pub(super) crossfade: Option<Crossfade>,
+    /// A gain curve on `current` alone: the end of a rise, or a fall before the
+    /// stream is reopened for the next item.
+    pub(super) ramp: Option<Ramp>,
+    /// The item whose crossfade into the next one has been decided.
+    pub(super) crossfade_checked: Option<ItemId>,
+    /// The fade in of the next item after the stream is reopened for it, when the
+    /// current one fades out instead of a crossfade.
+    pub(super) reopen_fade: Option<Duration>,
     pub(super) timeline: Timeline,
     /// The DSP chain, for the open stream's rate and channels.
     pub(super) dsp: Option<DspChain>,
@@ -93,6 +105,8 @@ pub(super) struct Worker {
     pub(super) pending: Vec<EngineEvent>,
     /// The output counters shared with the [`Engine`](super::Engine) handle.
     pub(super) stats: EngineStats,
+    /// The signal path and counters last sent.
+    pub(super) signal: SignalTracker,
 }
 
 impl Worker {
@@ -125,6 +139,10 @@ impl Worker {
             current: None,
             next: None,
             next_answered: false,
+            crossfade: None,
+            ramp: None,
+            crossfade_checked: None,
+            reopen_fade: None,
             timeline: Timeline::default(),
             dsp: None,
             staging: Vec::new(),
@@ -137,6 +155,7 @@ impl Worker {
             last_position: None,
             pending: Vec::new(),
             stats,
+            signal: SignalTracker::default(),
         }
     }
 
@@ -220,6 +239,8 @@ impl Worker {
     }
 
     fn command(&mut self, command: EngineCommand) {
+        // Settings of an earlier command decide how the items of this one open.
+        self.sync_dop();
         match command {
             EngineCommand::Load {
                 item,
@@ -238,6 +259,9 @@ impl Worker {
                 }
             }
             EngineCommand::SetOutput(selection) => self.set_output(selection),
+            EngineCommand::SetTransitions(transitions) => self.set_transitions(transitions),
+            EngineCommand::SetDecoderSettings(settings) => self.set_decoder_settings(&settings),
+            EngineCommand::SelectAudioStream(stream) => self.select_audio_stream(stream),
             EngineCommand::UpdateSettings {
                 output,
                 loudness,
@@ -300,6 +324,7 @@ impl Worker {
             }
             _ => {}
         }
+        self.update_signal();
     }
 
     /// Follows the heard position: item starts and ends, `NearEnd`, position ticks.
@@ -343,15 +368,13 @@ impl Worker {
         if self.near_end_sent == Some(id) {
             return;
         }
+        // A crossfade into the next item begins its length before the end.
+        let lead = self.config.near_end + self.crossfade_lead();
         let close = segment.length.is_some_and(|length| {
-            length.as_duration().saturating_sub(position.as_duration()) <= self.config.near_end
+            length.as_duration().saturating_sub(position.as_duration()) <= lead
         });
         // Rendered to the end already: it ends within the buffer length.
-        let rendered = self.timeline.len() > 1
-            || self
-                .current
-                .as_ref()
-                .is_none_or(|source| source.item().id != id || source.is_finished());
+        let rendered = self.timeline.len() > 1 || self.rendered_to_end(id);
         if close || rendered {
             self.near_end_sent = Some(id);
             self.emit(EngineEvent::NearEnd { item: id });
@@ -402,13 +425,24 @@ impl Worker {
         if self.state != state {
             self.state = state;
             self.paused_since = (state == TransportState::Paused).then(Instant::now);
+            if state == TransportState::Stopped {
+                // Nothing is heard any more: said before the state, not after it.
+                self.clear_signal();
+            }
             self.emit(EngineEvent::StateChanged(state));
         }
     }
 
     pub(super) fn emit(&self, event: EngineEvent) {
+        let streams = match &event {
+            EngineEvent::TrackStarted { item, .. } => self.audio_streams_event(*item),
+            _ => None,
+        };
         // Nobody listening is no reason to stop playing.
         let _ = self.events.send(event);
+        if let Some(streams) = streams {
+            let _ = self.events.send(streams);
+        }
     }
 
     pub(super) fn error(&self, item: Option<ItemId>, error: EngineError) {
@@ -419,6 +453,7 @@ impl Worker {
         if let Some(output) = self.output.take() {
             output.close();
         }
+        self.drop_crossfade();
         self.current = None;
         self.next = None;
     }

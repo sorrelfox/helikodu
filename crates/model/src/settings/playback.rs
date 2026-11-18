@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use super::{SettingsError, check_range};
+use super::{DecoderSettings, SettingsError, TransitionSettings, check_range};
 
 /// How the player behaves: the `[playback]` table.
 ///
@@ -24,6 +24,12 @@ use super::{SettingsError, check_range};
 /// keep_awake = true
 /// pause_on_lock = false
 /// pause_before_sleep = true
+///
+/// [playback.transitions]          # crossfades and fades, see `TransitionSettings`
+/// crossfade = false
+///
+/// [playback.decoders]             # tracker, game music, SID, MIDI, see `DecoderSettings`
+/// loops = 2
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -56,6 +62,10 @@ pub struct PlaybackSettings {
     /// Whether playback pauses before the computer goes to sleep (applied from a later
     /// version).
     pub pause_before_sleep: bool,
+    /// The crossfades and fades: the `[playback.transitions]` table.
+    pub transitions: TransitionSettings,
+    /// The long-tail decoders: the `[playback.decoders]` table.
+    pub decoders: DecoderSettings,
 }
 
 impl Default for PlaybackSettings {
@@ -72,6 +82,8 @@ impl Default for PlaybackSettings {
             keep_awake: true,
             pause_on_lock: false,
             pause_before_sleep: true,
+            transitions: TransitionSettings::default(),
+            decoders: DecoderSettings::default(),
         }
     }
 }
@@ -99,7 +111,9 @@ impl PlaybackSettings {
             "playback.long_track_minutes",
             self.long_track_minutes,
             1..=600,
-        )
+        )?;
+        self.transitions.validate()?;
+        self.decoders.validate()
     }
 
     /// How much of a track must have played for "Previous" to restart it, or `None`

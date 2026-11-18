@@ -412,7 +412,7 @@ fn a_worker_of_another_protocol_version_is_refused() {
         Err(ScanError::WorkerVersion { found, expected }) => {
             assert_eq!(found, 1);
             assert_eq!(expected, helikodu_meta::worker::PROTOCOL_VERSION);
-            assert_eq!(expected, 2);
+            assert_eq!(expected, 3);
         }
         other => panic!("{other:?}"),
     }

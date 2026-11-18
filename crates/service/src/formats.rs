@@ -11,6 +11,7 @@
 //! identifiers and the file extensions, which need no translation.
 
 use helikodu_engine::decode::DecoderRegistry;
+use helikodu_model::settings::DecoderSettings;
 
 /// A decoder library or reader.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -163,6 +164,9 @@ pub enum Availability {
     Available,
     /// This build was made without it.
     NotBuilt,
+    /// MIDI: built, but no SoundFont is chosen and none is installed ("Needs a
+    /// SoundFont", with "Choose SoundFont…").
+    NeedsSoundFont,
 }
 
 /// One decoder of the build.
@@ -206,11 +210,50 @@ impl FormatReport {
     }
 }
 
-/// What this build can play, from the engine's decoder registry.
+/// What this build can play, from the engine's decoder registry, with the default
+/// decoder settings.
 pub fn supported_formats() -> FormatReport {
+    supported_formats_for(&DecoderSettings::default())
+}
+
+/// What this build can play with the decoder settings `decoders`: MIDI needs a
+/// SoundFont, the chosen one or one installed on the system.
+pub fn supported_formats_for(decoders: &DecoderSettings) -> FormatReport {
     let registry = DecoderRegistry::with_default_backends();
     let built: Vec<&str> = registry.factories().map(|f| f.name()).collect();
-    report(&built)
+    #[allow(unused_mut)] // Without the long-tail features nothing changes it.
+    let mut report = report(&built);
+    #[cfg(feature = "midi")]
+    if helikodu_engine::decode::midi_soundfont(decoders).is_none() {
+        needs_soundfont(&mut report);
+    }
+    #[cfg(not(feature = "midi"))]
+    let _ = decoders;
+    #[cfg(feature = "openmpt")]
+    if let Some(status) = report
+        .decoders
+        .iter_mut()
+        .find(|d| d.decoder == Decoder::Openmpt)
+    {
+        status.version =
+            helikodu_engine::decode::library_version(helikodu_engine::decode::SongLibrary::OpenMpt);
+    }
+    report
+}
+
+/// Marks the MIDI decoder and family as needing a SoundFont.
+#[cfg_attr(not(feature = "midi"), allow(dead_code))]
+fn needs_soundfont(report: &mut FormatReport) {
+    for status in &mut report.decoders {
+        if status.decoder == Decoder::Rustysynth && status.availability == Availability::Available {
+            status.availability = Availability::NeedsSoundFont;
+        }
+    }
+    for family in &mut report.families {
+        if family.decoder == Decoder::Rustysynth && family.availability == Availability::Available {
+            family.availability = Availability::NeedsSoundFont;
+        }
+    }
 }
 
 fn report(built: &[&str]) -> FormatReport {
@@ -281,6 +324,24 @@ mod tests {
             .unwrap();
         assert_eq!(dsd.decoder, Decoder::Ffmpeg);
         assert_eq!(dsd.availability, Availability::Available);
+    }
+
+    #[test]
+    fn midi_without_a_soundfont_needs_one() {
+        let mut both = report(&["ffmpeg", "rustysynth"]);
+        needs_soundfont(&mut both);
+        let midi = both
+            .families
+            .iter()
+            .find(|f| f.family == FormatFamily::Midi)
+            .unwrap();
+        assert_eq!(midi.availability, Availability::NeedsSoundFont);
+        let ffmpeg = both
+            .decoders
+            .iter()
+            .find(|d| d.decoder == Decoder::Ffmpeg)
+            .unwrap();
+        assert_eq!(ffmpeg.availability, Availability::Available);
     }
 
     #[test]

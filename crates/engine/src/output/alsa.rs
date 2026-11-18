@@ -55,6 +55,8 @@ const KIND: OutputBackendKind = OutputBackendKind::Alsa;
 const HW_BUFFER_US: u32 = 100_000;
 /// The number of periods in the hardware buffer.
 const PERIODS: u32 = 4;
+/// The rates taken as a device's own when no rate is asked for, best first.
+const DEFAULT_RATES: [u32; 2] = [48_000, 44_100];
 
 /// The ALSA backend.
 ///
@@ -267,7 +269,18 @@ fn negotiate(pcm: &PCM, config: &StreamConfig) -> Result<Negotiated, OutputError
             .map_err(|e| refused(format!("format {format}: {e}")))?;
         hw.set_channels_near(u32::from(requested.channel_count()))
             .map_err(|e| refused(format!("{} channels: {e}", requested.channel_count())))?;
-        hw.set_rate_near(requested.rate.hz(), ValueOr::Nearest)
+        // "Match the track" and a fixed rate ask for the rate; when the device does
+        // not have it, the nearest one it has is taken and the engine resamples.
+        // "Device default" takes the device's usual rate.
+        let rate = if config.request_rate {
+            requested.rate.hz()
+        } else {
+            DEFAULT_RATES
+                .into_iter()
+                .find(|rate| hw.test_rate(*rate).is_ok())
+                .unwrap_or(requested.rate.hz())
+        };
+        hw.set_rate_near(rate, ValueOr::Nearest)
             .map_err(|e| refused(format!("{}: {e}", requested.rate)))?;
         hw.set_buffer_time_near(HW_BUFFER_US, ValueOr::Nearest)
             .map_err(|e| failed("buffer size", e))?;

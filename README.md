@@ -18,7 +18,9 @@ The name is Estonian: *heli* means "sound" and *kodu* means "home". It is a home
 
 ## Building
 
-Helikodu needs Rust (the version is pinned in `rust-toolchain.toml`) and the development files of GTK 4.18 or newer, FFmpeg 7.1 or newer (libavformat, libavcodec, libavutil), PipeWire 1.2 or newer, ALSA and SQLite 3.43 or newer with FTS5.
+Helikodu needs Rust (the version is pinned in `rust-toolchain.toml`) and the development files of GTK 4.18 or newer, FFmpeg 7.1 or newer (libavformat, libavcodec, libavutil), PipeWire 1.2 or newer, ALSA, JACK (`jack.pc`; `libjack` itself is loaded at run time) and SQLite 3.43 or newer with FTS5. The PulseAudio backend speaks the protocol itself and needs no development files.
+
+Each output backend and the DSD reader is a Cargo feature of `helikodu` and `helikodu-cli`, all on by default: `pipewire`, `alsa`, `pulseaudio`, `jack` and `dsd`. To leave one out, build with `--no-default-features` and list the others, for example `cargo build --release -p helikodu --no-default-features --features pipewire,alsa,pulseaudio,dsd` to build without JACK.
 
 For development, Cargo builds and runs everything:
 

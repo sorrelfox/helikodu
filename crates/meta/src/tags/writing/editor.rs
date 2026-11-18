@@ -18,6 +18,9 @@ use super::changes::{CoverChange, FieldKey, Normalized, TagField};
 /// Why a tag did not take a change; reported for the main tag only.
 pub(crate) type Skip = &'static str;
 
+/// Why a tag other than the comments of an Opus file does not take an R128 gain.
+pub(crate) const ONLY_OPUS: Skip = "only Opus files carry R128 gains";
+
 /// A number with its total: track, disc or movement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) struct Pair {

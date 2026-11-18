@@ -19,9 +19,9 @@ use helikodu_model::audio::{
 };
 use helikodu_model::player::Volume;
 use helikodu_model::settings::{
-    ClippingPrevention as ClippingSetting, ContextAction, DspSettings,
+    ClippingPrevention as ClippingSetting, ContextAction, DecoderSettings, DspSettings,
     LoudnessMode as LoudnessSetting, LoudnessSettings as LoudnessTable, OutputSettings,
-    PlaybackSettings,
+    PlaybackSettings, TransitionSettings,
 };
 
 use super::PlayerError;
@@ -205,6 +205,11 @@ pub struct PlayerConfig {
     pub reservation: SharedReservation,
     /// The `[dsp]` settings: the DSP chain and the resampler quality.
     pub dsp: DspSettings,
+    /// The crossfades and fades (`[playback.transitions]`).
+    pub transitions: TransitionSettings,
+    /// The long-tail decoders (`[playback.decoders]`): loops, fades, the SoundFont,
+    /// SID song lengths and ROMs, tracker rendering, whole-file buffering.
+    pub decoders: DecoderSettings,
 }
 
 impl PlayerConfig {
@@ -234,6 +239,8 @@ impl PlayerConfig {
             shuffle_seed: None,
             reservation: SharedReservation::default(),
             dsp: DspSettings::default(),
+            transitions: TransitionSettings::default(),
+            decoders: DecoderSettings::default(),
         }
     }
 
@@ -288,6 +295,7 @@ impl PlayerConfig {
             device_reservation: self.reservation.clone(),
             ..EngineConfig::default()
         }
+        .with_transitions(self.transitions)
     }
 }
 

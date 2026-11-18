@@ -15,7 +15,9 @@
 //! no channel mixing, no resampling, no DSP, no crossfade, the volume at 100 % or
 //! applied outside the engine, and a device format that carries the source samples
 //! exactly. The ring buffer holds 32-bit floats, which carry integers of up to 24
-//! bits exactly; 32-bit integer sources are therefore never bit-perfect yet.
+//! bits exactly, except for a 32-bit integer device format: its ring holds
+//! integers, and 32-bit sources that nothing changes go into it as integers, so
+//! they are bit-perfect there.
 
 use std::fmt;
 
@@ -382,13 +384,18 @@ impl fmt::Display for PathPlan {
     }
 }
 
-/// Whether the device format carries the source's samples exactly through the
-/// 32-bit float ring buffer.
+/// Whether the device format carries the source's samples exactly through the ring
+/// buffer: floats, exact for up to 24 bits, or integers for a 32-bit integer device.
 fn format_is_exact(source: &SourceFormat, device: SampleFormat) -> bool {
     let format = source.spec.format;
     if format.is_integer() && device.is_integer() {
         let bits = source.significant_bits();
-        bits <= 24 && bits <= device.bits()
+        let ring_bits = if matches!(device, SampleFormat::S32(_)) {
+            32
+        } else {
+            24
+        };
+        bits <= ring_bits && bits <= device.bits()
     } else {
         matches!(format, SampleFormat::F32(_)) && matches!(device, SampleFormat::F32(_))
     }
@@ -536,8 +543,11 @@ mod tests {
         // The same 24-bit source on a 32-bit device is exact.
         r.device = spec(SampleFormat::S32(Little), 44_100, ChannelLayout::STEREO);
         assert!(PathPlan::new(&r, &settings).is_bit_perfect());
-        // A true 32-bit source cannot pass the float ring exactly.
+        // So is a true 32-bit source: the ring of a 32-bit device holds integers.
         r.source = SourceFormat::new(hi_res.spec);
+        assert!(PathPlan::new(&r, &settings).is_bit_perfect());
+        // Not on a 24-bit device.
+        r.device = spec(SampleFormat::S24(Little), 44_100, ChannelLayout::STEREO);
         assert!(!PathPlan::new(&r, &settings).is_bit_perfect());
     }
 

@@ -10,19 +10,24 @@
 
 use std::path::Path;
 
-use helikodu_ffmpeg_bridge::{AudioDecoder, Error, MediaFile, PcmBuffer, PcmSamples, StreamChoice};
+use helikodu_ffmpeg_bridge::{
+    AudioDecoder, Error, MediaFile, PcmBuffer, PcmSamples, StreamChoice, StreamInfo,
+};
 use helikodu_model::audio::{AudioSpec, MediaTime};
+use helikodu_model::player::AudioStreamInfo;
 
 use super::block::{BlockSamples, PcmBlock};
 use super::decoder::{Decoder, DecoderInfo};
 use super::error::DecodeError;
-use super::factory::{DecoderFactory, Probe, ProbeScore};
+use super::factory::{DecoderFactory, OpenRequest, Probe, ProbeScore, SourceInput};
 
 const NAME: &str = "ffmpeg";
 
 /// The FFmpeg backend. It recognises files by their content when it opens them, so
 /// it probes every file with [`ProbeScore::FALLBACK`] and takes whatever no
-/// dedicated backend claims. It has no subsongs.
+/// dedicated backend claims. It has no subsongs; of a file with several audio
+/// streams it decodes the one asked for ([`OpenRequest::audio_stream`]), otherwise
+/// the default one, and lists them all in [`DecoderInfo::streams`].
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FfmpegFactory;
 
@@ -36,13 +41,53 @@ impl DecoderFactory for FfmpegFactory {
     }
 
     fn open(&self, path: &Path, subsong: Option<u32>) -> Result<Box<dyn Decoder>, DecodeError> {
-        if subsong.is_some() {
+        self.open_input(
+            &SourceInput::file(path),
+            &OpenRequest {
+                subsong,
+                audio_stream: None,
+            },
+        )
+    }
+
+    fn open_input(
+        &self,
+        input: &SourceInput<'_>,
+        request: &OpenRequest,
+    ) -> Result<Box<dyn Decoder>, DecodeError> {
+        if request.subsong.is_some() {
             return Err(DecodeError::SubsongUnsupported { backend: NAME });
         }
-        let decoder = MediaFile::open(path)
-            .and_then(|media| media.into_decoder(StreamChoice::Auto))
-            .map_err(open_error)?;
-        Ok(Box::new(FfmpegDecoder::new(decoder)))
+        let media = match input.data() {
+            Some(data) => MediaFile::open_bytes(data.clone()),
+            None => MediaFile::open(input.path()),
+        }
+        .map_err(open_error)?;
+        let streams: Vec<AudioStreamInfo> = media.audio_streams().map(stream_info).collect();
+        let choice = request.audio_stream.map_or(StreamChoice::Auto, |index| {
+            StreamChoice::Index(index as usize)
+        });
+        let decoder = media.into_decoder(choice).map_err(open_error)?;
+        let mut decoder = FfmpegDecoder::new(decoder);
+        decoder.info.stream = u32::try_from(decoder.decoder.stream_index()).ok();
+        if streams.len() > 1 {
+            decoder.info.streams = streams;
+        }
+        decoder.info.in_memory = input.data().is_some();
+        Ok(Box::new(decoder))
+    }
+}
+
+/// The stream selector's description of an audio stream.
+fn stream_info(stream: &StreamInfo) -> AudioStreamInfo {
+    AudioStreamInfo {
+        index: u32::try_from(stream.index).unwrap_or(u32::MAX),
+        codec: stream.codec.clone(),
+        language: stream.language.clone(),
+        title: stream.title.clone(),
+        channels: stream.channels,
+        sample_rate: stream.sample_rate,
+        default: stream.disposition.is_default(),
     }
 }
 
@@ -86,6 +131,7 @@ impl FfmpegDecoder {
                 .iter()
                 .map(|(k, v)| (k.to_owned(), v.to_owned()))
                 .collect(),
+            ..DecoderInfo::default()
         };
         Self { decoder, info }
     }

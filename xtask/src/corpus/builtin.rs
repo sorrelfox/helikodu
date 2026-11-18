@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The steps `xtask` performs itself: `copy`, `truncate`, `garbage` and `empty`.
+//! The steps `xtask` performs itself: `copy`, `truncate`, `garbage`, `empty`, and
+//! `write`, which writes one of the long-tail files the project makes itself (the
+//! same writers as the tests use, from `crates/testkit/src/longtail.rs`).
 
 use std::fs;
 use std::path::Path;
@@ -10,6 +12,12 @@ use anyhow::{Context, Result, bail};
 
 use super::recipe::Sample;
 use super::signal;
+
+// The writers depend on nothing but `std`; they are shared with the tests without
+// making `xtask` depend on a workspace crate.
+#[allow(dead_code, unreachable_pub)]
+#[path = "../../../crates/testkit/src/longtail.rs"]
+mod longtail;
 
 pub(crate) fn run(recipe: &Sample, input: Option<&Path>, output: &Path) -> Result<()> {
     let read_input = || -> Result<Vec<u8>> {
@@ -38,6 +46,15 @@ pub(crate) fn run(recipe: &Sample, input: Option<&Path>, output: &Path) -> Resul
             bytes.extend(noise);
             bytes
         }
+        "write" => match recipe.content.as_deref() {
+            Some("tracker-module") => longtail::tracker_module(),
+            Some("nsf") => longtail::nsf_file(),
+            Some("psid") => longtail::psid_file(),
+            Some("midi") => longtail::midi_file(),
+            Some("soundfont") => longtail::soundfont(),
+            Some(other) => bail!("`write` cannot make `{other}`"),
+            None => bail!("`write` needs `content`"),
+        },
         other => bail!("`{other}` is not a built-in step"),
     };
     fs::write(output, bytes).with_context(|| format!("could not write {}", output.display()))

@@ -2,15 +2,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Decoding: the [`Decoder`] and [`DecoderFactory`] traits, the registry that picks
-//! a backend for a file, the FFmpeg backend and the DSF/DFF backend, and the
-//! trimming of sections (CUE-style spans) to the exact frame.
+//! a backend for a file, the FFmpeg backend, the DSF/DFF backend (PCM or DoP), the
+//! synthesizing backends (tracker modules, game music, SID, vgmstream, MIDI) with
+//! their subsongs, and the trimming of sections (CUE-style spans) to the exact
+//! frame.
 //!
 //! [`DecoderRegistry::open`] reads the first bytes of the file, asks every
 //! registered [`DecoderFactory`] how well it recognises them, and opens the file
 //! with the best one; when that fails it tries the next. File names are never
-//! trusted: the FFmpeg backend probes the content itself, and the DSD backend
-//! recognises its files by their signature. A [`SourceSection::Span`] is applied on
-//! top of whichever backend opened the file.
+//! trusted: the FFmpeg backend probes the content itself, the DSD and synthesizing
+//! backends recognise their files by their signature (vgmstream, whose formats
+//! mostly have none, by name, and then by content when it opens them). A
+//! [`SourceSection::Subsong`] is passed to the backend; a [`SourceSection::Span`]
+//! is applied on top of whichever backend opened the file.
 //!
 //! # Block format
 //!
@@ -31,6 +35,7 @@
 //! formats that carry the information. Seeking lands on the exact frame.
 //!
 //! [`SourceSection::Span`]: helikodu_model::library::SourceSection::Span
+//! [`SourceSection::Subsong`]: helikodu_model::library::SourceSection::Subsong
 
 mod block;
 mod decoder;
@@ -39,14 +44,22 @@ mod dsd;
 mod error;
 mod factory;
 mod ffmpeg;
+mod options;
 mod registry;
 mod section;
+#[cfg(feature = "song")]
+mod songs;
 
 pub use block::{BlockSamples, PcmBlock};
 pub use decoder::{Decoder, DecoderInfo};
 #[cfg(feature = "dsd")]
 pub use dsd::DsdFactory;
 pub use error::DecodeError;
-pub use factory::{DecoderFactory, Probe, ProbeScore};
+pub use factory::{DecoderFactory, OpenRequest, Probe, ProbeScore, SourceInput};
 pub use ffmpeg::FfmpegFactory;
+pub use options::{DecodeOptions, SharedOptions};
 pub use registry::DecoderRegistry;
+#[cfg(feature = "midi")]
+pub use songs::midi_soundfont;
+#[cfg(feature = "song")]
+pub use songs::{SongFactory, SongLibrary, library_version};

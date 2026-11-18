@@ -19,3 +19,7 @@ appstreamcli validate --no-net data/io.github.sorrelfox.Helikodu.metainfo.xml
 ```
 
 `cargo test -p helikodu-desktop --test data_files` runs both when they are installed.
+
+## SoundFont for MIDI files
+
+No SoundFont is bundled yet. A small, freely licensed General MIDI SoundFont is to be chosen after a licence review and added here, with its licence recorded in `REUSE.toml` and `LICENSES/`; it was not added because it could not be obtained and reviewed offline. Until then MIDI files play with the SoundFont chosen in the settings (`[playback.decoders] soundfont`), or else with one a distribution installs (`/usr/share/soundfonts/default.sf2`, `/usr/share/sounds/sf2/default-GM.sf2`, `FluidR3_GM.sf2`, `TimGM6mb.sf2`, or `/app/share/soundfonts/default.sf2` in the Flatpak). Without either, the Supported formats page shows MIDI as "Needs a SoundFont" and opening a MIDI file fails with "MIDI files need a SoundFont: choose one in the settings".

@@ -15,10 +15,10 @@ use serde::{Deserialize, Serialize};
 use super::names;
 
 /// The tools `xtask` implements itself.
-pub(crate) const BUILTIN_TOOLS: &[&str] = &["copy", "truncate", "garbage", "empty"];
+pub(crate) const BUILTIN_TOOLS: &[&str] = &["copy", "truncate", "garbage", "empty", "write"];
 
 /// The sets a recipe may belong to; each is a folder in the corpus.
-pub(crate) const SETS: &[&str] = &["formats", "gapless", "video", "broken", "names"];
+pub(crate) const SETS: &[&str] = &["formats", "gapless", "video", "broken", "names", "longtail"];
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -109,6 +109,10 @@ pub(crate) struct Sample {
     /// `garbage`: the seed of the replacement bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) seed: Option<u64>,
+    /// `write`: the file the project writes itself (`tracker-module`, `nsf`,
+    /// `psid`, `midi`, `soundfont`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) content: Option<String>,
     /// Pad the file name to exactly this many bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) pad_name_to: Option<usize>,

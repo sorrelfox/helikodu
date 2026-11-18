@@ -4,9 +4,10 @@
 //! Opening a file: custom I/O, the locks, probing by content and the stream list.
 
 use std::fs::File;
-use std::io::{Seek, SeekFrom};
+use std::io::{Cursor, Seek, SeekFrom};
 use std::path::Path;
 use std::ptr;
+use std::sync::Arc;
 
 use helikodu_model::audio::MediaTime;
 
@@ -123,6 +124,13 @@ impl MediaFile {
             .filter(|m| m.is_file())
             .map(|m| m.len());
         Self::open_source(Box::new(file), size)
+    }
+
+    /// Opens a file already read into memory whole, with the same locks as a file
+    /// on disk. The bytes are shared, not copied.
+    pub fn open_bytes(data: Arc<[u8]>) -> Result<Self, Error> {
+        let size = data.len() as u64;
+        Self::open_source(Box::new(Cursor::new(data)), Some(size))
     }
 
     pub(crate) fn open_source(

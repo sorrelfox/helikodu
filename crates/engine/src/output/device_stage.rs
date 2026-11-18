@@ -125,18 +125,34 @@ impl DeviceStage {
         (self.fader.state() == FadeState::FadingOut).then(|| self.fader.remaining_frames())
     }
 
-    /// Applies volume, fade and dither to the interleaved frames of `block`.
-    ///
-    /// Dither runs on the frames that something changes: all of them when the audio
-    /// is processed or the volume is not full, otherwise only those a fade passes
-    /// over. Silence after a fade out stays digital silence.
-    pub(crate) fn apply(&mut self, block: &mut [f32]) {
+    /// Takes the volume as it is before the first frame, without a ramp.
+    fn begin(&mut self) {
         if !self.started {
             // Real-time safe: no allocation, and the old stage only drops a reference.
             self.volume =
                 SoftwareVolume::following(self.rate, self.channels, self.shared_volume.clone());
             self.started = true;
         }
+    }
+
+    /// Whether [`apply`](Self::apply) would leave the next frames untouched: the
+    /// fader open, the volume full and still, and nothing to dither. Integer samples
+    /// then go to the device without passing through a float.
+    pub(crate) fn is_transparent(&mut self) -> bool {
+        self.begin();
+        self.volume.refresh();
+        self.fader.state() == FadeState::Open
+            && self.volume.is_transparent()
+            && !(self.always_dither && self.dither.is_some())
+    }
+
+    /// Applies volume, fade and dither to the interleaved frames of `block`.
+    ///
+    /// Dither runs on the frames that something changes: all of them when the audio
+    /// is processed or the volume is not full, otherwise only those a fade passes
+    /// over. Silence after a fade out stays digital silence.
+    pub(crate) fn apply(&mut self, block: &mut [f32]) {
+        self.begin();
         let frames = block.len() / self.channels;
         let (audible, fading) = match self.fader.state() {
             FadeState::Silent => (0, 0),
@@ -221,6 +237,28 @@ mod tests {
         stage.apply(&mut block);
         assert!(block[0] < 0.2);
         assert_eq!(block[block.len() - 1], 1.0);
+    }
+
+    #[test]
+    fn transparent_only_while_nothing_changes_the_samples() {
+        let (mut stage, volume) = stage(SampleFormat::S32(Endianness::Little));
+        assert!(stage.is_transparent());
+        stage.act(DeviceAction::Fade {
+            open: false,
+            duration: Duration::from_millis(1),
+        });
+        assert!(!stage.is_transparent());
+        stage.act(DeviceAction::SetOpen(true));
+        assert!(stage.is_transparent());
+        volume.set_volume(Volume::new(0.5).unwrap());
+        assert!(!stage.is_transparent());
+        // No dither for 32-bit integers, so always dithering changes nothing.
+        let (mut stage, _) = super::tests::stage(SampleFormat::S32(Endianness::Little));
+        stage.act(DeviceAction::AlwaysDither(true));
+        assert!(stage.is_transparent());
+        let (mut stage, _) = super::tests::stage(SampleFormat::S16(Endianness::Little));
+        stage.act(DeviceAction::AlwaysDither(true));
+        assert!(!stage.is_transparent());
     }
 
     #[test]

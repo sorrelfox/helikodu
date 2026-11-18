@@ -22,6 +22,7 @@ use crate::pipeline::Transition;
 impl Worker {
     /// Forgets the items: nothing is loaded.
     pub(super) fn reset_items(&mut self) {
+        self.drop_crossfade();
         self.current = None;
         self.next = None;
         self.next_answered = false;

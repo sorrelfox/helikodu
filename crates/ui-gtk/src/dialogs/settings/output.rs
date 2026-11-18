@@ -22,7 +22,7 @@ use crate::backend::services::{
     BackendSelection, DeviceInfo, DeviceSelection, OutputBackendKind, OutputMode, Settings,
 };
 use crate::dialogs::common::{
-    bind_segmented, divider, dropdown, note, on_selected, option_card, row, segmented,
+    bind_segmented, divider, dropdown, note, on_selected, option_card, row, segmented, switch_row,
 };
 use crate::dialogs::volume_confirm;
 use crate::i18n::{fill, tr};
@@ -596,5 +596,29 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     body.append(&row(&tr("Mode"), None, &mode(context)));
     body.append(&divider());
     body.append(&grid(context));
+    body.append(&divider());
+    body.append(&unplug_switch(context));
     scroller.upcast()
+}
+
+/// Pausing when the device that the default output plays to is unplugged.
+fn unplug_switch(context: &Rc<Context>) -> gtk::Box {
+    let (line, switch) = switch_row(
+        &tr("Pause when headphones are unplugged"),
+        Some(&tr(
+            "Instead of going on through the loudspeakers when the system default output moves to another device.",
+        )),
+    );
+    switch.set_active(context.settings().output.pause_on_unplug);
+    let weak = Rc::downgrade(context);
+    switch.connect_active_notify(move |switch| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let on = switch.is_active();
+        if !context.update(|s| s.output.pause_on_unplug = on) {
+            switch.set_active(!on);
+        }
+    });
+    line
 }

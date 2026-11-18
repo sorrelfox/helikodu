@@ -4,9 +4,12 @@
 # Build and test environment: Arch Linux (rolling, latest FFmpeg).
 FROM docker.io/library/archlinux:latest
 
+# The long-tail decoders: libopenmpt, libgme and libsidplayfp (the SID shim is C++).
+# vgmstream is not packaged; its decoder is off by default and not built here.
 RUN pacman -Syu --noconfirm --needed \
       alsa-lib base-devel ca-certificates clang curl ffmpeg git gtk4 libpipewire meson ninja \
       pipewire-jack pkgconf sqlite \
+      libgme libopenmpt libsidplayfp \
     && pacman -Scc --noconfirm
 
 # Rust comes from rustup without a default toolchain: the toolchain pinned in

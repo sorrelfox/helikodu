@@ -165,6 +165,8 @@ impl Session {
                     EngineEvent::Position { .. }
                         | EngineEvent::DevicesChanged { .. }
                         | EngineEvent::NearEnd { .. }
+                        | EngineEvent::SignalPath(_)
+                        | EngineEvent::PlaybackStats(_)
                 )
             })
             .cloned()

@@ -10,13 +10,36 @@ repository.workspace = true
 publish.workspace = true
 
 [features]
-default = ["dsd"]
-# The DSF and DSDIFF (DFF) reader, with conversion of DSD to PCM. Pure Rust.
+default = ["dsd", "openmpt", "gme", "sid", "midi"]
+# The DSF and DSDIFF (DFF) reader, with conversion of DSD to PCM and DoP packing.
+# Pure Rust.
 dsd = ["dep:helikodu-model", "dep:thiserror"]
+# Tracker modules through libopenmpt.
+openmpt = ["song", "dep:helikodu-openmpt-sys"]
+# Game console music through libgme.
+gme = ["song", "dep:helikodu-gme-sys"]
+# Commodore 64 SID tunes through libsidplayfp.
+sid = ["song", "dep:helikodu-sidplayfp-sys"]
+# Game audio streams through vgmstream. Off by default: few distributions package
+# the library (see the crate's README).
+vgmstream = ["song", "dep:helikodu-vgmstream-sys", "helikodu-vgmstream-sys/link"]
+# MIDI files through rustysynth and a SoundFont. Pure Rust.
+midi = ["song", "dep:rustysynth"]
+# The common part of the decoders above: subsongs, lengths, loops and fades.
+song = ["dep:helikodu-model", "dep:thiserror"]
 
 [dependencies]
+helikodu-gme-sys = { workspace = true, optional = true }
 helikodu-model = { workspace = true, optional = true }
+helikodu-openmpt-sys = { workspace = true, optional = true }
+helikodu-sidplayfp-sys = { workspace = true, optional = true }
+helikodu-vgmstream-sys = { workspace = true, optional = true }
+rustysynth = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The project's own long-tail sample files.
+helikodu-testkit.workspace = true
 
 [lints]
 workspace = true

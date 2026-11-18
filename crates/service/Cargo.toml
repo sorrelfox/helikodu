@@ -10,7 +10,7 @@ repository.workspace = true
 publish.workspace = true
 
 [features]
-default = ["pipewire", "alsa", "pulseaudio", "jack", "dsd"]
+default = ["pipewire", "alsa", "pulseaudio", "jack", "dsd", "openmpt", "gme", "sid", "midi"]
 # The native PipeWire output backend of the engine.
 pipewire = ["helikodu-engine/pipewire"]
 # The native ALSA output backend of the engine.
@@ -21,6 +21,16 @@ pulseaudio = ["helikodu-engine/pulseaudio"]
 jack = ["helikodu-engine/jack"]
 # The DSF/DFF reader of the engine.
 dsd = ["helikodu-engine/dsd"]
+# Tracker modules through libopenmpt.
+openmpt = ["helikodu-engine/openmpt"]
+# Game console music through libgme.
+gme = ["helikodu-engine/gme"]
+# C64 SID tunes through libsidplayfp.
+sid = ["helikodu-engine/sid"]
+# MIDI files through rustysynth and a SoundFont.
+midi = ["helikodu-engine/midi"]
+# Game audio streams through vgmstream (off by default: rarely packaged).
+vgmstream = ["helikodu-engine/vgmstream"]
 # Build the SQLite copy that rusqlite bundles instead of linking the system library.
 bundled-sqlite = ["helikodu-library/bundled-sqlite"]
 

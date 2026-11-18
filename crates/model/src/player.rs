@@ -13,16 +13,21 @@ mod engine_error;
 mod engine_event;
 mod playback_item;
 mod queue;
+mod signal_path;
 mod transport_state;
 mod volume;
 
 pub use engine_command::EngineCommand;
 pub use engine_error::EngineError;
-pub use engine_event::{EngineEvent, TrackEndReason};
+pub use engine_event::{AudioStreamInfo, EngineEvent, TrackEndReason};
 pub use playback_item::{ItemId, Loudness, PlaybackItem};
 pub use queue::{
     ContextSource, EnqueueAt, EntryId, PlayModes, PlaybackState, QueueContext, QueueEntry,
     RepeatMode, ShuffleMode, StopAfter,
+};
+pub use signal_path::{
+    PlaybackStats, SignalDevice, SignalLamp, SignalPath, SignalSource, SignalStage, StageKind,
+    StageState,
 };
 pub use transport_state::TransportState;
 pub use volume::Volume;

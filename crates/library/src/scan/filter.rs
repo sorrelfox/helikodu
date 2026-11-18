@@ -26,6 +26,19 @@ const AUDIO: &[&[u8]] = &[
     b"tta", b"w64", b"wav", b"weba", b"wma", b"wv",
 ];
 
+/// Extensions of the long tail, in lower case: tracker modules (libopenmpt), game
+/// music (libgme), SID tunes (libsidplayfp), MIDI files (rustysynth) and game audio
+/// streams (vgmstream). Their decoders recognise the files by content; the
+/// extension only decides which files a scan reads.
+const LONG_TAIL: &[&[u8]] = &[
+    b"669", b"amf", b"ams", b"dbm", b"dmf", b"dsm", b"far", b"gdm", b"imf", b"it", b"itz", b"j2b",
+    b"mdl", b"med", b"mo3", b"mod", b"mptm", b"mt2", b"mtm", b"okt", b"plm", b"psm", b"ptm",
+    b"s3m", b"s3z", b"stm", b"ult", b"umx", b"xm", b"xmz", b"ay", b"gbs", b"gym", b"hes", b"kss",
+    b"nsf", b"nsfe", b"sap", b"spc", b"vgm", b"vgz", b"psid", b"rsid", b"sid", b"kar", b"mid",
+    b"midi", b"rmi", b"adx", b"at3", b"at9", b"bcstm", b"bfstm", b"brstm", b"fsb", b"hca", b"msf",
+    b"vag", b"wem", b"xwb",
+];
+
 /// Extensions of video files, in lower case.
 const VIDEO: &[&[u8]] = &[
     b"3gp", b"avi", b"divx", b"f4v", b"flv", b"m2ts", b"m4v", b"mkv", b"mov", b"mp4", b"mpeg",
@@ -39,7 +52,7 @@ pub(crate) fn classify(name: &OsStr) -> Option<FileClass> {
     let is = |list: &[&[u8]]| list.iter().any(|e| e.eq_ignore_ascii_case(extension));
     if extension.eq_ignore_ascii_case(b"cue") {
         Some(FileClass::CueSheet)
-    } else if is(AUDIO) {
+    } else if is(AUDIO) || is(LONG_TAIL) {
         Some(FileClass::Audio)
     } else if is(VIDEO) {
         Some(FileClass::Video)
@@ -95,6 +108,9 @@ mod tests {
         assert_eq!(classify(OsStr::new("a.Cue")), Some(FileClass::CueSheet));
         assert_eq!(classify(OsStr::new("a.mkv")), Some(FileClass::Video));
         assert_eq!(classify(OsStr::new("cover.jpg")), None);
+        for name in ["a.mod", "a.XM", "a.nsf", "a.sid", "a.mid", "a.spc", "a.vgz"] {
+            assert_eq!(classify(OsStr::new(name)), Some(FileClass::Audio), "{name}");
+        }
         assert_eq!(classify(OsStr::new("flac")), None);
         assert_eq!(
             classify(OsStr::from_bytes(b"\xff\xfe.mp3")),

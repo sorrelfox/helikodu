@@ -369,3 +369,42 @@ fn a_removed_device_is_lost_not_moved() {
     stream.stop().unwrap();
     drop(silence);
 }
+
+#[test]
+#[ignore = "needs a PipeWire session; loads a temporary null sink"]
+fn device_capabilities_come_from_the_node_formats() {
+    let sink = NullSink::load();
+    let (events, _received) = mpsc::channel();
+    let backend = PipeWireBackend::connect(events).unwrap();
+    let id = sink.id();
+    let capabilities = || {
+        backend
+            .devices()
+            .unwrap()
+            .into_iter()
+            .find(|d| d.id == id)
+            .map(|d| d.capabilities)
+            .unwrap_or_default()
+    };
+    assert!(
+        wait_until(Duration::from_secs(3), || {
+            let caps = capabilities();
+            !caps.formats.is_empty() && !caps.sample_rates.is_empty()
+        }),
+        "no capabilities for the null sink: {:?}",
+        capabilities()
+    );
+    let caps = capabilities();
+    println!(
+        "{}: formats {:?}, rates {:?}, channels {:?}",
+        sink.name,
+        caps.formats
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>(),
+        caps.sample_rates.iter().map(|r| r.hz()).collect::<Vec<_>>(),
+        caps.channel_counts
+    );
+    assert!(caps.sample_rates.windows(2).all(|w| w[0] < w[1]));
+    assert!(!caps.channel_counts.is_empty());
+}

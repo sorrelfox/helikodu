@@ -10,11 +10,13 @@
 
 mod advanced;
 mod appearance;
+mod decoders;
 mod dsp;
 mod library;
 mod loudness;
 mod output;
 mod playback;
+mod transitions;
 mod ui_state;
 
 use std::fmt;
@@ -25,6 +27,7 @@ use thiserror::Error;
 
 pub use advanced::{AdvancedSettings, Id3Version, LogDetail};
 pub use appearance::{Accent, AppearanceSettings, ColorScheme, WindowStyle};
+pub use decoders::{DecoderSettings, MEMORY_BUFFER_LIMIT, TrackerInterpolation};
 pub use dsp::{
     BuiltInPreset, ChannelMixSettings, ChannelMode, CrossfeedPreset, CrossfeedSettings,
     DspSettings, EqMode, EqualizerSettings, FilterKind, GRAPHIC_10_BANDS_HZ, GRAPHIC_31_BANDS_HZ,
@@ -33,9 +36,11 @@ pub use dsp::{
 pub use library::{LibrarySettings, StorageLimits};
 pub use loudness::{ClippingPrevention, LoudnessMode, LoudnessSettings};
 pub use output::{
-    DeviceLostPolicy, DeviceProfile, OutputFormat, OutputSettings, SampleRatePolicy, VolumeControl,
+    DeviceLostPolicy, DeviceProfile, DsdOutput, OutputFormat, OutputSettings, SampleRatePolicy,
+    VolumeControl,
 };
 pub use playback::{ContextAction, PlaybackSettings, StartAction};
+pub use transitions::TransitionSettings;
 pub use ui_state::{PaneState, UiState, WindowState};
 
 /// All settings: the contents of `settings.toml`.

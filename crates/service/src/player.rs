@@ -64,6 +64,7 @@ use std::sync::Arc;
 use std::sync::mpsc::{self, Sender};
 use std::thread::{self, JoinHandle};
 
+use helikodu_engine::decode::DecoderRegistry;
 use helikodu_engine::transport::Engine;
 use helikodu_model::audio::MediaTime;
 
@@ -155,7 +156,9 @@ impl Player {
 
         let mut engine_config = config.engine_config(&startup.selection);
         engine_config.volume = startup.volume;
-        let (engine, engine_events) = Engine::spawn(engine_config).map_err(PlayerError::Spawn)?;
+        let registry = DecoderRegistry::with_settings(&config.decoders);
+        let (engine, engine_events) =
+            Engine::spawn_with_registry(engine_config, registry).map_err(PlayerError::Spawn)?;
         let (inputs, mailbox) = mpsc::channel();
         let forward = inputs.clone();
         thread::Builder::new()

@@ -51,6 +51,16 @@ pub struct PlaybackItem {
     /// from the same album. The automatic loudness mode then applies the album gain.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub album_context: bool,
+    /// The album the item belongs to, as a key the sender chooses (for example its
+    /// title and album artists): items with the same key are tracks of one album.
+    /// The engine joins consecutive items of one album without a crossfade when the
+    /// settings keep albums gapless. `None` when the item has no album.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub album: Option<String>,
+    /// The audio stream to play, by its index in the file, for files with several;
+    /// `None` for the one the file marks as default, or the best one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio_stream: Option<u32>,
 }
 
 impl PlaybackItem {
@@ -61,7 +71,30 @@ impl PlaybackItem {
             source,
             loudness: Loudness::UNKNOWN,
             album_context: false,
+            album: None,
+            audio_stream: None,
         }
+    }
+
+    /// The same item playing the audio stream with the index `stream` of the file
+    /// (see [`audio_stream`](Self::audio_stream)).
+    #[must_use]
+    pub fn with_audio_stream(self, stream: Option<u32>) -> Self {
+        Self {
+            audio_stream: stream,
+            ..self
+        }
+    }
+
+    /// The same item on the album `album` (see [`album`](Self::album)).
+    #[must_use]
+    pub fn with_album(self, album: Option<String>) -> Self {
+        Self { album, ..self }
+    }
+
+    /// Whether `self` and `other` are tracks of one album.
+    pub fn same_album(&self, other: &Self) -> bool {
+        self.album.is_some() && self.album == other.album
     }
 
     /// The same item with the loudness values `loudness`.
@@ -91,6 +124,9 @@ pub struct Loudness {
     pub album_gain_db: Option<f64>,
     /// The album's peak.
     pub album_peak: Option<f64>,
+    /// Whether the peaks are true peaks (measured by the library's loudness
+    /// scanner) rather than sample peaks (as ReplayGain tags carry them).
+    pub true_peak: bool,
 }
 
 impl Loudness {
@@ -100,11 +136,15 @@ impl Loudness {
         track_peak: None,
         album_gain_db: None,
         album_peak: None,
+        true_peak: false,
     };
 
     /// Whether no value is known.
     pub fn is_unknown(&self) -> bool {
-        *self == Self::UNKNOWN
+        self.track_gain_db.is_none()
+            && self.track_peak.is_none()
+            && self.album_gain_db.is_none()
+            && self.album_peak.is_none()
     }
 }
 
@@ -130,5 +170,18 @@ mod tests {
         assert_eq!(back, item);
         assert!(back.album_context);
         assert!(!back.loudness.is_unknown());
+    }
+
+    #[test]
+    fn only_items_with_the_same_album_share_one() {
+        let a = PlaybackItem::new(ItemId::new(1), MediaSource::file("/a.flac"));
+        let b = PlaybackItem::new(ItemId::new(2), MediaSource::file("/b.flac"));
+        assert!(!a.same_album(&b));
+        let a = a.with_album(Some("Album\u{1f}Artist".into()));
+        assert!(!a.same_album(&b));
+        let b = b.with_album(a.album.clone());
+        assert!(a.same_album(&b));
+        let json = serde_json::to_string(&b).unwrap();
+        assert_eq!(serde_json::from_str::<PlaybackItem>(&json).unwrap(), b);
     }
 }

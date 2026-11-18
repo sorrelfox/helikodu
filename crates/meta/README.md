@@ -176,7 +176,7 @@ let written = write_playlist(&parsed.playlist, PlaylistKind::M3u8, &WriteOptions
 The `worker` module is the protocol between the library scanner and the `helikodu-scan-worker` processes, which read one file at a time so that a decoder that crashes or hangs on a broken file cannot take the application down.
 
 - Messages are binary frames: a little-endian 32-bit length, then the payload, at most 64 MiB. A worker greets with a magic value, the protocol version and its process ID; the scanner refuses another version.
-- A request names one file (its path as bytes) and the reading options. The answer is a report with the file's size, a quick hash, its tags, a CUE sheet or chapters if it has them, or a failure with its kind.
+- A request names one file (its path as bytes) and the reading options. The answer is a report with the file's size, a quick hash, its tags, a CUE sheet or chapters if it has them, the subsongs of a file with several (`SubsongReport`: index, tags, length; filled by the worker program from the long-tail decoders, protocol version 3), or a failure with its kind. Tags read by a format's own decoder have the source `TagSource::Decoder` and are read-only.
 - `quick_hash` is SHA-256 over the file size and its first and last 64 KiB, truncated to 16 bytes. It lets the library recognise a moved file without reading all of it.
 - `serve` runs the worker side over any reader and writer; `handle` answers a single request.
 

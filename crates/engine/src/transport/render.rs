@@ -36,6 +36,8 @@ impl Worker {
             None => return,
         };
         loop {
+            // Nothing is mixed into the current item around a crossfade.
+            let unmixed = self.renders_unmixed(budget);
             let Some(output) = self.output.as_mut() else {
                 return;
             };
@@ -49,17 +51,46 @@ impl Worker {
                 }
                 continue;
             }
+            if output.preroll_left > 0 {
+                // DAC warm-up: silence before the first audio of a new stream.
+                let frames = output.preroll_left.min((SILENCE.len() / channels) as u64);
+                let written = output
+                    .writer
+                    .write(&SILENCE[..usize::try_from(frames).unwrap_or(0) * channels]);
+                output.preroll_left -= written as u64;
+                if written == 0 {
+                    break;
+                }
+                continue;
+            }
             if budget == 0 {
                 break;
             }
             match &mut self.current {
+                // 32-bit integer sources that nothing changes go into the ring as
+                // integers, which a 32-bit device takes exactly.
+                Some(source)
+                    if output.writer.carries_integers()
+                        && unmixed
+                        && self.dsp.as_ref().is_none_or(|dsp| !dsp.is_active())
+                        && source.renders_exact() =>
+                {
+                    let frames = source.render_exact(&mut output.writer, budget);
+                    budget = budget.saturating_sub(frames);
+                    if frames == 0 {
+                        break;
+                    }
+                }
                 Some(source) if !source.is_finished() => {
-                    let frames = source.render(&mut self.staging);
+                    // The current item, mixed with the next one during a crossfade.
+                    let Some(frames) = self.render_block(channels) else {
+                        break;
+                    };
                     if let Some(dsp) = &mut self.dsp {
                         dsp.process(&mut self.staging[..frames * channels]);
                     }
                     self.staged = 0..frames * channels;
-                    if frames == 0 && !source.is_finished() {
+                    if frames == 0 && self.current.as_ref().is_some_and(|s| !s.is_finished()) {
                         break;
                     }
                 }
@@ -103,7 +134,7 @@ impl Worker {
 
     /// Whether to hold at the end of an item for the answer to `NearEnd`: only a
     /// freewheeling sink, which has no deadline, waits.
-    fn waits_for_next(&mut self) -> bool {
+    pub(super) fn waits_for_next(&mut self) -> bool {
         let freewheel = self.output.as_ref().is_some_and(|output| output.freewheel);
         if !freewheel || self.next_answered {
             return false;
@@ -131,6 +162,8 @@ impl Worker {
         let at = output.writer.frames_written();
         let id = source.item().id;
         self.current = Some(source);
+        // A fall before a reopening that did not happen ends with the item.
+        self.drop_crossfade();
         self.next_answered = false;
         self.waiting_since = None;
         if let Err(error) = self.attach_current() {
@@ -221,7 +254,10 @@ impl Worker {
         self.current = Some(source);
         self.next_answered = false;
         self.near_end_sent = None;
-        match self.play_current(None) {
+        // After a fall instead of a crossfade, the item fades in as long.
+        let fade = self.reopen_fade.take();
+        self.drop_crossfade();
+        match self.play_current_faded(fade) {
             Ok(()) => {
                 self.emit(started);
                 self.settle_playing();
@@ -305,12 +341,26 @@ impl Worker {
     /// Puts the sources where `resume` says: the heard item at its position, and the
     /// item that followed it.
     pub(super) fn restart_sources(&mut self, resume: &Resume) -> Result<(), EngineError> {
+        // A crossfade under way ends; its incoming item is put where it is heard.
+        let incoming = self.cancel_crossfade();
         let id = resume.segment.item.id;
         if let Some(source) = self.current.as_mut().filter(|s| s.item().id == id) {
             source.seek(resume.position)?;
+            if let Some(follower) = &resume.follower {
+                // The item that was being crossfaded in follows again.
+                self.next = match incoming {
+                    Some(source) if source.item().id == follower.id => Some(source),
+                    _ => Source::open(&self.registry, follower.clone()).ok(),
+                };
+                self.next_answered = self.next.is_some();
+            }
         } else {
             let old = self.current.take();
-            let mut source = Source::open(&self.registry, resume.segment.item.clone())?;
+            let mut source = match incoming {
+                // The incoming item of a crossfade, heard past its middle.
+                Some(source) if source.item().id == id => source,
+                _ => Source::open(&self.registry, resume.segment.item.clone())?,
+            };
             source.seek(resume.position)?;
             self.current = Some(source);
             if let Some(follower) = &resume.follower {
@@ -335,6 +385,12 @@ impl Worker {
         &mut self,
         transition: Option<Transition>,
     ) -> Result<(), EngineError> {
+        let fade = transition.map(|t| self.config.processing.fades.of(t));
+        self.play_current_faded(fade)
+    }
+
+    /// [`play_current`](Self::play_current) with a fade in of `fade`, of any length.
+    pub(super) fn play_current_faded(&mut self, fade: Option<Duration>) -> Result<(), EngineError> {
         let config = match &self.current {
             Some(source) => self.stream_config(source),
             None => return Err(EngineError::NothingLoaded),
@@ -357,24 +413,29 @@ impl Worker {
         self.drain = None;
         self.waiting_since = None;
         self.staged = 0..0;
-        let fade = transition.map(|t| self.config.processing.fades.of(t));
         let Some(output) = &self.output else {
             return Err(EngineError::NothingLoaded);
         };
         let until = output.writer.frames_written();
         let running = output.running;
         if until == 0 && !running {
-            self.timeline.reset(0);
-            self.push_segment(0);
+            // A new stream: the DAC warm-up's silence comes first, and the item
+            // starts after it.
+            let preroll = output.preroll_frames();
+            self.timeline.reset(preroll);
+            self.push_segment(preroll);
             if let Some(duration) = fade {
                 self.schedule(0, DeviceAction::SetOpen(false));
                 self.schedule(
-                    0,
+                    preroll,
                     DeviceAction::Fade {
                         open: true,
                         duration,
                     },
                 );
+            }
+            if let Some(output) = &mut self.output {
+                output.preroll_left = preroll;
             }
             self.fill();
             self.start_output()?;
@@ -461,6 +522,7 @@ impl Worker {
                 .as_ref()
                 .map_or(source.rate(), |output| output.spec().rate),
             error: None,
+            mix_from: None,
         }
     }
 }

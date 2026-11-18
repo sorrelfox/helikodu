@@ -54,6 +54,17 @@
 //!   settings ask the device for); otherwise the buffer plays out and the device is
 //!   reopened (`Reconfiguring`). `TrackEnded` (`Finished`) and `TrackStarted` are
 //!   sent when the join is heard.
+//! - With crossfades on ([`EngineConfig::transitions`], or
+//!   [`EngineCommand::SetTransitions`]), the next item is mixed into the end of the
+//!   current one with equal-power gains, unless both are tracks of one album kept
+//!   gapless, the path is bit-perfect in exclusive mode, or the length is unknown.
+//!   `NearEnd` comes earlier by the crossfade's length; `TrackEnded` (`Finished`)
+//!   and `TrackStarted` are sent when the middle of the crossfade is heard. An item
+//!   that needs another stream gets a fade out and, after the reopening, a fade in
+//!   as long. A `Load` while playing (a skip) crossfades from the end of the
+//!   buffered audio when the skip crossfade is on, sending `TrackEnded`
+//!   (`Interrupted`) and `TrackStarted` at once without `Loading`; otherwise it fades
+//!   out over the skip fade.
 //! - At the end of the last item the engine sends `StateChanged(Draining)`, and once
 //!   the buffer has played out `TrackEnded` and `StateChanged(Stopped)`.
 //! - `NearEnd` is sent once per item, when the heard position is within
@@ -79,10 +90,13 @@
 
 mod commands;
 mod config;
+mod crossfade;
 mod device;
+mod formats;
 mod recovery;
 mod render;
 mod settings;
+mod signal;
 mod source;
 mod stats;
 mod timeline;

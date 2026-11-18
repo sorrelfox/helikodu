@@ -13,12 +13,14 @@ use std::sync::{Arc, Mutex, mpsc};
 use ::pipewire as pw;
 use helikodu_model::audio::{AudioSpec, DeviceCapabilities, DeviceId, DeviceInfo};
 use pw::metadata::{Metadata, MetadataListener};
+use pw::node::{Node, NodeListener};
 use pw::registry::{GlobalObject, RegistryRc};
 use pw::spa::utils::dict::DictRef;
 use pw::types::ObjectType;
 
 use super::super::ring::{SampleReader, StreamShared};
 use super::super::{EventSender, OutputError, OutputEvent, StreamConfig};
+use super::formats;
 use super::stream::StreamEntry;
 use super::{KIND, default_sink_name};
 
@@ -91,10 +93,12 @@ struct Thread {
     events: EventSender,
     /// Whether the first registry listing is complete. Device events are sent only
     /// after it.
-    listed: RefCell<bool>,
+    listed: Rc<Cell<bool>>,
     streams: RefCell<HashMap<u64, StreamEntry>>,
     /// The listener first: it must be removed before the proxy goes.
     metadata: RefCell<Option<(MetadataListener, Metadata)>>,
+    /// The sink nodes, bound to read their formats; listener first, as above.
+    nodes: RefCell<HashMap<u32, (NodeListener, Node)>>,
 }
 
 impl Thread {
@@ -140,9 +144,10 @@ impl Thread {
                         ..device
                     })
                 };
-                if *self.listed.borrow() {
+                if self.listed.get() {
                     self.send(event);
                 }
+                self.read_formats(registry, global);
             }
             ObjectType::Link => {
                 // A stream being opened is ready once it is linked to a device.
@@ -166,18 +171,59 @@ impl Thread {
     }
 
     fn global_removed(&self, id: u32) {
+        self.nodes.borrow_mut().remove(&id);
         let removed = match self.devices.lock() {
             Ok(mut table) => table.nodes.remove(&id),
             Err(_) => None,
         };
         if let Some(device) = removed
-            && *self.listed.borrow()
+            && self.listed.get()
         {
             self.send(OutputEvent::DeviceRemoved {
                 backend: KIND,
                 id: device.id,
             });
         }
+    }
+
+    /// Binds a sink node and asks for its `EnumFormat` parameters, which become the
+    /// device's capabilities as they arrive. Once the first listing is complete, a
+    /// change is reported as the device being added again, with the new values.
+    fn read_formats(&self, registry: &RegistryRc, global: &GlobalObject<&DictRef>) {
+        let Ok(node) = registry.bind::<Node, _>(global) else {
+            return;
+        };
+        let id = global.id;
+        let devices = self.devices.clone();
+        let events = self.events.clone();
+        let listed = self.listed.clone();
+        let listener = node
+            .add_listener_local()
+            .param(move |_seq, kind, _index, _next, param| {
+                if kind != pw::spa::param::ParamType::EnumFormat {
+                    return;
+                }
+                let Some(caps) = param.and_then(formats::capabilities) else {
+                    return;
+                };
+                let updated = devices.lock().ok().and_then(|mut table| {
+                    let is_default = table.default_sink.clone();
+                    let device = table.nodes.get_mut(&id)?;
+                    formats::merge(&mut device.capabilities, caps);
+                    Some(DeviceInfo {
+                        is_default: is_default.as_deref() == Some(device.id.as_str()),
+                        ..device.clone()
+                    })
+                });
+                if listed.get()
+                    && let Some(device) = updated
+                {
+                    let _ = events.send(OutputEvent::DeviceAdded(device));
+                }
+            })
+            .register();
+        node.enum_params(0, Some(pw::spa::param::ParamType::EnumFormat), 0, u32::MAX);
+        self.nodes.borrow_mut().insert(id, (listener, node));
     }
 
     /// Follows `default.audio.sink` in the "default" metadata object.
@@ -319,9 +365,10 @@ fn serve(
     let thread = Rc::new(Thread {
         devices,
         events,
-        listed: RefCell::new(false),
+        listed: Rc::new(Cell::new(false)),
         streams: RefCell::new(HashMap::new()),
         metadata: RefCell::new(None),
+        nodes: RefCell::new(HashMap::new()),
     });
 
     let _registry_listener = registry
@@ -371,7 +418,7 @@ fn serve(
                     return;
                 }
                 pending.set(None);
-                *thread.listed.borrow_mut() = true;
+                thread.listed.set(true);
                 if let Some(ready) = ready.borrow_mut().take() {
                     let _ = ready.send(Ok(()));
                 }
@@ -418,6 +465,7 @@ fn serve(
         entry.close();
     }
     *thread.metadata.borrow_mut() = None;
+    thread.nodes.borrow_mut().clear();
 }
 
 #[cfg(test)]

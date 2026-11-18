@@ -13,10 +13,25 @@ publish.workspace = true
 name = "helikodu-scan-worker"
 path = "src/main.rs"
 
+[features]
+default = ["openmpt", "gme", "sid", "midi"]
+# The subsongs and text of tracker modules, game music, SID tunes, MIDI files and
+# game audio streams, from their own decoders (see `helikodu-extra-decoders`).
+openmpt = ["helikodu-extra-decoders/openmpt"]
+gme = ["helikodu-extra-decoders/gme"]
+sid = ["helikodu-extra-decoders/sid"]
+midi = ["helikodu-extra-decoders/midi"]
+vgmstream = ["helikodu-extra-decoders/vgmstream"]
+
 [dependencies]
+helikodu-extra-decoders = { workspace = true, features = ["song"] }
 helikodu-ffmpeg-bridge.workspace = true
 helikodu-meta.workspace = true
 rlimit.workspace = true
+
+[dev-dependencies]
+# The project's own long-tail sample files.
+helikodu-testkit.workspace = true
 
 [lints]
 workspace = true

@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Tracker modules (libopenmpt), game console music (libgme) and Commodore 64 SID tunes (libsidplayfp, with the HVSC song-length database when you point to it) play, and MIDI files with a SoundFont you choose or one your distribution installs. Game audio streams play through vgmstream in builds made with it. Files are recognised by their content, and the subsongs of a module, game or tune become tracks of their own in the library.
+- Looping game music plays its loop twice and fades out; the number of loops, the fade and the length of tunes without one are settings.
+- DSD files can go to a DAC as DoP when nothing on the way changes the samples; otherwise they are converted to PCM as before.
+- Tracks can be read into memory whole before they play, for slow or sleeping drives (`load_into_memory` in `[playback.decoders]`; off by default, never above 512 MiB).
+
 ## [0.1.0] - 2026-11-18
 
 The first alpha. Helikodu plays and organizes the music on your own computer and never connects to the internet.

@@ -47,7 +47,7 @@ const OUTPUT: &str = "target/corpus";
 const WORK: &str = ".work";
 /// Changes whenever the source signal or a built-in step changes, so that
 /// files made by an older `xtask` are made again.
-const BUILTIN_VERSION: &str = "xtask-corpus 1";
+const BUILTIN_VERSION: &str = "xtask-corpus 2";
 
 pub(crate) fn run(args: &[String]) -> Result<()> {
     let mut check = false;

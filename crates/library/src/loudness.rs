@@ -25,7 +25,7 @@ use crate::Library;
 use crate::catalog::{AlbumId, TrackSection, sql_track_id, track_id_from_sql};
 use crate::db::unix_time::{from_unix_seconds, to_unix_seconds};
 use crate::db::{DbError, path_from_blob};
-use crate::track_source::{TrackSource, span_of};
+use crate::track_source::{TrackSource, section_of};
 
 /// The ReplayGain 2.0 reference loudness, in LUFS.
 pub const REFERENCE_LUFS: f64 = -18.0;
@@ -83,6 +83,7 @@ impl MeasuredLoudness {
             track_peak: Some(self.true_peak),
             album_gain_db: album.and_then(AlbumMeasurement::gain_db),
             album_peak: album.map(|a| a.true_peak),
+            true_peak: true,
         }
     }
 
@@ -114,6 +115,8 @@ impl MeasuredLoudness {
             } else {
                 tags.album_peak
             },
+            // True peaks only when no sample peak of the tags is among them.
+            true_peak: (track || tags.track_peak.is_none()) && (album || tags.album_peak.is_none()),
         }
     }
 }
@@ -395,7 +398,8 @@ fn targets(c: &Connection, selection: &LoudnessSelection) -> rusqlite::Result<Ve
         "SELECT t.id, d.path, f.name, t.section, t.start_frame, t.end_frame, t.sample_rate,
                 t.album_id, t.codec, t.disc_no, t.track_no,
                 (SELECT count(*) FROM tracks a JOIN files af ON af.id = a.file_id
-                 WHERE a.album_id = t.album_id AND af.missing_since IS NULL)
+                 WHERE a.album_id = t.album_id AND af.missing_since IS NULL),
+                t.sub_index
          FROM tracks t
          JOIN files f ON f.id = t.file_id
          JOIN dirs d ON d.id = f.dir_id
@@ -423,7 +427,7 @@ fn targets(c: &Connection, selection: &LoudnessSelection) -> rusqlite::Result<Ve
                     track: track_id_from_sql(row.get(0)?),
                     source: TrackSource {
                         path: dir.join(name),
-                        section: span_of(section, span),
+                        section: section_of(section, span, row.get(12)?),
                     },
                     album: album.map(AlbumId),
                     album_size: if album.is_some() {
@@ -467,12 +471,17 @@ mod tests {
             track_peak: Some(0.5),
             album_gain_db: Some(-4.0),
             album_peak: Some(0.6),
+            true_peak: false,
         };
         let alone = measured(None).over_tags(tags);
         assert_eq!(alone.track_gain_db, Some(-7.0));
         assert_eq!(alone.track_peak, Some(1.05));
         assert_eq!(alone.album_gain_db, Some(-4.0));
         assert_eq!(alone.album_peak, Some(0.6));
+        assert!(
+            !alone.true_peak,
+            "the album peak is a sample peak of the tags"
+        );
 
         let album = AlbumMeasurement {
             integrated_lufs: Some(-12.5),
@@ -483,6 +492,7 @@ mod tests {
         let with_album = measured(Some(album)).over_tags(tags);
         assert_eq!(with_album.album_gain_db, Some(-5.5));
         assert_eq!(with_album.album_peak, Some(1.1));
+        assert!(with_album.true_peak);
 
         let silent = MeasuredLoudness {
             integrated_lufs: None,

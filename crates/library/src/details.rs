@@ -61,6 +61,8 @@ pub fn read_file_details(path: &Path) -> Result<FileDetails, ReadFileError> {
             track_peak: gain.track_peak,
             album_gain_db: gain.album_gain_rg2_db(),
             album_peak: gain.album_peak,
+            // ReplayGain tags carry sample peaks.
+            true_peak: false,
         },
         rating: file
             .tags

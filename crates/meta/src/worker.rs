@@ -30,7 +30,7 @@ mod wire;
 pub use extract::{MAX_EXTRA_VALUE_BYTES, handle, read_file};
 pub use message::{
     CoverOrigin, CoverReport, CueReport, Failure, FailureKind, FileReport, Hello, Message,
-    PROTOCOL_VERSION, Request, RequestOptions, Response,
+    PROTOCOL_VERSION, Request, RequestOptions, Response, SubsongReport,
 };
 pub use quick_hash::{QUICK_HASH_LEN, QUICK_HASH_SPAN, quick_hash};
 pub use serve::serve;

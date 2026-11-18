@@ -10,6 +10,11 @@
 //! back to exactly that integer, so 16- and 24-bit audio passes unchanged. Dither is a
 //! stage of its own ([`TpdfDither`](super::TpdfDither)) that runs before the encoder.
 //!
+//! 32-bit integer samples have more bits than a float carries. For them the encoder
+//! also takes integer words ([`Encoder::encode_s32`]), which a 32-bit device format
+//! receives unchanged; the ring buffer of such a stream holds integers (see
+//! [`SampleWriter`](crate::output::SampleWriter)).
+//!
 //! Both directions are real-time safe: no allocation after construction.
 
 use helikodu_model::audio::{Endianness, SampleFormat};
@@ -123,6 +128,54 @@ impl Encoder {
         }
         written
     }
+
+    /// Encodes the whole frames of `words`, 32-bit integer samples (full scale at
+    /// 2^31) stored as `u32`, into the start of `out`, and returns the number of bytes
+    /// written. A 32-bit integer or 64-bit float format receives every sample
+    /// exactly; narrower formats get it rounded like a float sample.
+    pub fn encode_s32(&self, words: &[u32], out: &mut [u8]) -> usize {
+        let bytes = self.format.bytes();
+        let frame_bytes = self.bytes_per_frame();
+        let mut written = 0;
+        for (frame, dst) in words
+            .chunks_exact(self.channels)
+            .zip(out.chunks_exact_mut(frame_bytes))
+        {
+            for (i, sample_dst) in dst.chunks_exact_mut(bytes).enumerate() {
+                let source = match &self.map {
+                    Some(map) => map[i],
+                    None => i,
+                };
+                write_s32(frame[source] as i32, self.format, sample_dst);
+            }
+            written += frame_bytes;
+        }
+        written
+    }
+}
+
+/// Writes a 32-bit integer sample in `format`.
+fn write_s32(v: i32, format: SampleFormat, dst: &mut [u8]) {
+    match format {
+        SampleFormat::S32(e) => put(dst, v.to_le_bytes(), v.to_be_bytes(), e),
+        SampleFormat::F64(e) => {
+            let x = f64::from(v) / 2_147_483_648.0;
+            put(dst, x.to_le_bytes(), x.to_be_bytes(), e);
+        }
+        other => write_sample(s32_to_f32(v), other, dst),
+    }
+}
+
+/// `x` as a 32-bit integer sample, rounded and clipped exactly as the encoder writes
+/// it to a 32-bit device.
+pub(crate) fn f32_to_s32(x: f32) -> i32 {
+    to_int(x, 32)
+}
+
+/// A 32-bit integer sample as a float, as decoders convert it: exact for up to 24
+/// significant bits.
+pub(crate) fn s32_to_f32(v: i32) -> f32 {
+    v as f32 * (1.0 / 2_147_483_648.0)
 }
 
 /// `x` scaled to a signed integer of `bits` bits, rounded and clipped. NaN is 0.
@@ -264,6 +317,31 @@ mod tests {
         let encoder = Encoder::new(SampleFormat::S16(Little), 2).unwrap();
         let mut out = [0; 6];
         assert_eq!(encoder.encode(&[0.0; 8], &mut out), 4);
+    }
+
+    #[test]
+    fn integer_words_reach_a_32_bit_format_exactly() {
+        let words = [i32::MIN, -1, 0x1234_5679, i32::MAX].map(|v| v as u32);
+        let encoder = Encoder::new(SampleFormat::S32(Big), 2)
+            .unwrap()
+            .with_channel_map(vec![1, 0]);
+        let mut out = [0u8; 16];
+        assert_eq!(encoder.encode_s32(&words, &mut out), 16);
+        let back: Vec<i32> = out
+            .chunks(4)
+            .map(|b| i32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+            .collect();
+        assert_eq!(back, [-1, i32::MIN, i32::MAX, 0x1234_5679]);
+        // Narrower formats round like floats.
+        let encoder = Encoder::new(SampleFormat::S16(Little), 1).unwrap();
+        let mut out = [0u8; 2];
+        encoder.encode_s32(&[(0x1234_8000u32)], &mut out);
+        assert_eq!(i16::from_le_bytes(out), 0x1235);
+        // The conversions agree with the float path for 24-bit samples.
+        for v in [-8_388_608i32, -2, 0x12_3456, 8_388_607] {
+            let word = v << 8;
+            assert_eq!(f32_to_s32(s32_to_f32(word)), word);
+        }
     }
 
     #[test]

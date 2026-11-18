@@ -309,3 +309,44 @@ fn matroska_is_a_read_only_format() {
     assert_eq!(std::fs::read(&path).expect("read"), before);
     assert_eq!(entries(&dir), ["a.mka"]);
 }
+
+#[test]
+fn opus_takes_r128_gains_and_other_formats_skip_them() {
+    let dir = folder("r128");
+    let Some(opus) = encode(&dir, "a.opus", WRITABLE[4], &[] as &[&str]) else {
+        return;
+    };
+    let mut c = TagChanges::new();
+    c.set_one(TagField::R128TrackGain, "-1280")
+        .set_one(TagField::R128AlbumGain, "+256");
+    let outcome = write_tags(&opus, &c, None, &WriteOptions::default()).expect("Opus writes");
+    assert!(outcome.skipped.is_empty(), "{:?}", outcome.skipped);
+    let tags = read(&opus);
+    assert_eq!(values(&tags, TagField::R128TrackGain), strings(&["-1280"]));
+    assert_eq!(values(&tags, TagField::R128AlbumGain), strings(&["256"]));
+    assert_eq!(tags.replay_gain.r128_track_gain, Some(-1280));
+    // −5 dB at −23 LUFS is 0 dB at the ReplayGain reference of −18 LUFS.
+    let track = tags.replay_gain.track_gain_rg2_db().expect("a track gain");
+    assert!(track.abs() < 1e-9, "{track}");
+
+    c = TagChanges::new();
+    c.clear(TagField::R128TrackGain);
+    write_tags(&opus, &c, None, &WriteOptions::default()).expect("Opus writes");
+    assert!(values(&read(&opus), TagField::R128TrackGain).is_empty());
+
+    c = TagChanges::new();
+    c.set_one(TagField::R128TrackGain, "1.5");
+    assert!(matches!(
+        write_tags(&opus, &c, None, &WriteOptions::default()),
+        Err(WriteError::InvalidValue { .. })
+    ));
+
+    let Some(vorbis) = encode(&dir, "a.ogg", WRITABLE[3], &[] as &[&str]) else {
+        return;
+    };
+    c = TagChanges::new();
+    c.set_one(TagField::R128TrackGain, "-1280");
+    let outcome = write_tags(&vorbis, &c, None, &WriteOptions::default()).expect("Vorbis writes");
+    assert_eq!(outcome.skipped.len(), 1, "{:?}", outcome.skipped);
+    assert!(values(&read(&vorbis), TagField::R128TrackGain).is_empty());
+}

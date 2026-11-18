@@ -13,7 +13,9 @@ use crate::tags::mapping::vorbis;
 use crate::tags::rating::Rating;
 
 use super::changes::{CoverChange, TagField};
-use super::editor::{Pair, PairKind, Skip, TagEditor, pair_fields, rating_values, replaced_fields};
+use super::editor::{
+    ONLY_OPUS, Pair, PairKind, Skip, TagEditor, pair_fields, rating_values, replaced_fields,
+};
 use super::id3v2::front_picture;
 
 /// The comment name Picard writes for `field`.
@@ -36,11 +38,24 @@ pub(crate) struct VorbisEditor<'a> {
     /// Whether the pictures live in the comments (Ogg) rather than in FLAC
     /// `PICTURE` blocks, which the caller handles.
     pictures: bool,
+    /// Whether the file is Ogg Opus, the one format whose comments carry the
+    /// R128 gains (RFC 7845).
+    opus: bool,
 }
 
 impl<'a> VorbisEditor<'a> {
     pub(crate) fn new(tag: &'a mut VorbisComments, pictures: bool) -> Self {
-        Self { tag, pictures }
+        Self {
+            tag,
+            pictures,
+            opus: false,
+        }
+    }
+
+    /// Marks the comments as those of an Opus file, so that they take R128 gains.
+    pub(crate) fn opus(mut self) -> Self {
+        self.opus = true;
+        self
     }
 
     /// Removes the comments for which `remove` holds, keeping the order of the rest.
@@ -66,6 +81,9 @@ impl<'a> VorbisEditor<'a> {
 
 impl TagEditor for VorbisEditor<'_> {
     fn set_field(&mut self, field: TagField, values: &[String]) -> Result<(), Skip> {
+        if field.is_r128() && !self.opus {
+            return Err(ONLY_OPUS);
+        }
         self.remove_fields(&replaced_fields(field));
         self.push(&key(field), values);
         Ok(())

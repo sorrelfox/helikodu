@@ -17,6 +17,7 @@
 //! | Channel mapping, downmix, upmix | [`MixMatrix`] | per source |
 //! | ReplayGain / R128 gain | [`GainStage`], [`resolve_gain`] | per source |
 //! | Resampling | [`ResampleStage`] | per source |
+//! | Crossfade (equal power) | [`equal_power`] | where two sources are mixed |
 //! | Software volume (`a = p³`) | [`SoftwareVolume`] | on the mixed stream |
 //! | Anti-click fades | [`Fader`] | on the mixed stream |
 //! | TPDF dither | [`TpdfDither`] | on the mixed stream |
@@ -40,6 +41,7 @@ mod volume;
 pub use self::chain::{OutputChain, SourceChain};
 pub use self::channel_mix::{MixKind, MixMatrix, MixOptions};
 pub use self::convert::{Encoder, PcmSample, to_float};
+pub(crate) use self::convert::{f32_to_s32, s32_to_f32};
 pub use self::dither::TpdfDither;
 pub use self::error::PipelineError;
 pub use self::loudness::{
@@ -51,6 +53,6 @@ pub use self::path_plan::{
     ChannelMixPlan, PathPlan, PathRequest, PlannedStage, ProcessingSettings, ResamplePlan,
     SourceFormat, VolumePlan, stream_config,
 };
-pub use self::ramp::{FadeDurations, FadeState, Fader, SmoothedGain, Transition};
+pub use self::ramp::{FadeDurations, FadeState, Fader, SmoothedGain, Transition, equal_power};
 pub use self::resample::{ResampleMethod, ResampleStage, ResamplerQuality};
 pub use self::volume::{SharedVolume, SoftwareVolume};

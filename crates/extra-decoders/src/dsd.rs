@@ -8,7 +8,7 @@
 //! the earliest bit in the most significant position, channels in WAVE order. DSF
 //! stores each byte least-significant bit first in per-channel blocks; DFF stores
 //! bytes most-significant bit first, interleaved per channel. That form is what DoP
-//! and native DSD output will need.
+//! and native DSD output need; [`DopDecoder`] packs it into DoP frames.
 //!
 //! [`DsdPcmDecoder`] turns the stream into PCM: a linear-phase FIR low-pass filter
 //! decimates it to 176.4 kHz (DSD64, DSD128, DSD256, DSD512) or 192 kHz (the 48 kHz
@@ -24,12 +24,14 @@
 
 mod decimator;
 mod dff;
+mod dop;
 mod dsf;
 mod error;
 mod pcm_decoder;
 mod reader;
 
 pub use decimator::DSD_GAIN;
+pub use dop::{DOP_MARKERS, DopDecoder, dop_silence, dop_word};
 pub use error::DsdError;
 pub use pcm_decoder::DsdPcmDecoder;
 pub use reader::{DsdContainer, DsdInfo, DsdReader, IDLE_BYTE};

@@ -1552,3 +1552,88 @@ set = "names"
 name = "Björk-nfd.wav"
 source = "s44-16"
 tool = "copy"
+
+# ---------------------------------------------------------------------------
+# The long tail: files of formats the engine plays with its own decoders
+# (libopenmpt, libgme, libsidplayfp, rustysynth), written byte by byte by xtask
+# (`tool = "write"`, the writers in crates/testkit/src/longtail.rs). They hold
+# nothing but what that code writes, so they are the project's own work under its
+# licence (GPL-3.0-or-later), like the rest of the generated corpus. The folder
+# below `longtail/` names the engine backend that must claim the file; the names
+# are misleading on purpose where it says so, because the content decides.
+
+# A ProTracker module with two subsongs (1.92 s and 0.96 s).
+[[sample]]
+set = "longtail"
+name = "openmpt/two-subsongs.mod"
+tool = "write"
+content = "tracker-module"
+
+[[sample]]
+set = "longtail"
+name = "openmpt/misnamed-module.mp3"
+from = "longtail/openmpt/two-subsongs.mod"
+tool = "copy"
+
+# An NSF file with three tracks (subsongs) and no stated lengths.
+[[sample]]
+set = "longtail"
+name = "gme/three-tracks.nsf"
+tool = "write"
+content = "nsf"
+
+# A PSID tune with two songs, the second the default.
+[[sample]]
+set = "longtail"
+name = "sidplayfp/two-songs.sid"
+tool = "write"
+content = "psid"
+
+# A standard MIDI file, 2 s, with a title and a copyright notice.
+[[sample]]
+set = "longtail"
+name = "rustysynth/arpeggio.mid"
+tool = "write"
+content = "midi"
+
+[[sample]]
+set = "longtail"
+name = "rustysynth/misnamed-midi.ogg"
+from = "longtail/rustysynth/arpeggio.mid"
+tool = "copy"
+
+# The SoundFont the MIDI files are played with: one looped sine preset.
+[[sample]]
+set = "longtail"
+name = "soundfont/sine.sf2"
+tool = "write"
+content = "soundfont"
+
+# Broken long-tail files: they fail cleanly or play what is there.
+[[sample]]
+set = "broken"
+name = "truncated.mod"
+from = "longtail/openmpt/two-subsongs.mod"
+tool = "truncate"
+keep = 0.5
+
+[[sample]]
+set = "broken"
+name = "truncated.nsf"
+from = "longtail/gme/three-tracks.nsf"
+tool = "truncate"
+keep = 0.5
+
+[[sample]]
+set = "broken"
+name = "truncated.sid"
+from = "longtail/sidplayfp/two-songs.sid"
+tool = "truncate"
+keep = 0.5
+
+[[sample]]
+set = "broken"
+name = "truncated.mid"
+from = "longtail/rustysynth/arpeggio.mid"
+tool = "truncate"
+keep = 0.5

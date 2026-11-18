@@ -166,6 +166,8 @@ impl Service {
             shuffle_seed: config.shuffle_seed,
             reservation: config.reservation,
             dsp: current.dsp.clone(),
+            transitions: current.playback.transitions,
+            decoders: current.playback.decoders.clone(),
         };
         let (player, _) = Player::spawn(player_config)?;
         // A restored session may have played on another device than the settings
@@ -285,6 +287,10 @@ fn keep_in_step(
                 if groups.contains(&SettingsGroup::Playback) {
                     let prefs = PlayerPrefs::from_settings(&now.playback);
                     let _ = player.send(PlayerCommand::Configure(prefs));
+                    let transitions = now.playback.transitions;
+                    let _ = player.send(PlayerCommand::ConfigureTransitions(transitions));
+                    let decoders = now.playback.decoders.clone();
+                    let _ = player.send(PlayerCommand::ConfigureDecoders(decoders));
                 }
                 if groups.contains(&SettingsGroup::Output) && now.output.selection() != output {
                     output = now.output.selection();

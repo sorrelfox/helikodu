@@ -15,7 +15,9 @@ use crate::tags::mapping::mp4;
 use crate::tags::rating::Rating;
 
 use super::changes::{CoverChange, TagField};
-use super::editor::{Pair, PairKind, Skip, TagEditor, pair_fields, rating_values, replaced_fields};
+use super::editor::{
+    ONLY_OPUS, Pair, PairKind, Skip, TagEditor, pair_fields, rating_values, replaced_fields,
+};
 use super::id3v2::front_picture;
 use super::vorbis;
 
@@ -165,6 +167,9 @@ impl<'a> Mp4Editor<'a> {
 
 impl TagEditor for Mp4Editor<'_> {
     fn set_field(&mut self, field: TagField, values: &[String]) -> Result<(), Skip> {
+        if field.is_r128() {
+            return Err(ONLY_OPUS);
+        }
         self.remove_fields(&replaced_fields(field));
         if values.is_empty() {
             return Ok(());

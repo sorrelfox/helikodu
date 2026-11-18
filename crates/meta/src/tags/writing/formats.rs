@@ -215,17 +215,17 @@ pub(crate) fn edit(
         }
         FileType::Opus => {
             let mut f: OpusFile = parse(file)?;
-            edited.skipped = edit_comments(f.vorbis_comments_mut(), plan);
+            edited.skipped = edit_comments(f.vorbis_comments_mut(), plan, true);
             save(&f, file, false)?;
         }
         FileType::Vorbis => {
             let mut f: VorbisFile = parse(file)?;
-            edited.skipped = edit_comments(f.vorbis_comments_mut(), plan);
+            edited.skipped = edit_comments(f.vorbis_comments_mut(), plan, false);
             save(&f, file, false)?;
         }
         FileType::Speex => {
             let mut f: SpeexFile = parse(file)?;
-            edited.skipped = edit_comments(f.vorbis_comments_mut(), plan);
+            edited.skipped = edit_comments(f.vorbis_comments_mut(), plan, false);
             save(&f, file, false)?;
         }
         FileType::Mp4 => {
@@ -264,8 +264,14 @@ pub(crate) fn edit(
     Ok(edited)
 }
 
-fn edit_comments(comments: &mut VorbisComments, plan: &Plan<'_>) -> Vec<SkippedChange> {
-    apply(&mut VorbisEditor::new(comments, true), plan)
+/// Edits the comments of an Ogg file; `opus` when it is Ogg Opus, which alone
+/// carries the R128 gains.
+fn edit_comments(comments: &mut VorbisComments, plan: &Plan<'_>, opus: bool) -> Vec<SkippedChange> {
+    let mut editor = VorbisEditor::new(comments, true);
+    if opus {
+        editor = editor.opus();
+    }
+    apply(&mut editor, plan)
 }
 
 fn edit_ape(

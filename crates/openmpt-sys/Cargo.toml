@@ -1,6 +1,8 @@
 [package]
 name = "helikodu-openmpt-sys"
 description = "Raw bindings to libopenmpt."
+links = "openmpt"
+build = "build.rs"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +10,9 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 publish.workspace = true
+
+[build-dependencies]
+pkg-config.workspace = true
 
 [lints]
 workspace = true

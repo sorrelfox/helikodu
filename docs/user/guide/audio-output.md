@@ -21,6 +21,7 @@ The output button in the player deck shows the device in use. Click it to see th
 | **If the device disappears** | **Pause** (the default), **Continue on the default device** or **Stop** |
 | **Buffer** | How much audio is prepared ahead, 50 to 2000 ms (default 200 ms) |
 | **DAC warm-up** | Milliseconds of silence after the device opens, for converters that need a moment to lock on (default 0) |
+| **Pause when headphones are unplugged** | On (the default): when the system default output moves away from a device that is removed, playback pauses instead of going on through the next device |
 
 Changes apply while music plays, at the same position. Helikodu remembers the device by a stable name (a PipeWire node name such as `alsa_output.usb-Topping_D10s-00.analog-stereo`, or an ALSA name such as `hw:CARD=D10s,DEV=0`), so it finds it again after a restart or when you plug it into another USB port. If the chosen device is missing when Helikodu starts, it pauses and tells you; choose another device or plug it in.
 

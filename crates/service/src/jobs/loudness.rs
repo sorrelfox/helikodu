@@ -14,9 +14,11 @@
 //! The results go to the library database. Only when [`LoudnessRequest::write_tags`]
 //! asks for it are they also written into the files' tags, as ReplayGain 2.0 values
 //! (`REPLAYGAIN_TRACK_GAIN` `-6.30 dB`, `REPLAYGAIN_TRACK_PEAK` `0.988525`, and the
-//! album pair; peaks are true peaks), in every format including Opus, where they
-//! take precedence over `R128_*_GAIN` when read. Tracks of CUE sheets share their
-//! file with other tracks, so their values stay in the library.
+//! album pair; peaks are true peaks). Opus files get `R128_TRACK_GAIN` and
+//! `R128_ALBUM_GAIN` instead, Q7.8 integers relative to −23 LUFS as RFC 7845
+//! defines them, and lose any `REPLAYGAIN_*` values, which readers would otherwise
+//! take first. Tracks of CUE sheets share their file with other tracks, so their
+//! values stay in the library.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -437,15 +439,16 @@ impl TagWriter {
                 result.tags = TagOutcome::Skipped("not measured".into());
                 continue;
             };
-            let whole_file = targets
-                .iter()
-                .find(|t| t.track == result.track)
-                .is_some_and(|t| t.whole_file);
+            let target = targets.iter().find(|t| t.track == result.track);
+            let whole_file = target.is_some_and(|t| t.whole_file);
+            let opus = target
+                .and_then(|t| t.codec.as_deref())
+                .is_some_and(|codec| codec.eq_ignore_ascii_case("opus"));
             if !whole_file {
                 result.tags = TagOutcome::Skipped("part of a file shared with other tracks".into());
                 continue;
             }
-            let Some(changes) = tag_changes(measured) else {
+            let Some(changes) = tag_changes(measured, opus) else {
                 result.tags = TagOutcome::Skipped("silence has no gain".into());
                 continue;
             };
@@ -484,10 +487,26 @@ impl TagWriter {
     }
 }
 
-/// The tag changes that carry `measured`, or `None` for silence.
-fn tag_changes(measured: &MeasuredLoudness) -> Option<TagChanges> {
+/// The tag changes that carry `measured`, or `None` for silence: R128 gains for
+/// an Opus file, ReplayGain 2.0 values for any other.
+fn tag_changes(measured: &MeasuredLoudness, opus: bool) -> Option<TagChanges> {
     let track_gain = measured.track_gain_db()?;
     let mut changes = TagChanges::new();
+    if opus {
+        changes.set_one(TagField::R128TrackGain, format_r128(track_gain));
+        if let Some(gain) = measured.album.and_then(|album| album.gain_db()) {
+            changes.set_one(TagField::R128AlbumGain, format_r128(gain));
+        }
+        for field in [
+            TagField::ReplayGainTrackGain,
+            TagField::ReplayGainTrackPeak,
+            TagField::ReplayGainAlbumGain,
+            TagField::ReplayGainAlbumPeak,
+        ] {
+            changes.clear(field);
+        }
+        return Some(changes);
+    }
     changes.set_one(TagField::ReplayGainTrackGain, format_gain(track_gain));
     changes.set_one(
         TagField::ReplayGainTrackPeak,
@@ -510,6 +529,18 @@ fn format_gain(db: f64) -> String {
 /// A peak as ReplayGain 2.0 writes it: `0.988525`.
 fn format_peak(peak: f64) -> String {
     format!("{peak:.6}")
+}
+
+/// A ReplayGain 2.0 gain (relative to −18 LUFS) as an Opus R128 gain: 1/256 dB
+/// relative to −23 LUFS, rounded and kept within the 16 bits it has.
+fn format_r128(db: f64) -> String {
+    let q7_8 = ((db - 5.0) * 256.0)
+        .round()
+        .clamp(f64::from(i16::MIN), f64::from(i16::MAX));
+    // The value is whole and within the range of `i16`.
+    #[allow(clippy::cast_possible_truncation)]
+    let q7_8 = q7_8 as i16;
+    q7_8.to_string()
 }
 
 /// Lowers the calling thread's scheduling priority; a failure leaves it as it is.
@@ -538,7 +569,7 @@ mod tests {
                 true_peak: 1.1,
             }),
         };
-        let changes = tag_changes(&measured).unwrap();
+        let changes = tag_changes(&measured, false).unwrap();
         let mut expected = TagChanges::new();
         expected.set_one(TagField::ReplayGainTrackGain, "-6.30 dB");
         expected.set_one(TagField::ReplayGainTrackPeak, "1.023457");
@@ -550,6 +581,36 @@ mod tests {
             integrated_lufs: None,
             ..measured
         };
-        assert!(tag_changes(&silent).is_none());
+        assert!(tag_changes(&silent, false).is_none());
+        assert!(tag_changes(&silent, true).is_none());
+    }
+
+    #[test]
+    fn opus_files_get_r128_gains() {
+        let measured = MeasuredLoudness {
+            track: TrackId::new(1),
+            version: MEASUREMENT_VERSION,
+            integrated_lufs: Some(-11.7),
+            range_lu: 5.0,
+            sample_peak: 0.9,
+            true_peak: 1.0,
+            album: Some(AlbumMeasurement {
+                integrated_lufs: Some(-23.0),
+                range_lu: 6.0,
+                sample_peak: 0.95,
+                true_peak: 1.1,
+            }),
+        };
+        let changes = tag_changes(&measured, true).unwrap();
+        let mut expected = TagChanges::new();
+        // −6.30 dB at −18 LUFS is −11.30 dB at −23 LUFS: −2892.8/256, rounded.
+        expected.set_one(TagField::R128TrackGain, "-2893");
+        expected.set_one(TagField::R128AlbumGain, "0");
+        expected.clear(TagField::ReplayGainTrackGain);
+        expected.clear(TagField::ReplayGainTrackPeak);
+        expected.clear(TagField::ReplayGainAlbumGain);
+        expected.clear(TagField::ReplayGainAlbumPeak);
+        assert_eq!(changes, expected);
+        assert_eq!(format_r128(-200.0), "-32768");
     }
 }

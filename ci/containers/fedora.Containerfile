@@ -5,12 +5,15 @@
 # from RPM Fusion instead of the restricted ffmpeg-free.
 FROM registry.fedoraproject.org/fedora:latest
 
+# The long-tail decoders: libopenmpt, libgme and libsidplayfp (the SID shim is C++).
+# vgmstream is not packaged; its decoder is off by default and not built here.
 RUN dnf install -y \
       "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
     && dnf install -y --allowerasing \
       alsa-lib-devel ca-certificates clang clang-devel curl gcc git gtk4-devel meson ninja-build \
       pipewire-devel pipewire-jack-audio-connection-kit-devel pkgconf-pkg-config sqlite-devel \
       ffmpeg-devel \
+      gcc-c++ game-music-emu-devel libopenmpt-devel libsidplayfp-devel \
     && dnf clean all
 
 # Rust comes from rustup without a default toolchain: the toolchain pinned in

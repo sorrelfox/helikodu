@@ -19,13 +19,14 @@ A run makes only the files whose recipe, tool version or input changed; everythi
 | `gapless/` | Two references (44.1 kHz and 48 kHz), each split into four parts at points that are not frame boundaries; every part encoded with each available encoder (WAV, FLAC, WavPack, TTA, ALAC, MP3 from LAME and from FFmpeg, AAC from FFmpeg and FDK, AAC in ADTS without gapless data, Vorbis, Opus in Ogg and WebM). The references are `gapless/reference-*.wav` |
 | `video/` | Two-second clips: H.264, H.265, VP9, AV1, MPEG-2, MPEG-4, Theora, H.263, WMV2, RealVideo and DV with AAC, Opus, AC-3, MP2, MP3, Vorbis, AMR-NB, WMA, RealAudio, FLAC or PCM audio, in MP4, Matroska, WebM, MPEG-PS, VOB, MPEG-TS, AVI, Ogg, FLV, 3GP, ASF, RM, DV, MXF and NUT; a Matroska file with three audio streams in different languages where the second is the default; a video-only file |
 | `broken/` | Truncated files, zero-length files, valid headers followed by noise, pure noise with an audio extension, and a FLAC file named `.mp3` |
+| `longtail/` | Files of the formats the engine plays with its own decoders, written byte by byte by `xtask` (`tool = "write"`, the writers in `crates/testkit/src/longtail.rs`): a ProTracker module with two subsongs, an NSF file with three tracks, a PSID tune with two songs, a MIDI file, the SoundFont the MIDI files play with, and copies of the module and the MIDI file under misleading names. The folder below `longtail/` names the engine backend that must claim the file. They are the project's own work under its licence, like everything generated here. The broken set has truncated copies |
 | `names/` | Names in Latin-1, cp1251 and Shift-JIS bytes, a folder whose name is not UTF-8, a name of exactly 255 bytes, names with a newline, a leading dash, leading and trailing spaces and characters Windows forbids, and the same name in Unicode NFC and NFD |
 
 **Unsupported by design:** the raw, headerless streams in `formats/` (Bluetooth SBC, aptX, aptX HD, DFPWM, G.722, G.723.1) have nothing in their bytes to recognise them by; FFmpeg identifies them only by file name extension, and the player never lets a file name decide what a file is. They are not supported as files. Their recipes stay, so the engine's corpus tests can check that such files are refused cleanly; the result tables list them as "unsupported by design", which is neither a gap nor a failure, also with `HELIKODU_CORPUS_STRICT=1`. One of them that starts to play fails the tests.
 
 The summary line counts the distinct `format` labels in `formats/`. Each label is one codec in one container; variants such as another bit depth, channel layout or bit-rate mode share their label and do not count again.
 
-Not generated yet, and to be added as recipes: the tag set (every tag format, legacy encodings, embedded pictures, lyrics, ReplayGain and R128, ratings, sort and classical fields), CUE sheets (single-file, multi-file, embedded, pregaps, non-UTF-8), titles in many scripts and locale-sensitive names, oversized tags and pictures, and playlists (nested, looping, referring to URLs). Synthetic libraries for benchmarks come from `cargo xtask synth-library` (see `xtask/README.md`). Formats without a Linux encoder (TAK, ATRAC, WMA Pro and Lossless, DTS-HD MA, DSD, MP1, many game formats) need a separate, licence-reviewed sample repository referenced by checksum.
+Not generated yet, and to be added as recipes: the tag set (every tag format, legacy encodings, embedded pictures, lyrics, ReplayGain and R128, ratings, sort and classical fields), CUE sheets (single-file, multi-file, embedded, pregaps, non-UTF-8), titles in many scripts and locale-sensitive names, oversized tags and pictures, and playlists (nested, looping, referring to URLs). Synthetic libraries for benchmarks come from `cargo xtask synth-library` (see `xtask/README.md`). Formats without a Linux encoder (TAK, ATRAC, WMA Pro and Lossless, DTS-HD MA, DSD, MP1, the game audio formats of vgmstream, and further tracker and game music formats) need a separate, licence-reviewed sample repository referenced by checksum.
 
 ## Recipes
 
@@ -48,13 +49,14 @@ A `[[sample]]` is one corpus file, made in the order of the file:
 
 | Key | Meaning |
 |---|---|
-| `set` | `formats`, `gapless`, `video`, `broken` or `names`; also the folder |
+| `set` | `formats`, `gapless`, `video`, `broken`, `names` or `longtail`; also the folder |
 | `name` | Path inside the set's folder, percent-encoded (below) |
 | `format` | Formats set only: the codec and container label |
 | `source` | The source the tool reads |
 | `from` | Instead of `source`: an earlier sample, as `set/name` |
 | `parts` | `true` makes one file per part of a split source; `name` contains `{part}` |
-| `tool` | A program (`ffmpeg`, `flac`, `lame`, `opusenc`, `wavpack`, `sox`, …) or a built-in step: `copy`, `truncate` (keeps the fraction `keep`), `garbage` (keeps `keep_bytes`, replaces the rest with noise from `seed`), `empty` |
+| `tool` | A program (`ffmpeg`, `flac`, `lame`, `opusenc`, `wavpack`, `sox`, …) or a built-in step: `copy`, `truncate` (keeps the fraction `keep`), `garbage` (keeps `keep_bytes`, replaces the rest with noise from `seed`), `empty`, `write` (writes the file `content` names) |
+| `content` | `write` only: `tracker-module`, `nsf`, `psid`, `midi` or `soundfont` |
 | `args` | Arguments; `{input}` and `{output}` are replaced by paths |
 | `needs` | FFmpeg features: `encoder:<name>`, `muxer:<name>` |
 | `optional` | The tool may fail on builds that lack a feature `needs` cannot see; the recipe is then skipped |

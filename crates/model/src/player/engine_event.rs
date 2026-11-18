@@ -5,8 +5,28 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{EngineError, ItemId, TransportState};
+use super::{EngineError, ItemId, PlaybackStats, SignalPath, TransportState};
 use crate::audio::{AudioSpec, DeviceInfo, MediaTime, OutputBackendKind};
+
+/// One audio stream of a file with several, as the stream selector shows it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AudioStreamInfo {
+    /// The stream's index in the file, as
+    /// [`PlaybackItem::audio_stream`](super::PlaybackItem::audio_stream) names it.
+    pub index: u32,
+    /// The codec, such as `ac3` or `aac`.
+    pub codec: String,
+    /// The language tag, if the file gives one.
+    pub language: Option<String>,
+    /// The stream's title, if the file gives one.
+    pub title: Option<String>,
+    /// The channel count.
+    pub channels: Option<u16>,
+    /// The sample rate in Hz.
+    pub sample_rate: Option<u32>,
+    /// Whether the file marks the stream as the default one.
+    pub default: bool,
+}
 
 /// Something the engine reports.
 ///
@@ -55,6 +75,22 @@ pub enum EngineEvent {
         /// Its devices.
         devices: Vec<DeviceInfo>,
     },
+    /// The signal path of the item being heard changed: another item, another plan
+    /// (gain, DSP, volume), another stream or device format. `None` when nothing is
+    /// being played.
+    SignalPath(Option<Box<SignalPath>>),
+    /// The open stream's counters, a few times per second while playing.
+    PlaybackStats(PlaybackStats),
+    /// The audio streams of an item's file, sent when the item starts and the file
+    /// has more than one, for the stream selector.
+    AudioStreams {
+        /// The item.
+        item: ItemId,
+        /// The file's audio streams, in file order.
+        streams: Vec<AudioStreamInfo>,
+        /// The index of the stream that plays.
+        playing: u32,
+    },
     /// Something went wrong.
     Error {
         /// The item it concerns, if any.
@@ -102,6 +138,15 @@ mod tests {
                 item: None,
                 error: EngineError::NothingLoaded,
             },
+            EngineEvent::SignalPath(None),
+            EngineEvent::PlaybackStats(PlaybackStats {
+                buffer_ms: 200,
+                buffered_ms: 184,
+                underruns: 1,
+                frames_delivered: 48_000,
+                silent_frames: 256,
+                total_underruns: 2,
+            }),
         ];
         for event in events {
             let json = serde_json::to_string(&event).unwrap();

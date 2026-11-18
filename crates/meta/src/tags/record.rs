@@ -284,6 +284,9 @@ pub enum TagSource {
     /// FFmpeg, for formats the tag library does not cover or cannot parse. These
     /// tags are read-only.
     Ffmpeg,
+    /// The format's own decoder (tracker modules, game music, SID tunes, MIDI
+    /// files), which reads the text the file carries. These tags are read-only.
+    Decoder,
 }
 
 /// The result of reading one file.

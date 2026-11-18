@@ -6,10 +6,10 @@
 use std::time::Duration;
 
 use helikodu_model::player::Volume;
-use helikodu_model::settings::{DspSettings, OutputSettings};
+use helikodu_model::settings::{DspSettings, OutputSettings, TransitionSettings};
 
 use crate::output::{Pacing, SharedConnector, SharedReservation};
-use crate::pipeline::ProcessingSettings;
+use crate::pipeline::{FadeDurations, ProcessingSettings};
 
 /// What the engine starts with.
 #[derive(Debug, Clone, PartialEq)]
@@ -29,6 +29,12 @@ pub struct EngineConfig {
     /// `processing`, which [`dsp::processing_settings`](crate::dsp::processing_settings)
     /// fills from them; `UpdateSettings` does that itself.
     pub dsp: DspSettings,
+    /// The crossfades: between tracks, on a skip, and whether albums stay gapless
+    /// (until [`SetTransitions`](helikodu_model::player::EngineCommand::SetTransitions)
+    /// replaces them). Crossfades are off by default. The fade lengths in them take
+    /// effect through `processing.fades`; [`with_transitions`](Self::with_transitions)
+    /// and `SetTransitions` set both.
+    pub transitions: TransitionSettings,
     /// The volume to start with.
     pub volume: Volume,
     /// How the null and WAV backends take samples. With [`Pacing::Freewheel`] they
@@ -37,7 +43,8 @@ pub struct EngineConfig {
     /// [`NearEnd`](helikodu_model::player::EngineEvent::NearEnd) (up to
     /// [`next_wait`](Self::next_wait)) instead of draining at once.
     pub sink_pacing: Pacing,
-    /// How long before the end of an item `NearEnd` is sent.
+    /// How long before the end of an item `NearEnd` is sent. With crossfades between
+    /// tracks on, it is sent earlier by the crossfade's length.
     pub near_end: Duration,
     /// How often `Position` is sent while playing.
     pub position_interval: Duration,
@@ -58,6 +65,7 @@ impl Default for EngineConfig {
             output: OutputSettings::default(),
             processing: ProcessingSettings::default(),
             dsp: DspSettings::default(),
+            transitions: TransitionSettings::default(),
             volume: Volume::FULL,
             sink_pacing: Pacing::RealTime,
             near_end: Duration::from_secs(5),
@@ -66,5 +74,15 @@ impl Default for EngineConfig {
             device_reservation: SharedReservation::default(),
             backend_connector: SharedConnector::default(),
         }
+    }
+}
+
+impl EngineConfig {
+    /// The same configuration with the crossfades and fades of `transitions`.
+    #[must_use]
+    pub fn with_transitions(mut self, transitions: TransitionSettings) -> Self {
+        self.transitions = transitions;
+        self.processing.fades = FadeDurations::from_settings(&transitions);
+        self
     }
 }

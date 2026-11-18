@@ -1,6 +1,8 @@
 [package]
 name = "helikodu-vgmstream-sys"
 description = "Raw bindings to libvgmstream."
+links = "vgmstream"
+build = "build.rs"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +10,15 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 publish.workspace = true
+
+[features]
+# Link the library. Off by default: few distributions package vgmstream. Without it,
+# or when the library is not found, the functions are stubs that fail and
+# `LINKED` is false.
+link = []
+
+[build-dependencies]
+pkg-config.workspace = true
 
 [lints]
 workspace = true

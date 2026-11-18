@@ -11,7 +11,9 @@ use helikodu_model::library::TrackRef;
 use helikodu_model::player::{
     EnqueueAt, EntryId, QueueContext, RepeatMode, ShuffleMode, StopAfter, Volume,
 };
-use helikodu_model::settings::{DspSettings, LoudnessSettings, OutputSettings};
+use helikodu_model::settings::{
+    DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, TransitionSettings,
+};
 
 use super::config::PlayerPrefs;
 use crate::library::{AlbumId, GenreId, PersonId};
@@ -137,4 +139,16 @@ pub enum PlayerCommand {
         /// applies from the next track. Boxed: they are large.
         dsp: Box<DspSettings>,
     },
+    /// Apply the crossfade and fade settings (`[playback.transitions]`) while
+    /// playing: fades apply from the next transition, crossfades from the next track
+    /// change.
+    ConfigureTransitions(TransitionSettings),
+    /// Apply the `[playback.decoders]` settings (loops, fades, SoundFont, SID song
+    /// lengths and ROMs, tracker rendering, whole-file buffering) to the tracks
+    /// opened from now on.
+    ConfigureDecoders(DecoderSettings),
+    /// Play another audio stream of the current track's file, by its index in the
+    /// file (`None`: the default one), from the same position. The engine
+    /// answers with [`PlayerEvent::AudioStreams`](super::PlayerEvent::AudioStreams).
+    SelectAudioStream(Option<u32>),
 }

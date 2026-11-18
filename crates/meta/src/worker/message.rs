@@ -8,7 +8,9 @@
 //! [`PROTOCOL_VERSION`] changes whenever it changes.
 //!
 //! Version 2 added the covers: [`RequestOptions::covers`], and in a [`FileReport`]
-//! the file's embedded cover and its folder image as [`CoverReport`]s.
+//! the file's embedded cover and its folder image as [`CoverReport`]s. Version 3
+//! added the subsongs of a file ([`FileReport::subsongs`]) and the tag source
+//! [`TagSource::Decoder`].
 
 use std::ffi::OsStr;
 use std::num::NonZeroU32;
@@ -29,7 +31,7 @@ use crate::tags::{
 
 /// The version of the message layout. A worker announces it in its [`Hello`]; the
 /// scanner refuses a worker with another version.
-pub const PROTOCOL_VERSION: u16 = 2;
+pub const PROTOCOL_VERSION: u16 = 3;
 
 /// The bytes that start a [`Hello`], so that a program that is not a worker is
 /// recognised at once.
@@ -143,6 +145,21 @@ pub struct FileReport {
     /// Things that went wrong without making the file unreadable, such as a sheet
     /// that could not be parsed.
     pub notes: Vec<String>,
+    /// The file's subsongs (tracker modules, game music, SID tunes, banks of game
+    /// audio) when it has more than one; each becomes a track of its own. Empty
+    /// otherwise.
+    pub subsongs: Vec<SubsongReport>,
+}
+
+/// One subsong of a file, played as `SourceSection::Subsong(index)`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubsongReport {
+    /// The subsong, counted from 0.
+    pub index: u32,
+    /// Its tags: the file's, with the subsong's own title and its number.
+    pub tags: TrackTags,
+    /// How long it plays.
+    pub duration: Option<Duration>,
 }
 
 /// The CUE sheet that splits a file into tracks.
@@ -372,6 +389,25 @@ fn file_report(e: &mut Encoder, r: &FileReport) {
     e.opt(r.cover.as_ref(), cover_report);
     e.opt(r.folder_cover.as_ref(), cover_report);
     e.strs(&r.notes);
+    e.list(&r.subsongs, |e, subsong| {
+        e.u32(subsong.index);
+        track_tags(e, &subsong.tags);
+        e.opt(subsong.duration, duration);
+    });
+}
+
+fn duration(e: &mut Encoder, duration: Duration) {
+    e.u64(duration.as_secs());
+    e.u32(duration.subsec_nanos());
+}
+
+fn read_duration(d: &mut Decoder<'_>) -> Result<Duration, DecodeError> {
+    let secs = d.u64()?;
+    let nanos = d.u32()?;
+    if nanos >= 1_000_000_000 {
+        return Err(DecodeError::Invalid("duration"));
+    }
+    Ok(Duration::new(secs, nanos))
 }
 
 const EMBEDDED_TAGS: [EmbeddedTag; 7] = [
@@ -493,6 +529,13 @@ fn read_file_report(d: &mut Decoder<'_>) -> Result<FileReport, DecodeError> {
         cover: d.opt(read_cover_report)?,
         folder_cover: d.opt(read_cover_report)?,
         notes: d.strings()?,
+        subsongs: d.list(|d| {
+            Ok(SubsongReport {
+                index: d.u32()?,
+                tags: read_track_tags(d)?,
+                duration: d.opt(read_duration)?,
+            })
+        })?,
     })
 }
 
@@ -502,6 +545,7 @@ fn file_tags(e: &mut Encoder, f: &FileTags) {
     e.u8(match f.source {
         TagSource::Lofty => 0,
         TagSource::Ffmpeg => 1,
+        TagSource::Decoder => 2,
     });
     e.opt_str(f.fallback_reason.as_deref());
     e.bool(f.charset_repaired);
@@ -514,6 +558,7 @@ fn read_file_tags(d: &mut Decoder<'_>) -> Result<FileTags, DecodeError> {
         source: match d.u8()? {
             0 => TagSource::Lofty,
             1 => TagSource::Ffmpeg,
+            2 => TagSource::Decoder,
             value => {
                 return Err(DecodeError::UnknownTag {
                     what: "tag source",
@@ -866,6 +911,11 @@ mod tests {
                 byte_len: 40_000,
             }),
             notes: vec!["note".into()],
+            subsongs: vec![SubsongReport {
+                index: 3,
+                tags: rich_tags(),
+                duration: Some(Duration::new(150, 7)),
+            }],
         }
     }
 

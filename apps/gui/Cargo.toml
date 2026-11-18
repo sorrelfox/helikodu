@@ -13,6 +13,31 @@ publish.workspace = true
 name = "helikodu"
 path = "src/main.rs"
 
+[features]
+default = ["pipewire", "alsa", "pulseaudio", "jack", "dsd", "openmpt", "gme", "sid", "midi"]
+# The native PipeWire output backend.
+pipewire = ["helikodu-service/pipewire"]
+# The native ALSA output backend.
+alsa = ["helikodu-service/alsa"]
+# The PulseAudio output backend (also works with PipeWire's PulseAudio service).
+pulseaudio = ["helikodu-service/pulseaudio"]
+# The JACK output backend; building it needs the JACK development files (`jack.pc`).
+jack = ["helikodu-service/jack"]
+# The DSF/DFF reader, which plays DSD files as PCM or DoP.
+dsd = ["helikodu-service/dsd"]
+# Tracker modules through libopenmpt (`libopenmpt.pc`).
+openmpt = ["helikodu-service/openmpt"]
+# Game console music through libgme (`libgme.pc`).
+gme = ["helikodu-service/gme"]
+# C64 SID tunes through libsidplayfp (`libsidplayfp.pc` and a C++ compiler).
+sid = ["helikodu-service/sid"]
+# MIDI files through rustysynth and a SoundFont. Pure Rust.
+midi = ["helikodu-service/midi"]
+# Game audio streams through vgmstream; off by default (rarely packaged).
+vgmstream = ["helikodu-service/vgmstream"]
+# Build the SQLite copy that rusqlite bundles instead of linking the system library.
+bundled-sqlite = ["helikodu-service/bundled-sqlite"]
+
 [dependencies]
 helikodu-desktop.workspace = true
 helikodu-model.workspace = true

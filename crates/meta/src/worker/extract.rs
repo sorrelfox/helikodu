@@ -131,6 +131,7 @@ pub fn read_file(request: &Request) -> Result<FileReport, Failure> {
         cover,
         folder_cover,
         notes,
+        subsongs: Vec::new(),
     })
 }
 

@@ -12,6 +12,7 @@
 // Tests may unwrap (see clippy.toml); clippy does not count the helpers here as tests.
 #![allow(clippy::unwrap_used)]
 
+mod crossfade;
 mod devices;
 mod dsp;
 mod errors;

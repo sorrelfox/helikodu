@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex, PoisonError};
 use helikodu_model::audio::{AudioSpec, MediaTime, OutputSelection};
 use helikodu_model::library::TrackRef;
 use helikodu_model::player::{
-    EntryId, PlayModes, PlaybackState, QueueContext, QueueEntry, StopAfter, TransportState, Volume,
+    EntryId, PlayModes, PlaybackState, PlaybackStats, QueueContext, QueueEntry, SignalPath,
+    StopAfter, TransportState, Volume,
 };
 
 /// The queue as it is at one version.
@@ -115,6 +116,10 @@ pub struct PlayerStatus {
     pub modes: PlayModes,
     /// Stop-after.
     pub stop_after: StopAfter,
+    /// The signal path of what is heard, as the engine last reported it.
+    pub signal_path: Option<Box<SignalPath>>,
+    /// The output's counters, as last reported while playing.
+    pub stats: Option<PlaybackStats>,
 }
 
 impl Default for PlayerStatus {
@@ -128,6 +133,8 @@ impl Default for PlayerStatus {
             output: OutputSelection::default(),
             modes: PlayModes::default(),
             stop_after: StopAfter::Off,
+            signal_path: None,
+            stats: None,
         }
     }
 }

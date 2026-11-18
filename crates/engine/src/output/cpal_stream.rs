@@ -340,9 +340,9 @@ impl Callback {
         while done < frames {
             let n = (frames - done).min(scratch_frames);
             let samples = &mut self.scratch[..n * self.channels];
-            self.reader.read(samples);
-            self.encoder.encode(
+            self.reader.read_encoded(
                 samples,
+                &self.encoder,
                 &mut bytes[done * self.stride..(done + n) * self.stride],
             );
             done += n;

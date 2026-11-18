@@ -523,6 +523,15 @@ impl Actor {
                 }
             }
             PlayerCommand::Configure(prefs) => self.prefs = prefs,
+            PlayerCommand::ConfigureTransitions(transitions) => {
+                self.send(EngineCommand::SetTransitions(transitions));
+            }
+            PlayerCommand::ConfigureDecoders(settings) => {
+                self.send(EngineCommand::SetDecoderSettings(settings));
+            }
+            PlayerCommand::SelectAudioStream(stream) => {
+                self.send(EngineCommand::SelectAudioStream(stream));
+            }
             PlayerCommand::ConfigureAudio {
                 output,
                 loudness,
@@ -1048,6 +1057,30 @@ impl Actor {
             }
             EngineEvent::DevicesChanged { backend, devices } => {
                 self.emit(PlayerEvent::DevicesChanged { backend, devices });
+            }
+            EngineEvent::SignalPath(path) => {
+                self.shared
+                    .update_status(|status| status.signal_path.clone_from(&path));
+                self.emit(PlayerEvent::SignalPath(path));
+            }
+            EngineEvent::PlaybackStats(stats) => {
+                self.shared
+                    .update_status(|status| status.stats = Some(stats));
+                self.emit(PlayerEvent::PlaybackStats(stats));
+            }
+            EngineEvent::AudioStreams {
+                item,
+                streams,
+                playing,
+            } => {
+                if let Some(slot) = self.current.as_ref().filter(|slot| slot.id == item) {
+                    let entry = slot.entry;
+                    self.emit(PlayerEvent::AudioStreams {
+                        entry,
+                        streams,
+                        playing,
+                    });
+                }
             }
         }
     }

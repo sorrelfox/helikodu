@@ -9,7 +9,8 @@ use helikodu_library::ListenOutcome;
 use helikodu_model::audio::{AudioSpec, DeviceInfo, MediaTime, OutputBackendKind, OutputSelection};
 use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::player::{
-    EngineError, EntryId, PlayModes, PlaybackState, StopAfter, TransportState, Volume,
+    AudioStreamInfo, EngineError, EntryId, PlayModes, PlaybackState, PlaybackStats, SignalPath,
+    StopAfter, TransportState, Volume,
 };
 
 /// Something the player reports. Every event comes from the player's own thread, in
@@ -72,6 +73,24 @@ pub enum PlayerEvent {
         backend: OutputBackendKind,
         /// Its devices now.
         devices: Vec<DeviceInfo>,
+    },
+    /// The signal path of what is heard changed: another entry, another plan (gain,
+    /// DSP, volume) or another device format. `None` when nothing plays. Also in
+    /// [`PlayerStatus::signal_path`](super::PlayerStatus::signal_path).
+    SignalPath(Option<Box<SignalPath>>),
+    /// The output's counters (buffer, underruns), a few times per second while
+    /// playing.
+    PlaybackStats(PlaybackStats),
+    /// The audio streams of the current entry's file, when it has several: for the
+    /// stream selector in the signal path's Source row. Sent when the entry
+    /// starts and after [`SelectAudioStream`](super::PlayerCommand::SelectAudioStream).
+    AudioStreams {
+        /// The entry.
+        entry: EntryId,
+        /// The file's audio streams, in file order.
+        streams: Vec<AudioStreamInfo>,
+        /// The index of the stream that plays.
+        playing: u32,
     },
     /// Something went wrong. Playback goes on where it can: an entry that cannot be
     /// played is skipped.

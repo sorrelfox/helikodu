@@ -6,13 +6,16 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use std::sync::Arc;
 
 use helikodu_model::library::{MediaSource, SourceSection};
+use helikodu_model::settings::DecoderSettings;
 
 use super::decoder::Decoder;
 use super::error::DecodeError;
-use super::factory::{DecoderFactory, Probe, ProbeScore};
+use super::factory::{DecoderFactory, OpenRequest, Probe, ProbeScore, SourceInput};
 use super::ffmpeg::FfmpegFactory;
+use super::options::{DecodeOptions, SharedOptions};
 use super::section::SectionDecoder;
 
 /// The decoder backends, and the choice of one for each file.
@@ -21,9 +24,16 @@ use super::section::SectionDecoder;
 /// highest [`ProbeScore`] down, and on a tie in the order they were registered. The
 /// first that opens the file wins. A section of the [`MediaSource`] is applied on
 /// top: a subsong is passed to the backend, a span trims its output.
+///
+/// The registry's [`DecodeOptions`] are shared with the backends it built: the
+/// decoder settings ([`configure`](Self::configure)), DoP for DSD files
+/// ([`set_dop`](Self::set_dop)) and whole-file buffering, which reads a file of up
+/// to [`DecodeOptions::memory_limit`] bytes into memory before any backend opens
+/// it.
 #[derive(Debug)]
 pub struct DecoderRegistry {
     factories: Vec<Box<dyn DecoderFactory>>,
+    options: SharedOptions,
 }
 
 impl Default for DecoderRegistry {
@@ -37,17 +47,56 @@ impl DecoderRegistry {
     pub fn empty() -> Self {
         Self {
             factories: Vec::new(),
+            options: SharedOptions::default(),
         }
     }
 
-    /// A registry with every backend this build has: the DSF/DFF reader (with the
-    /// `dsd` feature) and FFmpeg.
+    /// A registry with every backend this build has: the DSF/DFF reader (`dsd`
+    /// feature), the synthesizing decoders (`openmpt`, `gme`, `sid`, `midi` and
+    /// `vgmstream` features) and FFmpeg.
     pub fn with_default_backends() -> Self {
         let mut registry = Self::empty();
         #[cfg(feature = "dsd")]
-        registry.register(Box::new(super::dsd::DsdFactory));
+        registry.register(Box::new(super::dsd::DsdFactory::new(
+            registry.options.clone(),
+        )));
+        #[cfg(feature = "song")]
+        for library in super::songs::SongLibrary::all() {
+            registry.register(Box::new(super::songs::SongFactory::new(
+                library,
+                registry.options.clone(),
+            )));
+        }
         registry.register(Box::new(FfmpegFactory));
         registry
+    }
+
+    /// The default backends, opening files with `settings`.
+    pub fn with_settings(settings: &DecoderSettings) -> Self {
+        let registry = Self::with_default_backends();
+        registry.configure(settings);
+        registry
+    }
+
+    /// The options files are opened with, shared with the backends.
+    pub fn options(&self) -> DecodeOptions {
+        self.options.get()
+    }
+
+    /// Replaces the decoder settings. They apply to the files opened from now on.
+    pub fn configure(&self, settings: &DecoderSettings) {
+        self.options.update(|o| o.settings = settings.clone());
+    }
+
+    /// Whether DSD files are opened as DSD over PCM (DoP) from now on.
+    pub fn set_dop(&self, dop: bool) {
+        self.options.update(|o| o.dop = dop);
+    }
+
+    /// Lowers or raises the size above which files are never read into memory
+    /// whole (for tests; the settings never go above 512 MiB).
+    pub fn set_memory_limit(&self, bytes: u64) {
+        self.options.update(|o| o.memory_limit = bytes);
     }
 
     /// Adds a backend. On equal scores, earlier backends are tried first.
@@ -88,15 +137,37 @@ impl DecoderRegistry {
     /// opens it, and with [`DecodeError::InvalidSection`] when a span lies outside
     /// the file.
     pub fn open(&self, source: &MediaSource) -> Result<Box<dyn Decoder>, DecodeError> {
+        self.open_stream(source, None)
+    }
+
+    /// Opens a decoder for `source` like [`open`](Self::open), playing the audio
+    /// stream with the index `audio_stream` of a file that has several (`None`: the
+    /// default one).
+    pub fn open_stream(
+        &self,
+        source: &MediaSource,
+        audio_stream: Option<u32>,
+    ) -> Result<Box<dyn Decoder>, DecodeError> {
         let path = source.path();
-        let subsong = match &source.section {
-            Some(SourceSection::Subsong(index)) => Some(*index),
-            _ => None,
+        let request = OpenRequest {
+            subsong: match &source.section {
+                Some(SourceSection::Subsong(index)) => Some(*index),
+                _ => None,
+            },
+            audio_stream,
         };
-        let header = read_header(path)?;
+        let data = self.read_whole(path)?;
+        let header = match &data {
+            Some(data) => data[..data.len().min(Probe::HEADER_LEN)].to_vec(),
+            None => read_header(path)?,
+        };
+        let input = match &data {
+            Some(data) => SourceInput::in_memory(path, data),
+            None => SourceInput::file(path),
+        };
         let mut attempts = Vec::new();
         for (factory, _) in self.rank(&Probe::new(path, &header)) {
-            match factory.open(path, subsong) {
+            match factory.open_input(&input, &request) {
                 Ok(decoder) => {
                     return match &source.section {
                         Some(SourceSection::Span { start, end }) => {
@@ -112,6 +183,25 @@ impl DecoderRegistry {
             }
         }
         Err(DecodeError::NoDecoder { attempts })
+    }
+}
+
+impl DecoderRegistry {
+    /// The whole file, when the settings ask for whole-file buffering and it is no
+    /// larger than the limit.
+    fn read_whole(&self, path: &Path) -> Result<Option<Arc<[u8]>>, DecodeError> {
+        let options = self.options.get();
+        if !options.settings.load_into_memory {
+            return Ok(None);
+        }
+        let file = File::open(path)?;
+        let len = file.metadata()?.len();
+        if len > options.memory_limit {
+            return Ok(None);
+        }
+        let mut data = Vec::with_capacity(usize::try_from(len).unwrap_or(0));
+        file.take(options.memory_limit).read_to_end(&mut data)?;
+        Ok(Some(data.into()))
     }
 }
 
@@ -174,9 +264,22 @@ mod tests {
             .factories()
             .map(|f| f.name())
             .collect();
-        #[cfg(feature = "dsd")]
-        assert_eq!(names, ["dsd", "ffmpeg"]);
-        #[cfg(not(feature = "dsd"))]
-        assert_eq!(names, ["ffmpeg"]);
+        let mut expected = Vec::new();
+        if cfg!(feature = "dsd") {
+            expected.push("dsd");
+        }
+        for (feature, name) in [
+            (cfg!(feature = "openmpt"), "openmpt"),
+            (cfg!(feature = "gme"), "gme"),
+            (cfg!(feature = "sid"), "sidplayfp"),
+            (cfg!(feature = "midi"), "rustysynth"),
+            (cfg!(feature = "vgmstream"), "vgmstream"),
+        ] {
+            if feature {
+                expected.push(name);
+            }
+        }
+        expected.push("ffmpeg");
+        assert_eq!(names, expected);
     }
 }

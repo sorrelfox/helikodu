@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use crate::covers::{CoverLimits, PictureFormat};
 use crate::tags::builder::parse_number;
 use crate::tags::field::Field;
+use crate::tags::gain::parse_r128;
 use crate::tags::mapping;
 use crate::tags::rating::Rating;
 
@@ -103,6 +104,11 @@ pub enum TagField {
     ReplayGainTrackPeak,
     ReplayGainAlbumGain,
     ReplayGainAlbumPeak,
+    /// The Opus track gain (`R128_TRACK_GAIN`): a Q7.8 integer in 1/256 dB relative
+    /// to −23 LUFS, as RFC 7845 defines it. Only Opus files carry it.
+    R128TrackGain,
+    /// The Opus album gain (`R128_ALBUM_GAIN`), in the same form.
+    R128AlbumGain,
 }
 
 impl TagField {
@@ -183,6 +189,8 @@ impl TagField {
         TagField::ReplayGainTrackPeak,
         TagField::ReplayGainAlbumGain,
         TagField::ReplayGainAlbumPeak,
+        TagField::R128TrackGain,
+        TagField::R128AlbumGain,
     ];
 
     /// The field of the mapping tables this field is read as.
@@ -263,6 +271,8 @@ impl TagField {
             TagField::ReplayGainTrackPeak => Field::ReplayGainTrackPeak,
             TagField::ReplayGainAlbumGain => Field::ReplayGainAlbumGain,
             TagField::ReplayGainAlbumPeak => Field::ReplayGainAlbumPeak,
+            TagField::R128TrackGain => Field::R128TrackGain,
+            TagField::R128AlbumGain => Field::R128AlbumGain,
         }
     }
 
@@ -326,6 +336,11 @@ impl TagField {
                 | TagField::MovementTotal
                 | TagField::Bpm
         )
+    }
+
+    /// Whether the field is an Opus R128 gain, which only Opus files carry.
+    pub fn is_r128(self) -> bool {
+        matches!(self, TagField::R128TrackGain | TagField::R128AlbumGain)
     }
 
     /// Whether the value is a date (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`, possibly with a time).
@@ -588,6 +603,13 @@ fn check_values(key: &FieldKey, values: &[String]) -> Result<(), WriteError> {
             && !matches!(value.as_str(), "0" | "1")
         {
             return Err(invalid(key, value, "the field takes 1 or 0"));
+        }
+        if field.is_r128() && parse_r128(value).is_none() {
+            return Err(invalid(
+                key,
+                value,
+                "not a whole number from -32768 to 32767 (1/256 dB)",
+            ));
         }
     }
     Ok(())

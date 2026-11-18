@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use super::{PlaybackItem, Volume};
 use crate::audio::{MediaTime, OutputSelection};
-use crate::settings::{DspSettings, LoudnessSettings, OutputSettings};
+use crate::settings::{
+    DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, TransitionSettings,
+};
 
 /// A command to the engine. The engine answers with [`EngineEvent`](super::EngineEvent)s.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -31,8 +33,9 @@ pub enum EngineCommand {
     Stop,
     /// Move to a position in the loaded item.
     Seek(MediaTime),
-    /// The item to join without a gap when the current one ends, or `None` to end
-    /// playback there. Replaces any earlier next item.
+    /// The item to join without a gap when the current one ends (or to crossfade
+    /// into, when crossfades are on), or `None` to end playback there. Replaces any
+    /// earlier next item.
     SetNext(Option<PlaybackItem>),
     /// Change the volume.
     SetVolume(Volume),
@@ -57,4 +60,15 @@ pub enum EngineCommand {
         #[serde(default)]
         dsp: Box<DspSettings>,
     },
+    /// Replace the settings of the long-tail decoders (loops, fades, SoundFont, SID
+    /// song lengths and ROMs, tracker rendering, whole-file buffering). They apply to
+    /// the items opened from then on.
+    SetDecoderSettings(DecoderSettings),
+    /// Play another audio stream of the loaded item's file, by its index in the file
+    /// (`None`: the default one), continuing at the heard position. Ignored when
+    /// nothing is loaded.
+    SelectAudioStream(Option<u32>),
+    /// Replace the crossfade and fade settings while running. Fades apply from the
+    /// next transition; a crossfade already under way finishes as it began.
+    SetTransitions(TransitionSettings),
 }

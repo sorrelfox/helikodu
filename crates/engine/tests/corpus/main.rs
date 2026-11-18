@@ -7,7 +7,7 @@
 //! through the transport bit-exact (lossless) or with the exact total length
 //! (lossy); seeks land exactly (lossless) or aligned (lossy); video files play
 //! their audio only; broken files fail cleanly without stopping playback; file
-//! names that are not UTF-8 play.
+//! names that are not UTF-8 play; the long-tail files play with their own backends.
 //!
 //! The corpus is read from `target/corpus/` (or `$HELIKODU_CORPUS`). When it has
 //! not been generated, every test prints `SKIPPED:` and passes. Each test prints a
@@ -22,6 +22,7 @@ mod broken;
 mod decoding;
 mod formats;
 mod gapless;
+mod longtail;
 mod manifest;
 // The transport tests' helpers: the WAV reader and the engine driven as the
 // service drives it. Not every helper is used here.

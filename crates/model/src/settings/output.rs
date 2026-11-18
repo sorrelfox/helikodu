@@ -4,6 +4,7 @@
 //! The audio output settings: the `[output]` table.
 
 mod device_lost_policy;
+mod dsd_output;
 mod output_format;
 mod sample_rate_policy;
 mod volume_control;
@@ -14,6 +15,7 @@ use std::ops::RangeInclusive;
 use serde::{Deserialize, Serialize};
 
 pub use device_lost_policy::DeviceLostPolicy;
+pub use dsd_output::DsdOutput;
 pub use output_format::OutputFormat;
 pub use sample_rate_policy::SampleRatePolicy;
 pub use volume_control::VolumeControl;
@@ -39,6 +41,7 @@ const BUFFER_MS: RangeInclusive<u32> = 50..=2000;
 /// pause_on_unplug = true
 /// preroll_ms = 0
 /// exclusive_release_s = 30
+/// dsd = "pcm"                 # pcm | dop
 ///
 /// [output.profiles."alsa:hw:CARD=D10s,DEV=0"]
 /// mode = "exclusive"
@@ -78,6 +81,9 @@ pub struct OutputSettings {
     pub preroll_ms: u32,
     /// Seconds of pause after which a device held exclusively is released; 0 keeps it.
     pub exclusive_release_s: u32,
+    /// How DSD files reach the device: converted to PCM, or as DoP where the path
+    /// leaves the samples untouched.
+    pub dsd: DsdOutput,
     /// Settings that apply to one device only, by backend and device name.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub profiles: BTreeMap<DeviceKey, DeviceProfile>,
@@ -97,6 +103,7 @@ impl Default for OutputSettings {
             pause_on_unplug: true,
             preroll_ms: 0,
             exclusive_release_s: 30,
+            dsd: DsdOutput::Pcm,
             profiles: BTreeMap::new(),
         }
     }
@@ -268,6 +275,7 @@ fixed_volume_confirmed = true
             pause_on_unplug: false,
             preroll_ms: 250,
             exclusive_release_s: 0,
+            dsd: DsdOutput::Dop,
             profiles: BTreeMap::new(),
         };
         output.profiles.insert(

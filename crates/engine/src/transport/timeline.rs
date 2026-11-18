@@ -10,11 +10,15 @@
 //! position the listener hears, from the stream's counters, then gives the playing
 //! item and its position, and crossing a start gives the `TrackEnded` and
 //! `TrackStarted` events at the moment the join is heard.
+//!
+//! At a crossfade the next item's segment starts at the middle of the crossfade,
+//! with the item's position there; the item before records where its audio began
+//! to be mixed with it (`mix_from`).
 
 use std::collections::VecDeque;
 
 use helikodu_model::audio::{AudioSpec, MediaTime, SampleRate};
-use helikodu_model::player::{EngineError, EngineEvent, PlaybackItem, TrackEndReason};
+use helikodu_model::player::{EngineError, EngineEvent, ItemId, PlaybackItem, TrackEndReason};
 
 /// Where an item starts in the ring buffer.
 #[derive(Debug, Clone)]
@@ -31,6 +35,8 @@ pub(super) struct Segment {
     pub(super) device_rate: SampleRate,
     /// The error that ended the item early, once the render side has met it.
     pub(super) error: Option<EngineError>,
+    /// The ring position from which the item is crossfaded into the next one.
+    pub(super) mix_from: Option<u64>,
 }
 
 impl Segment {
@@ -118,6 +124,18 @@ impl Timeline {
         self.segments.back_mut()
     }
 
+    /// The last item `id` written, the heard one included.
+    pub(super) fn segment_mut(&mut self, id: ItemId) -> Option<&mut Segment> {
+        self.segments.iter_mut().rev().find(|s| s.item.id == id)
+    }
+
+    /// Forgets the items, but not the dropped audio, and starts again with
+    /// `segment`: positions before its start are its first one.
+    pub(super) fn restart_with(&mut self, segment: Segment) {
+        self.segments.clear();
+        self.segments.push_back(segment);
+    }
+
     /// Removes the items after the heard one and returns the ring position where
     /// they started.
     pub(super) fn cut_after_heard(&mut self) -> Option<u64> {
@@ -183,7 +201,6 @@ impl Timeline {
 mod tests {
     use helikodu_model::audio::{ChannelLayout, Endianness, SampleFormat};
     use helikodu_model::library::MediaSource;
-    use helikodu_model::player::ItemId;
 
     use super::*;
 
@@ -200,6 +217,7 @@ mod tests {
             start_frames,
             device_rate: SampleRate::HZ_48000,
             error: None,
+            mix_from: None,
         }
     }
 

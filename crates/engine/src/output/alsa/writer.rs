@@ -255,9 +255,9 @@ impl Writer {
                 continue;
             }
 
-            self.reader.read(&mut samples);
-            let len = self.encoder.encode(&samples, &mut bytes);
-            self.write_all(&bytes[..len], frame_bytes);
+            self.reader
+                .read_encoded(&mut samples, &self.encoder, &mut bytes);
+            self.write_all(&bytes, frame_bytes);
             if let Ok(delay) = self.pcm.delay() {
                 self.shared
                     .set_delay_frames(u64::try_from(delay).unwrap_or(0));

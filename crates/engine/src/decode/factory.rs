@@ -5,6 +5,7 @@
 
 use std::fmt;
 use std::path::Path;
+use std::sync::Arc;
 
 use super::decoder::Decoder;
 use super::error::DecodeError;
@@ -75,6 +76,49 @@ impl<'a> Probe<'a> {
     }
 }
 
+/// The file a backend opens: its path, and its bytes when the registry read it into
+/// memory whole (whole-file buffering).
+#[derive(Debug, Clone, Copy)]
+pub struct SourceInput<'a> {
+    path: &'a Path,
+    data: Option<&'a Arc<[u8]>>,
+}
+
+impl<'a> SourceInput<'a> {
+    /// The file at `path`, read from the drive.
+    pub fn file(path: &'a Path) -> Self {
+        Self { path, data: None }
+    }
+
+    /// The file at `path`, whose bytes are `data`.
+    pub fn in_memory(path: &'a Path, data: &'a Arc<[u8]>) -> Self {
+        Self {
+            path,
+            data: Some(data),
+        }
+    }
+
+    /// The file's path.
+    pub fn path(&self) -> &'a Path {
+        self.path
+    }
+
+    /// The file's bytes, when it was read into memory.
+    pub fn data(&self) -> Option<&'a Arc<[u8]>> {
+        self.data
+    }
+}
+
+/// What part of a file to open.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct OpenRequest {
+    /// The subsong, counted from 0; `None` for the file's default.
+    pub subsong: Option<u32>,
+    /// The audio stream, by its index in the file; `None` for the default one.
+    /// Backends whose files have one stream ignore it.
+    pub audio_stream: Option<u32>,
+}
+
 /// A decoder backend: recognises files and opens decoders for them.
 pub trait DecoderFactory: Send + Sync + fmt::Debug {
     /// The backend's short name, such as `ffmpeg` or `dsd`.
@@ -88,4 +132,15 @@ pub trait DecoderFactory: Send + Sync + fmt::Debug {
     /// [`DecodeError::SubsongUnsupported`] when one is asked for. Spans are applied
     /// by the registry, not here.
     fn open(&self, path: &Path, subsong: Option<u32>) -> Result<Box<dyn Decoder>, DecodeError>;
+
+    /// Opens a decoder for `input` as `request` says. The registry calls this; the
+    /// default ignores the file's bytes and the audio stream and calls
+    /// [`open`](Self::open).
+    fn open_input(
+        &self,
+        input: &SourceInput<'_>,
+        request: &OpenRequest,
+    ) -> Result<Box<dyn Decoder>, DecodeError> {
+        self.open(input.path(), request.subsong)
+    }
 }

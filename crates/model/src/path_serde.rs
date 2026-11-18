@@ -112,6 +112,31 @@ pub(crate) mod text_list {
     }
 }
 
+/// An optional path as [`serialize_text`] writes it; skip the field when it is `None`
+/// (`skip_serializing_if = "Option::is_none"`), since TOML has no null.
+pub(crate) mod opt_text {
+    use std::path::PathBuf;
+
+    use serde::{Deserializer, Serializer};
+
+    #[allow(clippy::ref_option)] // serde passes the field
+    pub(crate) fn serialize<S: Serializer>(
+        path: &Option<PathBuf>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match path {
+            Some(path) => super::serialize_text(path, serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Option<PathBuf>, D::Error> {
+        super::deserialize_text(deserializer).map(Some)
+    }
+}
+
 /// Accepts a path as bytes, as a sequence of numbers, or as text.
 struct PathVisitor;
 
