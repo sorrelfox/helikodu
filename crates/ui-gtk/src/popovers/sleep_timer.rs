@@ -76,7 +76,7 @@ impl SleepPopover {
         popover.set_has_arrow(false);
         popover.set_position(gtk::PositionType::Top);
         popover.add_css_class("hk-popover");
-        popover.add_css_class("hk-glass");
+        crate::style::glass_when_dark(&popover);
         popover.set_parent(parent);
         let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content.add_css_class("hk-sleep");

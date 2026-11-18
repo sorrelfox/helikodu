@@ -27,7 +27,7 @@ use std::time::{Duration, Instant};
 use gtk::prelude::*;
 use gtk::{gio, glib};
 use helikodu_ui_gtk::backend::{AlbumKey, Backend, PlayerRequest, TrackColumn, TrackQuery, sample};
-use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
+use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice, set_choice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
 
 /// Runs the main loop for `ms` milliseconds.
@@ -735,7 +735,61 @@ const TESTS: &[Test] = &[
         "rating_from_the_context_menu_updates_the_rows",
         rating_from_the_context_menu_updates_the_rows,
     ),
+    (
+        "text_ignores_the_desktop_scheme",
+        text_ignores_the_desktop_scheme,
+    ),
 ];
+
+/// With a scheme of its own, no text takes the desktop theme's colours: a
+/// theme that colours labels in a window without the focus or when
+/// insensitive, as Breeze does, changes nothing. The deck is glass only in
+/// the dark scheme.
+fn text_ignores_the_desktop_scheme(app: &gtk::Application) {
+    let display = gtk::gdk::Display::default().unwrap();
+    let theme = gtk::CssProvider::new();
+    theme.load_from_string(
+        "label, label:backdrop, label:disabled, label:backdrop:disabled { color: rgb(255,0,0); }",
+    );
+    gtk::style_context_add_provider_for_display(
+        &display,
+        &theme,
+        gtk::STYLE_PROVIDER_PRIORITY_THEME,
+    );
+    let (window, _backend) = window(app);
+    for scheme in [SchemeChoice::Light, SchemeChoice::Dark] {
+        set_choice(scheme, AccentChoice::Amber);
+        spin(100);
+        for backdrop in [false, true] {
+            if backdrop {
+                window.set_state_flags(gtk::StateFlags::BACKDROP, false);
+            } else {
+                window.unset_state_flags(gtk::StateFlags::BACKDROP);
+            }
+            spin(50);
+            let all = descendants(window.upcast_ref());
+            let labels: Vec<_> = all
+                .iter()
+                .filter_map(|w| w.downcast_ref::<gtk::Label>())
+                .filter(|l| l.is_drawable())
+                .collect();
+            assert!(labels.len() > 20, "labels found: {}", labels.len());
+            for label in labels {
+                let c = label.color();
+                assert!(
+                    !(c.red() > 0.99 && c.green() < 0.01 && c.blue() < 0.01),
+                    "{:?} ({scheme:?}, backdrop {backdrop}) has the theme's colour",
+                    label.label()
+                );
+            }
+            let deck = all.iter().find(|w| w.has_css_class("hk-deck")).unwrap();
+            assert_eq!(deck.has_css_class("hk-glass"), scheme == SchemeChoice::Dark);
+        }
+    }
+    gtk::style_context_remove_provider_for_display(&display, &theme);
+    set_choice(SchemeChoice::Dark, AccentChoice::Amber);
+    window.destroy();
+}
 
 fn main() -> ExitCode {
     if std::env::var_os("HELIKODU_GTK_TESTS").is_none() {

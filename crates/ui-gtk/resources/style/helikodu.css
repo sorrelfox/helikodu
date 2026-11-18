@@ -18,6 +18,13 @@
 
 window.hk { background-color: var(--hk-win); color: var(--hk-t1); font-size: 13px; }
 .hk-glass { background-color: var(--hk-win); color: var(--hk-t1); }
+/* Text takes its colour from the surface it is on, never from the desktop
+   theme. Themes colour labels themselves in some states (Breeze: in a window
+   without the focus, and when insensitive) with the desktop's own scheme,
+   which is wrong whenever Helikodu's scheme differs from the desktop's. This
+   provider outranks the theme, and the bare type selector loses to every
+   class rule here, so a label without a colour of its own inherits one. */
+label { color: inherit; }
 /* GTK marks the ancestors of the focus widget :focus-visible too; only the
    focus widget itself gets the ring. */
 .hk *:focus:focus-visible { outline: 2px solid var(--hk-accent-text); outline-offset: 1px; }
@@ -136,6 +143,8 @@ entry.hk-input > text > placeholder { color: var(--hk-t3); }
 entry.hk-input > image { min-width: 16px; min-height: 16px; margin: 0; padding: 0; -gtk-icon-size: 16px; color: var(--hk-t3); }
 entry.hk-input > image.left { margin-right: 7px; }
 entry.hk-input > image.right { margin-left: 7px; }
+entry.search > image:first-child { margin-right: 7px; }
+entry.search > image:last-child:not(:first-child) { margin-left: 7px; }
 entry.hk-input > text { margin: 0; padding: 0; }
 entry.hk-input.search { padding: 0 10px 0 12px; }
 entry.hk-input:focus-within { border-color: var(--hk-accent-fill); box-shadow: 0 0 0 3px var(--hk-sel); }
@@ -160,7 +169,41 @@ menubutton.hk-sort > button arrow {
 menubutton.hk-menu > button { min-width: 30px; min-height: 30px; padding: 0; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-t2); }
 menubutton.hk-menu > button:hover, menubutton.hk-menu > button:checked { background-color: var(--hk-hover); color: var(--hk-t1); }
 
-/* ---- 5. Player deck (inside .hk-glass) ---------------------------------- */
+/* ---- 5. Player deck ----------------------------------------------------- */
+
+/* The deck and its popovers are glass in the dark scheme (the deck and the
+   popovers get .hk-glass then) and the window's own surfaces in the light
+   one. In light, the glass colours the deck's rules use are the light
+   scheme's, so the same rules draw both. The signal colours for light come
+   from the second provider. */
+.hk-light .hk-deck {
+  background-color: var(--hk-win); color: var(--hk-t1);
+  --hk-glass-bg: var(--hk-win);
+  --hk-glass-border-top: var(--hk-line);
+  --hk-glass-button-border: var(--hk-line2);
+  --hk-glass-choice-border: var(--hk-line2);
+  --hk-glass-hover: var(--hk-hover);
+  --hk-glass-idle-button: var(--hk-seg);
+  --hk-glass-line: var(--hk-line);
+  --hk-glass-line2: var(--hk-line2);
+  --hk-glass-node: var(--hk-win);
+  --hk-glass-popover: var(--hk-menu);
+  --hk-glass-popover-border: var(--hk-line2);
+  --hk-glass-popover-hover: var(--hk-hover);
+  --hk-glass-seg: var(--hk-seg);
+  --hk-glass-slider-fill: var(--hk-t2);
+  --hk-glass-slider-thumb: var(--hk-t1);
+  --hk-glass-stop-after-mark: var(--hk-t1);
+  --hk-glass-t1: var(--hk-t1);
+  --hk-glass-t1-strong: var(--hk-t1);
+  --hk-glass-t2: var(--hk-t2);
+  --hk-glass-t2-strong: var(--hk-t2);
+  --hk-glass-t3: var(--hk-t3);
+  --hk-glass-t4: var(--hk-t3);
+  --hk-glass-tile: var(--hk-seg);
+  --hk-glass-wave-rest: var(--hk-line2);
+  --hk-signal-idle-text: var(--hk-t3);
+}
 
 .hk-deck-title { font-size: 13px; font-weight: 600; }
 .hk-deck-subtitle { font-size: 12px; color: var(--hk-t2); }

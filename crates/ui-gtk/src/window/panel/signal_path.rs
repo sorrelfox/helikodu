@@ -80,7 +80,7 @@ impl SignalPathPage {
 
         let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
         let card = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        // Dark in both colour schemes, like the deck.
+        // Dark in both colour schemes, like Now Playing.
         card.add_css_class("hk-glass");
         card.add_css_class("hk-path-card");
         let head = gtk::Box::new(gtk::Orientation::Horizontal, 6);

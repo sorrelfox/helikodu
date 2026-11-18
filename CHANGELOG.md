@@ -22,8 +22,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Chapters: while a chapter plays, the deck shows its number and title, and the seek bar covers the whole file with a gap at each chapter boundary.
 - Folders outside the library: the Folders view also shows the home folder, connected drives and the file system, plays from them without storing anything, and adds a folder to the library with **Add to library**.
 
+### Changed
+
+- The player deck at the bottom of the window follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.
+
 ### Fixed
 
+- With a colour scheme chosen in Helikodu that differs from the desktop's, text no longer takes the desktop theme's colours: sidebar entries, titles and other labels were light on light (or dark on dark) under themes such as Breeze, mostly while the window did not have the focus.
 - Tags without a field of their own (`MOOD`, `BPM`, `GROUPING`, `LABEL`, `COMMENT` and others) are stored when files are scanned, so `tag:NAME` queries find them, and shuffling by grouping uses the `GROUPING` tag.
 
 ## [0.2.0] - 2026-11-18

@@ -10,7 +10,9 @@
 //!
 //! Options: `--out DIR` (default `target/screenshots`), `--size WxH` (default
 //! 1440x900), `--accent amber|blue|green|violet`, `--style integrated|classic`,
-//! and `--database PATH` to show a real library instead of the sample one. With
+//! `--backdrop` to draw the window as when another window has the focus (themes
+//! colour some text differently then), and `--database PATH` to show a real
+//! library instead of the sample one. With
 //! a database the player plays its first album to the null output, so nothing
 //! is heard.
 
@@ -41,6 +43,7 @@ struct Options {
     accent: AccentChoice,
     style: WindowStyle,
     database: Option<PathBuf>,
+    backdrop: bool,
 }
 
 fn options() -> Result<Options, String> {
@@ -51,6 +54,7 @@ fn options() -> Result<Options, String> {
         accent: AccentChoice::Amber,
         style: WindowStyle::Integrated,
         database: None,
+        backdrop: false,
     };
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -79,6 +83,7 @@ fn options() -> Result<Options, String> {
                 }
             }
             "--database" => options.database = Some(PathBuf::from(value()?)),
+            "--backdrop" => options.backdrop = true,
             other => return Err(format!("unknown option {other}")),
         }
     }
@@ -195,6 +200,10 @@ fn main() -> ExitCode {
                     window.open_album(key);
                 }
                 glib::timeout_future(Duration::from_millis(1200)).await;
+                if options.backdrop {
+                    window.set_state_flags(gtk::StateFlags::BACKDROP, false);
+                    glib::timeout_future(Duration::from_millis(100)).await;
+                }
                 let path = out.join(format!("{prefix}{name}.png"));
                 match snapshot::save_png(&window, &path) {
                     Ok(()) => println!("wrote {}", path.display()),

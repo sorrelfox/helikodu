@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! WaveformSeekBar: the seek bar drawn as a band of bars. Bars before the
-//! position are in the glass accent fill, the rest in `waveRest`; a bar is
-//! either played or not. Until the library has peaks for a track every bar is
+//! position are in the accent fill, the rest in `waveRest` on the dark glass
+//! deck or the stronger line colour on the light one; a bar is either played
+//! or not. Until the library has peaks for a track every bar is
 //! 28 % high (a flat band).
 //!
 //! Click or drag seeks; the arrow keys move by the seek step, Home and End jump
@@ -28,7 +29,42 @@ use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, graphene, gsk};
 
 use crate::i18n::{fill, tr};
+use crate::style::color::Rgba;
 use crate::style::tokens::glass;
+
+/// The colours of the bars and flags, for the deck's surface now.
+struct Colors {
+    played: Rgba,
+    rest: Rgba,
+    outside: Rgba,
+    inside: Rgba,
+    flag: Rgba,
+    ink: Rgba,
+}
+
+fn colors() -> Colors {
+    let look = crate::style::current();
+    if look.dark {
+        Colors {
+            played: look.accent.glass_fill,
+            rest: glass::WAVE_REST,
+            outside: glass::LOOP_OUTSIDE,
+            inside: glass::LOOP_INSIDE,
+            flag: glass::LOOP_FLAG,
+            ink: glass::BG,
+        }
+    } else {
+        let p = look.palette;
+        Colors {
+            played: look.accent.fill,
+            rest: p.line2,
+            outside: p.line,
+            inside: p.t3.mix(p.line2, 0.5),
+            flag: p.t1,
+            ink: p.win,
+        }
+    }
+}
 
 const BAR: f32 = 5.0;
 const GAP: f32 = 2.0;
@@ -154,13 +190,14 @@ mod imp {
             let pitch = (w + GAP) / count as f32;
             let fraction = obj.fraction();
             let played = (fraction * count as f64).floor() as usize;
-            let accent = crate::style::current().accent.glass_fill.to_gdk();
-            let rest = glass::WAVE_REST.to_gdk();
+            let colors = colors();
+            let accent = colors.played.to_gdk();
+            let rest = colors.rest.to_gdk();
             let peaks = self.peaks.borrow();
             let (a, b) = obj.shown_loop();
             let section = obj.fractions(a, b);
-            let outside = glass::LOOP_OUTSIDE.to_gdk();
-            let inside = glass::LOOP_INSIDE.to_gdk();
+            let outside = colors.outside.to_gdk();
+            let inside = colors.inside.to_gdk();
             let gaps: Vec<(f32, f32)> = self
                 .gaps
                 .borrow()
@@ -308,8 +345,8 @@ impl WaveformSeekBar {
         let w = self.width() as f32;
         let tab = crate::style::tokens::metric::r#loop::FLAG_TAB as f32;
         let line = crate::style::tokens::metric::r#loop::FLAG_LINE as f32;
-        let flag = glass::LOOP_FLAG.to_gdk();
-        let ink = glass::BG.to_gdk();
+        let Colors { flag, ink, .. } = colors();
+        let (flag, ink) = (flag.to_gdk(), ink.to_gdk());
         for (at, text, after) in [(a, "A", false), (b, "B", true)] {
             let Some(x) = at.and_then(|at| self.flag_x(at)) else {
                 continue;

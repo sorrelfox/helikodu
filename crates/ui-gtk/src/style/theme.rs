@@ -204,6 +204,27 @@ pub(crate) fn connect_changed(listener: impl Fn(&Look) + 'static) {
     theme().listeners.borrow_mut().push(Box::new(listener));
 }
 
+/// Gives `widget` the dark glass surface while the scheme is dark, and leaves
+/// it on the light surfaces of the window while it is light: the player deck
+/// and the popovers opened from it.
+pub(crate) fn glass_when_dark(widget: &impl IsA<gtk::Widget>) {
+    let widget = widget.upcast_ref::<gtk::Widget>();
+    let set = |widget: &gtk::Widget, look: &Look| {
+        if look.dark {
+            widget.add_css_class("hk-glass");
+        } else {
+            widget.remove_css_class("hk-glass");
+        }
+    };
+    set(widget, &current());
+    let weak = widget.downgrade();
+    connect_changed(move |look| {
+        if let Some(widget) = weak.upgrade() {
+            set(&widget, look);
+        }
+    });
+}
+
 fn classes(window: &gtk::Window, look: &Look) {
     let (add, remove) = if look.dark {
         ("hk-dark", "hk-light")
@@ -409,6 +430,14 @@ pub(crate) fn look_css(look: &Look) -> String {
         ));
     }
     css.push_str(" }\n");
+    // The deck is light in the light scheme: the signal colours, made for
+    // glass, are darkened until they read on its surface.
+    let surface = super::color::palette(false, look.high_contrast).win;
+    css.push_str(&format!(
+        ".hk-light .hk-deck {{ --hk-signal-bit-perfect-text: {}; --hk-signal-processed-text: {}; }}\n",
+        tokens::signal::bit_perfect::TEXT.ensure(surface, 4.5).hex(),
+        tokens::signal::processed::TEXT.ensure(surface, 4.5).hex(),
+    ));
     if look.reduced_motion {
         css.push_str(".hk, .hk * { transition-duration: 0; animation-duration: 0; }\n");
     }

@@ -119,6 +119,7 @@ mod imp {
             self.parent_constructed();
             self.cover.set_shape(40, 4.0);
             self.cover.add_css_class("small");
+            crate::style::glass_when_dark(&*self.obj());
             self.obj().set_accessible_role(gtk::AccessibleRole::Group);
             self.obj()
                 .update_property(&[gtk::accessible::Property::Label(&tr("Player"))]);

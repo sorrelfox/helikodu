@@ -8,7 +8,8 @@
 //! pages with sound-processing controls); and the copies (`--copies` renders
 //! only those): Settings › Library, the track table with its badges, the
 //! copies window with its confirmation and results, and Find duplicates.
-//! Run it headless:
+//! `--backdrop` draws every window as when another window has the focus
+//! (themes colour some text differently then). Run it headless:
 //!
 //! ```sh
 //! crates/ui-gtk/tests/headless.sh cargo run -p helikodu-ui-gtk --example dialogs -- --out target/screenshots
@@ -18,6 +19,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
@@ -29,6 +31,19 @@ use helikodu_ui_gtk::backend::{
 };
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice, set_choice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display, snapshot};
+
+/// Set by `--backdrop`.
+static BACKDROP: AtomicBool = AtomicBool::new(false);
+
+/// Marks `widget`'s window as without the focus, with `--backdrop`.
+fn backdrop(widget: &impl IsA<gtk::Widget>) {
+    if BACKDROP.load(Ordering::Relaxed)
+        && let Some(root) = widget.root()
+    {
+        root.set_state_flags(gtk::StateFlags::BACKDROP, false);
+        spin(50);
+    }
+}
 
 fn spin(ms: u64) {
     let context = glib::MainContext::default();
@@ -65,6 +80,9 @@ fn descendants(root: &gtk::Widget) -> Vec<gtk::Widget> {
 fn save_native(widget: &impl IsA<gtk::Native>, path: &Path) -> Result<(), String> {
     let widget = widget.upcast_ref::<gtk::Native>();
     let as_widget = widget.upcast_ref::<gtk::Widget>();
+    if let Some(parent) = as_widget.parent() {
+        backdrop(&parent);
+    }
     let paintable = gtk::WidgetPaintable::new(Some(as_widget));
     let snapshot = gtk::Snapshot::new();
     let (w, h) = (as_widget.width(), as_widget.height());
@@ -96,6 +114,7 @@ fn window(application: &gtk::Application, backend: &Backend) -> MainWindow {
 
 fn save(window: &impl IsA<gtk::Window>, dir: &Path, name: &str) {
     spin(300);
+    backdrop(window.upcast_ref::<gtk::Window>());
     let path = dir.join(format!("{name}.png"));
     match snapshot::save_png(window, &path) {
         Ok(()) => println!("{}", path.display()),
@@ -372,6 +391,10 @@ fn main() -> ExitCode {
     let mut out = PathBuf::from("target/screenshots");
     let dsp_only = std::env::args().any(|a| a == "--dsp");
     let copies_only = std::env::args().any(|a| a == "--copies");
+    BACKDROP.store(
+        std::env::args().any(|a| a == "--backdrop"),
+        Ordering::Relaxed,
+    );
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--out"

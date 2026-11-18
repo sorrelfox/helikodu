@@ -3,14 +3,14 @@
 SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
-<!-- The player deck: a seek strip over a row of three control groups. Always dark. -->
+<!-- The player deck: a seek strip over a row of three control groups. Dark glass in the
+     dark scheme, the window's light surfaces in the light one. -->
 <interface domain="helikodu">
   <template class="HkDeck" parent="GtkBox">
     <property name="orientation">vertical</property>
     <property name="height-request">105</property>
     <style>
       <class name="hk-deck"/>
-      <class name="hk-glass"/>
     </style>
     <child>
       <object class="GtkBox" id="seek_strip">

@@ -10,4 +10,4 @@ pub(crate) mod theme;
 pub(crate) mod tokens;
 
 pub use theme::{AccentChoice, SchemeChoice, set_choice};
-pub(crate) use theme::{connect_changed, current, install, register_window};
+pub(crate) use theme::{connect_changed, current, glass_when_dark, install, register_window};
