@@ -35,6 +35,7 @@ use crate::db::DbError;
 use crate::db::unix_time::to_unix_seconds;
 use crate::library::Library;
 use compiler::{Compiled, QueryContext};
+pub(crate) use run::summaries as track_summaries;
 
 /// A query to run: the tree, the page of results wanted and how to treat masked
 /// library folders.
@@ -187,6 +188,24 @@ impl Library {
             .writer()?
             .write(move |c| saved::move_to(c, id, position))?;
         found_or(found, id)
+    }
+}
+
+/// Every track `query` selects now, in its order, on the connection `c`; the problem
+/// when a comparison of the query does not fit together.
+pub(crate) fn track_ids_on(
+    c: &rusqlite::Connection,
+    query: &Query,
+    now: i64,
+) -> rusqlite::Result<Result<Vec<TrackId>, TermProblem>> {
+    let context = QueryContext {
+        now,
+        utc_offset: run::utc_offset(c, now)?,
+        seed: 0,
+    };
+    match compiler::compile(query, &context) {
+        Ok(compiled) => run::track_ids(c, &compiled, false).map(Ok),
+        Err(problem) => Ok(Err(problem)),
     }
 }
 

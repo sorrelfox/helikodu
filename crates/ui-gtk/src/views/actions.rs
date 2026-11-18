@@ -203,7 +203,9 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         } => Some(*key),
         _ => None,
     };
-    for playlist in playlists.iter().filter(|p| Some(p.key) != editing) {
+    for playlist in playlists.iter().filter(|p| {
+        Some(p.key) != editing && p.kind == crate::backend::PlaylistType::Static && !p.locked
+    }) {
         let entry = gio::MenuItem::new(Some(&playlist.name), None);
         entry.set_action_and_target_value(
             Some("win.sel-add-to-playlist"),
@@ -230,6 +232,18 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     }
     if go.n_items() > 0 {
         menu.append_section(None, &go);
+    }
+    let pin = match target {
+        Target::Album(album) => Some(("win.pin-album", album.0)),
+        Target::Artist(artist) => Some(("win.pin-artist", artist.0)),
+        _ => None,
+    };
+    if let Some((action, id)) = pin {
+        let pins = gio::Menu::new();
+        let entry = gio::MenuItem::new(Some(&tr("Pin to the sidebar")), None);
+        entry.set_action_and_target_value(Some(action), Some(&id.to_variant()));
+        pins.append_item(&entry);
+        menu.append_section(None, &pins);
     }
     if matches!(target, Target::Tracks { .. } | Target::Album(_)) {
         let loudness = gio::Menu::new();
@@ -287,6 +301,29 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     menu
 }
 
+/// Renames the item labelled `from` in the sections of `model` to `to`.
+fn relabel(model: &gio::Menu, from: &str, to: &str) {
+    for section in 0..model.n_items() {
+        let Some(link) = model
+            .item_link(section, gio::MENU_LINK_SECTION)
+            .and_downcast::<gio::Menu>()
+        else {
+            continue;
+        };
+        for i in 0..link.n_items() {
+            let label = link
+                .item_attribute_value(i, "label", Some(glib::VariantTy::STRING))
+                .and_then(|v| v.str().map(str::to_owned));
+            if label.as_deref() == Some(from) {
+                let item = gio::MenuItem::from_model(&link, i);
+                item.set_label(Some(to));
+                link.remove(i);
+                link.insert_item(i, &item);
+            }
+        }
+    }
+}
+
 /// Pops up the context menu of `target` on `widget`, at the pointer position
 /// `at` in its coordinates, or at its middle for the keyboard.
 pub(crate) fn popup(
@@ -297,6 +334,15 @@ pub(crate) fn popup(
     let widget = widget.as_ref();
     let window = widget.root().and_downcast::<MainWindow>()?;
     let model = menu(&target, &window.playlist_rows());
+    // A pinned album or artist offers "Unpin" instead.
+    let pinned = match &target {
+        Target::Album(album) => window.is_pinned(crate::backend::PinKey::Album(*album)),
+        Target::Artist(artist) => window.is_pinned(crate::backend::PinKey::Artist(*artist)),
+        _ => false,
+    };
+    if pinned {
+        relabel(&model, &tr("Pin to the sidebar"), &tr("Unpin"));
+    }
     window.set_target(Some(target));
     let popover = gtk::PopoverMenu::from_model(Some(&model));
     popover.add_css_class("hk-context-menu");
@@ -483,44 +529,8 @@ fn remove(window: &MainWindow, backend: Backend, target: Target) {
                     ),
                     &[&count.to_string()],
                 );
-                let undo_window = window.downgrade();
-                window.toast_undo(&text, move || {
-                    let (Some(window), Some(backend)) = (
-                        undo_window.upgrade(),
-                        undo_window.upgrade().and_then(|w| w.backend()),
-                    ) else {
-                        return;
-                    };
-                    let removed = removed.clone();
-                    let weak = window.downgrade();
-                    glib::spawn_future_local(async move {
-                        let result = backend
-                            .query(move |l| {
-                                // Put each entry back at its old position, first
-                                // the lowest, so the later positions hold again.
-                                // A missing entry names no track and stays out; the
-                                // entries after it move up by one.
-                                let mut removed = removed;
-                                removed.sort_by_key(|(p, _)| *p);
-                                let mut skipped = 0;
-                                for (position, track) in removed {
-                                    if track.0 == 0 {
-                                        skipped += 1;
-                                    } else {
-                                        l.add_to_playlist(key, &[track], Some(position - skipped))?;
-                                    }
-                                }
-                                Ok(())
-                            })
-                            .await;
-                        if let Some(window) = weak.upgrade() {
-                            if let Err(error) = result {
-                                window.toast(&error.0, true);
-                            }
-                            window.playlists_changed(Some(key));
-                        }
-                    });
-                });
+                // Undo puts the playlist back as it was, missing entries too.
+                window.toast_playlist_undo(key, &text);
             });
         }
         Origin::Library | Origin::Playing => {}

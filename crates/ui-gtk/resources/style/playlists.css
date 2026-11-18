@@ -1,0 +1,51 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Playlists: the smart playlist page with its rule line and rule builder,
+ * album groups, the lock and the playlist menu.
+ */
+
+/* The hero tile of a smart playlist. */
+.hk-smart-tile { min-width: 88px; min-height: 88px; border-radius: 8px; border: 1px solid var(--hk-line); background-color: var(--hk-field); color: var(--hk-accent-text); }
+
+/* The rule line: chips in words, the order and the limit, Live. */
+.hk-rule-line { padding: 0 28px 14px; }
+button.hk-rule-chip { min-height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--hk-line); background: none; background-image: none; box-shadow: none; color: var(--hk-t2); font-size: 12px; font-weight: 400; }
+button.hk-rule-chip:hover { background-color: var(--hk-hover); }
+.hk-live-dot { min-width: 6px; min-height: 6px; border-radius: 3px; background-color: var(--hk-accent-fill); }
+
+/* The rule builder: the rules pane and the results pane. */
+.hk-rule-editor { border-top: 1px solid var(--hk-line); }
+.hk-rules-scroller { border-right: 1px solid var(--hk-line); }
+.hk-rules-pane { padding: 20px 20px 24px 24px; }
+.hk-rule-row { min-height: 40px; }
+.hk-rule-group { margin-left: 12px; padding-left: 16px; border-left: 1px solid var(--hk-line2); }
+button.hk-link-button { min-height: 28px; padding: 0 4px; border: none; background: none; background-image: none; box-shadow: none; color: var(--hk-t2); font-weight: 400; }
+button.hk-link-button:hover { color: var(--hk-t1); }
+entry.hk-input.error { border-color: var(--hk-accent-fill); }
+.hk-query-readout { padding: 12px 14px; border-radius: 8px; background-color: var(--hk-pane); }
+.hk-query-text { font-size: 12px; color: var(--hk-t1); }
+.hk-query-problem { color: var(--hk-t2); font-size: 12px; }
+.hk-results-head { min-height: 44px; padding: 0 24px 0 20px; border-bottom: 1px solid var(--hk-line); }
+listview.hk-playlist.compact .hk-cell { min-height: 34px; }
+button.hk-header-button { min-height: 0; padding: 0; border: none; background: none; background-image: none; box-shadow: none; }
+button.hk-header-button:disabled label { color: var(--hk-t3); }
+.hk-sort-key { color: var(--hk-t1); }
+button.hk-btn.hk-pressed { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); }
+
+/* Album groups of a playlist. */
+.hk-group-row { min-height: 48px; padding: 0 28px 0 12px; border-top: 1px solid var(--hk-line); }
+.hk-group-row.first { border-top: none; }
+.hk-small { font-size: 12px; }
+listview.hk-playlist > row:not(:selected):not(:hover) > .hk-cell.hk-grouped.hk-alt { background: none; }
+.hk-cell.hk-grouped .hk-playlist-row { min-height: 32px; }
+
+/* The lock toggle beside the more button. */
+button.hk-lock { min-width: 34px; min-height: 34px; padding: 0; border-radius: 8px; border: 1px solid var(--hk-line2); background: none; background-image: none; box-shadow: none; color: var(--hk-t2); }
+button.hk-lock:checked { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); color: var(--hk-accent-text); }
+
+/* The rows of the playlist menu that show a count at the right. */
+popover.menu.hk-playlist-menu > contents { min-width: 252px; }
+button.hk-menu-row { min-height: 28px; min-width: 214px; padding: 0 8px 0 34px; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; color: var(--hk-t1); font-weight: 400; }
+button.hk-menu-row:hover { background-color: var(--hk-seg); }
+button.hk-menu-row:disabled { color: var(--hk-t3); }

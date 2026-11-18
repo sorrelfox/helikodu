@@ -8,7 +8,14 @@
 //! Entries are reordered by dragging them: the dragged rows fade, a line marks
 //! where they go, and the status bar says so. Tracks dragged in from other
 //! lists are inserted where they are dropped. Delete removes the selected
-//! entries, with Undo in the toast.
+//! entries, with Undo in the toast; Ctrl+Z undoes the last change of the
+//! playlist and Ctrl+Shift+Z does it again. A locked playlist hides the drag
+//! handles and ignores drops and removals.
+//!
+//! Grouped by album, the entries that follow each other on one album get a
+//! group row (cover, album, artist and year, count and time); the Album
+//! column then gives way to the format. An entry whose file is missing reads
+//! "Missing" in place of its length.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -55,16 +62,58 @@ fn edited(modified: Option<SystemTime>) -> Option<String> {
     })
 }
 
-/// The columns of the table: label, width (0 expands), right-aligned.
-fn columns() -> [(String, i32, bool); 6] {
-    [
+/// The columns of the table: label, width (0 expands), right-aligned. In
+/// groups by album the format takes the Album column's place.
+fn columns(grouped: bool) -> Vec<(String, i32, bool)> {
+    let mut columns = vec![
         (String::new(), 16, false),
         ("#".to_owned(), 22, true),
         (tr("Title"), 0, false),
         (tr("Artist"), 0, false),
-        (tr("Album"), 0, false),
-        (tr("Length"), 48, true),
-    ]
+    ];
+    if grouped {
+        columns.push((tr("Format"), 110, false));
+        columns.push((tr("Length"), 64, true));
+    } else {
+        columns.push((tr("Album"), 0, false));
+        columns.push((tr("Length"), 48, true));
+    }
+    columns
+}
+
+/// The entries that follow each other on one album, from `start`: how many,
+/// and their length.
+fn group_at(rows: &[TrackRow], start: usize) -> (usize, Duration) {
+    let Some(first) = rows.get(start) else {
+        return (0, Duration::ZERO);
+    };
+    let same = |r: &TrackRow| {
+        if first.album.0 != 0 {
+            r.album == first.album
+        } else {
+            r.album_title == first.album_title
+        }
+    };
+    let run: Vec<&TrackRow> = rows[start..].iter().take_while(|r| same(r)).collect();
+    (run.len(), run.iter().filter_map(|r| r.duration).sum())
+}
+
+/// Whether the entry at `position` starts a group.
+fn starts_group(rows: &[TrackRow], position: usize) -> bool {
+    match (
+        position.checked_sub(1).and_then(|p| rows.get(p)),
+        rows.get(position),
+    ) {
+        (_, None) => false,
+        (None, Some(_)) => true,
+        (Some(before), Some(row)) => {
+            if row.album.0 != 0 {
+                before.album != row.album
+            } else {
+                before.album_title != row.album_title
+            }
+        }
+    }
 }
 
 /// A playlist page.
@@ -87,6 +136,11 @@ pub(crate) struct PlaylistView {
     playing: Cell<Option<TrackKey>>,
     cells: RefCell<Vec<glib::WeakRef<TableCell>>>,
     drop_line: RefCell<Option<TableCell>>,
+    header: gtk::Box,
+    lock: gtk::ToggleButton,
+    more: gtk::MenuButton,
+    /// Set while the lock button is set from the playlist, so it changes nothing.
+    quiet: Cell<bool>,
 }
 
 impl std::fmt::Debug for PlaylistView {
@@ -139,23 +193,26 @@ impl PlaylistView {
             false,
         );
         let export = button(&tr("Export"), Some("helikodu-export-symbolic"), false);
+        let lock = gtk::ToggleButton::new();
+        lock.set_icon_name("helikodu-lock-symbolic");
+        lock.add_css_class("hk-more");
+        lock.add_css_class("hk-lock");
+        lock.set_tooltip_text(Some(&tr("Lock against changes")));
+        lock.update_property(&[gtk::accessible::Property::Label(&tr(
+            "Lock against changes",
+        ))]);
         let more = gtk::MenuButton::new();
         more.set_icon_name("view-more-symbolic");
         more.add_css_class("hk-more");
         more.set_tooltip_text(Some(&tr("More")));
         more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
-        let menu = gio::Menu::new();
-        menu.append(Some(&tr("Rename…")), Some("playlist-page.rename"));
-        let delete = gio::Menu::new();
-        delete.append(Some(&tr("Delete…")), Some("playlist-page.delete"));
-        menu.append_section(None, &delete);
-        more.set_menu_model(Some(&menu));
         let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         buttons.set_valign(gtk::Align::Center);
         for b in [
             play.upcast_ref::<gtk::Widget>(),
             shuffle.upcast_ref(),
             export.upcast_ref(),
+            lock.upcast_ref(),
             more.upcast_ref(),
         ] {
             buttons.append(b);
@@ -166,31 +223,6 @@ impl PlaylistView {
         let header = gtk::Box::new(gtk::Orientation::Horizontal, 16);
         header.add_css_class("hk-table-header");
         header.add_css_class("hk-playlist-row");
-        for (i, (text, width, right)) in columns().into_iter().enumerate() {
-            let l = label(&text, &["hk-section-label"]);
-            if width > 0 {
-                l.set_size_request(width, -1);
-            } else {
-                l.set_hexpand(true);
-                l.set_max_width_chars(1);
-            }
-            if right {
-                l.set_xalign(1.0);
-            }
-            if i == 2 {
-                // The rows' title cell starts with a cover; the same room here
-                // keeps the columns of header and rows in line.
-                let cell = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-                cell.set_hexpand(true);
-                cell.append(&l);
-                let room = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-                room.set_size_request(24, -1);
-                cell.append(&room);
-                header.append(&cell);
-            } else {
-                header.append(&l);
-            }
-        }
         root.append(&header);
 
         let store = gio::ListStore::new::<TrackItem>();
@@ -232,10 +264,56 @@ impl PlaylistView {
             playing: Cell::new(None),
             cells: RefCell::new(Vec::new()),
             drop_line: RefCell::new(None),
+            header,
+            lock,
+            more,
+            quiet: Cell::new(false),
         });
         view.list.set_factory(Some(&view.factory()));
+        view.fill_header(false);
         view.connect(playback, &play, &shuffle, &export);
+        view.connect_menu();
         view
+    }
+
+    /// Fills the table header for the grouping.
+    fn fill_header(&self, grouped: bool) {
+        while let Some(child) = self.header.first_child() {
+            self.header.remove(&child);
+        }
+        for (i, (text, width, right)) in columns(grouped).into_iter().enumerate() {
+            let l = label(&text, &["hk-section-label"]);
+            if width > 0 {
+                l.set_size_request(width, -1);
+            } else {
+                l.set_hexpand(true);
+                l.set_max_width_chars(1);
+            }
+            if right {
+                l.set_xalign(1.0);
+            }
+            if i == 2 && !grouped {
+                // The rows' title cell starts with a cover; the same room here
+                // keeps the columns of header and rows in line.
+                let cell = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+                cell.set_hexpand(true);
+                cell.append(&l);
+                let room = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                room.set_size_request(24, -1);
+                cell.append(&room);
+                self.header.append(&cell);
+            } else {
+                self.header.append(&l);
+            }
+        }
+    }
+
+    fn grouped(&self) -> bool {
+        self.info.borrow().as_ref().is_some_and(|i| i.grouped)
+    }
+
+    fn locked(&self) -> bool {
+        self.info.borrow().as_ref().is_some_and(|i| i.locked)
     }
 
     fn factory(self: &Rc<Self>) -> gtk::SignalListItemFactory {
@@ -245,6 +323,37 @@ impl PlaylistView {
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
                 return;
             };
+            let outer = gtk::Box::new(gtk::Orientation::Vertical, 0);
+            // The group row, shown above the first entry of a group.
+            let group = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+            group.add_css_class("hk-group-row");
+            let group_cover = CoverArt::new(32, 4.0);
+            group.append(&group_cover);
+            let album = gtk::Button::new();
+            album.add_css_class("hk-link");
+            album.set_child(Some(&label("", &["hk-strong"])));
+            group.append(&album);
+            let about = label("", &["hk-t3"]);
+            about.set_hexpand(true);
+            group.append(&about);
+            let size = label("", &["hk-t3", "hk-numeric", "hk-small"]);
+            group.append(&size);
+            group.set_visible(false);
+            let weak_view = weak.clone();
+            album.connect_clicked(move |button| {
+                let (Some(view), Some(window)) = (
+                    weak_view.upgrade(),
+                    button.root().and_downcast::<crate::window::MainWindow>(),
+                ) else {
+                    return;
+                };
+                let key: Option<u64> = button.widget_name().parse().ok();
+                if let Some(key) = key.filter(|k| *k != 0) {
+                    let _ = view;
+                    window.open_album(crate::backend::AlbumKey(key));
+                }
+            });
+            outer.append(&group);
             let line = gtk::Box::new(gtk::Orientation::Horizontal, 16);
             line.add_css_class("hk-playlist-row");
             let handle = gtk::Image::from_icon_name("helikodu-drag-handle-symbolic");
@@ -265,6 +374,10 @@ impl PlaylistView {
             let cover = CoverArt::new(24, 4.0);
             cover.add_css_class("small");
             title_box.append(&cover);
+            let warning = gtk::Image::from_icon_name("dialog-warning-symbolic");
+            warning.set_visible(false);
+            warning.set_tooltip_text(Some(&tr("The file is missing")));
+            title_box.append(&warning);
             let title = TitleLine::new("", &["hk-medium"]);
             title_box.append(&title);
             line.append(&title_box);
@@ -274,11 +387,15 @@ impl PlaylistView {
                 l.set_max_width_chars(1);
                 line.append(&l);
             }
+            let format = label("", &["hk-t3", "hk-mono-meta"]);
+            format.set_size_request(110, -1);
+            line.append(&format);
             let length = label("", &["hk-t2", "hk-numeric"]);
             length.set_xalign(1.0);
             length.set_size_request(48, -1);
             line.append(&length);
-            let cell = TableCell::new(&line);
+            outer.append(&line);
+            let cell = TableCell::new(&outer);
             if let Some(view) = weak.upgrade() {
                 view.cells.borrow_mut().push(cell.downgrade());
             }
@@ -318,47 +435,113 @@ impl PlaylistView {
 
     fn show_row(&self, cell: &TableCell, track: &TrackItem) {
         let Some(row) = track.row() else { return };
-        let Some(line) = cell.child() else { return };
-        let children: Vec<gtk::Widget> = {
+        let Some(outer) = cell.child() else { return };
+        let (Some(group), Some(line)) = (outer.first_child(), outer.last_child()) else {
+            return;
+        };
+        let children = |widget: &gtk::Widget| -> Vec<gtk::Widget> {
             let mut out = Vec::new();
-            let mut child = line.first_child();
+            let mut child = widget.first_child();
             while let Some(w) = child {
                 child = w.next_sibling();
                 out.push(w);
             }
             out
         };
-        let [_, lead, title_box, artist, album, length] = children.as_slice() else {
+        let grouped = self.grouped();
+        let position = track.position() as usize;
+        let first = grouped && starts_group(&self.rows.borrow(), position);
+        group.set_visible(first);
+        if first {
+            let parts = children(&group);
+            let (count, time) = group_at(&self.rows.borrow(), position);
+            if let [cover, album, about, size] = parts.as_slice() {
+                if let Some(cover) = cover.downcast_ref::<CoverArt>() {
+                    self.covers.show(cover, row.cover, row.cover_seed, 32);
+                }
+                if let Some(album) = album.downcast_ref::<gtk::Button>() {
+                    album.set_widget_name(&row.album.0.to_string());
+                    album.set_sensitive(row.album.0 != 0);
+                    if let Some(l) = album.child().and_downcast::<gtk::Label>() {
+                        l.set_text(&row.album_title);
+                    }
+                }
+                if let Some(about) = about.downcast_ref::<gtk::Label>() {
+                    let mut text = vec![String::new(), row.artist.clone()];
+                    text.extend(row.year.map(|y| y.to_string()));
+                    about.set_text(&text.join(" · "));
+                }
+                if let Some(size) = size.downcast_ref::<gtk::Label>() {
+                    size.set_text(&fill(
+                        &tr("{} · {}"),
+                        &[
+                            &fill(&ntr("{} track", "{} tracks", count), &[&count.to_string()]),
+                            &format::minutes(time),
+                        ],
+                    ));
+                }
+            }
+            if position == 0 {
+                group.add_css_class("first");
+            } else {
+                group.remove_css_class("first");
+            }
+        }
+        let parts = children(&line);
+        let [handle, lead, title_box, artist, album, format_label, length] = parts.as_slice()
+        else {
             return;
         };
+        handle.set_opacity(if self.locked() { 0.0 } else { 1.0 });
         let playing = !row.missing && self.playing.get() == Some(row.key);
         if let Some(lead) = lead.downcast_ref::<gtk::Stack>() {
             lead.set_visible_child_name(if playing { "playing" } else { "number" });
             if let Some(number) = lead.child_by_name("number").and_downcast::<gtk::Label>() {
-                number.set_text(&(track.position() + 1).to_string());
+                number.set_text(&(position + 1).to_string());
             }
         }
-        if let Some(cover) = title_box.first_child().and_downcast::<CoverArt>() {
-            self.covers.show(&cover, row.cover, row.cover_seed, 24);
-        }
-        if let Some(title) = title_box.last_child().and_downcast::<TitleLine>() {
-            if row.missing {
-                title.set_text(&fill(&tr("{} · Missing"), &[&row.title]));
-            } else {
+        let title_parts = children(title_box);
+        if let [cover, warning, title] = title_parts.as_slice() {
+            cover.set_visible(!grouped);
+            if let Some(cover) = cover.downcast_ref::<CoverArt>()
+                && !grouped
+            {
+                self.covers.show(cover, row.cover, row.cover_seed, 24);
+            }
+            warning.set_visible(row.missing);
+            if let Some(title) = title.downcast_ref::<TitleLine>() {
                 title.set_text(&row.title);
+                title.set_copies(row.key, if row.missing { 0 } else { row.copies });
             }
-            title.set_copies(row.key, if row.missing { 0 } else { row.copies });
         }
         if let Some(l) = artist.downcast_ref::<gtk::Label>() {
             l.set_text(&row.artist);
         }
+        album.set_visible(!grouped);
         if let Some(l) = album.downcast_ref::<gtk::Label>() {
             l.set_text(&row.album_title);
         }
-        if let Some(l) = length.downcast_ref::<gtk::Label>() {
-            l.set_text(&row.duration.map(format::duration).unwrap_or_default());
+        format_label.set_visible(grouped);
+        if let Some(l) = format_label.downcast_ref::<gtk::Label>() {
+            l.set_text(&if row.missing {
+                String::new()
+            } else {
+                format::short(&row.format)
+            });
         }
-        for (class, on) in [("hk-playing", playing), ("hk-missing", row.missing)] {
+        if let Some(l) = length.downcast_ref::<gtk::Label>() {
+            l.set_size_request(if grouped { 64 } else { 48 }, -1);
+            if row.missing {
+                l.set_text(&tr("Missing"));
+            } else {
+                l.set_text(&row.duration.map(format::duration).unwrap_or_default());
+            }
+        }
+        for (class, on) in [
+            ("hk-playing", playing),
+            ("hk-missing", row.missing),
+            ("hk-grouped", grouped),
+        ] {
             if on {
                 cell.add_css_class(class);
             } else {
@@ -455,6 +638,12 @@ impl PlaylistView {
             let Some(view) = weak.upgrade() else {
                 return glib::Propagation::Proceed;
             };
+            if key == gdk::Key::F2
+                && let (Some(playlist), Some(window)) = (view.key.get(), view.window())
+            {
+                window.rename_playlist(playlist);
+                return glib::Propagation::Stop;
+            }
             let Some(target) = view.target() else {
                 return glib::Propagation::Proceed;
             };
@@ -463,6 +652,7 @@ impl PlaylistView {
                 return glib::Propagation::Stop;
             }
             if key == gdk::Key::Delete
+                && !view.locked()
                 && let Some(window) = view.window()
             {
                 window.set_target(Some(target));
@@ -528,6 +718,9 @@ impl PlaylistView {
             let Some(view) = weak.upgrade() else {
                 return gdk::DragAction::empty();
             };
+            if view.locked() {
+                return gdk::DragAction::empty();
+            }
             let moving = target
                 .value()
                 .and_then(|v| v.get::<DraggedTracks>().ok())
@@ -544,7 +737,8 @@ impl PlaylistView {
                         ),
                         &[&count.to_string(), &(to + 1).to_string()],
                     ));
-                    view.status_right.set_text(&tr("Esc cancels"));
+                    view.status_right
+                        .set_text(&tr("Esc cancels · Ctrl Z undoes"));
                     gdk::DragAction::MOVE
                 }
                 None => gdk::DragAction::COPY,
@@ -561,6 +755,10 @@ impl PlaylistView {
             let (Some(view), Ok(dragged)) = (weak.upgrade(), value.get::<DraggedTracks>()) else {
                 return false;
             };
+            if view.locked() {
+                view.clear_drop_line();
+                return false;
+            }
             let to = view.drop_position(x, y);
             view.clear_drop_line();
             view.dropped(dragged, to);
@@ -702,7 +900,21 @@ impl PlaylistView {
             parts.extend(edited(info.modified));
             self.summary.set_text(&parts.join(" · "));
         }
+        let grouped = info.as_ref().is_some_and(|i| i.grouped);
+        let was_grouped = self.grouped();
+        let locked = info.as_ref().is_some_and(|i| i.locked);
         self.info.replace(info);
+        self.quiet.set(true);
+        self.lock.set_active(locked);
+        self.quiet.set(false);
+        self.lock.set_tooltip_text(Some(&if locked {
+            tr("Unlock")
+        } else {
+            tr("Lock against changes")
+        }));
+        if grouped != was_grouped || self.header.first_child().is_none() {
+            self.fill_header(grouped);
+        }
         let mut seeds = Vec::new();
         for row in rows.iter().filter(|r| !r.missing) {
             if !seeds.iter().any(|(s, _)| *s == row.cover_seed) {
@@ -729,12 +941,12 @@ impl PlaylistView {
                 .map(|r| r.key)
                 .eq(rows.iter().map(|r| r.key));
         if same {
+            self.rows.replace(rows.clone());
             for (i, r) in rows.iter().enumerate() {
                 if let Some(item) = self.store.item(i as u32).and_downcast::<TrackItem>() {
                     item.fill(Rc::new(r.clone()));
                 }
             }
-            self.rows.replace(rows);
             self.show_status();
             return;
         }
@@ -811,9 +1023,163 @@ impl PlaylistView {
                 &[&crate::format::count(selected.len())],
             )
         };
-        self.status_left
-            .set_text(&fill(&tr("{} · {}"), &[&count, &format::minutes(length)]));
-        self.status_right.set_text("");
+        let mut left = fill(&tr("{} · {}"), &[&count, &format::minutes(length)]);
+        let missing = rows.iter().filter(|r| r.missing).count();
+        if selected.is_empty() && missing > 0 {
+            left = fill(
+                &tr("{} · {}"),
+                &[
+                    &left,
+                    &fill(
+                        &ntr("{} file is missing", "{} files are missing", missing),
+                        &[&missing.to_string()],
+                    ),
+                ],
+            );
+        }
+        self.status_left.set_text(&left);
+        let mut right = Vec::new();
+        if self.grouped() {
+            right.push(tr("Grouped by album"));
+        }
+        if self.locked() {
+            right.push(tr("Locked against changes"));
+        } else if self.info.borrow().as_ref().is_some_and(|i| i.can_undo) {
+            right.push(tr("Ctrl Z undoes the last change"));
+        }
+        self.status_right.set_text(&right.join(" · "));
+    }
+
+    /// The lock button and the more menu.
+    fn connect_menu(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.lock.connect_toggled(move |lock| {
+            let Some(view) = weak.upgrade() else { return };
+            if view.quiet.get() {
+                return;
+            }
+            if let (Some(key), Some(window)) = (view.key.get(), view.window()) {
+                window.set_playlist_flag(key, true, lock.is_active());
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.more.set_create_popup_func(move |more| {
+            if let Some(view) = weak.upgrade() {
+                view.build_menu(more);
+            }
+        });
+    }
+
+    /// The more menu: grouping and the lock, tidying, the playlist's own
+    /// commands, export and delete.
+    fn build_menu(self: &Rc<Self>, more: &gtk::MenuButton) {
+        let (Some(key), Some(window)) = (self.key.get(), self.window()) else {
+            return;
+        };
+        let id = key.0.to_variant();
+        let item = |label: &str, action: &str| {
+            let item = gio::MenuItem::new(Some(label), None);
+            item.set_action_and_target_value(Some(action), Some(&id));
+            item
+        };
+        let group = gio::SimpleActionGroup::new();
+        for (name, on, lock) in [
+            ("group", self.grouped(), false),
+            ("lock", self.locked(), true),
+        ] {
+            let action = gio::SimpleAction::new_stateful(name, None, &on.to_variant());
+            let weak = window.downgrade();
+            action.connect_activate(move |action, _| {
+                let on = !action
+                    .state()
+                    .and_then(|s| s.get::<bool>())
+                    .unwrap_or(false);
+                action.set_state(&on.to_variant());
+                if let Some(window) = weak.upgrade() {
+                    window.set_playlist_flag(key, lock, on);
+                }
+            });
+            group.add_action(&action);
+        }
+        self.root.insert_action_group("playlist-menu", Some(&group));
+        let menu = gio::Menu::new();
+        let checks = gio::Menu::new();
+        checks.append(Some(&tr("Group by album")), Some("playlist-menu.group"));
+        checks.append(
+            Some(&tr("Lock against changes")),
+            Some("playlist-menu.lock"),
+        );
+        menu.append_section(None, &checks);
+        let tidy = gio::Menu::new();
+        for custom in ["dedupe", "missing"] {
+            let entry = gio::MenuItem::new(None, None);
+            entry.set_attribute_value("custom", Some(&custom.to_variant()));
+            tidy.append_item(&entry);
+        }
+        tidy.append_item(&item(&tr("Shuffle the order…"), "win.playlist-shuffle"));
+        menu.append_section(None, &tidy);
+        // Rename, duplicate, move, pin, export and delete as on the sidebar.
+        let shared = window.playlist_menu_model(key);
+        for section in 1..shared.n_items() {
+            if let Some(link) = shared.item_link(section, gio::MENU_LINK_SECTION) {
+                menu.append_section(None, &link);
+            }
+        }
+        let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        popover.add_css_class("hk-playlist-menu");
+        let locked = self.locked();
+        for (custom, text, action) in [
+            ("dedupe", tr("Remove duplicates"), "win.playlist-dedupe"),
+            (
+                "missing",
+                tr("Remove missing tracks"),
+                "win.playlist-remove-missing",
+            ),
+        ] {
+            let button = gtk::Button::new();
+            button.add_css_class("hk-menu-row");
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            let name = label(&text, &[]);
+            name.set_hexpand(true);
+            line.append(&name);
+            let count = label("", &["hk-t3", "hk-numeric"]);
+            line.append(&count);
+            button.set_child(Some(&line));
+            button.set_action_name(Some(action));
+            button.set_action_target_value(Some(&id));
+            button.set_sensitive(false);
+            let p = popover.downgrade();
+            button.connect_clicked(move |_| {
+                if let Some(p) = p.upgrade() {
+                    p.popdown();
+                }
+            });
+            popover.add_child(&button, custom);
+            let backend = self.backend.clone();
+            let weak = button.downgrade();
+            let duplicates = custom == "dedupe";
+            glib::spawn_future_local(async move {
+                let Ok(counts) = backend.query(move |l| l.playlist_cleanup(key)).await else {
+                    return;
+                };
+                let n = if duplicates {
+                    counts.duplicates
+                } else {
+                    counts.missing
+                };
+                if let Some(button) = weak.upgrade() {
+                    if let Some(count) = button
+                        .child()
+                        .and_then(|c| c.last_child())
+                        .and_downcast::<gtk::Label>()
+                    {
+                        count.set_text(&n.to_string());
+                    }
+                    button.set_sensitive(n > 0 && !locked);
+                }
+            });
+        }
+        more.set_popover(Some(&popover));
     }
 
     fn play_from(&self, start: usize, shuffle: bool) {
@@ -831,11 +1197,21 @@ impl PlaylistView {
             .as_ref()
             .map(|i| i.name.clone())
             .unwrap_or_default();
-        self.backend.send(PlayerRequest::PlayTracks {
-            tracks: playable.into_iter().map(|(_, k)| k).collect(),
-            start,
-            title,
-            shuffle,
+        let tracks = playable.into_iter().map(|(_, k)| k).collect();
+        self.backend.send(match self.key.get() {
+            Some(key) => PlayerRequest::PlayPlaylist {
+                key,
+                tracks,
+                start,
+                title,
+                shuffle,
+            },
+            None => PlayerRequest::PlayTracks {
+                tracks,
+                start,
+                title,
+                shuffle,
+            },
         });
     }
 
@@ -942,6 +1318,12 @@ impl PlaylistView {
         let target = self.target()?;
         let y = 36.0 * f64::from(from) + 18.0;
         actions::popup(&self.list, target, Some((140.0, y)))
+    }
+
+    /// Opens the more menu (for tests and screenshots).
+    pub(crate) fn demo_more_menu(&self) -> Option<gtk::Popover> {
+        self.more.popup();
+        self.more.popover()
     }
 
     /// Selects every entry.

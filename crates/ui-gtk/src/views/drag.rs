@@ -22,6 +22,11 @@ pub(crate) struct DraggedTracks {
     pub(crate) from_playlist: Option<(PlaylistKey, Vec<usize>)>,
 }
 
+/// A playlist or folder dragged in the sidebar, to move it into a folder.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, glib::Boxed)]
+#[boxed_type(name = "HkDraggedPlaylist")]
+pub(crate) struct DraggedPlaylist(pub(crate) PlaylistKey);
+
 impl DraggedTracks {
     /// A drag source on `widget` that carries what `content` gives when the
     /// drag starts (at the press position), or nothing to refuse it.

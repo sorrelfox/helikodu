@@ -69,6 +69,7 @@ pub use loudness::{
 pub use maintenance::{Trash, TrashError, Trashed};
 pub use media_kinds::FileSection;
 pub use play_keys::PlayKeys;
+pub use playlists::{CleanupCounts, FoundReport, Pin, PinTarget, PlaylistNode, PlaylistType};
 pub use playlists::{
     DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions, ImportReport, ItemContent,
     PlaylistError, PlaylistId, PlaylistItem, PlaylistItemId, PlaylistSummary,

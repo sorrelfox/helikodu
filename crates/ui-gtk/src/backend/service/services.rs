@@ -114,6 +114,7 @@ pub(super) fn follow_folders(service: &Service, initial_scan: bool) {
         return;
     };
     let settings = service.settings().get();
+    library.set_import_playlists(&settings.library);
     if settings.library.watch && !settings.library.folders.is_empty() {
         if let Err(e) = library.watch(&WatchSettings {
             library: settings.library.clone(),

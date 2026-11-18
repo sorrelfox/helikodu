@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Static playlists: creating, renaming, duplicating and deleting them, editing their
-//! items, and importing and exporting playlist files.
+//! Playlists: static playlists with their items, smart playlists defined by a query,
+//! and folders that hold both; importing and exporting playlist files, and picking up
+//! the playlist files found in the library folders.
 //!
 //! An item refers to a track's identity, so it follows the track through moves and
 //! renames and comes back with it when the track returns to the library. An item whose
@@ -12,11 +13,22 @@
 //!
 //! Every edit is one write job: one transaction, committed with `synchronous=FULL`, so
 //! a crash leaves a playlist as it was before or after the edit, never in between.
-//! Positions count from 0 without gaps.
+//! Positions count from 0 without gaps. An edit of a playlist's items, name or query
+//! first records the playlist as it was, so that it can be undone and redone; a
+//! locked playlist refuses edits of its items and query.
+//!
+//! A smart playlist keeps its query as printed text, sort keys and limit included, and
+//! its tracks are the query's tracks at the time they are read, so it follows the
+//! library as it changes.
 
 mod export;
+mod found;
+mod history;
 mod import;
 mod items;
+mod maintain;
+mod pins;
+mod smart;
 mod store;
 
 use std::fmt;
@@ -33,11 +45,21 @@ use crate::catalog::{IdentityId, TrackSummary};
 use crate::db::DbError;
 
 pub(crate) use export::{export_rows, write_atomically};
+pub use found::FoundReport;
+pub(crate) use found::{find_playlist_files, imported_sources, store_found};
+pub(crate) use history::history_step;
 pub(crate) use import::{imported_name, match_entries};
 pub(crate) use items::{
     append_tracks, dead_items, insert_tracks, item_page, move_items, remove_items,
 };
-pub(crate) use store::{create, delete, duplicate, insert_imported, playlist, playlists, rename};
+pub(crate) use maintain::{cleanup_counts, remove_duplicates, remove_missing, shuffle};
+pub use pins::{Pin, PinTarget};
+pub(crate) use pins::{pin, pins, unpin};
+pub(crate) use smart::{added_times, create_smart, set_query, smart_query, smart_tracks};
+pub(crate) use store::{
+    create, create_folder, delete, duplicate, insert_imported, move_to, playlist, playlist_tree,
+    playlists, rename, set_grouped, set_locked,
+};
 
 /// A playlist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -67,14 +89,31 @@ impl PlaylistItemId {
     }
 }
 
-/// A playlist as the sidebar lists it.
+/// What a row of the playlists is.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum PlaylistType {
+    /// A folder of playlists and folders.
+    Folder,
+    /// A playlist of items the user added, imported or ordered.
+    #[default]
+    Static,
+    /// A playlist whose tracks a query selects.
+    Smart,
+}
+
+/// A playlist or a folder as the sidebar lists it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlaylistSummary {
     /// The playlist.
     pub id: PlaylistId,
     /// Its name.
     pub name: String,
-    /// The number of items.
+    /// What it is.
+    pub kind: PlaylistType,
+    /// The folder it is in, if it is in one.
+    pub parent: Option<PlaylistId>,
+    /// The number of items: for a smart playlist the tracks its query selects now,
+    /// for a folder the playlists and folders directly in it.
     pub items: usize,
     /// The number of dead items: entries that name no track in the library.
     pub dead: usize,
@@ -84,6 +123,37 @@ pub struct PlaylistSummary {
     pub created: SystemTime,
     /// When it was last changed.
     pub modified: SystemTime,
+    /// Whether its items and query are locked against changes.
+    pub locked: bool,
+    /// Whether it is shown in groups by album.
+    pub grouped: bool,
+    /// The playlist file it was imported from because it was found in a library
+    /// folder; it is kept up to date with that file.
+    pub source: Option<PathBuf>,
+    /// Whether an edit can be undone.
+    pub can_undo: bool,
+    /// Whether an undone edit can be done again.
+    pub can_redo: bool,
+}
+
+/// A row of the tree of playlists and folders, in the order the sidebar shows it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlaylistNode {
+    /// The playlist or folder.
+    pub summary: PlaylistSummary,
+    /// How many folders it is in: 0 at the top.
+    pub depth: usize,
+}
+
+/// What the maintenance commands of a static playlist would remove.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CleanupCounts {
+    /// Items that repeat an earlier item: the same track, or the same path or URL of
+    /// an entry that names no track.
+    pub duplicates: usize,
+    /// Items that cannot play: entries that name no track in the library, and tracks
+    /// whose file is missing.
+    pub missing: usize,
 }
 
 /// One item of a playlist.
@@ -216,6 +286,19 @@ pub enum PlaylistError {
     /// The playlist is not a static playlist, so its items cannot be edited.
     #[error("playlist {0} is not a static playlist")]
     NotStatic(PlaylistId),
+    /// The playlist is not a smart playlist, so it has no query.
+    #[error("playlist {0} is not a smart playlist")]
+    NotSmart(PlaylistId),
+    /// The playlist is locked against changes.
+    #[error("playlist {0} is locked")]
+    Locked(PlaylistId),
+    /// The playlist cannot go into that folder: it is not a folder, or it is the
+    /// playlist itself or a folder inside it.
+    #[error("playlist {0} cannot go there")]
+    BadFolder(PlaylistId),
+    /// The query does not fit together.
+    #[error("the query cannot run: {0}")]
+    BadQuery(helikodu_model::query::TermProblem),
     /// The track is not in the library.
     #[error("there is no track {0} in the library")]
     UnknownTrack(TrackId),
@@ -249,6 +332,9 @@ pub enum PlaylistError {
 pub(crate) enum Refusal {
     UnknownPlaylist(PlaylistId),
     NotStatic(PlaylistId),
+    NotSmart(PlaylistId),
+    Locked(PlaylistId),
+    BadFolder(PlaylistId),
     UnknownTrack(TrackId),
     BadPosition { position: usize, len: usize },
 }
@@ -278,6 +364,9 @@ impl PlaylistError {
                     Ok(refusal) => match *refusal {
                         Refusal::UnknownPlaylist(id) => Self::UnknownPlaylist(id),
                         Refusal::NotStatic(id) => Self::NotStatic(id),
+                        Refusal::NotSmart(id) => Self::NotSmart(id),
+                        Refusal::Locked(id) => Self::Locked(id),
+                        Refusal::BadFolder(id) => Self::BadFolder(id),
                         Refusal::UnknownTrack(id) => Self::UnknownTrack(id),
                         Refusal::BadPosition { position, len } => {
                             Self::BadPosition { position, len }
@@ -303,8 +392,22 @@ pub(crate) fn check_name(name: &str) -> Result<String, PlaylistError> {
     }
 }
 
+/// `playlists.kind` of a folder.
+pub(crate) const FOLDER: i64 = 0;
 /// `playlists.kind` of a static playlist.
 pub(crate) const STATIC: i64 = 1;
+/// `playlists.kind` of a smart playlist.
+pub(crate) const SMART: i64 = 2;
+
+impl PlaylistType {
+    pub(crate) fn from_sql(kind: i64) -> Self {
+        match kind {
+            FOLDER => Self::Folder,
+            SMART => Self::Smart,
+            _ => Self::Static,
+        }
+    }
+}
 
 /// `playlist_items.ref_kind`: a path on this system.
 pub(crate) const REF_PATH: i64 = 0;

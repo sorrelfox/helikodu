@@ -27,6 +27,7 @@ impl Providers {
             "playmodes.css",
             "tools.css",
             "browse.css",
+            "playlists.css",
         ] {
             let provider = gtk::CssProvider::new();
             provider.load_from_resource(&format!("{}/style/{file}", crate::RESOURCE_BASE));

@@ -22,8 +22,8 @@ use crate::catalog::{CoverInfo, CoverLocation, Page};
 use crate::db::unix_time::{to_millis, to_unix_seconds};
 use crate::db::{Database, DatabaseConfig, DbError, LocaleCollation};
 use crate::playlists::{
-    self, ExportOptions, ExportReport, ImportOptions, ImportReport, PlaylistError, PlaylistId,
-    PlaylistItem, PlaylistSummary,
+    self, CleanupCounts, ExportOptions, ExportReport, FoundReport, ImportOptions, ImportReport,
+    Pin, PinTarget, PlaylistError, PlaylistId, PlaylistItem, PlaylistNode, PlaylistSummary,
 };
 use crate::scan::{self, CancelToken, ScanError, ScanEvent, ScanOptions, ScanSummary};
 use crate::search::{self, SearchRequest, SearchResults};
@@ -400,14 +400,246 @@ impl Library {
         self.playlist_write(move |c| playlists::remove_items(c, playlist, &positions, now))
     }
 
-    /// One page of the static playlists, in the order they were created.
+    /// One page of the static playlists that are not in a folder, in their order.
     pub fn playlists(&self, page: Page) -> Result<crate::Paged<PlaylistSummary>, DbError> {
-        self.db.read(|c| playlists::playlists(c, page))
+        let now = to_unix_seconds(SystemTime::now());
+        self.db.read(|c| playlists::playlists(c, page, now))
     }
 
-    /// The static playlist `playlist`, if there is one.
+    /// The playlist or folder `playlist`, if there is one. The count and length of a
+    /// smart playlist are those of the tracks its query selects now.
     pub fn playlist(&self, playlist: PlaylistId) -> Result<Option<PlaylistSummary>, DbError> {
-        self.db.read(|c| playlists::playlist(c, playlist))
+        let now = to_unix_seconds(SystemTime::now());
+        self.db.read(|c| playlists::playlist(c, playlist, now))
+    }
+
+    /// Every playlist and folder, each folder followed by what is in it, in the order
+    /// the sidebar shows them.
+    pub fn playlist_tree(&self) -> Result<Vec<PlaylistNode>, DbError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.db.read(|c| playlists::playlist_tree(c, now))
+    }
+
+    /// Creates an empty folder named `name` in `parent` (at the top for `None`),
+    /// after what is there.
+    pub fn create_playlist_folder(
+        &self,
+        name: &str,
+        parent: Option<PlaylistId>,
+    ) -> Result<PlaylistId, PlaylistError> {
+        let name = playlists::check_name(name)?;
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::create_folder(c, &name, parent, now))
+    }
+
+    /// Moves the playlist or folder `playlist` into the folder `parent` (the top for
+    /// `None`), at `position` among what is there, or after it. A folder cannot go
+    /// into itself or a folder inside it.
+    pub fn move_playlist(
+        &self,
+        playlist: PlaylistId,
+        parent: Option<PlaylistId>,
+        position: Option<usize>,
+    ) -> Result<(), PlaylistError> {
+        self.playlist_write(move |c| playlists::move_to(c, playlist, parent, position))
+    }
+
+    /// Locks the playlist against changes of its items and query, or unlocks it.
+    pub fn set_playlist_locked(
+        &self,
+        playlist: PlaylistId,
+        locked: bool,
+    ) -> Result<(), PlaylistError> {
+        self.playlist_write(move |c| playlists::set_locked(c, playlist, locked))
+    }
+
+    /// Shows the playlist in groups by album, or not.
+    pub fn set_playlist_grouped(
+        &self,
+        playlist: PlaylistId,
+        grouped: bool,
+    ) -> Result<(), PlaylistError> {
+        self.playlist_write(move |c| playlists::set_grouped(c, playlist, grouped))
+    }
+
+    /// Undoes the newest edit of the playlist's items, name or query. Returns whether
+    /// there was one. A locked playlist refuses.
+    pub fn undo_playlist(&self, playlist: PlaylistId) -> Result<bool, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::history_step(c, playlist, false, now))
+    }
+
+    /// Does the newest undone edit of the playlist again. Returns whether there was
+    /// one. A locked playlist refuses.
+    pub fn redo_playlist(&self, playlist: PlaylistId) -> Result<bool, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::history_step(c, playlist, true, now))
+    }
+
+    /// What removing the repeated items and the items that cannot play would remove
+    /// from the static playlist `playlist`.
+    pub fn playlist_cleanup_counts(
+        &self,
+        playlist: PlaylistId,
+    ) -> Result<CleanupCounts, PlaylistError> {
+        self.db
+            .read(|c| playlists::cleanup_counts(c, playlist))
+            .map_err(PlaylistError::from_job)
+    }
+
+    /// Removes the items of the static playlist `playlist` that repeat an earlier
+    /// one (the same track, or the same path or URL). Returns how many went.
+    pub fn remove_playlist_duplicates(&self, playlist: PlaylistId) -> Result<usize, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::remove_duplicates(c, playlist, now))
+    }
+
+    /// Removes the items of the static playlist `playlist` that cannot play: entries
+    /// that name no track, and tracks whose file is missing. Returns how many went.
+    pub fn remove_missing_from_playlist(
+        &self,
+        playlist: PlaylistId,
+    ) -> Result<usize, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::remove_missing(c, playlist, now))
+    }
+
+    /// Puts the items of the static playlist `playlist` in a random order that `seed`
+    /// chooses, for good.
+    pub fn shuffle_playlist(&self, playlist: PlaylistId, seed: u64) -> Result<(), PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::shuffle(c, playlist, seed, now))
+    }
+
+    /// Creates a smart playlist named `name` whose tracks `query` selects (its sort
+    /// keys and limit included), in the folder `parent` or at the top.
+    pub fn create_smart_playlist(
+        &self,
+        name: &str,
+        query: &helikodu_model::query::Query,
+        parent: Option<PlaylistId>,
+    ) -> Result<PlaylistId, PlaylistError> {
+        let name = playlists::check_name(name)?;
+        if let Some((_, problem)) = query.problem() {
+            return Err(PlaylistError::BadQuery(problem));
+        }
+        let text = crate::query::print_query(query);
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::create_smart(c, &name, &text, parent, now))
+    }
+
+    /// Replaces the query of the smart playlist `playlist`. The change can be undone;
+    /// a locked playlist refuses.
+    pub fn set_smart_playlist_query(
+        &self,
+        playlist: PlaylistId,
+        query: &helikodu_model::query::Query,
+    ) -> Result<(), PlaylistError> {
+        if let Some((_, problem)) = query.problem() {
+            return Err(PlaylistError::BadQuery(problem));
+        }
+        let text = crate::query::print_query(query);
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::set_query(c, playlist, &text, now))
+    }
+
+    /// The query of the smart playlist `playlist`.
+    pub fn smart_playlist_query(
+        &self,
+        playlist: PlaylistId,
+    ) -> Result<helikodu_model::query::Query, PlaylistError> {
+        self.db
+            .read(|c| playlists::smart_query(c, playlist))
+            .map_err(PlaylistError::from_job)
+    }
+
+    /// One page of the tracks the smart playlist `playlist` selects now, in its
+    /// order, with how many it selects in all.
+    pub fn smart_playlist_tracks(
+        &self,
+        playlist: PlaylistId,
+        page: Page,
+    ) -> Result<crate::Paged<crate::TrackSummary>, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.db
+            .read(|c| playlists::smart_tracks(c, playlist, page, now))
+            .map_err(PlaylistError::from_job)
+    }
+
+    /// When each of `tracks` came into the library, by track; a track that is not in
+    /// the library is left out.
+    pub fn added_times(
+        &self,
+        tracks: &[TrackId],
+    ) -> Result<std::collections::HashMap<TrackId, SystemTime>, DbError> {
+        self.db.read(|c| playlists::added_times(c, tracks))
+    }
+
+    /// Pins an album, an artist or a playlist to the sidebar, after the other pins.
+    pub fn pin(&self, target: PinTarget) -> Result<(), DbError> {
+        self.write(move |c| playlists::pin(c, target))
+    }
+
+    /// Unpins it. Returns whether it was pinned.
+    pub fn unpin(&self, target: PinTarget) -> Result<bool, DbError> {
+        self.write(move |c| playlists::unpin(c, target))
+    }
+
+    /// The pins, in their order. A pinned album, artist or playlist that has gone is
+    /// left out; an album that split or merged with another during a scan may have
+    /// a new id and so lose its pin.
+    pub fn pins(&self) -> Result<Vec<Pin>, DbError> {
+        self.db.read(playlists::pins)
+    }
+
+    /// Picks up the playlist files (M3U, M3U8, PLS, XSPF) in the library folders that
+    /// are connected, leaving out hidden folders and what `exclude` names: a file
+    /// not seen before becomes a static playlist that remembers it; a file that
+    /// changed since replaces the items of its playlist (an edit that can be undone)
+    /// unless the playlist is locked.
+    pub fn import_found_playlists(
+        &self,
+        exclude: &[crate::ExcludeRule],
+    ) -> Result<FoundReport, DbError> {
+        use helikodu_meta::playlists::{ParseOptions, read_playlist};
+        let roots: Vec<PathBuf> = self
+            .root_states()?
+            .into_iter()
+            .filter(|root| !root.masked)
+            .map(|root| root.path)
+            .collect();
+        let files = playlists::find_playlist_files(&roots, exclude);
+        let known = self.db.read(playlists::imported_sources)?;
+        let mut report = FoundReport::default();
+        for file in files {
+            let existing = known.get(&file.path);
+            match existing {
+                Some((_, Some(mtime), _)) if *mtime == file.mtime_ns => continue,
+                Some((_, _, true)) => continue,
+                _ => {}
+            }
+            let parsed = match read_playlist(&file.path, &ParseOptions::default()) {
+                Ok(parsed) => parsed,
+                Err(error) => {
+                    report.failed.push((file.path.clone(), error.to_string()));
+                    continue;
+                }
+            };
+            let name = playlists::imported_name(None, parsed.playlist.title.as_deref(), &file.path);
+            let (items, _) = self
+                .db
+                .read(|c| playlists::match_entries(c, &parsed, name.clone()))?;
+            let existing = existing.map(|(id, _, _)| *id);
+            let now = to_unix_seconds(SystemTime::now());
+            let written =
+                self.write(move |c| playlists::store_found(c, &file, &name, &items, existing, now));
+            match written {
+                Ok(_) if existing.is_some() => report.refreshed += 1,
+                Ok(_) => report.imported += 1,
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(report)
     }
 
     /// One page of the items of the static playlist `playlist`, in order. An item whose

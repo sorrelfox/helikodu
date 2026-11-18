@@ -28,6 +28,7 @@ mod history_export;
 mod info;
 mod kinds;
 mod location;
+mod playlists;
 mod query;
 mod service;
 mod source;
@@ -51,6 +52,7 @@ use std::collections::HashMap;
 pub use self::history_export::{ExportedListen, HistoryFormat, write_history};
 pub use self::info::{LibraryEntry, TagOrigin, TrackInfo, read_file_info};
 pub use self::location::{DATA_FOLDER, DATABASE_FILE, default_database_path};
+pub use self::playlists::{CleanupCounts, FoundReport, Pin, PinTarget, PlaylistNode, PlaylistType};
 pub use self::query::{
     ParsedQuery, QueryError, SavedSearchEntry, SyntaxError, SyntaxErrorKind, parse_query,
     parse_query_lenient, print_query,

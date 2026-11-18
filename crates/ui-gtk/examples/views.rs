@@ -56,6 +56,18 @@ fn steps() -> Vec<Step> {
             w.open_first_playlist();
             None
         }),
+        ("playlist-menu", |w| {
+            w.open_first_playlist();
+            w.demo_playlist_more_menu()
+        }),
+        ("smart-playlist-view", |w| {
+            w.open_playlist_named("Unrated hi-res", false);
+            None
+        }),
+        ("smart-playlist", |w| {
+            w.open_playlist_named("Unrated hi-res", true);
+            None
+        }),
         ("search", |w| {
             w.search_text("harbour");
             None

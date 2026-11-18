@@ -17,6 +17,8 @@ pub(crate) mod now_playing;
 pub(crate) mod placeholder;
 pub(crate) mod playlist;
 pub(crate) mod search;
+pub(crate) mod smart_playlist;
+pub(crate) mod smart_rules;
 pub(crate) mod table;
 pub(crate) mod tracks;
 

@@ -74,7 +74,7 @@ const KEPT_FROM: &str = "FROM json_each(?1) k
     LEFT JOIN albums a ON a.id = t.album_id";
 
 /// The tracks with the ids `ids`, in that order.
-fn summaries(c: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<TrackSummary>> {
+pub(crate) fn summaries(c: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<TrackSummary>> {
     let list: Vec<String> = ids.iter().map(i64::to_string).collect();
     let json = format!("[{}]", list.join(","));
     c.prepare_cached(&format!("SELECT {COLUMNS} {KEPT_FROM} ORDER BY k.key"))?

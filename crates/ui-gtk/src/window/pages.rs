@@ -17,7 +17,8 @@ use gtk::{gdk, gio, glib};
 use super::toast_overlay::ToastAction;
 use super::{MainWindow, Page};
 use crate::backend::{
-    ArtistKey, Backend, PlayerRequest, PlaylistKey, PlaylistRow, TrackKey, TrackRow,
+    ArtistKey, Backend, PinKey, PinRow, PlayerRequest, PlaylistKey, PlaylistRow, PlaylistType,
+    TrackKey, TrackRow,
 };
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
@@ -31,11 +32,12 @@ use crate::views::folders::FoldersView;
 use crate::views::genres::GenresView;
 use crate::views::playlist::PlaylistView;
 use crate::views::search::SearchView;
+use crate::views::smart_playlist::SmartPlaylistView;
 use crate::views::tracks::TracksView;
 
 /// The views and state of the library pages.
 pub(crate) struct Pages {
-    backend: Backend,
+    pub(super) backend: Backend,
     tracks: Rc<TracksView>,
     artists: Rc<ArtistsView>,
     genres: Rc<GenresView>,
@@ -43,6 +45,9 @@ pub(crate) struct Pages {
     years: Rc<CategoryView>,
     folders: Rc<FoldersView>,
     playlist: Rc<PlaylistView>,
+    pub(super) smart: Rc<SmartPlaylistView>,
+    pub(super) covers: Rc<CoverCache>,
+    pub(super) pins: RefCell<Vec<PinRow>>,
     search: Rc<SearchView>,
     search_entry: gtk::SearchEntry,
     completion: Rc<QueryCompletion>,
@@ -69,8 +74,13 @@ const NAMES: &[&str] = &[
 ];
 
 impl MainWindow {
-    fn pages(&self) -> Option<Rc<Pages>> {
+    pub(super) fn pages(&self) -> Option<Rc<Pages>> {
         self.imp().pages.borrow().clone()
+    }
+
+    /// The sidebar.
+    pub(super) fn imp_sidebar(&self) -> Option<Rc<super::sidebar::Sidebar>> {
+        self.imp().sidebar.borrow().clone()
     }
 
     pub(super) fn setup_pages(
@@ -105,6 +115,8 @@ impl MainWindow {
         );
         let folders = FoldersView::new(backend, playback);
         let playlist = PlaylistView::new(backend, playback, covers);
+        let smart = SmartPlaylistView::new(backend, covers);
+        smart.install_actions();
         let search = SearchView::new(backend, covers, playback);
         imp.views.add_named(&tracks.root, Some("tracks"));
         imp.views.add_named(&artists.root, Some("artists"));
@@ -113,6 +125,7 @@ impl MainWindow {
         imp.views.add_named(&years.root, Some("years"));
         imp.views.add_named(&folders.root, Some("folders"));
         imp.views.add_named(&playlist.root, Some("playlist"));
+        imp.views.add_named(&smart.root, Some("smart-playlist"));
         imp.views.add_named(&search.root, Some("search"));
         // Each page is as wide as it needs; a wide page must not widen the window.
         imp.views.set_hhomogeneous(false);
@@ -130,6 +143,9 @@ impl MainWindow {
             years,
             folders,
             playlist,
+            smart,
+            covers: covers.clone(),
+            pins: RefCell::new(Vec::new()),
             search,
             search_entry,
             completion,
@@ -184,7 +200,9 @@ impl MainWindow {
         self.install_page_actions();
         self.setup_drops(backend);
         self.setup_queue_menu();
+        self.install_playlist_actions();
         self.load_playlists(None);
+        self.load_pins();
     }
 
     /// The search entry of the content header.
@@ -302,7 +320,7 @@ impl MainWindow {
         pages.search.search(text);
     }
 
-    fn current_page(&self) -> Option<Page> {
+    pub(super) fn current_page(&self) -> Option<Page> {
         let imp = self.imp();
         imp.history.borrow().get(imp.index.get()).copied()
     }
@@ -387,8 +405,19 @@ impl MainWindow {
                 "folders".into()
             }
             Page::Playlist(key) => {
-                pages.playlist.show(key);
-                views.set_visible_child_name("playlist");
+                let smart = pages
+                    .playlists
+                    .borrow()
+                    .iter()
+                    .any(|p| p.key == key && p.kind == PlaylistType::Smart);
+                if smart {
+                    let editing = pages.smart.key() == Some(key) && pages.smart.is_editing();
+                    pages.smart.show(key, editing);
+                    views.set_visible_child_name("smart-playlist");
+                } else {
+                    pages.playlist.show(key);
+                    views.set_visible_child_name("playlist");
+                }
                 format!("playlist:{}", key.0)
             }
             Page::Search => {
@@ -410,6 +439,7 @@ impl MainWindow {
             "years" => pages.years.focus_target(),
             "folders" => pages.folders.focus_target(),
             "playlist" => pages.playlist.focus_target(),
+            "smart-playlist" => pages.smart.focus_target(),
             "search" => pages.search_entry.clone().upcast(),
             "history" => self.history_view()?.focus_target(),
             _ => return None,
@@ -426,13 +456,34 @@ impl MainWindow {
         pages.years.library_changed();
         pages.folders.library_changed();
         pages.playlist.reload();
+        pages.smart.reload();
         self.load_playlists(None);
+        self.load_pins();
     }
 
-    /// A sidebar row other than a library page: a playlist or "New playlist".
+    /// A sidebar row other than a library page: a playlist, a pin or "New
+    /// playlist".
     pub(super) fn open_sidebar_row(&self, name: &str) {
         if name == "new-playlist" {
-            self.new_playlist();
+            let row = self.imp_sidebar().and_then(|s| s.row(name));
+            match row {
+                Some(row) => {
+                    self.new_menu(row.upcast_ref());
+                    // The row only opens the menu; the page stays selected.
+                    let page = self.current_page();
+                    if let Some(sidebar) = self.imp_sidebar() {
+                        let selected = match page {
+                            Some(Page::Playlist(key)) => Some(format!("playlist:{}", key.0)),
+                            Some(Page::Library(name)) => Some(name.to_owned()),
+                            _ => None,
+                        };
+                        sidebar.select(selected.as_deref());
+                    }
+                }
+                None => self.new_playlist(),
+            }
+        } else if let Some(pin) = PinKey::from_row_name(name) {
+            self.open_pin(pin);
         } else if let Some(key) = name
             .strip_prefix("playlist:")
             .and_then(|k| k.parse::<u64>().ok())
@@ -483,6 +534,7 @@ impl MainWindow {
             Some("tracks") => pages.tracks.target(),
             Some("artists") => pages.artists.target(),
             Some("playlist") => pages.playlist.target(),
+            Some("smart-playlist") => pages.smart.target(),
             Some("folders") => pages.folders.target(),
             Some("search") => pages.search.target(),
             _ => None,
@@ -519,11 +571,16 @@ impl MainWindow {
     pub(crate) fn playlists_changed(&self, changed: Option<PlaylistKey>) {
         if let Some(pages) = self.pages()
             && changed.is_some()
-            && pages.playlist.key() == changed
         {
-            pages.playlist.reload();
+            if pages.playlist.key() == changed {
+                pages.playlist.reload();
+            }
+            if pages.smart.key() == changed {
+                pages.smart.reload();
+            }
         }
         self.load_playlists(None);
+        self.load_pins();
     }
 
     fn load_playlists(&self, then_rename: Option<PlaylistKey>) {
@@ -558,10 +615,24 @@ impl MainWindow {
                         window.drop_on_playlist(key, dragged, None);
                     }
                 });
+                let weak = window.downgrade();
+                sidebar.connect_folder_drop(move |key, folder| {
+                    if let Some(window) = weak.upgrade() {
+                        window.move_playlist_to(key, Some(folder));
+                    }
+                });
             }
+            let visible = window.imp().views.visible_child_name();
             if let Some(Page::Playlist(key)) = window.current_page()
-                && window.imp().views.visible_child_name().as_deref() == Some("playlist")
+                && matches!(visible.as_deref(), Some("playlist" | "smart-playlist"))
             {
+                // A playlist opened before the list came shows on its own page.
+                let smart = lists
+                    .iter()
+                    .any(|p| p.key == key && p.kind == PlaylistType::Smart);
+                if smart != (visible.as_deref() == Some("smart-playlist")) {
+                    window.go(Page::Playlist(key), false);
+                }
                 if lists.iter().any(|p| p.key == key) {
                     if let Some(sidebar) = window.imp().sidebar.borrow().as_ref() {
                         sidebar.select(Some(&format!("playlist:{}", key.0)));
@@ -637,13 +708,43 @@ impl MainWindow {
         });
     }
 
-    /// Asks for a new name of the playlist `key` on its page.
+    /// Asks for a new name of the playlist `key` on its page, or of a folder
+    /// beside its sidebar row.
     pub(crate) fn rename_playlist(&self, key: PlaylistKey) {
         let Some(pages) = self.pages() else { return };
-        if pages.playlist.key() != Some(key) {
-            self.go(Page::Playlist(key), true);
+        match self.playlist_row(key).map(|p| p.kind) {
+            Some(PlaylistType::Folder) => self.ask_folder_name(key),
+            Some(PlaylistType::Smart) => {
+                self.open_smart_playlist(key, pages.smart.is_editing());
+                let name = pages.smart.name_label();
+                let current = self.playlist_row(key).map(|p| p.name).unwrap_or_default();
+                let weak = self.downgrade();
+                super::playlists::ask_name(
+                    name.upcast_ref(),
+                    &current,
+                    &tr("Playlist name"),
+                    move |name| {
+                        if let Some(window) = weak.upgrade() {
+                            window.rename_quietly(key, name);
+                        }
+                    },
+                );
+            }
+            _ => {
+                if pages.playlist.key() != Some(key) {
+                    self.go(Page::Playlist(key), true);
+                }
+                pages.playlist.ask_name();
+            }
         }
-        pages.playlist.ask_name();
+    }
+
+    /// Opens the smart playlist `key`, viewing or editing its rules.
+    pub(crate) fn open_smart_playlist(&self, key: PlaylistKey, editing: bool) {
+        let Some(pages) = self.pages() else { return };
+        pages.smart.show(key, editing);
+        self.go(Page::Playlist(key), true);
+        self.imp().views.set_visible_child_name("smart-playlist");
     }
 
     /// Asks before deleting the playlist `key`.
@@ -654,9 +755,23 @@ impl MainWindow {
             .find(|p| p.key == key)
             .map(|p| p.name)
             .unwrap_or_default();
+        let folder = self
+            .playlist_row(key)
+            .is_some_and(|p| p.kind == PlaylistType::Folder);
+        let (message, detail) = if folder {
+            (
+                fill(&tr("Delete the folder “{}”?"), &[&name]),
+                tr("The playlists in it move up a level."),
+            )
+        } else {
+            (
+                fill(&tr("Delete the playlist “{}”?"), &[&name]),
+                tr("Its tracks stay in the library. This cannot be undone."),
+            )
+        };
         let dialog = gtk::AlertDialog::builder()
-            .message(fill(&tr("Delete the playlist “{}”?"), &[&name]))
-            .detail(tr("Its tracks stay in the library. This cannot be undone."))
+            .message(message)
+            .detail(detail)
             .buttons([tr("Cancel"), tr("Delete")])
             .cancel_button(0)
             .default_button(0)
@@ -876,6 +991,9 @@ impl MainWindow {
                     if let Some(toasts) = window.imp().toasts.borrow().as_ref() {
                         toasts.dismiss();
                     }
+                } else if let Some(key) = window.open_playlist_key() {
+                    // Without a toast to undo, the open playlist's last edit.
+                    window.step_playlist(key, false);
                 }
             })
             .build();
@@ -1067,43 +1185,6 @@ impl MainWindow {
     }
 
     /// The menu of a playlist row in the sidebar.
-    fn playlist_menu(&self, widget: &gtk::Widget, key: PlaylistKey) {
-        let group = gio::SimpleActionGroup::new();
-        let weak = self.downgrade();
-        for name in ["play", "rename", "export", "delete"] {
-            let action = gio::SimpleAction::new(name, None);
-            let weak = weak.clone();
-            action.connect_activate(move |action, _| {
-                let Some(window) = weak.upgrade() else { return };
-                match action.name().as_str() {
-                    "play" => window.play_playlist(key),
-                    "rename" => window.rename_playlist(key),
-                    "export" => window.export_playlist(key),
-                    _ => window.delete_playlist(key),
-                }
-            });
-            group.add_action(&action);
-        }
-        widget.insert_action_group("playlist", Some(&group));
-        let menu = gio::Menu::new();
-        menu.append(Some(&tr("Play")), Some("playlist.play"));
-        let edit = gio::Menu::new();
-        edit.append(Some(&tr("Rename…")), Some("playlist.rename"));
-        edit.append(Some(&tr("Export…")), Some("playlist.export"));
-        menu.append_section(None, &edit);
-        let delete = gio::Menu::new();
-        delete.append(Some(&tr("Delete…")), Some("playlist.delete"));
-        menu.append_section(None, &delete);
-        let popover = gtk::PopoverMenu::from_model(Some(&menu));
-        popover.set_parent(widget);
-        popover.set_has_arrow(false);
-        popover.connect_closed(|p| {
-            let p = p.clone();
-            glib::idle_add_local_once(move || p.unparent());
-        });
-        crate::views::actions::popup_when_built(&popover);
-    }
-
     /// Plays the playlist `key` from its start.
     pub(crate) fn play_playlist(&self, key: PlaylistKey) {
         let Some(backend) = self.backend() else {
@@ -1115,8 +1196,20 @@ impl MainWindow {
             .find(|p| p.key == key)
             .map(|p| p.name)
             .unwrap_or_default();
+        let smart = self
+            .playlist_row(key)
+            .is_some_and(|p| p.kind == PlaylistType::Smart);
         glib::spawn_future_local(async move {
-            let Ok(items) = backend.query(move |l| l.playlist_items(key)).await else {
+            let Ok(items) = backend
+                .query(move |l| {
+                    if smart {
+                        Ok(l.smart_tracks(key)?.into_iter().map(|t| t.row).collect())
+                    } else {
+                        l.playlist_items(key)
+                    }
+                })
+                .await
+            else {
                 return;
             };
             let tracks = items
@@ -1132,6 +1225,52 @@ impl MainWindow {
                 shuffle: false,
             });
         });
+    }
+
+    /// Opens the playlist named `name` (for tests and screenshots).
+    #[doc(hidden)]
+    pub fn open_playlist_named(&self, name: &str, editing: bool) -> bool {
+        let Some(row) = self.playlist_rows().into_iter().find(|p| p.name == name) else {
+            return false;
+        };
+        if row.kind == PlaylistType::Smart {
+            self.open_smart_playlist(row.key, editing);
+        } else {
+            self.open_playlist(row.key);
+        }
+        true
+    }
+
+    /// The chips of the open smart playlist's rule line and its query text,
+    /// and how many tracks it lists (for tests).
+    #[doc(hidden)]
+    pub fn smart_playlist_state(&self) -> (Vec<String>, String, usize) {
+        self.pages().map_or_else(Default::default, |p| {
+            let (chips, text) = p.smart.rule_texts();
+            (chips, text, p.smart.track_count())
+        })
+    }
+
+    /// Types query text into the open smart playlist's editor (for tests).
+    #[doc(hidden)]
+    pub fn smart_playlist_text(&self, text: &str) {
+        if let Some(pages) = self.pages() {
+            pages.smart.enter_text(text);
+        }
+    }
+
+    /// Opens the open playlist's more menu (for tests and screenshots).
+    #[doc(hidden)]
+    pub fn demo_playlist_more_menu(&self) -> Option<gtk::Popover> {
+        self.pages()?.playlist.demo_more_menu()
+    }
+
+    /// The names of the pinned rows (for tests).
+    #[doc(hidden)]
+    pub fn pin_names(&self) -> Vec<String> {
+        self.pages()
+            .map(|p| p.pins.borrow().iter().map(|p| p.name.clone()).collect())
+            .unwrap_or_default()
     }
 
     /// The search view (for tests).
@@ -1298,11 +1437,18 @@ impl MainWindow {
     /// Opens the first playlist (for tests and screenshots).
     #[doc(hidden)]
     pub fn open_first_playlist(&self) -> bool {
-        let first = self
+        // The sample's playlist with album groups and a missing entry, or
+        // the first static playlist.
+        let rows: Vec<PlaylistRow> = self
             .playlist_rows()
             .into_iter()
-            .nth(2)
-            .or_else(|| self.playlist_rows().into_iter().next());
+            .filter(|p| p.kind == PlaylistType::Static)
+            .collect();
+        let first = rows
+            .iter()
+            .find(|p| p.grouped || p.dead > 0)
+            .or(rows.first())
+            .cloned();
         match first {
             Some(row) => {
                 self.open_playlist(row.key);

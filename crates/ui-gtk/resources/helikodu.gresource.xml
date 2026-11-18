@@ -13,6 +13,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <file>style/playmodes.css</file>
     <file>style/tools.css</file>
     <file>style/browse.css</file>
+    <file>style/playlists.css</file>
     <file preprocess="xml-stripblanks">ui/albums.ui</file>
     <file preprocess="xml-stripblanks">ui/album.ui</file>
     <file preprocess="xml-stripblanks">ui/deck.ui</file>

@@ -44,8 +44,9 @@ use helikodu_service::library::{
     AlbumFilter as ServiceAlbumFilter, AlbumId, AlbumQuality, AlbumQuery as ServiceAlbumQuery,
     AlbumSort as ServiceAlbumSort, AlbumSummary, ArtistQuery, ArtistRole, ArtistSummary, CoverHash,
     GenreId, GenreQuery, ItemContent, LibraryEvent, LibraryService, MAX_PAGE, MusicLibrary, Page,
-    PersonId, PlaylistId, QueueItemInfo, SavedSearchId, Thumbnail, ThumbnailSize, TrackFilter,
-    TrackOrder, TrackSortKey, TrackSummary, parse_query_lenient,
+    PersonId, PinTarget, PlaylistId, PlaylistType as ServicePlaylistType, QueueItemInfo,
+    SavedSearchId, Thumbnail, ThumbnailSize, TrackFilter, TrackOrder, TrackSortKey, TrackSummary,
+    parse_query_lenient,
 };
 use helikodu_service::player::SleepWhen as ServiceSleepWhen;
 use helikodu_service::player::{
@@ -57,10 +58,11 @@ use super::{
     AlbumDetail, AlbumFilter, AlbumKey, AlbumQuery, AlbumRow, AlbumScope, AlbumSort, ArtistDetail,
     ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, ChapterRow, CoverKey, DiscGroup,
     FolderFile, FolderListing, FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts,
-    LibrarySource, MediaKind, NowPlaying, OutputInfo, PlaybackState, PlayerControl, PlayerRequest,
-    PlaylistKey, PlaylistRow, QueueSnapshot, Repeat, SavedSearchKey, SavedSearchRow, SearchResults,
-    SignalState, ThumbnailState, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope,
-    TrackSort, UiStateAccess, Update, YearRow,
+    LibrarySource, MediaKind, NowPlaying, OutputInfo, PinKey, PinRow, PlaybackState, PlayerControl,
+    PlayerRequest, PlaylistCleanup, PlaylistKey, PlaylistRow, PlaylistType, QueueSnapshot, Repeat,
+    SavedSearchKey, SavedSearchRow, SearchResults, SignalState, SmartTrack, ThumbnailState,
+    TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort, UiStateAccess, Update,
+    YearRow,
 };
 use crate::i18n::{fill, tr};
 
@@ -87,6 +89,18 @@ impl Default for ServiceOptions {
 
 fn error(e: impl std::fmt::Display) -> BackendError {
     BackendError(e.to_string())
+}
+
+fn playlist_key(id: PlaylistId) -> PlaylistKey {
+    PlaylistKey(u64::try_from(id.get()).unwrap_or(0))
+}
+
+fn playlist_type(kind: ServicePlaylistType) -> PlaylistType {
+    match kind {
+        ServicePlaylistType::Folder => PlaylistType::Folder,
+        ServicePlaylistType::Smart => PlaylistType::Smart,
+        _ => PlaylistType::Static,
+    }
 }
 
 fn album_key(id: AlbumId) -> AlbumKey {
@@ -429,6 +443,16 @@ impl ServiceLibrary {
             .get(&key)
             .copied()
             .ok_or_else(|| BackendError(tr("The playlist is gone.")))
+    }
+
+    fn pin_target(&self, key: PinKey) -> Result<PinTarget, BackendError> {
+        Ok(match key {
+            PinKey::Album(album) => {
+                PinTarget::Album(AlbumId::from_raw(i64::try_from(album.0).unwrap_or(-1)))
+            }
+            PinKey::Artist(artist) => PinTarget::Artist(person(artist)),
+            PinKey::Playlist(playlist) => PinTarget::Playlist(self.playlist_id(playlist)?),
+        })
     }
 
     fn library(&self) -> Result<&MusicLibrary, BackendError> {
@@ -884,12 +908,13 @@ impl LibrarySource for ServiceLibrary {
     }
 
     fn playlists(&self) -> Result<Vec<PlaylistRow>, BackendError> {
-        let lists = self.library()?.playlists().map_err(error)?;
+        let tree = self.library()?.playlist_tree().map_err(error)?;
         let mut ids = lock(&self.playlists);
-        Ok(lists
+        Ok(tree
             .iter()
-            .map(|p| {
-                let key = PlaylistKey(u64::try_from(p.id.get()).unwrap_or(0));
+            .map(|node| {
+                let p = &node.summary;
+                let key = playlist_key(p.id);
                 ids.insert(key, p.id);
                 PlaylistRow {
                     key,
@@ -897,6 +922,15 @@ impl LibrarySource for ServiceLibrary {
                     items: p.items,
                     duration: p.duration,
                     modified: Some(p.modified),
+                    kind: playlist_type(p.kind),
+                    parent: p.parent.map(playlist_key),
+                    depth: node.depth,
+                    locked: p.locked,
+                    grouped: p.grouped,
+                    from_file: p.source.is_some(),
+                    dead: p.dead,
+                    can_undo: p.can_undo,
+                    can_redo: p.can_redo,
                 }
             })
             .collect())
@@ -1012,6 +1046,207 @@ impl LibrarySource for ServiceLibrary {
             .export_playlist(id, path)
             .map(|r| r.entries)
             .map_err(error)
+    }
+
+    fn create_playlist_folder(
+        &self,
+        name: &str,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        let parent = parent.map(|p| self.playlist_id(p)).transpose()?;
+        let id = self
+            .library()?
+            .create_playlist_folder(name, parent)
+            .map_err(error)?;
+        let key = playlist_key(id);
+        lock(&self.playlists).insert(key, id);
+        Ok(key)
+    }
+
+    fn move_playlist(
+        &self,
+        key: PlaylistKey,
+        parent: Option<PlaylistKey>,
+        position: Option<usize>,
+    ) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        let parent = parent.map(|p| self.playlist_id(p)).transpose()?;
+        self.library()?
+            .move_playlist(id, parent, position)
+            .map_err(error)
+    }
+
+    fn duplicate_playlist(
+        &self,
+        key: PlaylistKey,
+        name: &str,
+    ) -> Result<PlaylistKey, BackendError> {
+        let id = self.playlist_id(key)?;
+        let copy = self
+            .library()?
+            .duplicate_playlist(id, name)
+            .map_err(error)?;
+        let key = playlist_key(copy);
+        lock(&self.playlists).insert(key, copy);
+        Ok(key)
+    }
+
+    fn set_playlist_locked(&self, key: PlaylistKey, locked: bool) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?
+            .set_playlist_locked(id, locked)
+            .map_err(error)
+    }
+
+    fn set_playlist_grouped(&self, key: PlaylistKey, grouped: bool) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?
+            .set_playlist_grouped(id, grouped)
+            .map_err(error)
+    }
+
+    fn undo_playlist(&self, key: PlaylistKey) -> Result<bool, BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?.undo_playlist(id).map_err(error)
+    }
+
+    fn redo_playlist(&self, key: PlaylistKey) -> Result<bool, BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?.redo_playlist(id).map_err(error)
+    }
+
+    fn playlist_cleanup(&self, key: PlaylistKey) -> Result<PlaylistCleanup, BackendError> {
+        let id = self.playlist_id(key)?;
+        let counts = self.library()?.playlist_cleanup_counts(id).map_err(error)?;
+        Ok(PlaylistCleanup {
+            duplicates: counts.duplicates,
+            missing: counts.missing,
+        })
+    }
+
+    fn remove_playlist_duplicates(&self, key: PlaylistKey) -> Result<usize, BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?
+            .remove_playlist_duplicates(id)
+            .map_err(error)
+    }
+
+    fn remove_missing_from_playlist(&self, key: PlaylistKey) -> Result<usize, BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?
+            .remove_missing_from_playlist(id)
+            .map_err(error)
+    }
+
+    fn shuffle_playlist(&self, key: PlaylistKey) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        let seed = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(1, |d| d.as_nanos() as u64);
+        self.library()?.shuffle_playlist(id, seed).map_err(error)
+    }
+
+    fn create_smart_playlist(
+        &self,
+        name: &str,
+        query: &Query,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        let parent = parent.map(|p| self.playlist_id(p)).transpose()?;
+        let id = self
+            .library()?
+            .create_smart_playlist(name, query, parent)
+            .map_err(error)?;
+        let key = playlist_key(id);
+        lock(&self.playlists).insert(key, id);
+        Ok(key)
+    }
+
+    fn set_smart_query(&self, key: PlaylistKey, query: &Query) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?
+            .set_smart_playlist_query(id, query)
+            .map_err(error)
+    }
+
+    fn smart_query(&self, key: PlaylistKey) -> Result<Query, BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?.smart_playlist_query(id).map_err(error)
+    }
+
+    fn smart_tracks(&self, key: PlaylistKey) -> Result<Vec<SmartTrack>, BackendError> {
+        /// The most tracks given in full, with their format and cover.
+        const FULL: usize = 2000;
+        let id = self.playlist_id(key)?;
+        let music = self.library()?;
+        let summaries = music.smart_playlist_tracks(id).map_err(error)?;
+        let ids: Vec<TrackId> = summaries.iter().map(|t| t.id).collect();
+        let added = music.added_times(&ids).map_err(error)?;
+        Ok(summaries
+            .iter()
+            .enumerate()
+            .map(|(i, track)| {
+                let brief = self.summary_row(track);
+                let row = if i < FULL {
+                    self.track_row(music, brief.key)
+                        .map(|mut row| {
+                            row.missing = brief.missing;
+                            row
+                        })
+                        .unwrap_or(brief)
+                } else {
+                    brief
+                };
+                SmartTrack {
+                    row,
+                    added: added.get(&track.id).copied(),
+                }
+            })
+            .collect())
+    }
+
+    fn query_match_count(&self, query: &Query) -> Result<(usize, usize), BackendError> {
+        self.library()?.query_match_count(query).map_err(error)
+    }
+
+    fn pins(&self) -> Result<Vec<PinRow>, BackendError> {
+        let pins = self.library()?.pins().map_err(error)?;
+        Ok(pins
+            .iter()
+            .map(|pin| {
+                let key = match pin.target {
+                    PinTarget::Album(id) => PinKey::Album(album_key(id)),
+                    PinTarget::Artist(id) => {
+                        PinKey::Artist(ArtistKey(u64::try_from(id.get()).unwrap_or(0)))
+                    }
+                    PinTarget::Playlist(id) => {
+                        let key = playlist_key(id);
+                        lock(&self.playlists).insert(key, id);
+                        PinKey::Playlist(key)
+                    }
+                };
+                PinRow {
+                    key,
+                    name: pin.name.clone(),
+                    cover: pin.cover.as_ref().map(cover_key),
+                    cover_seed: match key {
+                        PinKey::Album(album) => seed(album),
+                        _ => 0,
+                    },
+                    playlist: pin.playlist.map(playlist_type),
+                }
+            })
+            .collect())
+    }
+
+    fn pin(&self, key: PinKey) -> Result<(), BackendError> {
+        let target = self.pin_target(key)?;
+        self.library()?.pin(target).map_err(error)
+    }
+
+    fn unpin(&self, key: PinKey) -> Result<(), BackendError> {
+        let target = self.pin_target(key)?;
+        self.library()?.unpin(target).map(|_| ()).map_err(error)
     }
 
     fn folder_roots(&self) -> Result<Vec<FolderRow>, BackendError> {

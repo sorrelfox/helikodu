@@ -155,6 +155,7 @@ impl Service {
         // The library follows `[library.duplicates]`, now and when it changes.
         if let Some(library) = &library {
             library.apply_duplicate_settings(&current.library);
+            library.set_import_playlists(&current.library);
         }
         let mut session = SessionConfig::new(&dirs.state);
         session.restore = current.playback.on_start == StartAction::Restore;

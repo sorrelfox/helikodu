@@ -24,7 +24,9 @@
 | Ctrl+J | Jump to the playing track |
 | Alt+Return | Track properties: opens the [tag editor](tags.md) for the selected tracks |
 | Ctrl+A | Select all |
-| Ctrl+Z | Undo, while a toast offers it |
+| Ctrl+Z | Undo, while a toast offers it; in a playlist, undo its last change |
+| Ctrl+Shift+Z, Ctrl+Y | Redo the last undone change of a playlist |
+| F2 | Rename the open playlist |
 | Ctrl+N | New playlist |
 | Delete | Remove the selected tracks from the queue or playlist |
 | Menu, Shift+F10 | Open the right-click menu of the selection |

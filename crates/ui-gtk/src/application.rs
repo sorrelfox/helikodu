@@ -170,6 +170,7 @@ pub fn install_actions(application: &gtk::Application, backend: &Backend) {
         ("win.track-properties", &["<Alt>Return"]),
         ("win.track-copies", &["<Alt>c"]),
         ("win.undo", &["<Control>z"]),
+        ("win.redo", &["<Control><Shift>z", "<Control>y"]),
         ("win.select-all", &["<Control>a"]),
         ("app.new-playlist", &["<Control>n"]),
         ("app.loop-start", &["<Control>bracketleft"]),

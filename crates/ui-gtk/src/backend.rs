@@ -397,19 +397,61 @@ pub struct TrackQuery {
     pub sort: Vec<TrackSort>,
 }
 
-/// A static playlist in the sidebar.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// What a row of the playlists is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum PlaylistType {
+    /// A folder of playlists.
+    Folder,
+    /// A playlist of entries put in by hand or imported.
+    #[default]
+    Static,
+    /// A playlist whose tracks rules select.
+    Smart,
+}
+
+/// A playlist or a playlist folder in the sidebar, in the sidebar's order:
+/// each folder is followed by what is in it.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PlaylistRow {
     /// The playlist.
     pub key: PlaylistKey,
     /// Its name.
     pub name: String,
-    /// The number of its entries.
+    /// The number of its entries (of a folder: what is in it).
     pub items: usize,
     /// The length of its entries.
     pub duration: Duration,
     /// When it last changed.
     pub modified: Option<SystemTime>,
+    /// What it is.
+    pub kind: PlaylistType,
+    /// The folder it is in.
+    pub parent: Option<PlaylistKey>,
+    /// How many folders it is in.
+    pub depth: usize,
+    /// Whether its entries are locked against changes.
+    pub locked: bool,
+    /// Whether it shows its entries in groups by album.
+    pub grouped: bool,
+    /// Whether it follows a playlist file found in a library folder.
+    pub from_file: bool,
+    /// The entries that name no track in the library.
+    pub dead: usize,
+    /// Whether an edit can be undone.
+    pub can_undo: bool,
+    /// Whether an undone edit can be done again.
+    pub can_redo: bool,
+}
+
+/// Something pinned to the sidebar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PinKey {
+    /// An album.
+    Album(AlbumKey),
+    /// An artist.
+    Artist(ArtistKey),
+    /// A playlist.
+    Playlist(PlaylistKey),
 }
 
 /// A saved search, as the side column of the search page lists it.
@@ -424,6 +466,66 @@ pub struct SavedSearchRow {
     /// How many tracks it finds now.
     pub count: usize,
 }
+
+impl PinKey {
+    /// The name of its sidebar row.
+    pub fn row_name(self) -> String {
+        match self {
+            Self::Album(k) => format!("pin:album:{}", k.0),
+            Self::Artist(k) => format!("pin:artist:{}", k.0),
+            Self::Playlist(k) => format!("pin:playlist:{}", k.0),
+        }
+    }
+
+    /// The pin a sidebar row name stands for.
+    pub fn from_row_name(name: &str) -> Option<Self> {
+        let rest = name.strip_prefix("pin:")?;
+        let (kind, id) = rest.split_once(':')?;
+        let id: u64 = id.parse().ok()?;
+        Some(match kind {
+            "album" => Self::Album(AlbumKey(id)),
+            "artist" => Self::Artist(ArtistKey(id)),
+            "playlist" => Self::Playlist(PlaylistKey(id)),
+            _ => return None,
+        })
+    }
+}
+
+/// A pinned row of the sidebar.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PinRow {
+    /// What is pinned.
+    pub key: PinKey,
+    /// Its name.
+    pub name: String,
+    /// The cover of an album.
+    pub cover: Option<CoverKey>,
+    /// The seed of an album's generated cover.
+    pub cover_seed: u64,
+    /// What a pinned playlist is.
+    pub playlist: Option<PlaylistType>,
+}
+
+/// What the tidying commands of a playlist would remove.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct PlaylistCleanup {
+    /// Entries that repeat an earlier one.
+    pub duplicates: usize,
+    /// Entries that cannot play.
+    pub missing: usize,
+}
+
+/// A track a smart playlist selects, with when it came into the library.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SmartTrack {
+    /// The track.
+    pub row: TrackRow,
+    /// When it was added.
+    pub added: Option<SystemTime>,
+}
+
+/// The query tree that smart playlists keep, and its text form.
+pub use helikodu_model::query::Query;
 
 /// What a search found.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -543,7 +645,8 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     fn search(&self, text: &str) -> Result<SearchResults, BackendError>;
     /// Sets the rating of `track` in whole stars, or clears it.
     fn set_rating(&self, track: TrackKey, stars: Option<u8>) -> Result<(), BackendError>;
-    /// The static playlists, in the order they were made.
+    /// The playlists and folders in the sidebar's order: each folder followed
+    /// by what is in it.
     fn playlists(&self) -> Result<Vec<PlaylistRow>, BackendError>;
     /// The entries of a playlist, in order; each `entry` is its position.
     fn playlist_items(&self, key: PlaylistKey) -> Result<Vec<TrackRow>, BackendError>;
@@ -579,6 +682,120 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     /// M3U, PLS or XSPF; M3U8 for any other); returns the number of entries
     /// written.
     fn export_playlist(&self, key: PlaylistKey, path: &Path) -> Result<usize, BackendError>;
+    /// Makes an empty folder in `parent`, or at the top.
+    fn create_playlist_folder(
+        &self,
+        name: &str,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        let _ = (name, parent);
+        Err(unsupported())
+    }
+    /// Moves a playlist or folder into `parent` (the top for `None`) at
+    /// `position`, or after what is there.
+    fn move_playlist(
+        &self,
+        key: PlaylistKey,
+        parent: Option<PlaylistKey>,
+        position: Option<usize>,
+    ) -> Result<(), BackendError> {
+        let _ = (key, parent, position);
+        Err(unsupported())
+    }
+    /// Copies a playlist into a new playlist named `name`; the copy of a smart
+    /// playlist holds the tracks it selects now.
+    fn duplicate_playlist(
+        &self,
+        key: PlaylistKey,
+        name: &str,
+    ) -> Result<PlaylistKey, BackendError> {
+        let _ = (key, name);
+        Err(unsupported())
+    }
+    /// Locks a playlist against changes, or unlocks it.
+    fn set_playlist_locked(&self, key: PlaylistKey, locked: bool) -> Result<(), BackendError> {
+        let _ = (key, locked);
+        Err(unsupported())
+    }
+    /// Shows a playlist in groups by album, or not.
+    fn set_playlist_grouped(&self, key: PlaylistKey, grouped: bool) -> Result<(), BackendError> {
+        let _ = (key, grouped);
+        Err(unsupported())
+    }
+    /// Undoes the last edit of a playlist; whether there was one.
+    fn undo_playlist(&self, key: PlaylistKey) -> Result<bool, BackendError> {
+        let _ = key;
+        Ok(false)
+    }
+    /// Does the last undone edit of a playlist again; whether there was one.
+    fn redo_playlist(&self, key: PlaylistKey) -> Result<bool, BackendError> {
+        let _ = key;
+        Ok(false)
+    }
+    /// What removing duplicates and missing tracks would remove.
+    fn playlist_cleanup(&self, key: PlaylistKey) -> Result<PlaylistCleanup, BackendError> {
+        let _ = key;
+        Ok(PlaylistCleanup::default())
+    }
+    /// Removes the entries that repeat an earlier one; how many went.
+    fn remove_playlist_duplicates(&self, key: PlaylistKey) -> Result<usize, BackendError> {
+        let _ = key;
+        Err(unsupported())
+    }
+    /// Removes the entries that cannot play; how many went.
+    fn remove_missing_from_playlist(&self, key: PlaylistKey) -> Result<usize, BackendError> {
+        let _ = key;
+        Err(unsupported())
+    }
+    /// Shuffles the order of a playlist for good.
+    fn shuffle_playlist(&self, key: PlaylistKey) -> Result<(), BackendError> {
+        let _ = key;
+        Err(unsupported())
+    }
+    /// Makes a smart playlist of the tracks `query` selects.
+    fn create_smart_playlist(
+        &self,
+        name: &str,
+        query: &Query,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        let _ = (name, query, parent);
+        Err(unsupported())
+    }
+    /// Replaces the rules of a smart playlist.
+    fn set_smart_query(&self, key: PlaylistKey, query: &Query) -> Result<(), BackendError> {
+        let _ = (key, query);
+        Err(unsupported())
+    }
+    /// The rules of a smart playlist.
+    fn smart_query(&self, key: PlaylistKey) -> Result<Query, BackendError> {
+        let _ = key;
+        Err(unsupported())
+    }
+    /// The tracks a smart playlist selects now, in its order.
+    fn smart_tracks(&self, key: PlaylistKey) -> Result<Vec<SmartTrack>, BackendError> {
+        let _ = key;
+        Ok(Vec::new())
+    }
+    /// How many tracks `query` selects, and how many there are in all.
+    fn query_match_count(&self, query: &Query) -> Result<(usize, usize), BackendError> {
+        let _ = query;
+        Ok((0, 0))
+    }
+    /// What is pinned to the sidebar, in order.
+    fn pins(&self) -> Result<Vec<PinRow>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// Pins an album, an artist or a playlist to the sidebar.
+    fn pin(&self, key: PinKey) -> Result<(), BackendError> {
+        let _ = key;
+        Err(unsupported())
+    }
+    /// Unpins it.
+    fn unpin(&self, key: PinKey) -> Result<(), BackendError> {
+        let _ = key;
+        Err(unsupported())
+    }
     /// The library folders.
     fn folder_roots(&self) -> Result<Vec<FolderRow>, BackendError>;
     /// The folders in `path`, by name.
@@ -752,6 +969,11 @@ impl Default for HistoryTotals {
             play_minutes: 4,
         }
     }
+}
+
+/// The error of a backend that cannot do something.
+fn unsupported() -> BackendError {
+    BackendError(crate::i18n::tr("This is not available here."))
 }
 
 /// The window state kept between runs.

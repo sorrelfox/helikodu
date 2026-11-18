@@ -23,6 +23,7 @@ use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::settings::{LibrarySettings, Settings};
 
 use super::duplicates::DuplicateApplier;
+use super::playlists::PlaylistFinder;
 use super::{
     AlbumDetail, AlbumId, AlbumQuery, AlbumSummary, ArtistQuery, ArtistSummary, GenreQuery,
     GenreSummary, LibraryError, LibraryOverview, MusicLibrary, Paged, ScanRequest, SearchPage,
@@ -162,8 +163,9 @@ pub struct LibraryService {
     watcher: Mutex<Option<RunningWatcher>>,
     loudness: Mutex<Option<LoudnessJob>>,
     duplicates: DuplicateApplier,
-    bus: EventBus<Event>,
+    pub(super) bus: EventBus<Event>,
     worker_program: Option<PathBuf>,
+    pub(super) finder: PlaylistFinder,
 }
 
 impl std::fmt::Debug for LibraryService {
@@ -221,7 +223,9 @@ impl LibraryService {
         };
         let duplicates =
             DuplicateApplier::start(library.clone(), bus.clone(), options.worker_program.clone());
+        let finder = PlaylistFinder::new(library.clone());
         Ok(Self {
+            finder,
             library,
             jobs: Some(jobs),
             worker: Some(worker),
@@ -506,9 +510,10 @@ impl LibraryService {
         let cancel = Arc::new(AtomicBool::new(false));
         let stop = Arc::clone(&cancel);
         let bus = self.bus.clone();
+        let finder = self.finder.clone();
         let thread = thread::Builder::new()
             .name("helikodu-scan-events".into())
-            .spawn(move || forward_scan(handle, &stop, &bus))
+            .spawn(move || forward_scan(handle, &stop, &bus, &finder))
             .map_err(|source| LibraryError::Io {
                 context: "cannot start the scan".into(),
                 source,
@@ -575,9 +580,10 @@ impl LibraryService {
             })?;
         let (control, messages) = mpsc::channel();
         let bus = self.bus.clone();
+        let finder = self.finder.clone();
         let thread = thread::Builder::new()
             .name("helikodu-watch-events".into())
-            .spawn(move || forward_watch(watcher, &messages, &bus))
+            .spawn(move || forward_watch(watcher, &messages, &bus, &finder))
             .map_err(|source| LibraryError::Io {
                 context: "cannot start watching the library folders".into(),
                 source,
@@ -631,7 +637,12 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-fn forward_scan(handle: ScanHandle, cancel: &AtomicBool, bus: &EventBus<Event>) {
+fn forward_scan(
+    handle: ScanHandle,
+    cancel: &AtomicBool,
+    bus: &EventBus<Event>,
+    finder: &PlaylistFinder,
+) {
     let mut cancelled = false;
     loop {
         if !cancelled && cancel.load(Ordering::SeqCst) {
@@ -645,11 +656,19 @@ fn forward_scan(handle: ScanHandle, cancel: &AtomicBool, bus: &EventBus<Event>) 
         }
     }
     let result = handle.join().map_err(|error| error.to_string());
+    if result.is_ok() {
+        finder.after_scan();
+    }
     bus.publish(&Event::Library(LibraryEvent::ScanEnded(result)));
     bus.publish(&Event::Library(LibraryEvent::Changed));
 }
 
-fn forward_watch(watcher: Watcher, control: &mpsc::Receiver<WatchControl>, bus: &EventBus<Event>) {
+fn forward_watch(
+    watcher: Watcher,
+    control: &mpsc::Receiver<WatchControl>,
+    bus: &EventBus<Event>,
+    finder: &PlaylistFinder,
+) {
     loop {
         match control.try_recv() {
             Ok(WatchControl::Rescan(folder)) => watcher.rescan(folder),
@@ -666,6 +685,9 @@ fn forward_watch(watcher: Watcher, control: &mpsc::Receiver<WatchControl>, bus: 
                         | WatchEvent::RootMasked { .. }
                         | WatchEvent::RootUnmasked { .. }
                 );
+                if matches!(event, WatchEvent::RescanFinished { .. }) {
+                    finder.after_scan();
+                }
                 bus.publish(&Event::Library(LibraryEvent::Watch(event)));
                 if changed {
                     bus.publish(&Event::Library(LibraryEvent::Changed));

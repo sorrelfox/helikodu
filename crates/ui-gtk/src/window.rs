@@ -15,6 +15,7 @@ pub(crate) mod pages;
 pub(crate) mod pane_handle;
 pub(crate) mod panel;
 pub(crate) mod play_modes;
+pub(crate) mod playlists;
 pub(crate) mod sidebar;
 pub(crate) mod toast_overlay;
 

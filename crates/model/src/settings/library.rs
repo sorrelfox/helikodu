@@ -21,6 +21,7 @@ use super::{SettingsError, check_range};
 /// include_video = false
 /// hide_missing_drives = true
 /// missing_grace_days = 30        # a missing track leaves the library after this
+/// import_playlists = false       # pick up playlist files found in the folders
 ///
 /// [library.duplicates]
 /// on_scan = "add"                # or "skip": copies get no tracks of their own
@@ -56,6 +57,9 @@ pub struct LibrarySettings {
     /// How many days (1 to 3650) a track whose file disappeared stays in the
     /// library, in case it comes back.
     pub missing_grace_days: u32,
+    /// Whether playlist files (M3U, M3U8, PLS, XSPF) found in the library folders
+    /// become playlists that follow their files.
+    pub import_playlists: bool,
     /// How copies (byte-identical files) are treated.
     pub duplicates: DuplicateSettings,
     /// Size limits of the caches and stores.
@@ -73,6 +77,7 @@ impl Default for LibrarySettings {
             include_video: false,
             hide_missing_drives: true,
             missing_grace_days: 30,
+            import_playlists: false,
             duplicates: DuplicateSettings::default(),
             storage: StorageLimits::default(),
         }

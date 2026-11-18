@@ -276,7 +276,7 @@ fn scanning(context: &Rc<Context>) -> gtk::Box {
     let column = gtk::Box::new(gtk::Orientation::Vertical, 12);
     let settings = context.settings();
     type Set = fn(&mut crate::backend::services::Settings, bool);
-    let rows: [(String, String, bool, Set); 4] = [
+    let rows: [(String, String, bool, Set); 5] = [
         (
             tr("Watch the folders for changes"),
             tr("New and changed files appear on their own."),
@@ -300,6 +300,12 @@ fn scanning(context: &Rc<Context>) -> gtk::Box {
             tr("They return with their ratings and play counts when the drive is back."),
             settings.library.hide_missing_drives,
             |s, on| s.library.hide_missing_drives = on,
+        ),
+        (
+            tr("Import playlist files found in the folders"),
+            tr("M3U, PLS and XSPF files become playlists that follow their files."),
+            settings.library.import_playlists,
+            |s, on| s.library.import_playlists = on,
         ),
     ];
     for (title, explanation, value, set) in rows {

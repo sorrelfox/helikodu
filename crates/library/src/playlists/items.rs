@@ -10,7 +10,8 @@
 use helikodu_model::library::TrackId;
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
-use super::store::{check_static, touch};
+use super::history::record;
+use super::store::{check_editable, check_static, touch};
 use super::{
     DeadItem, DeadReference, ItemContent, NewItem, PlaylistId, PlaylistItem, PlaylistItemId,
     REF_FOREIGN, REF_PATH, REF_URL, Refusal,
@@ -89,7 +90,7 @@ pub(crate) fn insert_rows(
 
 /// The items for `tracks`, with what is known of each now; refuses a track that is not
 /// in the library.
-fn track_rows(c: &Connection, tracks: &[TrackId]) -> rusqlite::Result<Vec<NewItem>> {
+pub(crate) fn track_rows(c: &Connection, tracks: &[TrackId]) -> rusqlite::Result<Vec<NewItem>> {
     let mut query = c.prepare_cached(
         "SELECT t.identity_id, d.path, f.name, t.title, t.artist, a.title, t.duration_ms
          FROM tracks t JOIN files f ON f.id = t.file_id JOIN dirs d ON d.id = f.dir_id
@@ -127,8 +128,9 @@ pub(crate) fn append_tracks(
     tracks: &[TrackId],
     now: i64,
 ) -> rusqlite::Result<usize> {
-    check_static(c, playlist)?;
+    check_editable(c, playlist)?;
     let at = len(c, playlist)?;
+    record(c, playlist, now)?;
     insert_rows(c, playlist, at, &track_rows(c, tracks)?)?;
     touch(c, playlist, now)?;
     Ok(at)
@@ -142,7 +144,7 @@ pub(crate) fn insert_tracks(
     tracks: &[TrackId],
     now: i64,
 ) -> rusqlite::Result<()> {
-    check_static(c, playlist)?;
+    check_editable(c, playlist)?;
     let n = len(c, playlist)?;
     if at > n {
         return Refusal::BadPosition {
@@ -151,12 +153,13 @@ pub(crate) fn insert_tracks(
         }
         .raise();
     }
+    record(c, playlist, now)?;
     insert_rows(c, playlist, at, &track_rows(c, tracks)?)?;
     touch(c, playlist, now)
 }
 
 /// The ids of the items of `playlist` in order.
-fn item_ids(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<Vec<i64>> {
+pub(crate) fn item_ids(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<Vec<i64>> {
     c.prepare_cached("SELECT id FROM playlist_items WHERE playlist_id = ?1 ORDER BY position")?
         .query_map([playlist.0], |row| row.get(0))?
         .collect()
@@ -187,7 +190,7 @@ pub(crate) fn move_items(
     to: usize,
     now: i64,
 ) -> rusqlite::Result<usize> {
-    check_static(c, playlist)?;
+    check_editable(c, playlist)?;
     let ids = item_ids(c, playlist)?;
     let moving = checked(positions, ids.len())?;
     if to > ids.len() {
@@ -222,6 +225,7 @@ pub(crate) fn move_items(
             .zip(&ids)
             .rposition(|(a, b)| a != b)
             .map_or(start, |e| e + 1);
+        record(c, playlist, now)?;
         // Only the span that changed is rewritten.
         renumber(c, playlist, start, end, &order[start..end])?;
         touch(c, playlist, now)?;
@@ -231,7 +235,7 @@ pub(crate) fn move_items(
 
 /// Gives the items `ids` the positions `start..`. They are the items now between
 /// `start` and `end`.
-fn renumber(
+pub(crate) fn renumber(
     c: &Connection,
     playlist: PlaylistId,
     start: usize,
@@ -257,12 +261,13 @@ pub(crate) fn remove_items(
     positions: &[usize],
     now: i64,
 ) -> rusqlite::Result<usize> {
-    check_static(c, playlist)?;
+    check_editable(c, playlist)?;
     let ids = item_ids(c, playlist)?;
     let removing = checked(positions, ids.len())?;
     let Some(&first) = removing.first() else {
         return Ok(0);
     };
+    record(c, playlist, now)?;
     let mut delete = c.prepare_cached("DELETE FROM playlist_items WHERE id = ?1")?;
     for &position in &removing {
         delete.execute([ids[position]])?;
@@ -280,19 +285,20 @@ pub(crate) fn remove_items(
 
 /// The columns of an item: the item `i`, its track `t` (the first track with its
 /// identity), the track's file `f` and album `a`.
-const ITEM: &str = "i.id, i.position, i.identity_id, i.ref_kind, i.missing_ref, i.title, i.artist,
+pub(crate) const ITEM: &str =
+    "i.id, i.position, i.identity_id, i.ref_kind, i.missing_ref, i.title, i.artist,
     i.album, i.duration_ms,
     t.id, t.title, t.artist, t.album_id, a.title, t.disc_no, t.track_no, t.duration_ms, t.year,
     t.kind, t.section, t.sub_index, f.missing_since IS NOT NULL, t.copies";
 
-const ITEM_FROM: &str = "FROM playlist_items i
+pub(crate) const ITEM_FROM: &str = "FROM playlist_items i
     LEFT JOIN tracks t ON t.id = (SELECT t2.id FROM tracks t2 JOIN files f2 ON f2.id = t2.file_id
         WHERE t2.identity_id = i.identity_id
         ORDER BY f2.missing_since IS NOT NULL, t2.is_copy, t2.id LIMIT 1)
     LEFT JOIN files f ON f.id = t.file_id
     LEFT JOIN albums a ON a.id = t.album_id";
 
-fn item(row: &Row<'_>) -> rusqlite::Result<PlaylistItem> {
+pub(crate) fn item(row: &Row<'_>) -> rusqlite::Result<PlaylistItem> {
     let id = PlaylistItemId(row.get(0)?);
     let position = usize::try_from(row.get::<_, i64>(1)?).unwrap_or(0);
     let content = match row.get::<_, Option<i64>>(9)? {

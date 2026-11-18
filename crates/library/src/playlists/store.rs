@@ -1,26 +1,68 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The `playlists` rows: creating, renaming, duplicating, deleting and listing.
+//! The `playlists` rows: creating, renaming, duplicating, moving, locking and deleting
+//! playlists and folders, and listing them.
+
+use std::collections::HashMap;
 
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
-use super::items::insert_rows;
-use super::{NewItem, PlaylistId, PlaylistSummary, Refusal, STATIC};
+use super::history::record;
+use super::items::{insert_rows, track_rows};
+use super::smart::{self, smart_track_ids};
+use super::{
+    FOLDER, NewItem, PlaylistId, PlaylistNode, PlaylistSummary, PlaylistType, Refusal, SMART,
+    STATIC,
+};
 use crate::catalog::{Page, Paged};
 use crate::db::unix_time::{from_millis, from_unix_seconds};
+use crate::db::{path_from_blob, path_to_blob};
 
-/// A new, empty static playlist named `name`, after the others. `now` is in seconds
-/// since the Unix epoch.
-pub(crate) fn create(c: &Connection, name: &str, now: i64) -> rusqlite::Result<PlaylistId> {
+/// The next position among the children of `parent` (the top for `None`).
+fn next_position(c: &Connection, parent: Option<PlaylistId>) -> rusqlite::Result<i64> {
+    c.prepare_cached("SELECT coalesce(max(position), -1) + 1 FROM playlists WHERE parent_id IS ?1")?
+        .query_row([parent.map(|p| p.0)], |row| row.get(0))
+}
+
+/// A new, empty row of `kind` named `name`, after the others in `parent`.
+pub(crate) fn create_row(
+    c: &Connection,
+    name: &str,
+    kind: i64,
+    parent: Option<PlaylistId>,
+    query: Option<&str>,
+    now: i64,
+) -> rusqlite::Result<PlaylistId> {
+    if let Some(parent) = parent {
+        check_folder(c, parent)?;
+    }
+    let position = next_position(c, parent)?;
     c.prepare_cached(
-        "INSERT INTO playlists (parent_id, name, kind, position, created_at, modified_at)
-         VALUES (NULL, ?1, ?2,
-                 (SELECT coalesce(max(position), -1) + 1 FROM playlists WHERE parent_id IS NULL),
-                 ?3, ?3)
+        "INSERT INTO playlists (parent_id, name, kind, query, position, created_at, modified_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
          RETURNING id",
     )?
-    .query_row(params![name, STATIC, now], |row| row.get(0).map(PlaylistId))
+    .query_row(
+        params![parent.map(|p| p.0), name, kind, query, position, now],
+        |row| row.get(0).map(PlaylistId),
+    )
+}
+
+/// A new, empty static playlist named `name`, after the others at the top. `now` is
+/// in seconds since the Unix epoch.
+pub(crate) fn create(c: &Connection, name: &str, now: i64) -> rusqlite::Result<PlaylistId> {
+    create_row(c, name, STATIC, None, None, now)
+}
+
+/// A new, empty folder named `name` in `parent`.
+pub(crate) fn create_folder(
+    c: &Connection,
+    name: &str,
+    parent: Option<PlaylistId>,
+    now: i64,
+) -> rusqlite::Result<PlaylistId> {
+    create_row(c, name, FOLDER, parent, None, now)
 }
 
 /// A new static playlist named `name` holding `items`.
@@ -35,16 +77,40 @@ pub(crate) fn insert_imported(
     Ok(id)
 }
 
+/// The kind of `playlist` and whether it is locked; refuses an unknown one.
+pub(crate) fn kind_of(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<(i64, bool)> {
+    let found: Option<(i64, Option<i64>)> = c
+        .prepare_cached("SELECT kind, locked FROM playlists WHERE id = ?1")?
+        .query_row([playlist.0], |row| Ok((row.get(0)?, row.get(1)?)))
+        .optional()?;
+    match found {
+        None => Refusal::UnknownPlaylist(playlist).raise(),
+        Some((kind, locked)) => Ok((kind, locked.unwrap_or(0) != 0)),
+    }
+}
+
 /// Fails unless `playlist` exists and is static.
 pub(crate) fn check_static(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<()> {
-    let kind: Option<i64> = c
-        .prepare_cached("SELECT kind FROM playlists WHERE id = ?1")?
-        .query_row([playlist.0], |row| row.get(0))
-        .optional()?;
-    match kind {
-        None => Refusal::UnknownPlaylist(playlist).raise(),
-        Some(STATIC) => Ok(()),
-        Some(_) => Refusal::NotStatic(playlist).raise(),
+    match kind_of(c, playlist)? {
+        (STATIC, _) => Ok(()),
+        _ => Refusal::NotStatic(playlist).raise(),
+    }
+}
+
+/// Fails unless `playlist` is static and not locked.
+pub(crate) fn check_editable(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<()> {
+    match kind_of(c, playlist)? {
+        (STATIC, false) => Ok(()),
+        (STATIC, true) => Refusal::Locked(playlist).raise(),
+        _ => Refusal::NotStatic(playlist).raise(),
+    }
+}
+
+/// Fails unless `folder` exists and is a folder.
+fn check_folder(c: &Connection, folder: PlaylistId) -> rusqlite::Result<()> {
+    match kind_of(c, folder)? {
+        (FOLDER, _) => Ok(()),
+        _ => Refusal::BadFolder(folder).raise(),
     }
 }
 
@@ -55,42 +121,68 @@ pub(crate) fn touch(c: &Connection, playlist: PlaylistId, now: i64) -> rusqlite:
     Ok(())
 }
 
-/// Renames `playlist`.
+/// Renames `playlist`; the rename can be undone.
 pub(crate) fn rename(
     c: &Connection,
     playlist: PlaylistId,
     name: &str,
     now: i64,
 ) -> rusqlite::Result<()> {
-    let changed = c
-        .prepare_cached("UPDATE playlists SET name = ?2, modified_at = ?3 WHERE id = ?1")?
+    let (kind, _) = kind_of(c, playlist)?;
+    if kind != FOLDER {
+        record(c, playlist, now)?;
+    }
+    c.prepare_cached("UPDATE playlists SET name = ?2, modified_at = ?3 WHERE id = ?1")?
         .execute(params![playlist.0, name, now])?;
-    if changed == 0 {
-        return Refusal::UnknownPlaylist(playlist).raise();
-    }
     Ok(())
 }
 
-/// Deletes `playlist` and its items.
+/// Deletes `playlist` and its items. The playlists and folders of a deleted folder
+/// move up into its parent.
 pub(crate) fn delete(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<()> {
-    let deleted = c
-        .prepare_cached("DELETE FROM playlists WHERE id = ?1")?
-        .execute([playlist.0])?;
-    if deleted == 0 {
-        return Refusal::UnknownPlaylist(playlist).raise();
+    let (kind, _) = kind_of(c, playlist)?;
+    if kind == FOLDER {
+        let parent: Option<i64> = c
+            .prepare_cached("SELECT parent_id FROM playlists WHERE id = ?1")?
+            .query_row([playlist.0], |row| row.get(0))?;
+        let parent = parent.map(PlaylistId);
+        let children: Vec<i64> = c
+            .prepare_cached("SELECT id FROM playlists WHERE parent_id = ?1 ORDER BY position, id")?
+            .query_map([playlist.0], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        let first = next_position(c, parent)?;
+        let mut set =
+            c.prepare_cached("UPDATE playlists SET parent_id = ?2, position = ?3 WHERE id = ?1")?;
+        for (position, child) in (first..).zip(children) {
+            set.execute(params![child, parent.map(|p| p.0), position])?;
+        }
     }
+    c.prepare_cached("DELETE FROM playlists WHERE id = ?1")?
+        .execute([playlist.0])?;
     Ok(())
 }
 
-/// A copy of the static playlist `playlist` named `name`, after the others.
+/// A static copy of `playlist` named `name`, after it in its folder. A copy of a
+/// smart playlist holds the tracks its query selects now.
 pub(crate) fn duplicate(
     c: &Connection,
     playlist: PlaylistId,
     name: &str,
     now: i64,
 ) -> rusqlite::Result<PlaylistId> {
-    check_static(c, playlist)?;
-    let copy = create(c, name, now)?;
+    let (kind, _) = kind_of(c, playlist)?;
+    if kind == FOLDER {
+        return Refusal::NotStatic(playlist).raise();
+    }
+    let parent: Option<i64> = c
+        .prepare_cached("SELECT parent_id FROM playlists WHERE id = ?1")?
+        .query_row([playlist.0], |row| row.get(0))?;
+    let copy = create_row(c, name, STATIC, parent.map(PlaylistId), None, now)?;
+    if kind == SMART {
+        let tracks = smart_track_ids(c, playlist, now)?;
+        insert_rows(c, copy, 0, &track_rows(c, &tracks)?)?;
+        return Ok(copy);
+    }
     c.prepare_cached(
         "INSERT INTO playlist_items (playlist_id, position, identity_id, ref_kind, missing_ref,
                                      title, artist, album, duration_ms)
@@ -99,6 +191,74 @@ pub(crate) fn duplicate(
     )?
     .execute(params![playlist.0, copy.0])?;
     Ok(copy)
+}
+
+/// Locks `playlist` against changes of its items and query, or unlocks it.
+pub(crate) fn set_locked(
+    c: &Connection,
+    playlist: PlaylistId,
+    locked: bool,
+) -> rusqlite::Result<()> {
+    kind_of(c, playlist)?;
+    c.prepare_cached("UPDATE playlists SET locked = ?2 WHERE id = ?1")?
+        .execute(params![playlist.0, i64::from(locked)])?;
+    Ok(())
+}
+
+/// Shows `playlist` in groups by album, or not.
+pub(crate) fn set_grouped(
+    c: &Connection,
+    playlist: PlaylistId,
+    grouped: bool,
+) -> rusqlite::Result<()> {
+    kind_of(c, playlist)?;
+    c.prepare_cached("UPDATE playlists SET grouped = ?2 WHERE id = ?1")?
+        .execute(params![playlist.0, i64::from(grouped)])?;
+    Ok(())
+}
+
+/// Moves `playlist` into `parent` (the top for `None`) at `position` among its
+/// children, or after them. A folder cannot go into itself or a folder inside it.
+pub(crate) fn move_to(
+    c: &Connection,
+    playlist: PlaylistId,
+    parent: Option<PlaylistId>,
+    position: Option<usize>,
+) -> rusqlite::Result<()> {
+    kind_of(c, playlist)?;
+    if let Some(parent) = parent {
+        check_folder(c, parent)?;
+        // Up from `parent`: the playlist must not be met.
+        let mut at = Some(parent);
+        while let Some(folder) = at {
+            if folder == playlist {
+                return Refusal::BadFolder(parent).raise();
+            }
+            at = c
+                .prepare_cached("SELECT parent_id FROM playlists WHERE id = ?1")?
+                .query_row([folder.0], |row| row.get::<_, Option<i64>>(0))?
+                .map(PlaylistId);
+        }
+    }
+    let siblings: Vec<i64> = c
+        .prepare_cached(
+            "SELECT id FROM playlists WHERE parent_id IS ?1 AND id != ?2 ORDER BY position, id",
+        )?
+        .query_map(params![parent.map(|p| p.0), playlist.0], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let at = position.unwrap_or(siblings.len()).min(siblings.len());
+    let mut order = siblings;
+    order.insert(at, playlist.0);
+    let mut set =
+        c.prepare_cached("UPDATE playlists SET parent_id = ?2, position = ?3 WHERE id = ?1")?;
+    for (index, id) in order.iter().enumerate() {
+        set.execute(params![
+            id,
+            parent.map(|p| p.0),
+            i64::try_from(index).unwrap_or(i64::MAX)
+        ])?;
+    }
+    Ok(())
 }
 
 /// The columns of a [`PlaylistSummary`], from the playlists `p`.
@@ -110,25 +270,64 @@ const SUMMARY: &str = "p.id, p.name, p.created_at, p.modified_at,
         (SELECT t.duration_ms FROM tracks t WHERE t.identity_id = i.identity_id
          ORDER BY t.id LIMIT 1),
         i.duration_ms)), 0)
-     FROM playlist_items i WHERE i.playlist_id = p.id)";
+     FROM playlist_items i WHERE i.playlist_id = p.id),
+    p.kind, p.parent_id, p.locked, p.grouped, p.source_path, p.query,
+    (SELECT count(*) FROM playlists c WHERE c.parent_id = p.id),
+    EXISTS (SELECT 1 FROM playlist_history h WHERE h.playlist_id = p.id AND h.redo = 0),
+    EXISTS (SELECT 1 FROM playlist_history h WHERE h.playlist_id = p.id AND h.redo = 1)";
 
-fn summary(row: &Row<'_>) -> rusqlite::Result<PlaylistSummary> {
+/// A summary row, and the query text of a smart playlist.
+fn summary(row: &Row<'_>) -> rusqlite::Result<(PlaylistSummary, Option<String>)> {
     let count = |n: i64| usize::try_from(n).unwrap_or(0);
-    Ok(PlaylistSummary {
-        id: PlaylistId(row.get(0)?),
-        name: row.get(1)?,
-        created: from_unix_seconds(row.get::<_, Option<i64>>(2)?.unwrap_or(0)),
-        modified: from_unix_seconds(row.get::<_, Option<i64>>(3)?.unwrap_or(0)),
-        items: count(row.get(4)?),
-        dead: count(row.get(5)?),
-        duration: from_millis(row.get(6)?),
-    })
+    let kind = PlaylistType::from_sql(row.get(7)?);
+    let items = match kind {
+        PlaylistType::Folder => count(row.get(13)?),
+        _ => count(row.get(4)?),
+    };
+    Ok((
+        PlaylistSummary {
+            id: PlaylistId(row.get(0)?),
+            name: row.get(1)?,
+            kind,
+            parent: row.get::<_, Option<i64>>(8)?.map(PlaylistId),
+            created: from_unix_seconds(row.get::<_, Option<i64>>(2)?.unwrap_or(0)),
+            modified: from_unix_seconds(row.get::<_, Option<i64>>(3)?.unwrap_or(0)),
+            items,
+            dead: count(row.get(5)?),
+            duration: from_millis(row.get(6)?),
+            locked: row.get::<_, Option<i64>>(9)?.unwrap_or(0) != 0,
+            grouped: row.get::<_, i64>(10)? != 0,
+            source: row.get::<_, Option<Vec<u8>>>(11)?.map(path_from_blob),
+            can_undo: row.get(14)?,
+            can_redo: row.get(15)?,
+        },
+        row.get(12)?,
+    ))
 }
 
-/// One page of the static playlists, in the order they were created.
-pub(crate) fn playlists(c: &Connection, page: Page) -> rusqlite::Result<Paged<PlaylistSummary>> {
+/// `summary` with the count and length of a smart playlist's tracks now.
+fn finish(
+    c: &Connection,
+    (mut summary, query): (PlaylistSummary, Option<String>),
+    now: i64,
+) -> rusqlite::Result<PlaylistSummary> {
+    if summary.kind == PlaylistType::Smart {
+        let tracks = smart::tracks_of(c, query.as_deref().unwrap_or_default(), now)?;
+        let (items, duration) = smart::totals(c, &tracks)?;
+        summary.items = items;
+        summary.duration = duration;
+    }
+    Ok(summary)
+}
+
+/// One page of the static playlists at the top, in their order.
+pub(crate) fn playlists(
+    c: &Connection,
+    page: Page,
+    now: i64,
+) -> rusqlite::Result<Paged<PlaylistSummary>> {
     let (limit, offset) = page.sql();
-    let items = c
+    let rows = c
         .prepare_cached(&format!(
             "SELECT {SUMMARY} FROM playlists p
              WHERE p.kind = ?1 AND p.parent_id IS NULL
@@ -136,6 +335,10 @@ pub(crate) fn playlists(c: &Connection, page: Page) -> rusqlite::Result<Paged<Pl
         ))?
         .query_map(params![STATIC, limit, offset], summary)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
+    let items = rows
+        .into_iter()
+        .map(|row| finish(c, row, now))
+        .collect::<rusqlite::Result<_>>()?;
     let total: i64 = c
         .prepare_cached("SELECT count(*) FROM playlists WHERE kind = ?1 AND parent_id IS NULL")?
         .query_row([STATIC], |row| row.get(0))?;
@@ -145,14 +348,55 @@ pub(crate) fn playlists(c: &Connection, page: Page) -> rusqlite::Result<Paged<Pl
     })
 }
 
-/// The static playlist `playlist`, if there is one.
+/// The playlist or folder `playlist`, if there is one.
 pub(crate) fn playlist(
     c: &Connection,
     playlist: PlaylistId,
+    now: i64,
 ) -> rusqlite::Result<Option<PlaylistSummary>> {
-    c.prepare_cached(&format!(
-        "SELECT {SUMMARY} FROM playlists p WHERE p.id = ?1 AND p.kind = ?2"
-    ))?
-    .query_row(params![playlist.0, STATIC], summary)
-    .optional()
+    let row = c
+        .prepare_cached(&format!(
+            "SELECT {SUMMARY} FROM playlists p WHERE p.id = ?1"
+        ))?
+        .query_row([playlist.0], summary)
+        .optional()?;
+    row.map(|row| finish(c, row, now)).transpose()
+}
+
+/// Every playlist and folder, each folder followed by what is in it.
+pub(crate) fn playlist_tree(c: &Connection, now: i64) -> rusqlite::Result<Vec<PlaylistNode>> {
+    let rows = c
+        .prepare_cached(&format!(
+            "SELECT {SUMMARY} FROM playlists p ORDER BY p.position, p.id"
+        ))?
+        .query_map([], summary)?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut children: HashMap<Option<PlaylistId>, Vec<PlaylistSummary>> = HashMap::new();
+    let known: Vec<PlaylistId> = rows.iter().map(|(s, _)| s.id).collect();
+    for row in rows {
+        let summary = finish(c, row, now)?;
+        // A row whose folder is gone shows at the top rather than not at all.
+        let parent = summary.parent.filter(|p| known.contains(p));
+        children.entry(parent).or_default().push(summary);
+    }
+    let mut out = Vec::with_capacity(known.len());
+    let mut stack: Vec<(PlaylistSummary, usize)> = children
+        .remove(&None)
+        .unwrap_or_default()
+        .into_iter()
+        .rev()
+        .map(|s| (s, 0))
+        .collect();
+    while let Some((summary, depth)) = stack.pop() {
+        if let Some(inner) = children.remove(&Some(summary.id)) {
+            stack.extend(inner.into_iter().rev().map(|s| (s, depth + 1)));
+        }
+        out.push(PlaylistNode { summary, depth });
+    }
+    Ok(out)
+}
+
+/// The path of a playlist file as stored.
+pub(crate) fn source_blob(path: &std::path::Path) -> Vec<u8> {
+    path_to_blob(path).to_vec()
 }

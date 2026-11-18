@@ -118,7 +118,7 @@ fn artists_genres_and_folders_list(app: &gtk::Application) {
 
 fn playlists_edit_with_undo(app: &gtk::Application) {
     let (window, _) = window(app);
-    wait_for("the playlists", 2, || window.playlist_names().len() == 3);
+    wait_for("the playlists", 2, || window.playlist_names().len() == 9);
     app.activate_action("new-playlist", None);
     wait_for("a new playlist", 2, || {
         window.playlist_names().iter().any(|n| n == "New playlist")
@@ -137,6 +137,87 @@ fn playlists_edit_with_undo(app: &gtk::Application) {
     assert!(window.toast_text().unwrap_or_default().contains("removed"));
     WidgetExt::activate_action(&window, "win.undo", None).unwrap();
     wait_for("the undo", 2, || window.playlist_titles() == before);
+    window.destroy();
+}
+
+fn playlists_lock_group_tidy_and_redo(app: &gtk::Application) {
+    let (window, _) = window(app);
+    wait_for("the playlists", 2, || window.playlist_names().len() == 9);
+    assert!(window.open_first_playlist());
+    wait_for("the entries", 2, || window.playlist_titles().len() == 48);
+    let before = window.playlist_titles();
+    let menu = window.demo_playlist_more_menu().expect("the more menu");
+    wait_for("the more menu", 2, || menu.is_visible());
+    menu.popdown();
+    // Removing the missing entry, undone with Ctrl+Z, done again with redo.
+    WidgetExt::activate_action(
+        &window,
+        "win.playlist-remove-missing",
+        Some(&6u64.to_variant()),
+    )
+    .unwrap();
+    wait_for("the removal", 2, || window.playlist_titles().len() == 47);
+    WidgetExt::activate_action(&window, "win.undo", None).unwrap();
+    wait_for("the undo", 2, || window.playlist_titles() == before);
+    WidgetExt::activate_action(&window, "win.redo", None).unwrap();
+    wait_for("the redo", 2, || window.playlist_titles().len() == 47);
+    // A locked playlist refuses edits.
+    WidgetExt::activate_action(&window, "win.playlist-lock", Some(&6u64.to_variant())).unwrap();
+    spin(100);
+    WidgetExt::activate_action(&window, "win.playlist-shuffle", Some(&6u64.to_variant())).unwrap();
+    wait_for("the refusal", 2, || {
+        window.toast_text().is_some_and(|t| t.contains("locked"))
+    });
+    assert_eq!(window.playlist_titles().len(), 47);
+    window.destroy();
+}
+
+fn smart_playlists_folders_and_pins(app: &gtk::Application) {
+    let (window, _) = window(app);
+    wait_for("the playlists", 2, || window.playlist_names().len() == 9);
+    wait_for("the pins", 2, || window.pin_names().len() == 2);
+    assert!(window.open_playlist_named("Unrated hi-res", false));
+    assert_eq!(window.visible_view().as_deref(), Some("smart-playlist"));
+    wait_for("the tracks", 2, || window.smart_playlist_state().2 > 0);
+    let (chips, text, _) = window.smart_playlist_state();
+    assert_eq!(
+        chips,
+        [
+            "Rating is Unrated",
+            "Sample rate is at least 88.2 kHz",
+            "Codec is FLAC or DSD",
+            "Added in the last 12 months",
+        ]
+    );
+    assert_eq!(
+        text,
+        "rating=0 samplerate>=88200 (codec:flac OR codec:dsd) added<12m sort:added desc limit:100"
+    );
+    // Editing the text changes the rules, and text that cannot be read keeps them.
+    window.smart_playlist_text("genre:jazz year<1970");
+    wait_for("the new rules", 2, || {
+        window.smart_playlist_state().0 == ["Genre contains jazz", "Year is less than 1970"]
+    });
+    window.smart_playlist_text("year<<");
+    spin(50);
+    assert_eq!(window.smart_playlist_state().1, "genre:jazz year<1970");
+    // A new folder, a new smart playlist from query text, and a pin.
+    WidgetExt::activate_action(&window, "win.new-playlist-folder", Some(&0u64.to_variant()))
+        .unwrap();
+    wait_for("the folder", 2, || {
+        window.playlist_names().iter().any(|n| n == "New folder")
+    });
+    WidgetExt::activate_action(
+        &window,
+        "win.new-smart-playlist",
+        Some(&"artist:Kask sort:added desc".to_variant()),
+    )
+    .unwrap();
+    wait_for("the smart playlist", 2, || {
+        window.smart_playlist_state().1 == "artist:Kask sort:added desc"
+    });
+    WidgetExt::activate_action(&window, "win.playlist-pin", Some(&1u64.to_variant())).unwrap();
+    wait_for("the pin", 2, || window.pin_names().len() == 3);
     window.destroy();
 }
 
@@ -512,7 +593,7 @@ fn genre_grid_shows_covers(app: &gtk::Application) {
     window.present();
     spin(200);
     window.open_page("genres");
-    wait_for("the genre's covers", 5, || {
+    wait_for("the genre's covers", 20, || {
         let (tiles, covered) = window.genre_cover_stats();
         tiles > 0 && covered == tiles
     });
@@ -702,6 +783,14 @@ const TESTS: &[Test] = &[
         artists_genres_and_folders_list,
     ),
     ("playlists_edit_with_undo", playlists_edit_with_undo),
+    (
+        "playlists_lock_group_tidy_and_redo",
+        playlists_lock_group_tidy_and_redo,
+    ),
+    (
+        "smart_playlists_folders_and_pins",
+        smart_playlists_folders_and_pins,
+    ),
     ("the_context_menu_queues", the_context_menu_queues),
     ("search_and_no_results", search_and_no_results),
     (

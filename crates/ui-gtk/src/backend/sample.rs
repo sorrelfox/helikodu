@@ -12,6 +12,7 @@ mod browse;
 mod copies;
 mod history;
 mod lyrics;
+mod playlists;
 mod query;
 mod services;
 mod signal;
@@ -31,9 +32,10 @@ use super::{
     AlbumDetail, AlbumFilter, AlbumKey, AlbumQuery, AlbumRow, AlbumScope, AlbumSort, ArtistDetail,
     ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, CoverKey, DiscGroup, FolderFile,
     FolderListing, FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts, LibrarySource,
-    NowPlaying, OutputInfo, PlaybackState, PlayerControl, PlayerRequest, PlaylistKey, PlaylistRow,
-    QueueSnapshot, Repeat, SavedSearchKey, SavedSearchRow, SearchResults, SignalState,
-    ThumbnailState, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort, Update,
+    NowPlaying, OutputInfo, PinKey, PinRow, PlaybackState, PlayerControl, PlayerRequest,
+    PlaylistCleanup, PlaylistKey, PlaylistRow, PlaylistType, Query, QueueSnapshot, Repeat,
+    SavedSearchKey, SavedSearchRow, SearchResults, SignalState, SmartTrack, ThumbnailState,
+    TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort, Update,
 };
 
 /// What the sample backend contains and does at the start.
@@ -133,25 +135,7 @@ struct SampleAlbum {
     tracks: Vec<TrackRow>,
 }
 
-#[derive(Debug, Clone)]
-enum Entry {
-    Track(TrackKey),
-    Missing(Box<TrackRow>),
-}
-
-#[derive(Debug, Clone)]
-struct SamplePlaylist {
-    key: PlaylistKey,
-    name: String,
-    entries: Vec<Entry>,
-    modified: SystemTime,
-}
-
-#[derive(Debug, Default)]
-struct Playlists {
-    next: u64,
-    lists: Vec<SamplePlaylist>,
-}
+use playlists::{Entry, Playlists};
 
 /// The invented library.
 #[derive(Debug)]
@@ -374,37 +358,6 @@ impl SampleLibrary {
         };
         library.add_sample_playlists(&mut r);
         library
-    }
-
-    fn add_sample_playlists(&self, r: &mut Random) {
-        if self.tracks.is_empty() {
-            return;
-        }
-        let total = self.tracks.len() as u64;
-        let mut lists = self.lists();
-        for (name, count) in [("Favourites", 214), ("Workouts", 6), ("Late evening", 48)] {
-            lists.next += 1;
-            let mut entries: Vec<Entry> = (0..count.min(self.tracks.len()))
-                .map(|_| Entry::Track(TrackKey(1 + r.next() % total)))
-                .collect();
-            if name == "Late evening" && entries.len() > 4 {
-                entries[4] = Entry::Missing(Box::new(TrackRow {
-                    title: "Kopu Light".into(),
-                    artist: "Mari Kask".into(),
-                    album_title: "Letters from Hiiumaa".into(),
-                    duration: Some(Duration::from_secs(326)),
-                    missing: true,
-                    ..TrackRow::default()
-                }));
-            }
-            let key = PlaylistKey(lists.next);
-            lists.lists.push(SamplePlaylist {
-                key,
-                name: name.into(),
-                entries,
-                modified: SystemTime::now(),
-            });
-        }
     }
 
     fn searches(&self) -> std::sync::MutexGuard<'_, Vec<query::SampleSearch>> {
@@ -832,72 +785,23 @@ impl LibrarySource for SampleLibrary {
     }
 
     fn playlists(&self) -> Result<Vec<PlaylistRow>, BackendError> {
-        let lists = self.lists();
-        Ok(lists
-            .lists
-            .iter()
-            .map(|p| PlaylistRow {
-                key: p.key,
-                name: p.name.clone(),
-                items: p.entries.len(),
-                duration: p
-                    .entries
-                    .iter()
-                    .filter_map(|e| match e {
-                        Entry::Track(k) => self.track(*k).and_then(|t| t.duration),
-                        Entry::Missing(t) => t.duration,
-                    })
-                    .sum(),
-                modified: Some(p.modified),
-            })
-            .collect())
+        Ok(self.sample_playlists())
     }
 
     fn playlist_items(&self, key: PlaylistKey) -> Result<Vec<TrackRow>, BackendError> {
-        let lists = self.lists();
-        let list = lists
-            .lists
-            .iter()
-            .find(|p| p.key == key)
-            .ok_or_else(|| BackendError("no such playlist".into()))?;
-        Ok(list
-            .entries
-            .iter()
-            .enumerate()
-            .map(|(i, e)| {
-                let mut row = match e {
-                    Entry::Track(k) => self.track(*k).unwrap_or_default(),
-                    Entry::Missing(t) => (**t).clone(),
-                };
-                row.entry = Some(i as u64);
-                row.from_context = true;
-                row
-            })
-            .collect())
+        self.sample_playlist_items(key)
     }
 
     fn create_playlist(&self, name: &str) -> Result<PlaylistKey, BackendError> {
-        let mut lists = self.lists();
-        lists.next += 1;
-        let key = PlaylistKey(lists.next);
-        lists.lists.push(SamplePlaylist {
-            key,
-            name: name.to_owned(),
-            entries: Vec::new(),
-            modified: SystemTime::now(),
-        });
-        Ok(key)
+        Ok(self.sample_create(name, PlaylistType::Static, None, None))
     }
 
     fn rename_playlist(&self, key: PlaylistKey, name: &str) -> Result<(), BackendError> {
-        self.edit(key, |p| {
-            p.name = name.to_owned();
-            Ok(())
-        })
+        self.sample_rename(key, name)
     }
 
     fn delete_playlist(&self, key: PlaylistKey) -> Result<(), BackendError> {
-        self.lists().lists.retain(|p| p.key != key);
+        self.sample_delete(key);
         Ok(())
     }
 
@@ -960,6 +864,102 @@ impl LibrarySource for SampleLibrary {
             });
             Ok(())
         })
+    }
+
+    fn create_playlist_folder(
+        &self,
+        name: &str,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        Ok(self.sample_create(name, PlaylistType::Folder, parent, None))
+    }
+
+    fn move_playlist(
+        &self,
+        key: PlaylistKey,
+        parent: Option<PlaylistKey>,
+        position: Option<usize>,
+    ) -> Result<(), BackendError> {
+        self.sample_move(key, parent, position)
+    }
+
+    fn duplicate_playlist(
+        &self,
+        key: PlaylistKey,
+        name: &str,
+    ) -> Result<PlaylistKey, BackendError> {
+        self.sample_duplicate(key, name)
+    }
+
+    fn set_playlist_locked(&self, key: PlaylistKey, locked: bool) -> Result<(), BackendError> {
+        self.sample_flag(key, |p| p.set_locked(locked))
+    }
+
+    fn set_playlist_grouped(&self, key: PlaylistKey, grouped: bool) -> Result<(), BackendError> {
+        self.sample_flag(key, |p| p.set_grouped(grouped))
+    }
+
+    fn undo_playlist(&self, key: PlaylistKey) -> Result<bool, BackendError> {
+        self.sample_playlist_history(key, false)
+    }
+
+    fn redo_playlist(&self, key: PlaylistKey) -> Result<bool, BackendError> {
+        self.sample_playlist_history(key, true)
+    }
+
+    fn playlist_cleanup(&self, key: PlaylistKey) -> Result<PlaylistCleanup, BackendError> {
+        self.sample_cleanup(key)
+    }
+
+    fn remove_playlist_duplicates(&self, key: PlaylistKey) -> Result<usize, BackendError> {
+        self.sample_tidy(key, true)
+    }
+
+    fn remove_missing_from_playlist(&self, key: PlaylistKey) -> Result<usize, BackendError> {
+        self.sample_tidy(key, false)
+    }
+
+    fn shuffle_playlist(&self, key: PlaylistKey) -> Result<(), BackendError> {
+        self.sample_shuffle(key)
+    }
+
+    fn create_smart_playlist(
+        &self,
+        name: &str,
+        query: &Query,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        Ok(self.sample_create(name, PlaylistType::Smart, parent, Some(query.clone())))
+    }
+
+    fn set_smart_query(&self, key: PlaylistKey, query: &Query) -> Result<(), BackendError> {
+        self.sample_set_query(key, query)
+    }
+
+    fn smart_query(&self, key: PlaylistKey) -> Result<Query, BackendError> {
+        self.sample_query(key)
+    }
+
+    fn smart_tracks(&self, key: PlaylistKey) -> Result<Vec<SmartTrack>, BackendError> {
+        self.sample_smart_tracks(key)
+    }
+
+    fn query_match_count(&self, query: &Query) -> Result<(usize, usize), BackendError> {
+        Ok(self.sample_match_count(query))
+    }
+
+    fn pins(&self) -> Result<Vec<PinRow>, BackendError> {
+        Ok(self.sample_pins())
+    }
+
+    fn pin(&self, key: PinKey) -> Result<(), BackendError> {
+        self.sample_pin(key, true);
+        Ok(())
+    }
+
+    fn unpin(&self, key: PinKey) -> Result<(), BackendError> {
+        self.sample_pin(key, false);
+        Ok(())
     }
 
     fn import_playlist(&self, path: &Path) -> Result<(PlaylistKey, String), BackendError> {
@@ -1132,22 +1132,6 @@ impl LibrarySource for SampleLibrary {
 }
 
 impl SampleLibrary {
-    fn edit(
-        &self,
-        key: PlaylistKey,
-        change: impl FnOnce(&mut SamplePlaylist) -> Result<(), BackendError>,
-    ) -> Result<(), BackendError> {
-        let mut lists = self.lists();
-        let list = lists
-            .lists
-            .iter_mut()
-            .find(|p| p.key == key)
-            .ok_or_else(|| BackendError("no such playlist".into()))?;
-        change(list)?;
-        list.modified = SystemTime::now();
-        Ok(())
-    }
-
     /// The rows of `keys` as queue entries numbered from `first`.
     fn queue_rows(&self, keys: &[TrackKey], first: u64) -> Vec<TrackRow> {
         keys.iter()
