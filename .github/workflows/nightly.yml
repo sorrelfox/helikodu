@@ -13,6 +13,8 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # Keeps each job under the 12 GB memory limit; see ci/README.md.
+  CARGO_BUILD_JOBS: 4
 
 jobs:
   checks:
@@ -30,7 +32,7 @@ jobs:
       - name: Test corpus
         run: |
           mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target ~/ci-cache/tools
-          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+          docker run --rm --memory 12g --memory-swap 12g -e CI=true -e CARGO_TERM_COLOR -e CARGO_BUILD_JOBS \
             -v "$PWD:/src" \
             -v ~/ci-cache/registry:/usr/local/cargo/registry \
             -v ~/ci-cache/git:/usr/local/cargo/git \
@@ -46,7 +48,7 @@ jobs:
       - name: cargo xtask ci
         run: |
           mkdir -p ~/ci-cache/registry ~/ci-cache/git ~/ci-cache/target ~/ci-cache/tools
-          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+          docker run --rm --memory 12g --memory-swap 12g -e CI=true -e CARGO_TERM_COLOR -e CARGO_BUILD_JOBS \
             -v "$PWD:/src" \
             -v ~/ci-cache/registry:/usr/local/cargo/registry \
             -v ~/ci-cache/git:/usr/local/cargo/git \
@@ -63,7 +65,7 @@ jobs:
       - name: Underrun stress test (one hour)
         timeout-minutes: 75
         run: |
-          docker run --rm -e CI=true -e CARGO_TERM_COLOR \
+          docker run --rm --memory 12g --memory-swap 12g -e CI=true -e CARGO_TERM_COLOR -e CARGO_BUILD_JOBS \
             -v "$PWD:/src" \
             -v ~/ci-cache/registry:/usr/local/cargo/registry \
             -v ~/ci-cache/git:/usr/local/cargo/git \

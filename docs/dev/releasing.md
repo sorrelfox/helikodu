@@ -53,7 +53,7 @@ The version is set in one place: `version` under `[workspace.package]` in the ro
    git push origin v0.1.0
    ```
 
-   The push starts the Release workflow (and the CI workflow). It runs the build and tests (`cargo xtask ci --tests-only`), makes the source tarball, builds the programs from it offline, and creates the GitHub Release.
+   The push starts the Release workflow (and the CI workflow). It runs the build and tests (`cargo xtask ci --tests-only`), makes the source tarball, builds the programs from it offline, and creates the GitHub Release. The build runs with at most four Cargo jobs inside a container capped at 12 GB of memory, the runner's limit; see [ci/README.md](../../ci/README.md#memory-limit).
 8. **Check the release page**: the notes, the pre-release mark and the three files. Download the files and run `sha256sum --check SHA256SUMS`.
 
 If the workflow fails, fix the cause on `main`, delete the tag (`git push --delete origin v0.1.0`, `git tag -d v0.1.0`) and tag again. A published release is never replaced: a mistake in it is fixed by a new patch version.

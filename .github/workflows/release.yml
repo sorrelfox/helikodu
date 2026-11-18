@@ -24,6 +24,8 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # Keeps each job under the 12 GB memory limit; see ci/README.md.
+  CARGO_BUILD_JOBS: 4
 
 jobs:
   build:
@@ -39,7 +41,7 @@ jobs:
           # Only a tag push checks the tag against the workspace version.
           RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
         run: |
-          docker run --rm -e CI=true -e CARGO_TERM_COLOR -e RELEASE_TAG \
+          docker run --rm --memory 12g --memory-swap 12g -e CI=true -e CARGO_TERM_COLOR -e CARGO_BUILD_JOBS -e RELEASE_TAG \
             -v "$PWD:/src" \
             helikodu-ci:debian sh -euxc '
               git config --global --add safe.directory /src
