@@ -132,6 +132,7 @@ def report(results):
     mib_budget = RSS_MB * 1e6 / 2**20
     for key, what in [("rss_after_startup_mib", "RSS after start-up"),
                       ("rss_after_albums_scroll_mib", "RSS after scrolling albums"),
+                      ("rss_after_tracks_open_mib", "RSS after opening tracks"),
                       ("rss_after_tracks_scroll_mib", "RSS after scrolling tracks"),
                       ("rss_peak_mib", "RSS peak")]:
         v = full.get(key)
@@ -153,6 +154,12 @@ def report(results):
                 f"anonymous {full[f'{prefix}.anon_mib']:.0f} MiB; "
                 f"GL driver libraries {full.get(f'{prefix}.gl_driver_mib', 0):.0f} MiB; "
                 f"RSS without them {rss_without_driver(full, prefix):.0f} MB")
+    for when, what in [("after_startup", "after start-up"),
+                       ("after_tracks_scroll", "after scrolling tracks")]:
+        if f"widgets_{when}" in full:
+            add(f"Widgets {what}",
+                f"{full[f'widgets_{when}']:.0f}, {full[f'widgets_{when}.mapped']:.0f} shown",
+                "", None, full.get(f"widgets_{when}.top", ""))
     for view in ("albums", "tracks"):
         for mode in ("slow", "fast", "jump"):
             k = f"{view}.{mode}"

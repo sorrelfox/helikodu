@@ -116,27 +116,37 @@ fn statistics(c: &Connection, request: &StatisticsRequest) -> rusqlite::Result<L
         ),
         None,
     )?;
-    let formats = c
-        .prepare(&format!(
-            "SELECT lower(t.codec), count(*) FROM tracks t WHERE {shown}
-             GROUP BY lower(t.codec) ORDER BY 2 DESC, 1"
-        ))?
-        .query_map([], |row| Ok((row.get(0)?, to_count(row.get(1)?))))?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    let (lossless_cd, lossless_hi_res, lossy): (i64, i64, i64) = c
-        .prepare(&format!(
-            "SELECT
-                 coalesce(sum(CASE WHEN t.codec IS NOT NULL AND {LOSSLESS}
-                     AND coalesce(t.sample_rate, 0) <= 48000
-                     AND coalesce(t.bit_depth, 0) <= 16 THEN 1 ELSE 0 END), 0),
-                 coalesce(sum(CASE WHEN t.codec IS NOT NULL AND {LOSSLESS}
-                     AND (coalesce(t.sample_rate, 0) > 48000
-                          OR coalesce(t.bit_depth, 0) > 16) THEN 1 ELSE 0 END), 0),
-                 coalesce(sum(CASE WHEN t.codec IS NOT NULL AND {LOSSLESS}
-                     THEN 0 ELSE 1 END), 0)
-             FROM tracks t WHERE {shown}"
-        ))?
-        .query_row([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+    // One pass over the tracks for the formats and the three quality classes:
+    // the counts of each codec, split by whether it is lossless and beyond CD
+    // quality.
+    let mut formats: Vec<(Option<String>, usize)> = Vec::new();
+    let (mut lossless_cd, mut lossless_hi_res, mut lossy) = (0i64, 0i64, 0i64);
+    {
+        let mut statement = c.prepare(&format!(
+            "SELECT lower(t.codec),
+                    t.codec IS NOT NULL AND {LOSSLESS},
+                    coalesce(t.sample_rate, 0) > 48000 OR coalesce(t.bit_depth, 0) > 16,
+                    count(*)
+             FROM tracks t WHERE {shown} GROUP BY 1, 2, 3"
+        ))?;
+        let mut rows = statement.query([])?;
+        while let Some(row) = rows.next()? {
+            let codec: Option<String> = row.get(0)?;
+            let lossless: bool = row.get(1)?;
+            let beyond_cd: bool = row.get(2)?;
+            let n: i64 = row.get(3)?;
+            match (lossless, beyond_cd) {
+                (true, false) => lossless_cd += n,
+                (true, true) => lossless_hi_res += n,
+                (false, _) => lossy += n,
+            }
+            match formats.iter_mut().find(|(c, _)| *c == codec) {
+                Some((_, count)) => *count += to_count(n),
+                None => formats.push((codec, to_count(n))),
+            }
+        }
+    }
+    formats.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
     let (plays, listened_ms): (i64, i64) = c
         .prepare(
             "SELECT count(*) FILTER (WHERE counted = 1), coalesce(sum(played_ms), 0)
@@ -156,12 +166,14 @@ fn statistics(c: &Connection, request: &StatisticsRequest) -> rusqlite::Result<L
     )?;
     let top_artists = c
         .prepare(&format!(
+            // From the played tracks, rather than from every artist credit: far
+            // fewer rows to look at in a large library.
             "SELECT p.id, p.name, sum(s.play_count) AS plays
-             FROM track_people tp
-             JOIN tracks t ON t.id = tp.track_id
-             JOIN stats s ON s.identity_id = t.identity_id
+             FROM stats s
+             CROSS JOIN tracks t ON t.identity_id = s.identity_id
+             CROSS JOIN track_people tp ON tp.track_id = t.id AND tp.role = 0
              JOIN people p ON p.id = tp.person_id
-             WHERE tp.role = 0 AND s.play_count > 0 AND {shown}
+             WHERE s.play_count > 0 AND {shown}
              GROUP BY p.id ORDER BY plays DESC, p.sort_name, p.id LIMIT ?1"
         ))?
         .query_map([top], |row| {
@@ -177,9 +189,9 @@ fn statistics(c: &Connection, request: &StatisticsRequest) -> rusqlite::Result<L
             "SELECT a.id, a.title, a.artist,
                     (SELECT hash FROM covers WHERE id = a.cover_id),
                     sum(s.play_count) AS plays
-             FROM tracks t
+             FROM stats s
+             CROSS JOIN tracks t ON t.identity_id = s.identity_id
              JOIN albums a ON a.id = t.album_id
-             JOIN stats s ON s.identity_id = t.identity_id
              WHERE s.play_count > 0 AND {shown}
              GROUP BY a.id ORDER BY plays DESC, a.title_sort, a.id LIMIT ?1"
         ))?

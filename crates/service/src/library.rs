@@ -368,6 +368,25 @@ impl MusicLibrary {
         Ok(self.library.albums(query)?)
     }
 
+    /// Every track matching `text`, best first, as ids, in one query.
+    pub fn search_ids(&self, text: &str) -> Result<Vec<TrackId>, LibraryError> {
+        Ok(self.library.search_ids(text)?)
+    }
+
+    /// The album and the number of other copies of each of `tracks`, in one query
+    /// for many tracks; for lists that fetch their rows by id.
+    pub fn albums_and_copies(
+        &self,
+        tracks: &[TrackId],
+    ) -> Result<std::collections::HashMap<TrackId, (Option<AlbumId>, u32)>, LibraryError> {
+        Ok(self.library.albums_and_copies(tracks)?)
+    }
+
+    /// Every album of `query`, whatever its page, in one query.
+    pub fn all_albums(&self, query: &AlbumQuery) -> Result<Vec<AlbumSummary>, LibraryError> {
+        Ok(self.library.all_albums(query)?)
+    }
+
     /// An album with its discs and tracks; `None` if there is no such album or all
     /// its tracks are on drives that are not connected.
     pub fn album(&self, album: AlbumId) -> Result<Option<AlbumDetail>, LibraryError> {

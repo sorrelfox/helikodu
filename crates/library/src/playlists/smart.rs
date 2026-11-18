@@ -85,6 +85,20 @@ pub(crate) fn smart_tracks(
     })
 }
 
+/// Every track of the smart playlist `playlist` now, in its order: the query runs
+/// once, where reading page after page runs it again for each page.
+pub(crate) fn all_smart_tracks(
+    c: &Connection,
+    playlist: PlaylistId,
+    now: i64,
+) -> rusqlite::Result<Vec<TrackSummary>> {
+    let ids: Vec<i64> = smart_track_ids(c, playlist, now)?
+        .iter()
+        .map(|t| sql_track_id(*t))
+        .collect();
+    track_summaries(c, &ids)
+}
+
 /// A new smart playlist named `name` with the query `text`, after the others in
 /// `parent`.
 pub(crate) fn create_smart(

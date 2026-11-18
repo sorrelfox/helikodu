@@ -97,6 +97,14 @@ fn albums_where(library: &Library, filter: AlbumFilter) -> Vec<AlbumSummary> {
         })
         .unwrap();
     assert_eq!(page.items.len(), page.total);
+    // Every album at once: the same list as the pages.
+    let all = library
+        .all_albums(&AlbumQuery {
+            filter,
+            ..AlbumQuery::default()
+        })
+        .unwrap();
+    assert_eq!(all, page.items);
     page.items
 }
 

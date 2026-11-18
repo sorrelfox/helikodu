@@ -123,6 +123,13 @@ impl Fetcher {
         let Some(backend) = self.backend.borrow().clone() else {
             return;
         };
+        // Positions whose items are gone (scrolled past) need no row: after a
+        // fast scroll or a jump they would otherwise be fetched one batch after
+        // another long after the list stopped.
+        self.waiting.borrow_mut().retain(|_, items| {
+            items.retain(|item| item.upgrade().is_some());
+            !items.is_empty()
+        });
         // The first waiting position and the waiting ones within a batch of it;
         // the batch covers the positions in between too, which scrolling
         // usually asks for next.

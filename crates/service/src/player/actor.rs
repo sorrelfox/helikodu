@@ -33,7 +33,7 @@ use super::{EndReason, Notice, PlayerEvent};
 use crate::Event;
 use crate::bus::EventBus;
 use crate::clock::SharedClock;
-use crate::library::{ArtistRole, MAX_PAGE, MusicLibrary, TrackFilter, TrackKind, YearSpan};
+use crate::library::{ArtistRole, MusicLibrary, TrackFilter, TrackKind, YearSpan};
 
 /// The most search results a search context plays.
 const SEARCH_LIMIT: usize = 5000;
@@ -1071,22 +1071,12 @@ impl Actor {
                 tracks_of(TrackFilter::Years(*span))?,
             ),
             ContextRequest::Search(text) => {
-                let mut tracks = Vec::new();
-                loop {
-                    let page = library
-                        .search(text, tracks.len(), MAX_PAGE)
-                        .map_err(|e| e.to_string())?;
-                    let done = page.hits.is_empty()
-                        || tracks.len() + page.hits.len() >= page.total.min(SEARCH_LIMIT);
-                    tracks.extend(
-                        page.hits
-                            .into_iter()
-                            .map(|h| TrackRef::Library(h.hit.track)),
-                    );
-                    if done {
-                        break;
-                    }
-                }
+                let mut tracks: Vec<TrackRef> = library
+                    .search_ids(text)
+                    .map_err(|e| e.to_string())?
+                    .into_iter()
+                    .map(TrackRef::Library)
+                    .collect();
                 tracks.truncate(SEARCH_LIMIT);
                 (ContextSource::Query(text.clone()), title, tracks)
             }

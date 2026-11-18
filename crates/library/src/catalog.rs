@@ -28,7 +28,9 @@ pub use browse::{
     YearSpan, YearSummary,
 };
 pub(crate) use browse::{BY_ALBUM_ARTIST, COLUMNS, LOSSLESS, summary};
-pub(crate) use browse::{album, albums, artists, genres, track_order, tracks, years};
+pub(crate) use browse::{
+    album, albums, albums_and_copies, all_albums, artists, genres, track_order, tracks, years,
+};
 pub use covers::{CoverInfo, CoverLocation};
 pub use fingerprint::TrackFingerprint;
 pub use ids::{AlbumId, GenreId, IdentityId, PersonId, RootId};

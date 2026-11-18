@@ -6,6 +6,7 @@
 use std::collections::VecDeque;
 use std::ffi::OsString;
 use std::path::Path;
+use std::sync::Arc;
 use std::sync::mpsc::{RecvTimeoutError, Sender};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
@@ -397,27 +398,27 @@ fn read_files(
         covers: options.covers,
         ..RequestOptions::default()
     };
-    let requests: Vec<Job> = to_read
-        .iter()
-        .enumerate()
-        .map(|(index, item)| Job {
-            index,
-            request: Request {
-                id: index as u64,
-                path: item.found.path.clone(),
-                options: RequestOptions {
-                    cue_sheets: item.cue_sheets.clone(),
-                    ..request_options.clone()
-                },
-            },
-        })
-        .collect();
+    // The feeder makes each job as it hands it over: made up front, the jobs of a
+    // large first scan held a second copy of every path.
+    let to_read = Arc::new(to_read);
     let feeder = pool.jobs().map(|jobs| {
         let (cancel, stop) = (cancel.clone(), stop.clone());
+        let to_read = Arc::clone(&to_read);
         thread::Builder::new()
             .name("helikodu-scan-feeder".to_owned())
             .spawn(move || {
-                for job in requests {
+                for (index, item) in to_read.iter().enumerate() {
+                    let job = Job {
+                        index,
+                        request: Request {
+                            id: index as u64,
+                            path: item.found.path.clone(),
+                            options: RequestOptions {
+                                cue_sheets: item.cue_sheets.clone(),
+                                ..request_options.clone()
+                            },
+                        },
+                    };
                     if cancel.is_cancelled() || stop.is_cancelled() || jobs.send(job).is_err() {
                         break;
                     }

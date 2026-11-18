@@ -7,8 +7,8 @@ use helikodu_model::query::Query;
 use helikodu_service::library::{StatisticsRequest, parse_query_lenient};
 
 use super::{
-    AlbumKey, BackendError, ServiceLibrary, TrackKey, TrackQuery, album_key, browse, cover_key,
-    error, lock, query_sort, seed,
+    BackendError, ServiceLibrary, TrackKey, TrackQuery, album_key, browse, cover_key, error, lock,
+    query_sort, seed,
 };
 use crate::backend::{
     ArtistKey, FacetChoice, FacetField, FacetList, LibraryStats, PlayedAlbumRow, PlayedArtistRow,
@@ -53,22 +53,7 @@ impl ServiceLibrary {
             search.sort = query_sort(&query.sort);
         }
         let ids = music.facet_track_ids(&search, chosen).map_err(error)?;
-        let keys: Vec<TrackKey> = ids.iter().map(|id| TrackKey(id.get())).collect();
-        // The rows need the album of each track, which the ids lack.
-        let unknown = {
-            let albums = lock(&self.albums_of);
-            keys.iter().any(|k| !albums.contains_key(k))
-        };
-        if unknown {
-            let tracks = music
-                .sorted_track_ids(helikodu_service::library::TrackFilter::All, &[])
-                .map_err(error)?;
-            let mut albums = lock(&self.albums_of);
-            for (id, album) in &tracks {
-                albums.insert(TrackKey(id.get()), album.map_or(AlbumKey(0), album_key));
-            }
-        }
-        Ok(keys)
+        Ok(ids.iter().map(|id| TrackKey(id.get())).collect())
     }
 
     pub(super) fn library_statistics(

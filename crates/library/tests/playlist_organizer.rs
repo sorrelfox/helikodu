@@ -166,6 +166,11 @@ fn smart_playlists_follow_the_library() {
         .unwrap();
     let ids: Vec<TrackId> = page.items.iter().map(|s| s.id).collect();
     assert_eq!(ids, [t[4], t[3]]);
+    // All at once, in one run of the query, the same tracks in the same order.
+    assert_eq!(
+        library.all_smart_playlist_tracks(smart).unwrap(),
+        page.items
+    );
     let summary = library.playlist(smart).unwrap().unwrap();
     assert_eq!(summary.kind, PlaylistType::Smart);
     assert_eq!(summary.items, 2);

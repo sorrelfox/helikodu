@@ -324,6 +324,30 @@ fn descendants(root: &gtk::Widget) -> Vec<gtk::Widget> {
     all
 }
 
+/// The number of widgets in the window, how many of them are shown, and the
+/// most common types: each widget costs a few kilobytes, so the widgets kept
+/// for hidden pages and rows scrolled past show up in the memory.
+fn widgets(window: &MainWindow, report: &mut Report, when: &str) {
+    let all = descendants(window.upcast_ref());
+    let mut types: std::collections::HashMap<glib::Type, usize> = std::collections::HashMap::new();
+    for widget in &all {
+        *types.entry(widget.type_()).or_default() += 1;
+    }
+    report.number(&format!("widgets_{when}"), all.len() as f64);
+    report.number(
+        &format!("widgets_{when}.mapped"),
+        all.iter().filter(|w| w.is_mapped()).count() as f64,
+    );
+    let mut types: Vec<(glib::Type, usize)> = types.into_iter().collect();
+    types.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+    let top: Vec<String> = types
+        .iter()
+        .take(5)
+        .map(|(t, n)| format!("{} {n}", t.name()))
+        .collect();
+    report.text(&format!("widgets_{when}.top"), &top.join(", "));
+}
+
 async fn wait(ms: u64) {
     glib::timeout_future(Duration::from_millis(ms)).await;
 }
@@ -455,6 +479,7 @@ async fn measure(
     wait(1000).await;
     r.number("rss_after_startup_mib", rss_mib());
     memory_split(&mut r, "mem_after_startup");
+    widgets(&window, &mut r, "after_startup");
     if !options.startup_only {
         // The album grid.
         let grid = descendants(window.upcast_ref())
@@ -470,6 +495,7 @@ async fn measure(
         }
         r.number("rss_after_albums_scroll_mib", rss_mib());
         memory_split(&mut r, "mem_after_albums_scroll");
+        widgets(&window, &mut r, "after_albums_scroll");
 
         // The track table.
         let total = backend
@@ -485,6 +511,9 @@ async fn measure(
         r.number("tracks.keys_loaded_ms", t0.elapsed().as_secs_f64() * 1000.0);
         if loaded && rows {
             wait(500).await;
+            r.number("rss_after_tracks_open_mib", rss_mib());
+            memory_split(&mut r, "mem_after_tracks_open");
+            widgets(&window, &mut r, "after_tracks_open");
             match window.track_table_adjustment() {
                 Some(adjustment) => {
                     scroll(&window, &adjustment, options.scroll_secs, &mut r, "tracks").await
@@ -496,6 +525,7 @@ async fn measure(
         }
         r.number("rss_after_tracks_scroll_mib", rss_mib());
         memory_split(&mut r, "mem_after_tracks_scroll");
+        widgets(&window, &mut r, "after_tracks_scroll");
         window.open_page("albums");
         wait(1000).await;
         r.number("rss_peak_mib", {

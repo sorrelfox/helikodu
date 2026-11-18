@@ -164,6 +164,32 @@ pub(crate) fn search(c: &Connection, request: &SearchRequest) -> rusqlite::Resul
     })
 }
 
+/// Every track matching `text`, best first, as ids only: one query, where reading
+/// page after page ranks every match again for each page.
+pub(crate) fn search_ids(
+    c: &Connection,
+    text: &str,
+    include_masked: bool,
+) -> rusqlite::Result<Vec<TrackId>> {
+    let Some(terms) = Terms::parse(text) else {
+        return Ok(Vec::new());
+    };
+    let mut params: Vec<Value> = vec![Value::Text(terms.whole.clone())];
+    let visible = visibility(c, include_masked)?;
+    let mut matched = matching_condition(&terms, &mut params);
+    if visible != "1" {
+        matched = format!("{matched} AND {visible}");
+    }
+    c.prepare_cached(&format!(
+        "SELECT t.id FROM tracks t LEFT JOIN albums a ON a.id = t.album_id
+         WHERE {matched} ORDER BY {RANK}, t.title_sort, t.id"
+    ))?
+    .query_map(rusqlite::params_from_iter(&params), |row| {
+        row.get(0).map(track_id_from_sql)
+    })?
+    .collect()
+}
+
 /// The condition on track `t` that every term matches. Adds the terms to `params`,
 /// numbered from 2 (`?1` is the whole query, for ranking). Index lookups come first, so
 /// that a query with a long term starts from the index.

@@ -200,6 +200,24 @@ fn order_sql(sort: AlbumSort) -> &'static str {
 
 /// The albums of `query`.
 pub(crate) fn albums(c: &Connection, query: &AlbumQuery) -> rusqlite::Result<Paged<AlbumSummary>> {
+    listed(c, query, Some(query.page))
+}
+
+/// Every album of `query`, whatever its page, in one query: reading page after
+/// page sorts every album again for each page.
+pub(crate) fn all_albums(
+    c: &Connection,
+    query: &AlbumQuery,
+) -> rusqlite::Result<Vec<AlbumSummary>> {
+    Ok(listed(c, query, None)?.items)
+}
+
+/// The albums of `query`, of `page` or all of them.
+fn listed(
+    c: &Connection,
+    query: &AlbumQuery,
+    page: Option<super::Page>,
+) -> rusqlite::Result<Paged<AlbumSummary>> {
     let visible = visibility(c, query.include_masked)?;
     let shown = if visible == "1" {
         "1".to_owned()
@@ -208,25 +226,34 @@ pub(crate) fn albums(c: &Connection, query: &AlbumQuery) -> rusqlite::Result<Pag
     };
     let (filter, mut params) = filter_sql(query.filter);
     let filter = format!("{filter} AND {}", quality_sql(query.quality));
-    let total: i64 = c
-        .prepare_cached(&format!(
-            "SELECT count(*) FROM albums a WHERE {filter} AND {shown}"
-        ))?
-        .query_row(params_from_iter(&params), |row| row.get(0))?;
-    let (limit, offset) = query.page.sql();
-    let n = params.len();
-    params.push(Value::Integer(limit));
-    params.push(Value::Integer(offset));
+    let limit = match page {
+        Some(page) => {
+            let (limit, offset) = page.sql();
+            let n = params.len();
+            params.push(Value::Integer(limit));
+            params.push(Value::Integer(offset));
+            format!("LIMIT ?{} OFFSET ?{}", n + 1, n + 2)
+        }
+        None => String::new(),
+    };
     let mut items: Vec<AlbumSummary> = c
         .prepare_cached(&format!(
             "SELECT {ALBUM_COLUMNS} FROM albums a WHERE {filter} AND {shown}
-             ORDER BY {} LIMIT ?{} OFFSET ?{}",
+             ORDER BY {} {limit}",
             order_sql(query.sort),
-            n + 1,
-            n + 2
         ))?
         .query_map(params_from_iter(&params), album_row)?
         .collect::<rusqlite::Result<_>>()?;
+    let total = match page {
+        Some(_) => {
+            params.truncate(params.len() - 2);
+            c.prepare_cached(&format!(
+                "SELECT count(*) FROM albums a WHERE {filter} AND {shown}"
+            ))?
+            .query_row(params_from_iter(&params), |row| row.get::<_, i64>(0))?
+        }
+        None => i64::try_from(items.len()).unwrap_or(i64::MAX),
+    };
     for album in &mut items {
         add_counts(c, album, &visible)?;
     }

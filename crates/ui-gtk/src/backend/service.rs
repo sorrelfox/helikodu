@@ -120,22 +120,21 @@ fn size_of(pixels: u32) -> ThumbnailSize {
     ThumbnailSize::from_pixels(pixels).unwrap_or_else(|| ThumbnailSize::for_display(pixels, 1))
 }
 
-/// The seed of an album's generated cover.
-/// How many other copies the file of `track` has: the distinct files of its
-/// group of copies but its own, two paths to one file counted once.
-fn copies_count(music: &MusicLibrary, track: TrackId) -> u32 {
-    let Ok(Some(group)) = music.copies_of(track) else {
-        return 0;
-    };
-    // Of two paths to one file (each names the other), the lower id counts.
-    let files = group
-        .files
-        .iter()
-        .filter(|f| f.same_file_as.is_none_or(|other| other > f.file))
-        .count();
-    u32::try_from(files.saturating_sub(1)).unwrap_or(u32::MAX)
+/// The album and the number of other copies of each of `tracks`, in one query
+/// rather than one or two per row; tracks not in the library are left out.
+fn albums_and_copies(
+    music: &MusicLibrary,
+    tracks: &[TrackId],
+) -> HashMap<TrackId, (AlbumKey, u32)> {
+    music
+        .albums_and_copies(tracks)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(track, (album, copies))| (track, (album.map_or(AlbumKey(0), album_key), copies)))
+        .collect()
 }
 
+/// The seed of an album's generated cover.
 fn seed(key: AlbumKey) -> u64 {
     key.0.wrapping_mul(0x9E37_79B9_7F4A_7C15).rotate_left(17)
 }
@@ -148,10 +147,10 @@ pub struct ServiceLibrary {
     ids: Mutex<HashMap<AlbumKey, AlbumId>>,
     /// The library's playlist identifiers by key, learned from the lists.
     playlists: Mutex<HashMap<PlaylistKey, PlaylistId>>,
-    /// The album of each track seen in a list, which the track details lack.
-    albums_of: Mutex<HashMap<TrackKey, AlbumKey>>,
-    /// The album list in album-artist order, for search.
+    /// The album list in album-artist order, for search and the grid.
     album_rows: Mutex<Vec<AlbumRow>>,
+    /// The album list of the last other query of the grid.
+    listed: Mutex<Option<(AlbumQuery, Vec<AlbumRow>)>>,
     /// The artist list, for search and names.
     artist_rows: Mutex<Vec<ArtistRow>>,
 }
@@ -305,30 +304,22 @@ impl ServiceLibrary {
         }
     }
 
-    /// Every album of `query`, page after page.
+    /// Every album of `query`.
     fn all_albums(&self, query: &AlbumQuery) -> Result<Vec<AlbumRow>, BackendError> {
         let Some(music) = self.music() else {
             return Ok(Vec::new());
         };
-        let mut rows = Vec::new();
-        loop {
-            let page = music
-                .albums(&Self::query(query, Page::new(rows.len(), MAX_PAGE)))
-                .map_err(error)?;
-            self.remember(&page.items);
-            let got = page.items.len();
-            rows.extend(page.items.iter().map(Self::row));
-            if got == 0 || rows.len() >= page.total {
-                return Ok(rows);
-            }
-        }
+        let albums = music
+            .all_albums(&Self::query(query, Page::default()))
+            .map_err(error)?;
+        self.remember(&albums);
+        Ok(albums.iter().map(Self::row).collect())
     }
 
     /// The row of a track from a list, remembering its album.
     fn summary_row(&self, track: &TrackSummary) -> TrackRow {
         let key = TrackKey(track.id.get());
         let album = track.album.map_or(AlbumKey(0), album_key);
-        lock(&self.albums_of).insert(key, album);
         TrackRow {
             key,
             album,
@@ -372,39 +363,32 @@ impl ServiceLibrary {
         }
         let ids = music.query_track_ids(&search, 0).map_err(error)?;
         let mut keys: Vec<TrackKey> = ids.iter().map(|id| TrackKey(id.get())).collect();
-        // The albums of the tracks, for their rows; and the scope, if any.
+        // The scope, if any.
         let filter = match query.scope {
             TrackScope::All => None,
             TrackScope::Artist(key) => Some(TrackFilter::Artist(person(key), None)),
             TrackScope::Genre(key) => Some(TrackFilter::Genre(genre_id(key))),
         };
-        let unknown = {
-            let albums = lock(&self.albums_of);
-            keys.iter().any(|k| !albums.contains_key(k))
-        };
-        if unknown || filter.is_some() {
-            let tracks = music
-                .sorted_track_ids(filter.unwrap_or(TrackFilter::All), &[])
-                .map_err(error)?;
-            let mut albums = lock(&self.albums_of);
-            for (id, album) in &tracks {
-                albums.insert(TrackKey(id.get()), album.map_or(AlbumKey(0), album_key));
-            }
-            drop(albums);
-            if filter.is_some() {
-                let scope: HashSet<TrackKey> =
-                    tracks.iter().map(|(id, _)| TrackKey(id.get())).collect();
-                keys.retain(|k| scope.contains(k));
-            }
+        if let Some(filter) = filter {
+            let tracks = music.sorted_track_ids(filter, &[]).map_err(error)?;
+            let scope: HashSet<TrackKey> =
+                tracks.iter().map(|(id, _)| TrackKey(id.get())).collect();
+            keys.retain(|k| scope.contains(k));
         }
         Ok(Some(keys))
     }
 
-    /// The row of one track by its key, from the database.
-    fn track_row(&self, music: &MusicLibrary, key: TrackKey) -> Option<TrackRow> {
+    /// The row of one track by its key, from the database, on `album` and with
+    /// `copies` other copies.
+    fn track_row(
+        &self,
+        music: &MusicLibrary,
+        key: TrackKey,
+        album: AlbumKey,
+        copies: u32,
+    ) -> Option<TrackRow> {
         let details = music.track_details(track_id(key)).ok().flatten()?;
         let stats = music.stats(track_id(key)).ok();
-        let album = lock(&self.albums_of).get(&key).copied().unwrap_or_default();
         let audio = &details.audio;
         Some(TrackRow {
             key,
@@ -434,7 +418,7 @@ impl ServiceLibrary {
                 channels: audio.channels,
             },
             path: Some(details.path),
-            copies: copies_count(music, track_id(key)),
+            copies,
             genre: details.tags.genres.join(", "),
             added: Some(details.added_at),
             ..TrackRow::default()
@@ -532,6 +516,8 @@ impl LibrarySource for ServiceLibrary {
         let keys = rows.iter().map(|r| r.key).collect();
         if *query == AlbumQuery::default() {
             *lock(&self.album_rows) = rows;
+        } else {
+            *lock(&self.listed) = Some((*query, rows));
         }
         Ok(keys)
     }
@@ -545,6 +531,19 @@ impl LibrarySource for ServiceLibrary {
         let Some(music) = self.music() else {
             return Ok(Vec::new());
         };
+        // The grid's rows come from the list its keys came with: a page from the
+        // database sorts every album again.
+        let slice = |rows: &[AlbumRow]| rows.iter().skip(offset).take(limit).cloned().collect();
+        if *query == AlbumQuery::default() {
+            let rows = lock(&self.album_rows);
+            if !rows.is_empty() {
+                return Ok(slice(&rows));
+            }
+        } else if let Some((listed, rows)) = lock(&self.listed).as_ref()
+            && listed == query
+        {
+            return Ok(slice(rows));
+        }
         let page = music
             .albums(&Self::query(query, Page::new(offset, limit.min(MAX_PAGE))))
             .map_err(error)?;
@@ -793,15 +792,12 @@ impl LibrarySource for ServiceLibrary {
         }
         let mut found: Option<Vec<TrackKey>> = None;
         if !text.is_empty() {
-            let mut keys = Vec::new();
-            loop {
-                let page = music.search(text, keys.len(), 1000).map_err(error)?;
-                let got = page.hits.len();
-                keys.extend(page.hits.iter().map(|h| TrackKey(h.hit.track.get())));
-                if got == 0 || keys.len() >= page.total {
-                    break;
-                }
-            }
+            let keys: Vec<TrackKey> = music
+                .search_ids(text)
+                .map_err(error)?
+                .iter()
+                .map(|id| TrackKey(id.get()))
+                .collect();
             if query.scope == TrackScope::All && query.sort.is_empty() {
                 return Ok(keys);
             }
@@ -826,20 +822,19 @@ impl LibrarySource for ServiceLibrary {
             let found: HashSet<TrackKey> = found.into_iter().collect();
             tracks.retain(|(id, _)| found.contains(&TrackKey(id.get())));
         }
-        {
-            let mut albums = lock(&self.albums_of);
-            for (id, album) in &tracks {
-                albums.insert(TrackKey(id.get()), album.map_or(AlbumKey(0), album_key));
-            }
-        }
         Ok(tracks.iter().map(|(id, _)| TrackKey(id.get())).collect())
     }
 
     fn track_rows(&self, keys: &[TrackKey]) -> Result<Vec<TrackRow>, BackendError> {
         let music = self.library()?;
+        let ids: Vec<TrackId> = keys.iter().map(|key| track_id(*key)).collect();
+        let known = albums_and_copies(music, &ids);
         Ok(keys
             .iter()
-            .filter_map(|key| self.track_row(music, *key))
+            .filter_map(|key| {
+                let (album, copies) = known.get(&track_id(*key)).copied()?;
+                self.track_row(music, *key, album, copies)
+            })
             .collect())
     }
 
@@ -875,13 +870,14 @@ impl LibrarySource for ServiceLibrary {
         let page = music.search(text, 0, 50).map_err(error)?;
         // Looked up under the lock rather than copied: the map holds every
         // track of the track table.
-        let known = lock(&self.albums_of);
+        let ids: Vec<TrackId> = page.hits.iter().map(|found| found.hit.track).collect();
+        let known = albums_and_copies(music, &ids);
         let tracks = page
             .hits
             .iter()
             .map(|found| {
                 let key = TrackKey(found.hit.track.get());
-                let album = known.get(&key).copied().unwrap_or_default();
+                let (album, copies) = known.get(&found.hit.track).copied().unwrap_or_default();
                 TrackRow {
                     key,
                     album,
@@ -892,12 +888,11 @@ impl LibrarySource for ServiceLibrary {
                     path: found.path.clone(),
                     cover_seed: seed(album),
                     from_context: true,
-                    copies: copies_count(music, found.hit.track),
+                    copies,
                     ..TrackRow::default()
                 }
             })
             .collect();
-        drop(known);
         Ok(SearchResults {
             artists,
             albums,
@@ -1233,7 +1228,7 @@ impl LibrarySource for ServiceLibrary {
             .map(|(i, track)| {
                 let brief = self.summary_row(track);
                 let row = if i < FULL {
-                    self.track_row(music, brief.key)
+                    self.track_row(music, brief.key, brief.album, brief.copies)
                         .map(|mut row| {
                             row.missing = brief.missing;
                             row
@@ -1365,11 +1360,13 @@ impl LibrarySource for ServiceLibrary {
                 other_files += 1;
                 continue;
             }
-            let track = music
-                .track_at(&file)
-                .ok()
-                .flatten()
-                .and_then(|id| self.track_row(music, TrackKey(id.get())));
+            let track = music.track_at(&file).ok().flatten().and_then(|id| {
+                let (album, copies) = albums_and_copies(music, &[id])
+                    .get(&id)
+                    .copied()
+                    .unwrap_or_default();
+                self.track_row(music, TrackKey(id.get()), album, copies)
+            });
             // A file outside the library is read for its title and length;
             // nothing is stored.
             let (title, duration) = if track.is_none() {
@@ -2030,6 +2027,16 @@ impl Forwarder {
             let Ok(infos) = infos else { return };
             let music = service.library().map(LibraryService::library);
             let album = Self::context_album(&snapshot);
+            let ids: Vec<TrackId> = infos
+                .iter()
+                .filter_map(|info| match &info.track {
+                    TrackRef::Library(id) => Some(*id),
+                    _ => None,
+                })
+                .collect();
+            let known = music
+                .map(|music| albums_and_copies(music, &ids))
+                .unwrap_or_default();
             let items = snapshot
                 .entries
                 .iter()
@@ -2041,8 +2048,8 @@ impl Forwarder {
                         AlbumKey(0)
                     };
                     let mut row = track_row(info, Some(entry.id), entry.from_context, album);
-                    if let (Some(music), TrackRef::Library(id)) = (music, &info.track) {
-                        row.copies = copies_count(music, *id);
+                    if let TrackRef::Library(id) = &info.track {
+                        row.copies = known.get(id).map_or(0, |(_, copies)| *copies);
                     }
                     row
                 })
@@ -2506,8 +2513,8 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         service: Arc::clone(&service),
         ids: Mutex::new(HashMap::new()),
         playlists: Mutex::new(HashMap::new()),
-        albums_of: Mutex::new(HashMap::new()),
         album_rows: Mutex::new(Vec::new()),
+        listed: Mutex::new(None),
         artist_rows: Mutex::new(Vec::new()),
     });
     let player = Rc::new(ServicePlayer {

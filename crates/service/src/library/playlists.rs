@@ -15,10 +15,7 @@ pub use helikodu_library::{
     CleanupCounts, FoundReport, Pin, PinTarget, PlaylistNode, PlaylistType,
 };
 
-use super::{
-    LibraryError, LibraryEvent, LibraryService, MAX_PAGE, MusicLibrary, Page, PlaylistId,
-    TrackSummary,
-};
+use super::{LibraryError, LibraryEvent, LibraryService, MusicLibrary, PlaylistId, TrackSummary};
 use crate::Event;
 
 impl MusicLibrary {
@@ -162,17 +159,7 @@ impl MusicLibrary {
         &self,
         playlist: PlaylistId,
     ) -> Result<Vec<TrackSummary>, LibraryError> {
-        let mut all = Vec::new();
-        loop {
-            let page = self
-                .library
-                .smart_playlist_tracks(playlist, Page::new(all.len(), MAX_PAGE))?;
-            let done = page.items.is_empty() || all.len() + page.items.len() >= page.total;
-            all.extend(page.items);
-            if done {
-                return Ok(all);
-            }
-        }
+        Ok(self.library.all_smart_playlist_tracks(playlist)?)
     }
 
     /// When each of `tracks` came into the library, by track.

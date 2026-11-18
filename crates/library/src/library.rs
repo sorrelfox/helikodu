@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime};
 
 use helikodu_model::library::TrackId;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use helikodu_meta::covers::CoverHash;
 
@@ -229,6 +229,11 @@ impl Library {
         self.db.read(|c| catalog::albums(c, query))
     }
 
+    /// Every album of `query`, whatever its page, in one query.
+    pub fn all_albums(&self, query: &AlbumQuery) -> Result<Vec<AlbumSummary>, DbError> {
+        self.db.read(|c| catalog::all_albums(c, query))
+    }
+
     /// The album `album` with its artists, genres, discs and tracks in order; `None`
     /// if there is no such album or all its tracks are in masked library folders.
     pub fn album(&self, album: AlbumId) -> Result<Option<AlbumDetail>, DbError> {
@@ -254,6 +259,16 @@ impl Library {
     /// One page of the tracks of an album, a person or a genre.
     pub fn tracks(&self, query: &TrackQuery) -> Result<Paged<TrackSummary>, DbError> {
         self.db.read(|c| catalog::tracks(c, query))
+    }
+
+    /// The album and the number of other copies of each of `tracks` (copies that
+    /// are missing or are the same file by another path do not count), in one
+    /// query for many tracks; a track not in the library is left out.
+    pub fn albums_and_copies(
+        &self,
+        tracks: &[TrackId],
+    ) -> Result<HashMap<TrackId, (Option<AlbumId>, u32)>, DbError> {
+        self.db.read(|c| catalog::albums_and_copies(c, tracks))
     }
 
     /// Every track of `query` in its order (the page is not used), as its id and
@@ -597,6 +612,18 @@ impl Library {
             .map_err(PlaylistError::from_job)
     }
 
+    /// Every track of the smart playlist `playlist` now, in its order, running its
+    /// query once.
+    pub fn all_smart_playlist_tracks(
+        &self,
+        playlist: PlaylistId,
+    ) -> Result<Vec<crate::TrackSummary>, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.db
+            .read(|c| playlists::all_smart_tracks(c, playlist, now))
+            .map_err(PlaylistError::from_job)
+    }
+
     /// When each of `tracks` came into the library, by track; a track that is not in
     /// the library is left out.
     pub fn added_times(
@@ -812,6 +839,11 @@ impl Library {
     /// The tracks matching `request.text`, best first, one page of them.
     pub fn search(&self, request: &SearchRequest) -> Result<SearchResults, DbError> {
         self.db.read(|c| search::search(c, request))
+    }
+
+    /// Every track matching `text`, best first, as ids, in one query.
+    pub fn search_ids(&self, text: &str) -> Result<Vec<TrackId>, DbError> {
+        self.db.read(|c| search::search_ids(c, text, false))
     }
 
     /// Empties both search indexes and fills them again from the tracks.

@@ -267,6 +267,24 @@ fn paging() {
     );
     assert!(page(30, 10).hits.is_empty());
     assert_eq!(page(30, 10).total, 25);
+
+    // Every match as ids, in the order of the pages.
+    let paged: Vec<TrackId> = [0, 10, 20]
+        .into_iter()
+        .flat_map(|offset| page(offset, 10).hits)
+        .map(|hit| hit.track)
+        .collect();
+    assert_eq!(library.search_ids("track").unwrap(), paged);
+    assert!(library.search_ids("nothing like it").unwrap().is_empty());
+
+    // Their albums and copies, in one query; an unknown id is left out.
+    let known = library
+        .albums_and_copies(&[paged[0], paged[1], TrackId::new(999)])
+        .unwrap();
+    assert_eq!(known.len(), 2);
+    let album = known[&paged[0]].0;
+    assert!(album.is_some());
+    assert_eq!(known[&paged[1]], (album, 0));
 }
 
 #[test]

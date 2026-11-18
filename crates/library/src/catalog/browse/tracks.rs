@@ -3,13 +3,15 @@
 
 //! Lists of tracks.
 
+use std::collections::HashMap;
+
 use rusqlite::types::Value;
 use rusqlite::{Connection, Row, params_from_iter};
 
 use super::{Paged, Params, TrackFilter, TrackOrder, TrackQuery, TrackSortKey, TrackSummary};
 use helikodu_model::library::TrackId;
 
-use crate::catalog::ids::{AlbumId, track_id_from_sql};
+use crate::catalog::ids::{AlbumId, sql_track_id, track_id_from_sql};
 use crate::catalog::roots::visibility;
 use crate::catalog::track_record::{ArtistRole, TrackKind, TrackSection};
 use crate::db::unix_time;
@@ -114,6 +116,39 @@ pub(crate) fn track_order(
         ))
     })?
     .collect()
+}
+
+/// How many tracks [`albums_and_copies`] asks for in one statement.
+const LOOKUP_CHUNK: usize = 500;
+
+/// The album and the stored number of other copies of each of `tracks`, in one
+/// statement per few hundred tracks; for lists that fetch their rows by id.
+pub(crate) fn albums_and_copies(
+    c: &Connection,
+    tracks: &[TrackId],
+) -> rusqlite::Result<HashMap<TrackId, (Option<AlbumId>, u32)>> {
+    let mut out = HashMap::with_capacity(tracks.len());
+    for chunk in tracks.chunks(LOOKUP_CHUNK) {
+        let marks = vec!["?"; chunk.len()].join(",");
+        let mut statement = c.prepare_cached(&format!(
+            "SELECT id, album_id, copies FROM tracks WHERE id IN ({marks})"
+        ))?;
+        let rows = statement.query_map(
+            params_from_iter(chunk.iter().map(|t| sql_track_id(*t))),
+            |row| {
+                Ok((
+                    track_id_from_sql(row.get(0)?),
+                    row.get::<_, Option<i64>>(1)?.map(AlbumId),
+                    u32::try_from(row.get::<_, i64>(2)?).unwrap_or(0),
+                ))
+            },
+        )?;
+        for row in rows {
+            let (track, album, copies) = row?;
+            out.insert(track, (album, copies));
+        }
+    }
+    Ok(out)
 }
 
 /// The condition of `filter` (its values pushed to `params`) and its own order.

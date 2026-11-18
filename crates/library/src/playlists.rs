@@ -55,7 +55,9 @@ pub(crate) use items::{
 pub(crate) use maintain::{cleanup_counts, remove_duplicates, remove_missing, shuffle};
 pub use pins::{Pin, PinTarget};
 pub(crate) use pins::{pin, pins, unpin};
-pub(crate) use smart::{added_times, create_smart, set_query, smart_query, smart_tracks};
+pub(crate) use smart::{
+    added_times, all_smart_tracks, create_smart, set_query, smart_query, smart_tracks,
+};
 pub(crate) use store::{
     create, create_folder, delete, duplicate, favourite_tracks, favourites, insert_imported,
     is_favourite, move_to, playlist, playlist_tree, playlists, rename, set_favourite, set_grouped,

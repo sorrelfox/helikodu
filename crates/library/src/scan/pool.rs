@@ -16,7 +16,7 @@ use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, SyncSender};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -83,7 +83,10 @@ impl Pool {
     ) -> Self {
         let (jobs, queue) = mpsc::sync_channel::<Job>(count * 4);
         let queue = Arc::new(Mutex::new(queue));
-        let (results_out, results) = mpsc::channel();
+        // Bounded too: when the database writes fall behind the workers, the
+        // reports would otherwise pile up here, a few kilobytes each, until the
+        // scan ends (over a gigabyte for half a million files).
+        let (results_out, results) = mpsc::sync_channel(count * 4);
         let restarts = Arc::new(AtomicUsize::new(0));
         let command = Arc::new(command);
         let slots = (0..count)
@@ -142,7 +145,7 @@ impl Pool {
 struct Slot {
     command: Arc<WorkerCommand>,
     queue: Arc<Mutex<Receiver<Job>>>,
-    results: Sender<Outcome>,
+    results: SyncSender<Outcome>,
     cancel: CancelToken,
     stop: CancelToken,
     restarts: Arc<AtomicUsize>,
