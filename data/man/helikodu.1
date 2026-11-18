@@ -1,0 +1,125 @@
+.\" SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+.\" SPDX-License-Identifier: CC-BY-SA-4.0
+.TH HELIKODU 1 2026-11-17 Helikodu "User Commands"
+.SH NAME
+helikodu \- offline audio player and music library manager
+.SH SYNOPSIS
+.B helikodu
+.RB [ \-\-scheme
+.IR scheme ]
+.RB [ \-\-accent
+.IR accent ]
+.RB [ \-\-style
+.IR style ]
+.RB [ \-\-demo ]
+.RI [ file \&...]
+.br
+.B helikodu
+.B \-\-help
+.SH DESCRIPTION
+.B helikodu
+is the desktop application of Helikodu, an audio player and music library
+manager for Linux that works entirely offline.
+It plays practically every audio format FFmpeg can decode, plays the sound
+track of video files without showing any picture, and plays to the audio
+device chosen in its settings, in shared or exclusive mode.
+.PP
+Files given on the command line are played.
+Only one instance runs at a time: when Helikodu is already running, the files
+are handed to it and the new process ends.
+.PP
+The output device, the library folders and every other setting are read from
+the settings file; see
+.BR FILES .
+.SH OPTIONS
+The appearance options override the settings for this start only.
+.TP
+.BI \-\-scheme " scheme"
+The colour scheme:
+.BR system ,
+.B light
+or
+.BR dark .
+.TP
+.BI \-\-accent " accent"
+The accent colour:
+.B system
+(the desktop's),
+.BR amber ,
+.BR blue ,
+.B green
+or
+.BR violet .
+.TP
+.BI \-\-style " style"
+The window style:
+.B integrated
+(the window draws its own title bar) or
+.B classic
+(the desktop's title bar, with an optional menu bar).
+.TP
+.B \-\-demo
+Shows invented sample content and plays nothing.
+The library and the settings are not used.
+.TP
+.BR \-h ", " \-\-help
+Prints a short usage message and exits.
+.PP
+Options starting with
+.B \-\-gapplication
+are passed on to GApplication; desktop launchers use
+.B \-\-gapplication\-service
+to start Helikodu over D-Bus.
+.SH FILES
+.TP
+.I $XDG_CONFIG_HOME/helikodu/settings.toml
+The settings
+.RI ( ~/.config/helikodu/settings.toml
+by default).
+.TP
+.I $XDG_DATA_HOME/helikodu/library.db
+The library database: tracks, albums, ratings, play statistics and playlists
+.RI ( ~/.local/share/helikodu/ ).
+.TP
+.I $XDG_STATE_HOME/helikodu/
+The last session
+.RI ( session.json ),
+the window state
+.RI ( ui-state.toml )
+and the marker of what is playing
+.RI ( playing.json ),
+which is used to recover after an abnormal end
+.RI ( ~/.local/state/helikodu/ ).
+.TP
+.I $XDG_CACHE_HOME/helikodu/thumbnails/
+Cover thumbnails; safe to delete
+.RI ( ~/.cache/helikodu/ ).
+.SH EXIT STATUS
+0 on success; 1 when an option is not recognised or the application cannot
+start.
+.SH EXAMPLES
+Play two files:
+.PP
+.RS
+.EX
+helikodu ~/Music/one.flac ~/Music/two.opus
+.EE
+.RE
+.PP
+Look at the interface in light colours with sample content:
+.PP
+.RS
+.EX
+helikodu \-\-demo \-\-scheme light
+.EE
+.RE
+.SH SEE ALSO
+.BR helikodu\-cli (1)
+.PP
+The user guide, installed with the application and published at
+.UR https://sorrelfox.github.io/helikodu/
+.UE .
+.SH BUGS
+Report bugs at
+.UR https://github.com/sorrelfox/helikodu/issues
+.UE .

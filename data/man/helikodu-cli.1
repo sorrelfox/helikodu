@@ -1,0 +1,310 @@
+.\" SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+.\" SPDX-License-Identifier: CC-BY-SA-4.0
+.TH HELIKODU-CLI 1 2026-11-17 Helikodu "User Commands"
+.SH NAME
+helikodu\-cli \- play audio files and query the Helikodu library from the terminal
+.SH SYNOPSIS
+.B helikodu\-cli play
+.IR file \&...
+.RI [ options ]
+.br
+.B helikodu\-cli list\-outputs
+.RB [ \-\-backend
+.IR backend ]
+.RB [ \-\-json ]
+.br
+.B helikodu\-cli scan
+.RI [ folder \&...]
+.RB [ \-\-exclude
+.IR pattern ]\&...
+.RB [ \-\-workers
+.IR n ]
+.RB [ \-\-worker
+.IR path ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli search
+.IR text \&...
+.RB [ \-\-limit
+.IR n ]
+.RB [ \-\-offset
+.IR n ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli info
+.IR file | track-id
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli stats
+.RB [ \-\-top
+.IR n ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli \-\-version
+.SH DESCRIPTION
+.B helikodu\-cli
+is the command-line tool of Helikodu.
+It plays files in the terminal, lists the audio devices, and scans and
+queries the same library the desktop application uses.
+It works on its own; the application need not be running.
+.SH COMMANDS
+.SS play
+Plays the files in the order given.
+Files of the same format join without a gap.
+A file that cannot be opened or decoded is reported and skipped.
+.TP
+.BI \-\-backend " backend"
+.B auto
+(the default: PipeWire if it is running, otherwise ALSA),
+.BR pipewire ,
+.BR alsa ,
+.B null
+(discards the audio) or
+.BR wav .
+.TP
+.BI \-\-device " id"
+The device's stable name, as
+.B list\-outputs
+shows it: a PipeWire node name such as
+.BR alsa_output.usb\-Topping_D10s\-00.analog\-stereo ,
+or an ALSA PCM such as
+.BR hw:CARD=D10s,DEV=0 .
+The default is the backend's default device.
+.TP
+.BI \-\-mode " mode"
+.B shared
+(the default) or
+.BR exclusive .
+.TP
+.BI \-\-volume " n"
+The position of the volume control, 0 to 100 (the default).
+It follows the cubic curve of desktop mixers.
+.TP
+.BI \-\-wav\-out " path"
+The file the
+.B wav
+backend writes; required with
+.B \-\-backend wav
+and refused otherwise.
+The file is written as fast as the input decodes.
+.TP
+.BI \-\-replaygain " mode"
+Loudness normalization by ReplayGain tags or Opus R128 tags:
+.B off
+(the default),
+.BR track ,
+.B album
+or
+.B auto
+(the album gain when a neighbouring file in the list has the same album
+title and album artists, the track gain otherwise).
+A file without the chosen gain uses the other one; a file without either
+plays unchanged.
+A positive gain is lowered so that the tagged peak stays at or below full scale.
+.TP
+.BI \-\-preamp " dB"
+Added to the gain of files with loudness tags, \-24 to 24 (default 0).
+.PP
+When standard input is a terminal, these keys control playback and a status
+line on standard error shows the file, position, volume and output:
+.TP
+.B Space
+Pause or resume.
+.TP
+.BR n ", " p
+Next file; previous file (restarts the current file when more than three
+seconds of it have played).
+.TP
+.BR Left ", " Right
+Seek back or forward 5 seconds.
+.TP
+.BR + ", " \-
+Volume up or down by 5.
+.TP
+.B o
+Move playback to the next output device, through the PipeWire and then the
+ALSA devices, without stopping.
+.TP
+.BR q ", " Esc ", " Ctrl+C
+Quit.
+.PP
+Otherwise the files play to the end without reading input, and a lost device
+ends playback.
+.B play
+writes messages to standard error and nothing to standard output.
+.SS list\-outputs
+Lists the devices of every backend that plays sound (PipeWire and ALSA), or
+of the one given with
+.BR \-\-backend
+.RB ( auto ,
+.BR pipewire ,
+.B alsa
+or
+.BR null ).
+The default device is marked with
+.BR * .
+With
+.B \-\-json
+the output is a JSON array with an object per device:
+.BR backend ,
+.BR id ,
+.BR description ,
+.B is_default
+and
+.B capabilities
+.RB ( sample_rates ,
+.BR formats ,
+.BR channel_counts ).
+.SS scan
+Adds the folders to the library and reads their new and changed files;
+files that disappeared are marked missing.
+Without folders, every folder already in the library is scanned again.
+Progress goes to standard error, the summary to standard output.
+.TP
+.BI \-\-exclude " pattern"
+Leaves out every file and folder whose name matches the pattern
+.RB ( *
+and
+.B ?
+are wildcards; case matters), or, when the pattern contains a
+.BR / ,
+the file or folder at that path.
+May be given more than once.
+.TP
+.BI \-\-workers " n"
+The number of worker processes, 1 to 64.
+The default is one per processor, at most 8.
+.TP
+.BI \-\-worker " path"
+The scan worker program.
+The default is
+.B helikodu\-scan\-worker
+beside
+.B helikodu\-cli
+or in
+.I ../libexec/helikodu/
+from it.
+.SS search
+Finds the tracks whose title, artists, album, album artists, genres,
+composers or path contain every word of
+.IR text ,
+ignoring case, accents and character width, best matches first.
+.TP
+.BI \-\-limit " n"
+At most
+.I n
+results, 1 to 1000 (default 50).
+.TP
+.BI \-\-offset " n"
+Skips the first
+.I n
+results (default 0).
+.SS info
+Shows the tags, audio properties and loudness values of a file, read
+directly, with its library entry and statistics when it is in the library.
+An argument that is not an existing file is taken as a track number, as
+.B search
+prints it, and the track is shown from the library.
+.SS stats
+Shows the library folders, the totals and the most played tracks.
+.TP
+.BI \-\-top " n"
+How many of the most played tracks to show, 0 to 1000 (default 10).
+.SH COMMON OPTIONS
+.TP
+.B \-\-json
+Prints the result as JSON.
+Paths are given as text; a path that is not valid UTF-8 also has
+.BR path_bytes ,
+its exact bytes.
+Times are seconds since the Unix epoch, lengths are milliseconds, and unknown
+values are
+.BR null .
+Later versions may add keys; existing keys keep their meaning.
+.TP
+.BI \-\-database " path"
+Uses this library database instead of the default one.
+.TP
+.BR \-h ", " \-\-help
+Prints help for the tool or a command.
+.TP
+.BR \-V ", " \-\-version
+Prints the version.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+For
+.BR play ,
+at least one file played; for
+.BR scan ,
+files that could not be read do not change the status;
+.B search
+without a match is a success.
+.TP
+.B 1
+A runtime error: the output could not be opened or failed, no backend could
+be listed, there is no library yet, the library or a file could not be read,
+a scan could not start, or
+.B info
+found no such track.
+.TP
+.B 2
+A usage error: an unknown option or value, or options that do not go together.
+.TP
+.B 3
+.B play
+could not play any of the files.
+.SH ENVIRONMENT
+.TP
+.B XDG_DATA_HOME
+The library database is
+.I $XDG_DATA_HOME/helikodu/library.db
+.RI ( ~/.local/share/helikodu/library.db
+when it is not set).
+.TP
+.BR LC_ALL ", " LC_COLLATE ", " LANG
+The locale that sorting follows.
+.SH FILES
+.TP
+.I ~/.local/share/helikodu/library.db
+The library database, shared with
+.BR helikodu (1).
+.B scan
+creates it; the other library commands need it, except
+.B info
+on a file.
+.SH EXAMPLES
+List the ALSA devices, then play an album exclusively to one of them with
+album gain:
+.PP
+.RS
+.EX
+helikodu\-cli list\-outputs \-\-backend alsa
+helikodu\-cli play ~/Music/Album/*.flac \-\-backend alsa \e
+    \-\-device \(aqhw:CARD=D10s,DEV=0\(aq \-\-mode exclusive \-\-replaygain album
+.EE
+.RE
+.PP
+Scan a folder and search it:
+.PP
+.RS
+.EX
+helikodu\-cli scan ~/Music \-\-exclude \(aq*.part\(aq
+helikodu\-cli search miles davis \-\-limit 10 \-\-json
+.EE
+.RE
+.SH SEE ALSO
+.BR helikodu (1)
+.SH BUGS
+Report bugs at
+.UR https://github.com/sorrelfox/helikodu/issues
+.UE .

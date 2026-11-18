@@ -127,6 +127,8 @@ install_data(
   install_dir: datadir / 'icons' / 'hicolor' / 'symbolic' / 'apps',
 )
 
+install_man('data/man/helikodu.1', 'data/man/helikodu-cli.1')
+
 desktop_file_validate = find_program('desktop-file-validate', required: false)
 if desktop_file_validate.found()
   test('desktop file', desktop_file_validate, args: [files('data' / app_id + '.desktop')])
