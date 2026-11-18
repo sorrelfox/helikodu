@@ -494,6 +494,9 @@ impl ScanFooter {
         root.append(&bar);
         let current = label("", &["hk-mono-meta", "hk-t3"]);
         current.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
+        // A long path must not widen the sidebar.
+        current.set_max_width_chars(1);
+        current.set_hexpand(true);
         root.append(&current);
         Self {
             root,
@@ -533,7 +536,7 @@ impl ScanFooter {
                 self.bar.set_fraction(fraction);
                 let percent = (fraction * 100.0).floor() as u32;
                 self.share
-                    .set_text(&fill(&tr("{} %"), &[&percent.to_string()]));
+                    .set_text(&fill(&tr("{}%"), &[&percent.to_string()]));
             }
             None => {
                 self.bar.pulse();

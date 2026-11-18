@@ -174,6 +174,7 @@ impl Sidebar {
         line.append(&count);
         self.counts.borrow_mut().push((page.to_owned(), count));
         row.set_child(Some(&line));
+        row.update_property(&[gtk::accessible::Property::Label(title)]);
         self.list.append(&row);
     }
 
@@ -197,7 +198,7 @@ impl Sidebar {
             let title = label(&playlist.name, &[]);
             title.set_hexpand(true);
             line.append(&title);
-            let count = label(&playlist.items.to_string(), &["hk-count"]);
+            let count = label(&crate::format::count(playlist.items), &["hk-count"]);
             count.set_xalign(1.0);
             line.append(&count);
             row.set_child(Some(&line));
@@ -319,14 +320,18 @@ impl Sidebar {
             label.set_text(
                 &value
                     .filter(|v| *v > 0)
-                    .map(|v| v.to_string())
+                    .map(crate::format::count)
                     .unwrap_or_default(),
             );
         }
     }
 
-    /// The list, for keyboard focus.
+    /// The row to focus when the sidebar is entered from the keyboard: the
+    /// selected one, else the first; the arrow keys move on from there.
     pub(crate) fn focus_target(&self) -> gtk::Widget {
-        self.list.clone().upcast()
+        self.list
+            .selected_row()
+            .or_else(|| self.list.row_at_index(0))
+            .map_or_else(|| self.list.clone().upcast(), Cast::upcast)
     }
 }

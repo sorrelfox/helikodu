@@ -212,6 +212,7 @@ pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
     let search = gtk::SearchEntry::new();
     search.add_css_class("hk-input");
     search.set_placeholder_text(Some(&tr("Search settings")));
+    search.update_property(&[gtk::accessible::Property::Label(&tr("Search settings"))]);
     search.set_margin_start(8);
     search.set_margin_end(8);
     search.set_margin_bottom(8);
@@ -227,6 +228,7 @@ pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
         let row = gtk::ListBoxRow::new();
         row.set_widget_name(page.id());
         row.set_child(Some(&label(&page.title(), &[])));
+        row.update_property(&[gtk::accessible::Property::Label(&page.title())]);
         row.set_sensitive(page.available());
         list.append(&row);
     }

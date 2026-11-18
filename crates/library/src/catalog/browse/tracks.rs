@@ -7,6 +7,8 @@ use rusqlite::types::Value;
 use rusqlite::{Connection, Row, params_from_iter};
 
 use super::{Paged, Params, TrackFilter, TrackOrder, TrackQuery, TrackSortKey, TrackSummary};
+use helikodu_model::library::TrackId;
+
 use crate::catalog::ids::{AlbumId, track_id_from_sql};
 use crate::catalog::roots::visibility;
 use crate::catalog::track_record::{ArtistRole, TrackKind, TrackSection};
@@ -51,7 +53,71 @@ pub(super) fn summary(row: &Row<'_>) -> rusqlite::Result<TrackSummary> {
 pub(crate) fn tracks(c: &Connection, query: &TrackQuery) -> rusqlite::Result<Paged<TrackSummary>> {
     let visible = visibility(c, query.include_masked)?;
     let mut params: Params = Vec::new();
-    let (filter, order) = match query.filter {
+    let (filter, order) = filter_and_order(query.filter, &mut params);
+    let (join, order) = sorted(&query.sort, order);
+    let total: i64 = c
+        .prepare_cached(&format!(
+            "SELECT count(*) FROM tracks t WHERE {filter} AND {visible}"
+        ))?
+        .query_row(params_from_iter(&params), |row| row.get(0))?;
+    let (limit, offset) = query.page.sql();
+    let n = params.len();
+    params.push(Value::Integer(limit));
+    params.push(Value::Integer(offset));
+    let items = c
+        .prepare_cached(&format!(
+            "SELECT {COLUMNS} {FROM} {join} WHERE {filter} AND {visible}
+             ORDER BY {order} LIMIT ?{} OFFSET ?{}",
+            n + 1,
+            n + 2
+        ))?
+        .query_map(params_from_iter(&params), summary)?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(Paged {
+        items,
+        total: usize::try_from(total).unwrap_or(0),
+    })
+}
+
+/// Every track of `query` in its order, as its id and album only, in one
+/// sorted query; the page of `query` is not used.
+pub(crate) fn track_order(
+    c: &Connection,
+    query: &TrackQuery,
+) -> rusqlite::Result<Vec<(TrackId, Option<AlbumId>)>> {
+    let visible = visibility(c, query.include_masked)?;
+    let mut params: Params = Vec::new();
+    let (filter, order) = filter_and_order(query.filter, &mut params);
+    // The order of whole lists by album and folder compares the ranks of the
+    // albums and folders rather than their names and paths, the same order
+    // with far smaller rows to sort.
+    let (ranks, order) = match order {
+        BY_ALBUM_ARTIST => (RANKS_BY_ALBUM_ARTIST, RANKED_ORDER),
+        BY_YEAR => (RANKS_BY_YEAR, RANKED_ORDER),
+        other => ("", other),
+    };
+    let (join, order) = sorted(&query.sort, order);
+    let rank_join = if ranks.is_empty() {
+        ""
+    } else {
+        "LEFT JOIN album_rank ar ON ar.id = t.album_id JOIN dir_rank dr ON dr.id = f.dir_id"
+    };
+    c.prepare_cached(&format!(
+        "{ranks} SELECT t.id, t.album_id {FROM} {rank_join} {join}
+         WHERE {filter} AND {visible} ORDER BY {order}"
+    ))?
+    .query_map(params_from_iter(&params), |row| {
+        Ok((
+            track_id_from_sql(row.get(0)?),
+            row.get::<_, Option<i64>>(1)?.map(AlbumId),
+        ))
+    })?
+    .collect()
+}
+
+/// The condition of `filter` (its values pushed to `params`) and its own order.
+fn filter_and_order(filter: TrackFilter, params: &mut Params) -> (String, &'static str) {
+    match filter {
         TrackFilter::All => ("1".to_owned(), BY_ALBUM_ARTIST),
         TrackFilter::Album(album) => {
             params.push(Value::Integer(album.0));
@@ -88,30 +154,7 @@ pub(crate) fn tracks(c: &Connection, query: &TrackQuery) -> rusqlite::Result<Pag
                 BY_ALBUM_ARTIST,
             )
         }
-    };
-    let (join, order) = sorted(&query.sort, order);
-    let total: i64 = c
-        .prepare_cached(&format!(
-            "SELECT count(*) FROM tracks t WHERE {filter} AND {visible}"
-        ))?
-        .query_row(params_from_iter(&params), |row| row.get(0))?;
-    let (limit, offset) = query.page.sql();
-    let n = params.len();
-    params.push(Value::Integer(limit));
-    params.push(Value::Integer(offset));
-    let items = c
-        .prepare_cached(&format!(
-            "SELECT {COLUMNS} {FROM} {join} WHERE {filter} AND {visible}
-             ORDER BY {order} LIMIT ?{} OFFSET ?{}",
-            n + 1,
-            n + 2
-        ))?
-        .query_map(params_from_iter(&params), summary)?
-        .collect::<rusqlite::Result<_>>()?;
-    Ok(Paged {
-        items,
-        total: usize::try_from(total).unwrap_or(0),
-    })
+    }
 }
 
 /// Albums in the order of their year, then the tracks without an album by title.
@@ -125,6 +168,23 @@ const BY_ALBUM_ARTIST: &str = "t.album_id IS NULL, a.artist_sort IS NULL, a.arti
     coalesce(a.original_year, a.year), a.title_sort, t.album_id,
     coalesce(t.disc_no, 1), t.track_no IS NULL, t.track_no, d.path, f.name, t.sub_index,
     t.title_sort, t.id";
+
+/// [`BY_ALBUM_ARTIST`] and [`BY_YEAR`] over the ranks of [`RANKS_BY_ALBUM_ARTIST`]
+/// or [`RANKS_BY_YEAR`]: `ar.r` (no rank without an album) and `dr.r`.
+const RANKED_ORDER: &str = "t.album_id IS NULL, ar.r, coalesce(t.disc_no, 1), t.track_no IS NULL,
+    t.track_no, dr.r, f.name, t.sub_index, t.title_sort, t.id";
+
+/// The albums ranked as [`BY_ALBUM_ARTIST`] orders them, and the folders by path.
+const RANKS_BY_ALBUM_ARTIST: &str = "WITH album_rank(id, r) AS (
+        SELECT id, row_number() OVER (ORDER BY artist_sort IS NULL, artist_sort,
+            coalesce(original_year, year), title_sort, id) FROM albums),
+    dir_rank(id, r) AS (SELECT id, row_number() OVER (ORDER BY path) FROM dirs)";
+
+/// The albums ranked as [`BY_YEAR`] orders them, and the folders by path.
+const RANKS_BY_YEAR: &str = "WITH album_rank(id, r) AS (
+        SELECT id, row_number() OVER (ORDER BY coalesce(original_year, year) IS NULL,
+            coalesce(original_year, year), title_sort, id) FROM albums),
+    dir_rank(id, r) AS (SELECT id, row_number() OVER (ORDER BY path) FROM dirs)";
 
 /// The order of `sort` in front of the filter's own `order`, and the join it needs.
 fn sorted(sort: &[TrackOrder], order: &str) -> (&'static str, String) {

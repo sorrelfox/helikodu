@@ -17,6 +17,7 @@ mod services;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::RecvTimeoutError;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;
@@ -29,8 +30,8 @@ use helikodu_model::audio::{
 };
 use helikodu_model::library::{MediaSource, TrackId, TrackRef};
 use helikodu_model::player::{
-    ContextSource, EnqueueAt, EntryId, PlayModes, PlaybackState as ServicePlayback, QueueContext,
-    RepeatMode, ShuffleMode, StopAfter, Volume,
+    ContextSource, EngineError, EnqueueAt, EntryId, PlayModes, PlaybackState as ServicePlayback,
+    QueueContext, RepeatMode, ShuffleMode, StopAfter, Volume,
 };
 use helikodu_model::settings::UiState;
 use helikodu_service::bus::Subscription;
@@ -648,18 +649,19 @@ impl LibrarySource for ServiceLibrary {
                 descending: key.descending,
             })
             .collect();
-        let mut tracks = music.sorted_tracks(filter, &sort).map_err(error)?;
+        // Only ids and albums, sorted in one query: the rows come later, by key.
+        let mut tracks = music.sorted_track_ids(filter, &sort).map_err(error)?;
         if let Some(found) = found {
             let found: HashSet<TrackKey> = found.into_iter().collect();
-            tracks.retain(|t| found.contains(&TrackKey(t.id.get())));
+            tracks.retain(|(id, _)| found.contains(&TrackKey(id.get())));
         }
         {
             let mut albums = lock(&self.albums_of);
-            for t in &tracks {
-                albums.insert(TrackKey(t.id.get()), t.album.map_or(AlbumKey(0), album_key));
+            for (id, album) in &tracks {
+                albums.insert(TrackKey(id.get()), album.map_or(AlbumKey(0), album_key));
             }
         }
-        Ok(tracks.iter().map(|t| TrackKey(t.id.get())).collect())
+        Ok(tracks.iter().map(|(id, _)| TrackKey(id.get())).collect())
     }
 
     fn track_rows(&self, keys: &[TrackKey]) -> Result<Vec<TrackRow>, BackendError> {
@@ -962,6 +964,8 @@ pub struct ServicePlayer {
     service: Arc<Service>,
     library: Arc<ServiceLibrary>,
     updates: async_channel::Sender<Update>,
+    /// Whether position updates reach the window (only while it is shown).
+    positions: Arc<AtomicBool>,
 }
 
 impl ServicePlayer {
@@ -983,6 +987,20 @@ impl ServicePlayer {
 }
 
 impl PlayerControl for ServicePlayer {
+    fn follow_position(&self, shown: bool) {
+        if self.positions.swap(shown, Ordering::Relaxed) || !shown {
+            return;
+        }
+        // The position missed while hidden, at once.
+        let status = self.service.player().status();
+        if let Some(now) = status.now_playing {
+            let _ = self.updates.try_send(Update::Position {
+                elapsed: status.position.as_duration(),
+                length: now.length.map(MediaTime::as_duration),
+            });
+        }
+    }
+
     fn send(&self, request: PlayerRequest) {
         match request {
             PlayerRequest::PlayAlbum {
@@ -1219,6 +1237,8 @@ struct Forwarder {
     output: OutputInfo,
     /// The now-playing entry and the cover MPRIS waits for.
     pending_cover: Arc<Mutex<Option<(EntryId, CoverHash)>>>,
+    /// Whether the window is shown; position updates wait otherwise.
+    positions: Arc<AtomicBool>,
 }
 
 impl Forwarder {
@@ -1406,6 +1426,8 @@ impl Forwarder {
                     length: length.map(MediaTime::as_duration),
                 }) && self.send(Update::Output(self.output.clone()))
             }
+            // Nothing draws the position while the window is hidden.
+            PlayerEvent::Position { .. } if !self.positions.load(Ordering::Relaxed) => true,
             PlayerEvent::Position {
                 position, length, ..
             } => self.send(Update::Position {
@@ -1425,6 +1447,17 @@ impl Forwarder {
             }
             PlayerEvent::OutputChanged(selection) => {
                 self.output.device = output_name(selection);
+                self.send(Update::Output(self.output.clone()))
+            }
+            // The window tells of a lost device itself, with the output
+            // button showing it as not connected.
+            PlayerEvent::Problem {
+                error: EngineError::DeviceLost { .. },
+                ..
+            } => {
+                self.output.signal = SignalState::NotConnected;
+                self.output.sample_rate = None;
+                self.output.bits = None;
                 self.send(Update::Output(self.output.clone()))
             }
             PlayerEvent::Problem { file, error, .. } => {
@@ -1534,7 +1567,9 @@ impl Forwarder {
     fn run(mut self, events: &Subscription<Event>) {
         self.initial();
         loop {
-            match events.recv_timeout(Duration::from_millis(200)) {
+            // The timeout only notices a closed window while nothing happens;
+            // a long one keeps an idle player from waking this thread often.
+            match events.recv_timeout(Duration::from_secs(5)) {
                 Ok(Event::Player(event)) => {
                     if !self.player_event(&event) {
                         return;
@@ -1621,12 +1656,14 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
     }
     let events =
         service.subscribe(SubscribeOptions::all().with_position_interval(POSITION_INTERVAL));
+    let positions = Arc::new(AtomicBool::new(true));
     let forwarder = Forwarder {
         service: Arc::clone(&service),
         updates: sender.clone(),
         mpris,
         output: OutputInfo::default(),
         pending_cover: Arc::new(Mutex::new(None)),
+        positions: Arc::clone(&positions),
     };
     thread::Builder::new()
         .name("helikodu-ui-events".into())
@@ -1648,6 +1685,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         service: Arc::clone(&service),
         library: Arc::clone(&library),
         updates: sender,
+        positions,
     });
     services::follow_folders(&service, true);
     let services = Arc::new(services::ServiceServices {

@@ -309,7 +309,10 @@ impl AlbumPage {
         imp.title.set_tooltip_text(Some(&row.title));
         imp.artist.set_text(&row.artist);
         let count = detail.tracks().count();
-        let tracks = fill(&ntr("{} track", "{} tracks", count), &[&count.to_string()]);
+        let tracks = fill(
+            &ntr("{} track", "{} tracks", count),
+            &[&crate::format::count(count)],
+        );
         let mut parts = Vec::new();
         if let Some(year) = row.year {
             parts.push(year.to_string());

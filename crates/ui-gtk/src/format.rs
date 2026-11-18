@@ -94,6 +94,27 @@ pub(crate) fn badges(format: &AudioFormat, album_gain_db: Option<f64>) -> Vec<St
     out
 }
 
+/// A count with the locale's thousands separator: `1,284`. The separator is
+/// translated (context "thousands separator"), so each language sets its own.
+pub(crate) fn count(n: impl TryInto<u64>) -> String {
+    group(
+        n.try_into().unwrap_or(u64::MAX),
+        &gettextrs::pgettext("thousands separator", ","),
+    )
+}
+
+fn group(n: u64, separator: &str) -> String {
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3 * separator.len());
+    for (i, digit) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push_str(separator);
+        }
+        out.push(digit);
+    }
+    out
+}
+
 /// A size in bytes: `912 MB`.
 pub(crate) fn size(bytes: u64) -> String {
     gtk::glib::format_size(bytes).to_string()
@@ -112,6 +133,15 @@ mod tests {
             "\u{2212}3:13"
         );
         assert_eq!(minutes(Duration::from_secs(43 * 60)), "43 min");
+    }
+
+    #[test]
+    fn counts() {
+        assert_eq!(group(0, ","), "0");
+        assert_eq!(group(999, ","), "999");
+        assert_eq!(group(1284, ","), "1,284");
+        assert_eq!(group(18_402, ","), "18,402");
+        assert_eq!(group(1_000_000, "\u{202f}"), "1\u{202f}000\u{202f}000");
     }
 
     #[test]

@@ -69,8 +69,80 @@ fn steps() -> Vec<Step> {
             None
         }),
         ("main-menu", |w| w.demo_main_menu()),
-        ("play-menu", |w| Some(w.demo_play_menu())),
+        ("play-menu", |w| {
+            // As drawn: "Stop after this track" is on.
+            if let Some(action) = w
+                .application()
+                .and_then(|a| a.lookup_action("stop-after"))
+                .filter(|a| a.state().and_then(|s| s.get::<bool>()) == Some(false))
+            {
+                action.activate(None);
+            }
+            Some(w.demo_play_menu())
+        }),
     ]
+}
+
+/// Renders an open menu over the part of the window the design shows with
+/// it: the play button's menu in 440 × 300 above the deck, the main menu in
+/// 300 × 470 from the top, 8 px beyond its right edge, the context menu in 280 × 380 from 38 px left and
+/// 12 px above the menu.
+fn save_menu(
+    window: &MainWindow,
+    popover: &gtk::Popover,
+    name: &str,
+    path: &std::path::Path,
+) -> Result<(), String> {
+    let window_widget = window.upcast_ref::<gtk::Widget>();
+    let popover_widget = popover.upcast_ref::<gtk::Widget>();
+    // Where the popover's surface is, in the window's coordinates.
+    let popup = popover
+        .surface()
+        .and_downcast::<gtk::gdk::Popup>()
+        .ok_or("the menu is not shown")?;
+    let (wx, wy) = window.surface_transform();
+    let (px, py) = popover.surface_transform();
+    let x = f64::from(popup.position_x()) + px - wx;
+    let y = f64::from(popup.position_y()) + py - wy;
+    let snapshot = gtk::Snapshot::new();
+    gtk::WidgetPaintable::new(Some(window_widget)).snapshot(
+        &snapshot,
+        f64::from(window.width()),
+        f64::from(window.height()),
+    );
+    snapshot.save();
+    snapshot.translate(&gtk::graphene::Point::new(x as f32, y as f32));
+    gtk::WidgetPaintable::new(Some(popover_widget)).snapshot(
+        &snapshot,
+        f64::from(popover.width()),
+        f64::from(popover.height()),
+    );
+    snapshot.restore();
+    let node = snapshot.to_node().ok_or("nothing was drawn")?;
+    let frame = popover
+        .child()
+        .and_then(|c| c.compute_bounds(popover_widget))
+        .map(|b| {
+            (
+                x as f32 + b.x() - 7.0,
+                y as f32 + b.y() - 7.0,
+                b.width() + 14.0,
+            )
+        })
+        .ok_or("the menu has no content")?;
+    let h = window.height() as f32;
+    let region = match name {
+        "play-menu" => {
+            gtk::graphene::Rect::new(frame.0 + frame.2 / 2.0 - 220.0, h - 300.0, 440.0, 300.0)
+        }
+        "main-menu" => gtk::graphene::Rect::new(frame.0 + frame.2 + 8.0 - 300.0, 0.0, 300.0, 470.0),
+        _ => gtk::graphene::Rect::new(frame.0 - 38.0, frame.1 - 12.0, 280.0, 380.0),
+    };
+    let renderer = window.renderer().ok_or("the window is not realised")?;
+    renderer
+        .render_texture(&node, Some(&region))
+        .save_to_png(path)
+        .map_err(|e| e.to_string())
 }
 
 fn main() -> ExitCode {
@@ -157,6 +229,9 @@ fn main() -> ExitCode {
                     set_choice(scheme, AccentChoice::Amber);
                     let popover = prepare(&window);
                     glib::timeout_future(Duration::from_millis(900)).await;
+                    if name == "tracks" {
+                        window.demo_select_tracks(3, 3);
+                    }
                     if name == "folders" {
                         for _ in 0..3 {
                             window.demo_folder_step();
@@ -172,7 +247,14 @@ fn main() -> ExitCode {
                     let file = format!("{name}-{suffix}");
                     save(&file, window.upcast_ref());
                     if let Some(popover) = popover {
-                        save(&format!("{file}-popover"), popover.upcast_ref());
+                        let path = out.join(format!("{file}-popover.png"));
+                        match save_menu(&window, &popover, name, &path) {
+                            Ok(()) => println!("wrote {}", path.display()),
+                            Err(e) => {
+                                eprintln!("views: {name}: {e}");
+                                failed.set(true);
+                            }
+                        }
                         popover.popdown();
                     }
                 }

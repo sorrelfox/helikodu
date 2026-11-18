@@ -265,6 +265,7 @@ pub(crate) fn popup(
     let model = menu(&target, &window.playlist_rows());
     window.set_target(Some(target));
     let popover = gtk::PopoverMenu::from_model(Some(&model));
+    popover.add_css_class("hk-context-menu");
     popover.set_parent(widget);
     popover.set_has_arrow(false);
     popover.set_halign(gtk::Align::Start);

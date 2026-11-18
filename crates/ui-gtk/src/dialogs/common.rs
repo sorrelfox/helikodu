@@ -130,8 +130,36 @@ pub(crate) fn row(
     row.append(&head);
     let control = control.as_ref();
     control.set_hexpand(true);
+    label_dropdowns(control, &name);
     row.append(control);
     row
+}
+
+/// The style class of a dropdown in a row that is named by its own label
+/// rather than the row's title.
+pub(crate) const OWN_LABEL: &str = "hk-own-label";
+
+/// Names the dropdowns in `control` after the row's `title` (and, in a
+/// sentence of controls, the words just before each), rather than after the
+/// value they show.
+fn label_dropdowns(control: &gtk::Widget, title: &gtk::Label) {
+    if let Some(dropdown) = control.downcast_ref::<gtk::DropDown>() {
+        if dropdown.has_css_class(OWN_LABEL) {
+            return;
+        }
+        let mut labels: Vec<gtk::Accessible> = vec![title.clone().upcast()];
+        if let Some(words) = dropdown.prev_sibling().and_downcast::<gtk::Label>() {
+            labels.push(words.upcast());
+        }
+        let labels: Vec<&gtk::Accessible> = labels.iter().collect();
+        dropdown.update_relation(&[gtk::accessible::Relation::LabelledBy(&labels)]);
+        return;
+    }
+    let mut child = control.first_child();
+    while let Some(widget) = child {
+        label_dropdowns(&widget, title);
+        child = widget.next_sibling();
+    }
 }
 
 /// A vertical box for the control area of a row: the control, then a note.
@@ -277,6 +305,10 @@ pub(crate) fn option_card(
 pub(crate) fn dropdown(items: &[String], selected: usize, width: i32) -> gtk::DropDown {
     let strings: Vec<&str> = items.iter().map(String::as_str).collect();
     let dropdown = gtk::DropDown::from_strings(&strings);
+    // The value in the button is not a stop of its own for the keyboard; the
+    // list keeps its focusable rows and the mark at the chosen one.
+    dropdown.set_factory(Some(&dropdown_items(false)));
+    dropdown.set_list_factory(Some(&dropdown_items(true)));
     dropdown.add_css_class("hk-input");
     dropdown.set_selected(u32::try_from(selected).unwrap_or(0));
     dropdown.set_halign(gtk::Align::Start);
@@ -285,6 +317,52 @@ pub(crate) fn dropdown(items: &[String], selected: usize, width: i32) -> gtk::Dr
         dropdown.set_size_request(width, -1);
     }
     dropdown
+}
+
+/// The items of a dropdown of strings: in its button, or in its list.
+fn dropdown_items(in_list: bool) -> gtk::SignalListItemFactory {
+    let factory = gtk::SignalListItemFactory::new();
+    factory.connect_setup(move |_, item| {
+        let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+            return;
+        };
+        let text = gtk::Label::new(None);
+        text.set_xalign(0.0);
+        text.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        if in_list {
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+            text.set_hexpand(true);
+            line.append(&text);
+            let mark = gtk::Image::from_icon_name("object-select-symbolic");
+            item.bind_property("selected", &mark, "opacity")
+                .transform_to(|_, selected: bool| Some(if selected { 1.0 } else { 0.0 }))
+                .sync_create()
+                .build();
+            line.append(&mark);
+            item.set_child(Some(&line));
+        } else {
+            item.set_focusable(false);
+            item.set_child(Some(&text));
+        }
+    });
+    factory.connect_bind(|_, item| {
+        let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+            return;
+        };
+        let text = item
+            .item()
+            .and_downcast::<gtk::StringObject>()
+            .map(|s| s.string());
+        let child = item.child();
+        let label = child
+            .as_ref()
+            .and_then(|c| c.downcast_ref::<gtk::Label>().cloned())
+            .or_else(|| child.and_then(|c| c.first_child()).and_downcast());
+        if let Some(label) = label {
+            label.set_text(text.as_deref().unwrap_or(""));
+        }
+    });
+    factory
 }
 
 /// Calls `changed` with each index the user picks in `dropdown`.

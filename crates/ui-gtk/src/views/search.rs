@@ -305,7 +305,7 @@ impl SearchView {
         }
         self.root.set_visible_child_name("results");
         self.title.set_text(&fill(&tr("Results for “{}”"), &[text]));
-        self.total.set_text(&count.to_string());
+        self.total.set_text(&crate::format::count(count));
         let words: Vec<String> = text.split_whitespace().map(str::to_lowercase).collect();
         let mut entries = Vec::new();
         if !results.artists.is_empty() {
@@ -315,11 +315,11 @@ impl SearchView {
                 lead.set_name(&artist.name);
                 let albums = fill(
                     &crate::i18n::ntr("{} album", "{} albums", artist.album_count),
-                    &[&artist.album_count.to_string()],
+                    &[&crate::format::count(artist.album_count)],
                 );
                 let tracks = fill(
                     &crate::i18n::ntr("{} track", "{} tracks", artist.track_count),
-                    &[&artist.track_count.to_string()],
+                    &[&crate::format::count(artist.track_count)],
                 );
                 self.row(
                     entries.len(),
@@ -362,10 +362,21 @@ impl SearchView {
                 } else {
                     fill(&tr("{} · {}"), &[&track.artist, &track.album_title])
                 };
+                // A track without a title shows its file name, as the queue does.
+                let title = if track.title.is_empty() {
+                    track
+                        .path
+                        .as_deref()
+                        .and_then(std::path::Path::file_name)
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default()
+                } else {
+                    track.title.clone()
+                };
                 self.row(
                     entries.len(),
                     cover.upcast_ref(),
-                    &track.title,
+                    &title,
                     &description,
                     &track.duration.map(format::duration).unwrap_or_default(),
                     &words,
@@ -376,13 +387,12 @@ impl SearchView {
                 let row = gtk::ListBoxRow::new();
                 row.set_widget_name(&entries.len().to_string());
                 row.add_css_class("hk-show-all");
-                row.set_child(Some(&label(
-                    &fill(
-                        &tr("Show all {} tracks"),
-                        &[&results.track_total.to_string()],
-                    ),
-                    &["hk-t2"],
-                )));
+                let text = fill(
+                    &tr("Show all {} tracks"),
+                    &[&results.track_total.to_string()],
+                );
+                row.set_child(Some(&label(&text, &["hk-t2"])));
+                row.update_property(&[gtk::accessible::Property::Label(&text)]);
                 self.list.append(&row);
                 entries.push(Entry::ShowAll);
             }
@@ -412,6 +422,10 @@ impl SearchView {
             line.append(&l);
         }
         row.set_child(Some(&line));
+        row.update_property(&[gtk::accessible::Property::Label(&fill(
+            &tr("{}, {}"),
+            &[text, &count.to_string()],
+        ))]);
         self.list.append(&row);
     }
 

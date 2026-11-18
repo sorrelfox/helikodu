@@ -82,6 +82,7 @@ fn accent(context: &Rc<Context>) -> gtk::Box {
     inner.append(&gtk::Image::from_icon_name("video-display-symbolic"));
     inner.append(&gtk::Label::new(Some(&tr("From the desktop"))));
     desktop.set_child(Some(&inner));
+    desktop.update_property(&[gtk::accessible::Property::Label(&tr("From the desktop"))]);
     desktop.set_valign(gtk::Align::Center);
     line.append(&desktop);
     let bar = gtk::Separator::new(gtk::Orientation::Vertical);

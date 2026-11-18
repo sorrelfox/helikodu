@@ -118,8 +118,12 @@ button.hk-swatch:checked { box-shadow: 0 0 0 2px var(--hk-pane), 0 0 0 4px var(-
 
 /* ---- 3. Full-output confirmation ---------------------------------------- */
 
-.hk-confirm-readout { margin-top: 20px; background-color: var(--hk-side); border: 1px solid var(--hk-line); }
-.hk-confirm-value { font-size: 12.5px; font-weight: 500; }
+.hk-confirm.hk-dialog-body { padding: 24px 24px 20px; }
+.hk-confirm .hk-dialog-buttons { margin-top: 0; }
+.hk-confirm-readout { margin-top: 16px; padding: 11px 16px; }
+.hk-confirm-value { font-size: 12px; font-weight: 500; }
+.hk-confirm button.hk-btn.default { padding: 0 16px; font-weight: 600; }
+.hk-confirm button:focus:focus-visible { outline-offset: 2px; }
 
 /* ---- 4. Output switcher (on glass) -------------------------------------- */
 

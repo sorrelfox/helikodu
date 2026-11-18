@@ -117,6 +117,7 @@ mod imp {
             if count == 0 {
                 return;
             }
+            let pitch = (w + GAP) / count as f32;
             let fraction = obj.fraction();
             let played = (fraction * count as f64).floor() as usize;
             let accent = crate::style::current().accent.glass_fill.to_gdk();
@@ -129,8 +130,11 @@ mod imp {
                     peaks[i * peaks.len() / count].max(MIN)
                 };
                 let bar_h = (peak * h).round().max(2.0);
-                let x = i as f32 * (BAR + GAP);
-                let rect = graphene::Rect::new(x, ((h - bar_h) / 2.0).round(), BAR, bar_h);
+                // The bars share the whole width, as in the design: the space
+                // a whole bar would not fill is spread over all of them.
+                let x = (i as f32 * pitch).round();
+                let width = ((i + 1) as f32 * pitch - GAP).round() - x;
+                let rect = graphene::Rect::new(x, ((h - bar_h) / 2.0).round(), width, bar_h);
                 let color = if i < played { &accent } else { &rest };
                 snapshot.push_rounded_clip(&gsk::RoundedRect::from_rect(rect, 1.0));
                 snapshot.append_color(color, &rect);

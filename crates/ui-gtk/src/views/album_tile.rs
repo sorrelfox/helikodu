@@ -30,10 +30,17 @@ mod imp {
         pub(super) title: RefCell<Option<gtk::Label>>,
         pub(super) artist: RefCell<Option<gtk::Label>>,
         pub(super) meta: RefCell<Option<gtk::Label>>,
+        pub(super) text: RefCell<Option<gtk::Box>>,
+        pub(super) bars: RefCell<Option<gtk::DrawingArea>>,
         pub(super) item: RefCell<Option<AlbumItem>>,
         pub(super) loaded: RefCell<Option<glib::SignalHandlerId>>,
         pub(super) key: Cell<Option<u64>>,
         pub(super) covers: RefCell<Option<Rc<CoverCache>>>,
+        /// Whether the cover loads only while the tile is in view (the grid).
+        pub(super) lazy: Cell<bool>,
+        pub(super) in_view: Cell<bool>,
+        /// The cover and placeholder seed of the album shown.
+        pub(super) art: Cell<Option<(Option<CoverKey>, u64)>>,
     }
 
     #[glib::object_subclass]
@@ -61,6 +68,11 @@ mod imp {
                 text.append(l);
             }
             obj.append(&text);
+            let bars = placeholder_bars();
+            bars.set_visible(false);
+            obj.append(&bars);
+            self.text.replace(Some(text));
+            self.bars.replace(Some(bars));
             self.title.replace(Some(title));
             self.artist.replace(Some(artist));
             self.meta.replace(Some(meta));
@@ -139,6 +151,36 @@ impl AlbumTile {
         }
         imp.cover.want(None);
         imp.key.set(None);
+        imp.in_view.set(false);
+        imp.art.set(None);
+    }
+
+    /// Loads the cover only while the tile is in view (see [`Self::set_in_view`]);
+    /// otherwise it shows a cached cover or the placeholder.
+    pub(crate) fn set_lazy_cover(&self) {
+        self.imp().lazy.set(true);
+    }
+
+    /// Whether the tile is in view: a lazy tile loads its cover when it comes
+    /// into view and lets go of it when it leaves, so that the tiles the grid
+    /// keeps off screen hold no pictures.
+    pub(crate) fn set_in_view(&self, on: bool) {
+        let imp = self.imp();
+        if !imp.lazy.get() || imp.in_view.replace(on) == on {
+            return;
+        }
+        let (Some((cover, seed)), Some(covers)) = (imp.art.get(), imp.covers.borrow().clone())
+        else {
+            return;
+        };
+        if on {
+            covers.show(&imp.cover, cover, seed, TILE);
+        } else {
+            if let Some(cover) = cover {
+                covers.cancel(cover, self.thumbnail_size());
+            }
+            imp.cover.show(seed, None);
+        }
     }
 
     /// The thumbnail size of the cover in device pixels.
@@ -167,12 +209,35 @@ impl AlbumTile {
                 l.set_text("");
             }
         }
+        self.show_bars(true);
+    }
+
+    /// Shows the three placeholder bars in place of the text, or the text.
+    fn show_bars(&self, on: bool) {
+        let imp = self.imp();
+        if let Some(text) = imp.text.borrow().as_ref() {
+            text.set_visible(!on);
+        }
+        if let Some(bars) = imp.bars.borrow().as_ref() {
+            if on {
+                // Each tile its own widths, the same each time it is shown.
+                let seed = imp.key.get().unwrap_or_default();
+                bars.set_widget_name(&seed.to_string());
+                bars.queue_draw();
+            }
+            bars.set_visible(on);
+        }
     }
 
     fn show(&self, row: &AlbumRow) {
         let imp = self.imp();
         imp.cover.set_loading(false);
+        self.show_bars(false);
+        imp.art.set(Some((row.cover, row.cover_seed)));
         match imp.covers.borrow().as_ref() {
+            Some(covers) if imp.lazy.get() && !imp.in_view.get() => {
+                covers.show_cached(&imp.cover, row.cover, row.cover_seed, TILE);
+            }
             Some(covers) => covers.show(&imp.cover, row.cover, row.cover_seed, TILE),
             None => imp.cover.show(row.cover_seed, None),
         }
@@ -204,4 +269,53 @@ impl AlbumTile {
                 &[&row.title, &row.artist],
             ))]);
     }
+}
+
+/// The three bars in `line` under a placeholder tile: 9, 8 and 7 high, 7
+/// apart, radius 3, each between 34 % and 88 % of the tile's width. The
+/// colour is the widget's CSS colour; the widths follow the widget name, which
+/// holds the album's key.
+fn placeholder_bars() -> gtk::DrawingArea {
+    let bars = gtk::DrawingArea::new();
+    bars.add_css_class("hk-placeholder-bars");
+    bars.set_margin_top(13);
+    bars.set_content_height(9 + 7 + 8 + 7 + 7);
+    bars.set_can_target(false);
+    bars.set_draw_func(|area, cr, width, _| {
+        let seed: u64 = area.widget_name().parse().unwrap_or_default();
+        let color = area.color();
+        cr.set_source_rgba(
+            f64::from(color.red()),
+            f64::from(color.green()),
+            f64::from(color.blue()),
+            f64::from(color.alpha()),
+        );
+        let mut y = 0.0;
+        for (i, height) in [9.0, 8.0, 7.0].into_iter().enumerate() {
+            let w = f64::from(width) * bar_share(seed, i);
+            rounded(cr, 0.0, y, w.round(), height, 3.0);
+            y += height + 7.0;
+        }
+        let _ = cr.fill();
+    });
+    bars
+}
+
+/// A share of the width between 0.34 and 0.88 for bar `i` of the tile `seed`.
+fn bar_share(seed: u64, i: usize) -> f64 {
+    let mut x = seed
+        .wrapping_add(i as u64 + 1)
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    x ^= x >> 31;
+    0.34 + (x % 1000) as f64 / 999.0 * (0.88 - 0.34)
+}
+
+fn rounded(cr: &gtk::cairo::Context, x: f64, y: f64, w: f64, h: f64, r: f64) {
+    use std::f64::consts::{FRAC_PI_2, PI};
+    cr.new_sub_path();
+    cr.arc(x + w - r, y + r, r, -FRAC_PI_2, 0.0);
+    cr.arc(x + w - r, y + h - r, r, 0.0, FRAC_PI_2);
+    cr.arc(x + r, y + h - r, r, FRAC_PI_2, PI);
+    cr.arc(x + r, y + r, r, PI, 3.0 * FRAC_PI_2);
+    cr.close_path();
 }

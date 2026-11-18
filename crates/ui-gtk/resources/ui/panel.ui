@@ -32,12 +32,16 @@ SPDX-License-Identifier: GPL-3.0-or-later
                   <object class="GtkToggleButton" id="lyrics_tab">
                     <property name="label" translatable="yes">Lyrics</property>
                     <property name="group">queue_tab</property>
+                    <!-- Not in this version; the page stays for later. -->
+                    <property name="visible">False</property>
                   </object>
                 </child>
                 <child>
                   <object class="GtkToggleButton" id="signal_tab">
                     <property name="label" translatable="yes">Signal path</property>
                     <property name="group">queue_tab</property>
+                    <!-- Not in this version; the page stays for later. -->
+                    <property name="visible">False</property>
                   </object>
                 </child>
               </object>

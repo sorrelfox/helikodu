@@ -20,7 +20,9 @@ use gtk::prelude::*;
 use gtk::{gio, glib};
 use helikodu_model::settings::VolumeControl;
 use helikodu_ui_gtk::backend::services::ScanStatus;
-use helikodu_ui_gtk::backend::{AlbumQuery, Backend, PlayerRequest, sample};
+use helikodu_ui_gtk::backend::{
+    AlbumQuery, Backend, OutputInfo, PlaybackState, PlayerRequest, SignalState, Update, sample,
+};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice, set_choice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display, snapshot};
 
@@ -54,7 +56,8 @@ fn descendants(root: &gtk::Widget) -> Vec<gtk::Widget> {
     all
 }
 
-/// Renders a popover (its own surface) to `path`.
+/// Renders a popover (its own surface) to `path`, cut to its frame: the
+/// child and the 1 px border around it, without the shadow.
 fn save_native(widget: &impl IsA<gtk::Native>, path: &Path) -> Result<(), String> {
     let widget = widget.upcast_ref::<gtk::Native>();
     let as_widget = widget.upcast_ref::<gtk::Widget>();
@@ -64,7 +67,14 @@ fn save_native(widget: &impl IsA<gtk::Native>, path: &Path) -> Result<(), String
     paintable.snapshot(&snapshot, f64::from(w), f64::from(h));
     let node = snapshot.to_node().ok_or("the popover drew nothing")?;
     let renderer = widget.renderer().ok_or("the popover is not realised")?;
-    let bounds = gtk::graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
+    let bounds = as_widget
+        .downcast_ref::<gtk::Popover>()
+        .and_then(|p| p.child())
+        .and_then(|c| c.compute_bounds(as_widget))
+        .map(|b| {
+            gtk::graphene::Rect::new(b.x() - 1.0, b.y() - 1.0, b.width() + 2.0, b.height() + 2.0)
+        })
+        .unwrap_or_else(|| gtk::graphene::Rect::new(0.0, 0.0, w as f32, h as f32));
     renderer
         .render_texture(&node, Some(&bounds))
         .save_to_png(path)
@@ -163,15 +173,6 @@ fn shoot(application: &gtk::Application, dir: &Path, suffix: &str) {
         about.close();
     }
 
-    // A scan in progress.
-    main.show_scan_status(&ScanStatus {
-        current: Some(glib::home_dir().join("Music/Halden/2018 Concrete Gardens")),
-        done: 12,
-        total: Some(100),
-        ..ScanStatus::default()
-    });
-    save(&main, dir, &format!("scanning{suffix}"));
-
     // The full-output confirmation, before playback to a fixed-volume device.
     backend.send(PlayerRequest::Stop);
     let _ = backend
@@ -187,6 +188,30 @@ fn shoot(application: &gtk::Application, dir: &Path, suffix: &str) {
         save(&confirm, dir, &format!("volume-confirm{suffix}"));
         confirm.close();
     }
+    main.destroy();
+
+    // A scan in progress, with tiles still loading, and the output device
+    // lost: paused, the output button not connected, a toast. The panel is
+    // hidden, as drawn.
+    let (backend, updates) = sample::scanning_backend(&options, 10);
+    let main = window(application, &backend);
+    let _ = WidgetExt::activate_action(&main, "win.toggle-panel", None);
+    main.show_scan_status(&ScanStatus {
+        current: Some(glib::home_dir().join("Music/Halden/2018 Concrete Gardens")),
+        done: 12,
+        total: Some(100),
+        ..ScanStatus::default()
+    });
+    let _ = updates.send_blocking(Update::State(PlaybackState::Paused));
+    let _ = updates.send_blocking(Update::Output(OutputInfo {
+        device: "Studio Interface".to_owned(),
+        signal: SignalState::NotConnected,
+        sample_rate: None,
+        bits: None,
+    }));
+    spin(400);
+    save(&main, dir, &format!("scanning{suffix}"));
+    let _ = WidgetExt::activate_action(&main, "win.toggle-panel", None);
     main.destroy();
 
     // The first run.

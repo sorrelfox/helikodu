@@ -151,6 +151,8 @@ pub struct SampleLibrary {
     ratings: Mutex<HashMap<TrackKey, Option<u8>>>,
     playlists: Mutex<Playlists>,
     roots: Vec<(PathBuf, FolderState)>,
+    /// The tiles past this position stay unloaded, as while a scan runs.
+    loaded: usize,
 }
 
 fn format(r: &mut Random) -> AudioFormat {
@@ -335,6 +337,7 @@ impl SampleLibrary {
             ratings: Mutex::new(HashMap::new()),
             playlists: Mutex::new(Playlists::default()),
             roots,
+            loaded: usize::MAX,
         };
         library.add_sample_playlists(&mut r);
         library
@@ -552,6 +555,7 @@ impl LibrarySource for SampleLibrary {
         offset: usize,
         limit: usize,
     ) -> Result<Vec<AlbumRow>, BackendError> {
+        let limit = limit.min(self.loaded.saturating_sub(offset));
         Ok(self
             .sorted(query)
             .into_iter()
@@ -1283,8 +1287,28 @@ pub fn backend_with_updates(options: &SampleOptions) -> (Backend, async_channel:
     build(options, false)
 }
 
+/// The backend of [`backend_with_updates`] in the middle of a scan: only the
+/// first `loaded` tiles of the album list have their rows, the others show
+/// placeholders.
+pub fn scanning_backend(
+    options: &SampleOptions,
+    loaded: usize,
+) -> (Backend, async_channel::Sender<Update>) {
+    let mut library = SampleLibrary::new(options.albums);
+    library.loaded = loaded;
+    build_over(library, options, false)
+}
+
 fn build(options: &SampleOptions, first_run: bool) -> (Backend, async_channel::Sender<Update>) {
-    let library = Arc::new(SampleLibrary::new(options.albums));
+    build_over(SampleLibrary::new(options.albums), options, first_run)
+}
+
+fn build_over(
+    library: SampleLibrary,
+    options: &SampleOptions,
+    first_run: bool,
+) -> (Backend, async_channel::Sender<Update>) {
+    let library = Arc::new(library);
     let (sender, receiver) = async_channel::unbounded();
     let mut services = MemoryServices::for_library(library.clone(), sender.clone());
     if first_run {

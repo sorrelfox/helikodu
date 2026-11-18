@@ -124,6 +124,7 @@ fn section(text: &str) -> gtk::ListBoxRow {
     row.set_activatable(false);
     row.set_focusable(false);
     row.set_child(Some(&label(text, &["hk-section-label"])));
+    row.update_property(&[gtk::accessible::Property::Label(text)]);
     row
 }
 
@@ -159,6 +160,7 @@ fn track_row(track: &TrackRow, classes: &[&str]) -> gtk::ListBoxRow {
     length.set_xalign(1.0);
     line.append(&length);
     row.set_child(Some(&line));
+    row.update_property(&[gtk::accessible::Property::Label(&text)]);
     row
 }
 
@@ -285,7 +287,7 @@ impl Panel {
         let total: Duration = upcoming.iter().filter_map(|t| t.duration).sum();
         imp.summary.set_text(&fill(
             &ntr("{} upcoming · {}", "{} upcoming · {}", upcoming.len()),
-            &[&upcoming.len().to_string(), &format::minutes(total)],
+            &[&format::count(upcoming.len()), &format::minutes(total)],
         ));
     }
 }

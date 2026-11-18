@@ -323,6 +323,14 @@ impl Switcher {
     }
 }
 
+/// The popover's width and greatest height, and the heights of its fixed
+/// parts (the stylesheet gives the same).
+const WIDTH: i32 = 400;
+const MAX_HEIGHT: i32 = 520;
+const HEAD: i32 = 50;
+const MODE: i32 = 48;
+/// The footer row with its top border.
+const FOOTER: i32 = 45;
 /// Opens the switcher above `button` when it is clicked.
 pub(crate) fn attach(
     window: &gtk::Window,
@@ -338,7 +346,8 @@ pub(crate) fn attach(
     popover.set_parent(button);
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.add_css_class("hk-switcher");
-    content.set_size_request(400, -1);
+    // 400 × at most 520 with the popover's border, as designed.
+    content.set_size_request(WIDTH - 2, -1);
 
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     head.add_css_class("hk-switcher-head");
@@ -357,7 +366,7 @@ pub(crate) fn attach(
     let scroller = gtk::ScrolledWindow::new();
     scroller.set_hscrollbar_policy(gtk::PolicyType::Never);
     scroller.set_propagate_natural_height(true);
-    scroller.set_max_content_height(420);
+    scroller.set_max_content_height(MAX_HEIGHT - 2 - HEAD - MODE - FOOTER - 1);
     scroller.set_child(Some(&rows));
     content.append(&scroller);
 

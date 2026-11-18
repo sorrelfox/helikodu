@@ -351,6 +351,22 @@ impl MusicLibrary {
         }
     }
 
+    /// The ids and albums of every track `filter` selects, sorted by `sort` and
+    /// then in the filter's own order, in one query; for lists that fetch their
+    /// rows later.
+    pub fn sorted_track_ids(
+        &self,
+        filter: TrackFilter,
+        sort: &[TrackOrder],
+    ) -> Result<Vec<(TrackId, Option<AlbumId>)>, LibraryError> {
+        Ok(self.library.track_order(&TrackQuery {
+            filter,
+            page: Page::new(0, MAX_PAGE),
+            include_masked: false,
+            sort: sort.to_vec(),
+        })?)
+    }
+
     /// The source to play for `track`: its file, and the part of it for a CUE track
     /// or chapter. `None` if there is no such track.
     pub fn track_source(&self, track: TrackId) -> Result<Option<TrackSource>, LibraryError> {

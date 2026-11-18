@@ -19,7 +19,7 @@ use rusqlite::types::Value;
 
 pub(crate) use albums::{album, albums};
 pub(crate) use people::{artists, genres};
-pub(crate) use tracks::tracks;
+pub(crate) use tracks::{track_order, tracks};
 
 use super::ids::{AlbumId, GenreId, PersonId};
 use super::track_record::{ArtistRole, TrackKind, TrackSection};

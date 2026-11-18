@@ -25,7 +25,7 @@ use gtk::{CompositeTemplate, gio, glib};
 
 use crate::backend::{AlbumKey, ArtistKey, Backend, GenreKey, PlaylistKey, Update};
 use crate::deck::Deck;
-use crate::i18n::tr;
+use crate::i18n::{fill, tr};
 use crate::models::CoverCache;
 use crate::playback::{Change, Playback};
 use crate::views::placeholder::placeholder;
@@ -152,6 +152,13 @@ mod imp {
         pub(super) placeholders: RefCell<HashSet<&'static str>>,
         pub(super) notifications: Cell<bool>,
         pub(super) pages: RefCell<Option<Rc<pages::Pages>>>,
+        /// Whether the queue panel is wanted, as remembered or as last set.
+        pub(super) panel_wanted: Cell<bool>,
+        /// Whether the user has shown or hidden the panel: then that choice
+        /// holds in every view, not each view's own default.
+        pub(super) panel_chosen: Cell<bool>,
+        /// Whether the output device is gone.
+        pub(super) device_lost: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -234,6 +241,9 @@ impl MainWindow {
             .set_reveal_child(state.panes.sidebar_visible);
         imp.panel_revealer
             .set_reveal_child(state.panes.queue_visible);
+        imp.panel_wanted.set(state.panes.queue_visible);
+        // A hidden panel was hidden by the user; shown is the default.
+        imp.panel_chosen.set(!state.panes.queue_visible);
         self.set_default_size(
             i32::try_from(state.window.width).unwrap_or(1280),
             i32::try_from(state.window.height).unwrap_or(800),
@@ -309,8 +319,30 @@ impl MainWindow {
         });
 
         self.install_actions();
+        // Space plays and pauses unless the focused widget uses it (a button,
+        // a switch, a text field…): a shortcut of the window in the bubble
+        // phase, which runs only after the focus widget let the key through.
+        let space = gtk::ShortcutController::new();
+        space.set_propagation_phase(gtk::PropagationPhase::Bubble);
+        space.add_shortcut(gtk::Shortcut::new(
+            gtk::ShortcutTrigger::parse_string("space"),
+            Some(gtk::NamedAction::new("app.play-pause")),
+        ));
+        self.add_controller(space);
+        // The position is drawn only while the window can be seen.
+        let follow = |window: &Self| {
+            let shown = window.is_visible() && !window.is_suspended();
+            if let Some(backend) = window.imp().backend.borrow().as_ref() {
+                backend.follow_position(shown);
+            }
+        };
+        self.connect_visible_notify(follow);
+        self.connect_suspended_notify(follow);
         if let Some(menu) = imp.menu_button.menu_model() {
             imp.menubar.set_menu_model(Some(&menubar_model(&menu)));
+        }
+        if let Some(popover) = imp.menu_button.popover() {
+            popover.add_css_class("hk-main-menu");
         }
         self.set_style(style);
         self.go(Page::Library("albums"), true);
@@ -329,6 +361,7 @@ impl MainWindow {
                     }
                 }
                 Change::Track => window.notify_track(view),
+                Change::Output => window.notice_output(view),
                 _ => {}
             }
         });
@@ -339,6 +372,35 @@ impl MainWindow {
             }
         });
         self.set_reduced_motion(crate::style::current().reduced_motion);
+    }
+
+    /// Says so in a toast when the output device goes away; the output button
+    /// shows it as not connected meanwhile.
+    fn notice_output(&self, view: &crate::playback::PlayerView) {
+        let imp = self.imp();
+        let lost = view.output.signal == crate::backend::SignalState::NotConnected;
+        if imp.device_lost.replace(lost) || !lost {
+            return;
+        }
+        let Some(toasts) = imp.toasts.borrow().clone() else {
+            return;
+        };
+        let weak = self.downgrade();
+        toasts.show_with_dot(
+            &fill(
+                &tr("{} was disconnected. Playback is paused."),
+                &[&view.output.device],
+            ),
+            Some(toast_overlay::ToastAction {
+                label: tr("Details"),
+                undo: false,
+                run: Box::new(move || {
+                    if let Some(window) = weak.upgrade() {
+                        window.open_output_switcher();
+                    }
+                }),
+            }),
+        );
     }
 
     fn set_reduced_motion(&self, reduced: bool) {
@@ -378,7 +440,7 @@ impl MainWindow {
             state.panes.queue_width = u32::try_from(right.width()).unwrap_or(320);
         }
         state.panes.sidebar_visible = imp.sidebar_revealer.reveals_child();
-        state.panes.queue_visible = imp.panel_revealer.reveals_child();
+        state.panes.queue_visible = imp.panel_wanted.get();
         state.window.maximized = self.is_maximized();
         if !self.is_maximized() {
             let (w, h) = self.default_size();
@@ -420,8 +482,11 @@ impl MainWindow {
             .build();
         let toggle_panel = gio::ActionEntry::builder("toggle-panel")
             .activate(|window: &Self, _, _| {
-                let revealer = &window.imp().panel_revealer;
-                revealer.set_reveal_child(!revealer.reveals_child());
+                let imp = window.imp();
+                let shown = !imp.panel_revealer.reveals_child();
+                imp.panel_wanted.set(shown);
+                imp.panel_chosen.set(true);
+                imp.panel_revealer.set_reveal_child(shown);
                 window.update_header();
                 window.save_ui_state();
             })
@@ -538,7 +603,23 @@ impl MainWindow {
         if let Some(sidebar) = imp.sidebar.borrow().as_ref() {
             sidebar.select((!selected.is_empty()).then_some(selected.as_ref()));
         }
+        self.show_panel_for(page);
         self.update_history_actions();
+    }
+
+    /// Tracks, Artists and Genres open without the queue panel, as designed,
+    /// until the user shows or hides it; from then on their choice holds.
+    fn show_panel_for(&self, page: Page) {
+        let imp = self.imp();
+        let wide = matches!(
+            page,
+            Page::Library("tracks" | "artists" | "genres") | Page::Artist(_) | Page::Genre(_)
+        );
+        let shown = imp.panel_wanted.get() && (imp.panel_chosen.get() || !wide);
+        if imp.panel_revealer.reveals_child() != shown {
+            imp.panel_revealer.set_reveal_child(shown);
+            self.update_header();
+        }
     }
 
     fn step_history(&self, by: isize) {

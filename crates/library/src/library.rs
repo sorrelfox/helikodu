@@ -255,6 +255,15 @@ impl Library {
         self.db.read(|c| catalog::tracks(c, query))
     }
 
+    /// Every track of `query` in its order (the page is not used), as its id and
+    /// album: one sorted query, for long lists that fetch their rows later.
+    pub fn track_order(
+        &self,
+        query: &TrackQuery,
+    ) -> Result<Vec<(TrackId, Option<AlbumId>)>, DbError> {
+        self.db.read(|c| catalog::track_order(c, query))
+    }
+
     // --- Covers ----------------------------------------------------------------------
 
     /// The cover of `album`: the embedded cover most of its tracks have, or else the

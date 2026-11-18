@@ -808,6 +808,11 @@ pub enum Update {
 pub trait PlayerControl: fmt::Debug {
     /// Hands `request` to the player.
     fn send(&self, request: PlayerRequest);
+
+    /// Whether the window is shown and wants position updates; while it is
+    /// not, they are not sent, and the current position follows when it is
+    /// shown again.
+    fn follow_position(&self, _shown: bool) {}
 }
 
 /// The front end's handle on the core.
@@ -819,6 +824,45 @@ pub struct Backend {
     ui_state: Rc<dyn UiStateAccess>,
     services: Arc<dyn services::Services>,
     gate: GateSlot,
+    workers: Workers,
+}
+
+/// How many threads run the library queries and load the covers.
+const WORKERS: usize = 2;
+
+type Job = Box<dyn FnOnce() + Send>;
+
+/// The threads that run library queries and load covers. A few long-lived
+/// threads rather than a pool that grows: each thread keeps its own memory
+/// arena and database cache. They end with the last backend.
+#[derive(Clone)]
+struct Workers(async_channel::Sender<Job>);
+
+impl Workers {
+    fn start() -> Self {
+        let (sender, receiver) = async_channel::unbounded::<Job>();
+        for _ in 0..WORKERS {
+            let jobs = receiver.clone();
+            let _ = std::thread::Builder::new()
+                .name("helikodu-worker".into())
+                .spawn(move || {
+                    while let Ok(job) = jobs.recv_blocking() {
+                        // A job that panics fails alone; its caller sees the
+                        // reply channel close.
+                        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job));
+                    }
+                });
+        }
+        Self(sender)
+    }
+}
+
+impl fmt::Debug for Workers {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Workers")
+            .field("queued", &self.0.len())
+            .finish()
+    }
 }
 
 /// Looks at each request before it reaches the player and keeps it back by
@@ -850,6 +894,7 @@ impl Backend {
             ui_state: Rc::new(MemoryUiState::default()),
             services: Arc::new(sample::MemoryServices::default()),
             gate: GateSlot::default(),
+            workers: Workers::start(),
         }
     }
 
@@ -877,6 +922,12 @@ impl Backend {
             return;
         }
         self.player.send(request);
+    }
+
+    /// Tells the player whether the window shows the position (see
+    /// [`PlayerControl::follow_position`]).
+    pub fn follow_position(&self, shown: bool) {
+        self.player.follow_position(shown);
     }
 
     /// Sends a request to the player past the gate.
@@ -913,8 +964,23 @@ impl Backend {
         F: FnOnce(&dyn LibrarySource) -> Result<T, BackendError> + Send + 'static,
     {
         let library = self.library.clone();
-        gtk::gio::spawn_blocking(move || query(library.as_ref()))
+        self.work(move || query(library.as_ref()))
             .await
-            .unwrap_or_else(|_| Err(BackendError("a library query failed".into())))
+            .unwrap_or_else(|| Err(BackendError("a library query failed".into())))
+    }
+
+    /// Runs `job` on one of the worker threads and returns its result on the
+    /// main loop; `None` if it panicked.
+    pub(crate) async fn work<T, F>(&self, job: F) -> Option<T>
+    where
+        T: Send + 'static,
+        F: FnOnce() -> T + Send + 'static,
+    {
+        let (reply, result) = async_channel::bounded(1);
+        let job: Job = Box::new(move || {
+            let _ = reply.send_blocking(job());
+        });
+        self.workers.0.send(job).await.ok()?;
+        result.recv().await.ok()
     }
 }

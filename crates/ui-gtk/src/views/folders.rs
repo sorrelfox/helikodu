@@ -487,7 +487,7 @@ impl FoldersView {
         let count = listing.files.len();
         let mut parts = vec![fill(
             &ntr("{} audio file", "{} audio files", count),
-            &[&count.to_string()],
+            &[&crate::format::count(count)],
         )];
         if count > 0 {
             parts.push(format::size(listing.files.iter().map(|f| f.size).sum()));
@@ -519,7 +519,7 @@ impl FoldersView {
                     "{} other files not shown",
                     listing.other_files,
                 ),
-                &[&listing.other_files.to_string()],
+                &[&crate::format::count(listing.other_files)],
             )
         } else {
             String::new()

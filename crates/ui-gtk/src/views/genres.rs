@@ -318,7 +318,7 @@ impl GenresView {
         if self.by_count.get() {
             rows.sort_by_key(|r| std::cmp::Reverse(r.album_count));
         }
-        self.count.set_text(&rows.len().to_string());
+        self.count.set_text(&crate::format::count(rows.len()));
         for genre in &rows {
             let row = gtk::ListBoxRow::new();
             row.set_widget_name(&genre.key.0.to_string());
@@ -326,7 +326,7 @@ impl GenresView {
             let name = label(&genre.name, &[]);
             name.set_hexpand(true);
             line.append(&name);
-            let count = label(&genre.album_count.to_string(), &["hk-count"]);
+            let count = label(&crate::format::count(genre.album_count), &["hk-count"]);
             line.append(&count);
             row.set_child(Some(&line));
             row.update_property(&[gtk::accessible::Property::Label(&fill(
@@ -363,11 +363,11 @@ impl GenresView {
         self.name.set_text(&row.name);
         let albums = fill(
             &ntr("{} album", "{} albums", row.album_count),
-            &[&row.album_count.to_string()],
+            &[&crate::format::count(row.album_count)],
         );
         let tracks = fill(
             &ntr("{} track", "{} tracks", row.track_count),
-            &[&row.track_count.to_string()],
+            &[&crate::format::count(row.track_count)],
         );
         self.summary
             .set_text(&fill(&tr("{} · {}"), &[&albums, &tracks]));

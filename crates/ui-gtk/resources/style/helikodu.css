@@ -18,7 +18,9 @@
 
 window.hk { background-color: var(--hk-win); color: var(--hk-t1); font-size: 13px; }
 .hk-glass { background-color: var(--hk-win); color: var(--hk-t1); }
-.hk *:focus-visible { outline: 2px solid var(--hk-accent-text); outline-offset: 1px; }
+/* GTK marks the ancestors of the focus widget :focus-visible too; only the
+   focus widget itself gets the ring. */
+.hk *:focus:focus-visible { outline: 2px solid var(--hk-accent-text); outline-offset: 1px; }
 
 .hk-t1 { color: var(--hk-t1); }
 .hk-t2 { color: var(--hk-t2); }
@@ -98,7 +100,7 @@ gridview.hk-grid > child:focus-visible .hk-cover { outline: 2px solid var(--hk-a
 .hk-cover.playing { box-shadow: 0 0 0 2px var(--hk-pane), 0 0 0 4px var(--hk-accent-fill); }
 
 .hk-placeholder { border-radius: 6px; border: 1px solid var(--hk-line); background-color: var(--hk-win); }
-.hk-placeholder-bar { min-height: 8px; border-radius: 3px; background-color: var(--hk-line); }
+.hk-placeholder-bars { color: var(--hk-line); }
 
 /* ---- 4. Controls -------------------------------------------------------- */
 
@@ -131,7 +133,11 @@ button.hk-icon:disabled > image { opacity: 0.6; }
 
 entry.hk-input { min-height: 30px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); color: var(--hk-t1); box-shadow: none; outline: none; }
 entry.hk-input > text > placeholder { color: var(--hk-t3); }
-entry.hk-input > image { color: var(--hk-t3); }
+entry.hk-input > image { min-width: 16px; min-height: 16px; margin: 0; padding: 0; -gtk-icon-size: 16px; color: var(--hk-t3); }
+entry.hk-input > image.left { margin-right: 7px; }
+entry.hk-input > image.right { margin-left: 7px; }
+entry.hk-input > text { margin: 0; padding: 0; }
+entry.hk-input.search { padding: 0 10px 0 12px; }
 entry.hk-input:focus-within { border-color: var(--hk-accent-fill); box-shadow: 0 0 0 3px var(--hk-sel); }
 .hk-key { min-height: 18px; min-width: 18px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--hk-line2); color: var(--hk-t2); font-size: 11px; font-weight: 500; }
 .hk-shortcut-row { min-height: 30px; }
@@ -144,6 +150,10 @@ button.hk-link:hover > label { text-decoration: underline; }
 
 menubutton.hk-sort > button { min-height: 28px; padding: 0 10px 0 12px; border-radius: 7px; border: 1px solid var(--hk-line); background: none; box-shadow: none; color: var(--hk-t1); }
 menubutton.hk-sort > button:hover { background-color: var(--hk-hover); }
+menubutton.hk-sort > button arrow {
+  min-width: 16px; min-height: 16px; margin: 0 0 0 6px; padding: 0;
+  -gtk-icon-source: -gtk-icontheme("pan-down-symbolic"); -gtk-icon-size: 16px; color: var(--hk-t2);
+}
 menubutton.hk-menu > button { min-width: 30px; min-height: 30px; padding: 0; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-t2); }
 menubutton.hk-menu > button:hover, menubutton.hk-menu > button:checked { background-color: var(--hk-hover); color: var(--hk-t1); }
 
@@ -177,17 +187,28 @@ scale.hk-volume:disabled > trough > slider { background-color: var(--hk-glass-t3
 .hk-signal.processed { color: var(--hk-signal-processed-text); }
 .hk-signal.idle { color: var(--hk-signal-idle-text); }
 
-popover.hk-popover > contents { padding: 0; border-radius: 14px; border: 1px solid var(--hk-glass-popover-border); background-color: var(--hk-glass-popover); color: var(--hk-glass-t1); }
+popover.hk-popover { padding: 0; margin: 0; }
+popover.hk-popover > contents { min-width: 0; min-height: 0; margin: 0; box-shadow: var(--hk-menu-shadow); padding: 0; border-radius: 14px; border: 1px solid var(--hk-glass-popover-border); background-color: var(--hk-glass-popover); color: var(--hk-glass-t1); }
 
 /* ---- 6. Menus ----------------------------------------------------------- */
 
-popover.menu > contents { padding: 6px; border-radius: 10px; border: 1px solid var(--hk-line2); background-color: var(--hk-menu); color: var(--hk-t1); box-shadow: var(--hk-menu-shadow); }
-popover.menu modelbutton { min-height: 28px; padding: 0 10px; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; color: var(--hk-t1); }
+/* Every size is set here, so menus keep the design's size under any theme. */
+popover.menu { padding: 0; margin: 0; font-size: 13px; font-weight: 400; }
+popover.menu > contents { min-width: 0; padding: 6px; border-radius: 10px; border: 1px solid var(--hk-line2); background-color: var(--hk-menu); color: var(--hk-t1); box-shadow: var(--hk-menu-shadow); }
+popover.menu.hk-main-menu > contents { min-width: 254px; }
+popover.menu.hk-play-menu > contents { min-width: 274px; }
+popover.menu.hk-context-menu > contents { min-width: 220px; }
+popover.menu modelbutton { min-height: 28px; min-width: 0; padding: 0 8px 0 10px; margin: 0; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; color: var(--hk-t1); }
+popover.menu.hk-play-menu modelbutton { padding: 0 8px; }
+popover.menu modelbutton > box { border-spacing: 0; }
+popover.menu modelbutton arrow { min-width: 16px; min-height: 16px; margin: 0 0 0 8px; padding: 0; background: none; opacity: 1; color: var(--hk-t3); -gtk-icon-size: 16px; }
+popover.menu modelbutton arrow.left { margin: 0 8px 0 0; }
 popover.menu modelbutton:hover, popover.menu modelbutton:selected { background-color: var(--hk-seg); }
 popover.menu modelbutton:disabled { color: var(--hk-t3); }
-popover.menu modelbutton accelerator { color: var(--hk-t3); font-size: 12px; }
+popover.menu modelbutton accelerator { margin: 0 0 0 16px; color: var(--hk-t3); font-size: 12px; }
 popover.menu separator { min-height: 1px; margin: 4px 6px; background-color: var(--hk-line); }
-popover.menu label.title { color: var(--hk-t3); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+popover.menu > contents > stack > box > box > separator, popover.menu.background separator { margin: 4px 6px; }
+popover.menu label.title { min-height: 26px; padding: 0 10px; margin: 0; color: var(--hk-t3); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 
 menubar { min-height: 28px; padding: 0 6px; border-bottom: 1px solid var(--hk-line); background-color: var(--hk-win); color: var(--hk-t1); }
 menubar > item { min-height: 24px; padding: 0 9px; border-radius: 5px; }
@@ -198,6 +219,8 @@ menubar > item:hover, menubar > item:selected { background-color: var(--hk-seg);
 .hk-toast { min-height: 44px; padding: 0 6px 0 16px; border-radius: 10px; border: 1px solid var(--hk-glass-toast-border); background-color: var(--hk-glass-bg); box-shadow: 0 14px 30px -8px rgba(0,0,0,0.55); }
 .hk-toast button.action { min-height: 30px; padding: 0 10px; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-accent); font-weight: 600; }
 .hk-toast button.action:hover { background-color: var(--hk-hover); }
+.hk-toast-dot { min-width: 7px; min-height: 7px; margin-right: 4px; border-radius: 4px; background-color: var(--hk-glass-line2); }
+.hk-toast button.hk-icon { -gtk-icon-size: 13px; }
 
 .hk-empty-tile { min-width: 56px; min-height: 56px; border-radius: 12px; border: 1px solid var(--hk-line); background-color: var(--hk-field); color: var(--hk-t2); }
 
@@ -212,14 +235,21 @@ menubar > item:hover, menubar > item:selected { background-color: var(--hk-seg);
 
 /* The desktop's window buttons inside the top strips. Only size and colours
    are set; which buttons appear and on which side comes from the desktop. */
-windowcontrols { border-spacing: 6px; }
+windowcontrols { border-spacing: 6px; margin: 0; }
 windowcontrols > button {
   min-width: 24px; min-height: 24px; padding: 0; margin: 0;
   border: none; border-radius: 12px; background: none; box-shadow: none;
   color: var(--hk-t2);
 }
 windowcontrols > button:hover { background-color: var(--hk-hover); color: var(--hk-t1); }
-windowcontrols > button > image { padding: 0; background: none; box-shadow: none; }
+/* Adwaita draws the button as a 30 px disc on the image; that would widen
+   the strip that holds the buttons, and with it the panel. */
+windowcontrols > button > image,
+windowcontrols > button:hover > image,
+windowcontrols > button:active > image {
+  min-width: 16px; min-height: 16px; padding: 0; margin: 0; border: none; border-radius: 0;
+  background: none; box-shadow: none; -gtk-icon-size: 16px;
+}
 
 /* ---- 10. Resets against theme rules ------------------------------------- */
 

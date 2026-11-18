@@ -496,7 +496,7 @@ impl TracksView {
                     .cached(keys[0])
                     .map(|r| r.title.clone())
                     .unwrap_or_default(),
-                n => fill(&ntr("{} track", "{} tracks", n), &[&n.to_string()]),
+                n => fill(&ntr("{} track", "{} tracks", n), &[&format::count(n)]),
             };
             Some((
                 DraggedTracks {
@@ -584,11 +584,19 @@ impl TracksView {
     /// The headers carry an arrow and, with several keys, the key's number.
     fn show_sort(&self) {
         let keys = self.sort.borrow();
+        // Without keys of the user's the library sorts by artist, album, disc
+        // and number; the first two have columns and carry their marks.
+        let marks: Vec<(TrackColumn, bool)> = if keys.is_empty() {
+            vec![(TrackColumn::Artist, false), (TrackColumn::Album, false)]
+        } else {
+            keys.iter().map(|k| (k.column, k.descending)).collect()
+        };
+        let numbered = keys.is_empty() || keys.len() > 1;
         for (column, c) in &self.columns {
             let mut title = column_title(*column);
-            if let Some(index) = keys.iter().position(|k| k.column == *column) {
-                let arrow = if keys[index].descending { "↓" } else { "↑" };
-                title = if keys.len() > 1 {
+            if let Some(index) = marks.iter().position(|(m, _)| m == column) {
+                let arrow = if marks[index].1 { "↓" } else { "↑" };
+                title = if numbered {
                     format!("{title} {arrow} {}", index + 1)
                 } else {
                     format!("{title} {arrow}")
@@ -620,7 +628,7 @@ impl TracksView {
             .sum();
         let count = fill(
             &ntr("{} selected", "{} selected", positions.len()),
-            &[&positions.len().to_string()],
+            &[&format::count(positions.len())],
         );
         self.status_selection
             .set_text(&fill(&tr("{} · {}"), &[&count, &format::duration(length)]));
@@ -695,10 +703,10 @@ impl TracksView {
             let count = if filtered {
                 fill(
                     &tr("{} of {}"),
-                    &[&keys.len().to_string(), &view.total.get().to_string()],
+                    &[&format::count(keys.len()), &format::count(view.total.get())],
                 )
             } else {
-                keys.len().to_string()
+                format::count(keys.len())
             };
             view.count.set_text(&count);
             view.model.set_keys(keys);
@@ -770,6 +778,11 @@ impl TracksView {
                     item.fill(row);
                 }
             });
+    }
+
+    /// Selects `count` rows from `start`.
+    pub(crate) fn select_rows(&self, start: u32, count: u32) {
+        self.selection.select_range(start, count, true);
     }
 
     /// Selects every row.

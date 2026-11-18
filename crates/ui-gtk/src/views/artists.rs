@@ -453,7 +453,7 @@ impl ArtistsView {
             self.list.remove(&child);
         }
         let rows = self.rows.borrow().clone();
-        self.count.set_text(&rows.len().to_string());
+        self.count.set_text(&crate::format::count(rows.len()));
         {
             let mut map = self.letters.borrow_mut();
             map.clear();
@@ -471,7 +471,10 @@ impl ArtistsView {
             let name = label(&artist.name, &[]);
             name.set_hexpand(true);
             line.append(&name);
-            line.append(&label(&artist.album_count.to_string(), &["hk-count"]));
+            line.append(&label(
+                &crate::format::count(artist.album_count),
+                &["hk-count"],
+            ));
             row.set_child(Some(&line));
             row.update_property(&[gtk::accessible::Property::Label(&fill(
                 &ntr("{}, {} album", "{}, {} albums", artist.album_count),
@@ -498,7 +501,14 @@ impl ArtistsView {
                 && row.widget_name() == artist.0.to_string()
             {
                 self.list.select_row(Some(row));
-                if self.list.is_mapped() {
+                // The focus follows within the list, but is not taken from
+                // elsewhere (such as the sidebar the view was opened from).
+                let in_list = self
+                    .list
+                    .root()
+                    .and_then(|root| root.focus())
+                    .is_some_and(|focus| focus.is_ancestor(&self.list));
+                if self.list.is_mapped() && in_list {
                     row.grab_focus();
                 }
             }
@@ -535,7 +545,7 @@ impl ArtistsView {
         if !detail.albums.is_empty() {
             parts.push(fill(
                 &ntr("{} album", "{} albums", detail.albums.len()),
-                &[&detail.albums.len().to_string()],
+                &[&crate::format::count(detail.albums.len())],
             ));
         }
         if !detail.singles.is_empty() {
@@ -545,12 +555,12 @@ impl ArtistsView {
                     "{} EPs and singles",
                     detail.singles.len(),
                 ),
-                &[&detail.singles.len().to_string()],
+                &[&crate::format::count(detail.singles.len())],
             ));
         }
         parts.push(fill(
             &ntr("{} track", "{} tracks", detail.row.track_count),
-            &[&detail.row.track_count.to_string()],
+            &[&crate::format::count(detail.row.track_count)],
         ));
         parts.push(format::minutes(detail.duration));
         self.summary.set_text(&parts.join(" · "));
@@ -582,6 +592,10 @@ impl ArtistsView {
             }
             group.append(&row);
             self.releases.append(&group);
+            // A group is not a stop for the keyboard; its tiles are.
+            if let Some(cell) = group.parent() {
+                cell.set_focusable(false);
+            }
         }
         self.detail_data.replace(Some(detail));
         self.show_most_played();
@@ -590,8 +604,16 @@ impl ArtistsView {
         }
     }
 
-    fn tile(self: &Rc<Self>, album: &AlbumRow) -> AlbumTile {
+    /// A tile in the cell of its group that takes the keyboard focus and
+    /// carries the album's name.
+    fn tile(self: &Rc<Self>, album: &AlbumRow) -> gtk::FlowBoxChild {
         let tile = AlbumTile::default();
+        let cell = gtk::FlowBoxChild::new();
+        cell.set_child(Some(&tile));
+        cell.update_property(&[gtk::accessible::Property::Label(&fill(
+            &tr("{} by {}"),
+            &[&album.title, &album.artist],
+        ))]);
         tile.cover().set_shape(160, 6.0);
         tile.set_hexpand(false);
         tile.set_size_request(160, -1);
@@ -599,7 +621,6 @@ impl ArtistsView {
         tile.bind(&item, &self.covers);
         tile.cover()
             .set_playing(self.playing_album.get() == Some(album.key));
-        tile.set_focusable(true);
         let key = album.key;
         let click = gtk::GestureClick::new();
         click.set_button(0);
@@ -641,7 +662,7 @@ impl ArtistsView {
             }
             glib::Propagation::Stop
         });
-        tile.add_controller(keys);
+        cell.add_controller(keys);
         let title = album.title.clone();
         DraggedTracks::source(&tile, move |_, _| {
             Some((
@@ -652,8 +673,8 @@ impl ArtistsView {
                 title.clone(),
             ))
         });
-        self.tiles.borrow_mut().push(tile.clone());
-        tile
+        self.tiles.borrow_mut().push(tile);
+        cell
     }
 
     fn show_most_played(&self) {
@@ -686,6 +707,10 @@ impl ArtistsView {
                 line.append(&l);
             }
             row.set_child(Some(&line));
+            row.update_property(&[gtk::accessible::Property::Label(&fill(
+                &tr("{} · {}"),
+                &[&track.title, &track.album_title],
+            ))]);
             self.most_played.append(&row);
         }
     }

@@ -101,8 +101,8 @@ pub(crate) fn caps(accelerator: &str) -> Vec<String> {
     caps
 }
 
-/// The accelerators of `action` in `application`. Space plays and pauses
-/// outside text fields even while a text field has lifted it.
+/// The accelerators of `action` in `application`. Space, which plays and
+/// pauses, is a shortcut of the main window rather than an accelerator.
 fn accelerators(application: Option<&gtk::Application>, action: &str) -> Vec<String> {
     let mut accels: Vec<String> = application
         .map(|a| {

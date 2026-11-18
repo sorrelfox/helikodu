@@ -23,7 +23,7 @@ list.hk-artist-list > row { min-height: 40px; }
 
 /* ---- 2. Tables ---------------------------------------------------------- */
 
-columnview.hk-table { background: none; color: var(--hk-t1); }
+columnview.hk-table { border: none; outline: none; background: none; color: var(--hk-t1); }
 columnview.hk-table > header {
   min-height: 32px; background-color: var(--hk-win);
   border-top: 1px solid var(--hk-line); border-bottom: 1px solid var(--hk-line);
@@ -112,6 +112,7 @@ list.hk-tree, listview.hk-tree { padding: 0 8px 8px; background: none; color: va
 listview.hk-tree > row { min-height: 30px; padding: 0 10px; border-radius: 6px; color: var(--hk-t2); background: none; }
 listview.hk-tree > row:hover { background-color: var(--hk-hover); }
 listview.hk-tree > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); font-weight: 600; }
+listview.hk-tree treeexpander { border-spacing: 4px; }
 listview.hk-tree treeexpander indent { -gtk-icon-size: 18px; }
 listview.hk-tree treeexpander expander { -gtk-icon-size: 12px; min-width: 12px; color: var(--hk-t3); }
 
@@ -134,8 +135,9 @@ list.hk-results > row.hk-show-all { min-height: 34px; }
 
 /* A check item shows a mark in a 16 px column, not a box. */
 popover.menu modelbutton check {
-  min-width: 16px; min-height: 16px; margin: 0 6px 0 0; padding: 0;
+  min-width: 16px; min-height: 16px; margin: 0 8px 0 0; padding: 0;
   border: none; border-radius: 0; background: none; background-image: none; box-shadow: none;
-  -gtk-icon-source: none; -gtk-icon-size: 12px; color: var(--hk-t1);
+  transform: none; -gtk-icon-source: none; -gtk-icon-size: 14px; color: var(--hk-t1);
 }
+popover.menu modelbutton check:hover, popover.menu modelbutton check:active { transform: none; background: none; box-shadow: none; }
 popover.menu modelbutton check:checked { -gtk-icon-source: -gtk-icontheme("helikodu-check-symbolic"); }

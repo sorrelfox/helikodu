@@ -144,8 +144,7 @@ pub fn install_actions(application: &gtk::Application, backend: &Backend) {
     application.add_action(&quit);
     crate::dialogs::install_actions(application, backend);
     for (action, accels) in [
-        ("app.play-pause", &["space"][..]),
-        ("app.next", &["<Control>Right"]),
+        ("app.next", &["<Control>Right"][..]),
         ("app.previous", &["<Control>Left"]),
         ("app.seek-forward", &["<Control><Shift>Right"]),
         ("app.seek-back", &["<Control><Shift>Left"]),

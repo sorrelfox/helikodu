@@ -497,7 +497,7 @@ impl PlaylistView {
                 [one] => rows.get(*one).map(|r| r.title.clone()).unwrap_or_default(),
                 many => fill(
                     &ntr("{} track", "{} tracks", many.len()),
-                    &[&many.len().to_string()],
+                    &[&crate::format::count(many.len())],
                 ),
             };
             Some((
@@ -696,7 +696,7 @@ impl PlaylistView {
             let mut parts = vec![
                 fill(
                     &ntr("{} track", "{} tracks", info.items),
-                    &[&info.items.to_string()],
+                    &[&crate::format::count(info.items)],
                 ),
                 format::minutes(info.duration),
             ];
@@ -763,12 +763,12 @@ impl PlaylistView {
         let count = if selected.is_empty() {
             fill(
                 &ntr("{} track", "{} tracks", rows.len()),
-                &[&rows.len().to_string()],
+                &[&crate::format::count(rows.len())],
             )
         } else {
             fill(
                 &ntr("{} selected", "{} selected", selected.len()),
-                &[&selected.len().to_string()],
+                &[&crate::format::count(selected.len())],
             )
         };
         self.status_left

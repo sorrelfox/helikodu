@@ -27,6 +27,11 @@ use crate::widgets::empty_state::empty_state;
 
 type OpenHandler = Rc<dyn Fn(AlbumKey)>;
 
+/// The most columns the grid shows, however wide.
+const MAX_COLUMNS: i32 = 12;
+/// No column is narrower: the cover alone, without its margins.
+const NARROWEST_COLUMN: i32 = 160;
+
 mod imp {
     use super::*;
 
@@ -207,18 +212,32 @@ impl AlbumsView {
                 button.set_tooltip_text(Some(&tr("The library does not tell formats apart yet")));
             }
         }
-        let weak = self.downgrade();
-        imp.grid.add_tick_callback(move |_, _| {
-            if let Some(view) = weak.upgrade() {
-                view.visibility_tick();
-            }
-            glib::ControlFlow::Continue
-        });
+        // The grid keeps tiles for a number of rows of its widest possible
+        // layout, so its column limit follows what fits: the layout stays the
+        // same and far fewer tiles are kept for the rows off screen.
+        if let Some(adjustment) = imp.grid.hadjustment() {
+            let grid = imp.grid.downgrade();
+            adjustment.connect_page_size_notify(move |adjustment| {
+                let fits = (adjustment.page_size() as i32 / NARROWEST_COLUMN).clamp(1, MAX_COLUMNS);
+                let fits = u32::try_from(fits).unwrap_or(1);
+                if let Some(grid) = grid.upgrade()
+                    && fits != grid.max_columns()
+                {
+                    // Not while the grid is being allocated.
+                    let grid = grid.downgrade();
+                    glib::idle_add_local_once(move || {
+                        if let Some(grid) = grid.upgrade() {
+                            grid.set_max_columns(fits);
+                        }
+                    });
+                }
+            });
+        }
         if let Some(adjustment) = imp.grid.vadjustment() {
             let weak = self.downgrade();
             adjustment.connect_value_changed(move |_| {
                 if let Some(view) = weak.upgrade() {
-                    view.imp().visibility_pass.set(true);
+                    view.schedule_visibility_pass();
                 }
             });
         }
@@ -242,6 +261,7 @@ impl AlbumsView {
                 return;
             };
             let tile = AlbumTile::default();
+            tile.set_lazy_cover();
             let Some(view) = weak.upgrade() else { return };
             view.attach_gestures(&tile);
             view.imp().tiles.borrow_mut().push(tile.downgrade());
@@ -268,7 +288,7 @@ impl AlbumsView {
             model.ensure_row(&album);
             tile.cover()
                 .set_playing(view.imp().playing.get() == Some(album.key()));
-            view.imp().visibility_pass.set(true);
+            view.schedule_visibility_pass();
         });
         factory.connect_unbind(move |_, item| {
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
@@ -382,11 +402,24 @@ impl AlbumsView {
 
     /// The visibility pass of the covers: once per frame while tiles wait,
     /// the visible ones ask again so they are made first.
-    fn visibility_tick(&self) {
-        let imp = self.imp();
-        if !imp.visibility_pass.replace(false) {
+    /// Runs the visibility pass at the next frame, once however often it is
+    /// asked for meanwhile. The frame clock runs only while there is one to do.
+    fn schedule_visibility_pass(&self) {
+        if self.imp().visibility_pass.replace(true) {
             return;
         }
+        let weak = self.downgrade();
+        self.imp().grid.add_tick_callback(move |_, _| {
+            if let Some(view) = weak.upgrade() {
+                view.visibility_tick();
+            }
+            glib::ControlFlow::Break
+        });
+    }
+
+    fn visibility_tick(&self) {
+        let imp = self.imp();
+        imp.visibility_pass.set(false);
         let Some(covers) = imp.covers.borrow().clone() else {
             return;
         };
@@ -397,15 +430,15 @@ impl AlbumsView {
             let Some(tile) = weak.upgrade() else {
                 return false;
             };
-            if let Some(waiting) = tile.waiting_cover()
-                && tile.is_mapped()
-                && let Some(b) = tile.compute_bounds(&viewport)
-            {
-                let (x, y) = (f64::from(b.x()), f64::from(b.y()));
-                let (bw, bh) = (f64::from(b.width()), f64::from(b.height()));
-                if x + bw > 0.0 && y + bh > 0.0 && x < w && y < h {
-                    visible.push(waiting);
-                }
+            let in_view = tile.is_mapped()
+                && tile.compute_bounds(&viewport).is_some_and(|b| {
+                    let (x, y) = (f64::from(b.x()), f64::from(b.y()));
+                    let (bw, bh) = (f64::from(b.width()), f64::from(b.height()));
+                    x + bw > 0.0 && y + bh > 0.0 && x < w && y < h
+                });
+            tile.set_in_view(in_view);
+            if in_view && let Some(waiting) = tile.waiting_cover() {
+                visible.push(waiting);
             }
             true
         });
@@ -451,7 +484,7 @@ impl AlbumsView {
             }
             imp.loaded.set(true);
             let keys = keys.unwrap_or_default();
-            imp.count.set_text(&keys.len().to_string());
+            imp.count.set_text(&crate::format::count(keys.len()));
             if keys.is_empty() {
                 view.show_empty(query.filter == AlbumFilter::All && query.scope == AlbumScope::All);
             } else {

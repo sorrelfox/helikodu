@@ -122,6 +122,17 @@ impl ToastOverlay {
         self.countdown(generation, seconds);
     }
 
+    /// Shows `text` led by a grey dot, the mark of a device that went away.
+    pub(crate) fn show_with_dot(self: &Rc<Self>, text: &str, action: Option<ToastAction>) {
+        self.show(text, action, true);
+        if let Some(toast) = self.current.borrow().as_ref() {
+            let dot = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+            dot.add_css_class("hk-toast-dot");
+            dot.set_valign(gtk::Align::Center);
+            toast.prepend(&dot);
+        }
+    }
+
     fn countdown(self: &Rc<Self>, generation: u64, seconds: u32) {
         let weak = Rc::downgrade(self);
         glib::timeout_add_local_once(Duration::from_secs(u64::from(seconds)), move || {
@@ -153,9 +164,13 @@ impl ToastOverlay {
     /// The text of the toast shown (for tests).
     pub(crate) fn text(&self) -> Option<String> {
         let toast = self.current.borrow();
-        let first = toast.as_ref()?.first_child()?;
-        first
-            .downcast_ref::<gtk::Label>()
-            .map(|l| l.text().to_string())
+        let mut child = toast.as_ref()?.first_child();
+        while let Some(widget) = child {
+            if let Some(label) = widget.downcast_ref::<gtk::Label>() {
+                return Some(label.text().to_string());
+            }
+            child = widget.next_sibling();
+        }
+        None
     }
 }

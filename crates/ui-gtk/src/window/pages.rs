@@ -159,6 +159,7 @@ impl MainWindow {
 
     fn setup_search(&self, pages: &Rc<Pages>) {
         let entry = &pages.search_entry;
+        add_shortcut_hint(entry);
         entry.set_sensitive(true);
         entry.set_tooltip_text(None);
         entry.set_search_delay(60);
@@ -201,14 +202,12 @@ impl MainWindow {
         entry.add_controller(keys);
     }
 
-    /// Space, Ctrl+A and Ctrl+Z belong to a text field while it has the
-    /// focus: the window's shortcuts for them are lifted until it loses it.
+    /// Ctrl+A and Ctrl+Z belong to a text field while it has the focus: the
+    /// window's shortcuts for them are lifted until it loses it. (Space is a
+    /// shortcut of the window that yields to the focused widget anyway.)
     fn guard_text_fields(&self) {
-        const KEYS: &[(&str, &str)] = &[
-            ("app.play-pause", "space"),
-            ("win.select-all", "<Control>a"),
-            ("win.undo", "<Control>z"),
-        ];
+        const KEYS: &[(&str, &str)] =
+            &[("win.select-all", "<Control>a"), ("win.undo", "<Control>z")];
         self.connect_focus_widget_notify(|window| {
             let Some(application) = window.application() else {
                 return;
@@ -1110,6 +1109,14 @@ impl MainWindow {
         self.pages()?.playlist.demo_menu(0, 3).map(|p| p.upcast())
     }
 
+    /// Selects `count` rows of the track table from `start` (for screenshots).
+    #[doc(hidden)]
+    pub fn demo_select_tracks(&self, start: u32, count: u32) {
+        if let Some(pages) = self.pages() {
+            pages.tracks.select_rows(start, count);
+        }
+    }
+
     /// Opens a folder of the folder tree, a level per call (for screenshots).
     #[doc(hidden)]
     pub fn demo_folder_step(&self) {
@@ -1222,4 +1229,28 @@ fn expand_folders(paths: Vec<PathBuf>) -> Vec<PathBuf> {
         }
     }
     files
+}
+
+/// Puts the hint "Ctrl F" at the right end of the empty search entry: the
+/// entry goes into an overlay that takes its place in the header.
+fn add_shortcut_hint(entry: &gtk::SearchEntry) {
+    let Some(header) = entry.parent().and_downcast::<gtk::CenterBox>() else {
+        return;
+    };
+    header.set_center_widget(None::<&gtk::Widget>);
+    let overlay = gtk::Overlay::new();
+    overlay.set_valign(gtk::Align::Center);
+    overlay.set_child(Some(entry));
+    let hint = crate::widgets::label("Ctrl F", &["hk-key", "hint"]);
+    hint.set_halign(gtk::Align::End);
+    hint.set_valign(gtk::Align::Center);
+    hint.set_margin_end(entry.margin_end() + 10);
+    hint.set_can_target(false);
+    overlay.add_overlay(&hint);
+    entry
+        .bind_property("text", &hint, "visible")
+        .transform_to(|_, text: String| Some(text.is_empty()))
+        .sync_create()
+        .build();
+    header.set_center_widget(Some(&overlay));
 }

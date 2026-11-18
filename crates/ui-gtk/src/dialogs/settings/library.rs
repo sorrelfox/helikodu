@@ -14,7 +14,8 @@ use gtk::{gio, glib};
 use super::{Context, page_body};
 use crate::backend::services::{FolderState, LibraryFolder, StorageUsage};
 use crate::dialogs::common::{
-    bytes, compact_button, divider, dropdown, on_selected, row, switch_row, tilde, with_note,
+    OWN_LABEL, bytes, compact_button, divider, dropdown, on_selected, row, switch_row, tilde,
+    with_note,
 };
 use crate::i18n::{fill, ntr, tr};
 use crate::widgets::{icon_button, label};
@@ -399,7 +400,9 @@ fn storage(context: &Rc<Context>) -> gtk::Box {
             })
             .collect();
         let choice = dropdown(&items, index, 112);
-        choice.update_property(&[gtk::accessible::Property::Label(&fill(
+        choice.add_css_class(OWN_LABEL);
+        choice.update_relation(&[gtk::accessible::Relation::LabelledBy(&[title.upcast_ref()])]);
+        choice.update_property(&[gtk::accessible::Property::Description(&fill(
             &tr("Limit for {}"),
             &[&name],
         ))]);

@@ -222,6 +222,7 @@ impl Deck {
         );
         menu.append_section(None, &jump);
         let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        popover.add_css_class("hk-play-menu");
         // On the deck, which disposes of it, pointing at the play button.
         popover.set_parent(self);
         let play = self.imp().play.get();
@@ -342,7 +343,14 @@ impl Deck {
                     SignalState::NotConnected => Some(tr("Not connected")),
                     SignalState::Unreported => None,
                 };
+                let lost = output.signal == SignalState::NotConnected;
+                if lost {
+                    imp.device.add_css_class("hk-t2");
+                } else {
+                    imp.device.remove_css_class("hk-t2");
+                }
                 let format = match (output.sample_rate, output.bits) {
+                    _ if lost => None,
                     (Some(rate), Some(bits)) => Some(format!("{} / {bits}", format::khz(rate))),
                     (Some(rate), None) => Some(format::khz(rate)),
                     _ => None,

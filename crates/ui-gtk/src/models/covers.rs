@@ -8,19 +8,21 @@
 //! scrolling: requests of visible tiles move to the front again, and requests of
 //! tiles that were recycled are dropped.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::rc::Rc;
 
 use gtk::prelude::*;
-use gtk::{gdk, gio, glib};
+use gtk::{gdk, glib};
 
 use crate::backend::{Backend, CoverKey, ThumbnailState};
 use crate::widgets::CoverArt;
 
-/// Textures kept.
-const CACHE: usize = 600;
+/// The pixel memory of the textures kept (about 160 thumbnails at 192 px);
+/// the covers on screen hold theirs anyway, so this only spares reloading
+/// the ones just scrolled past.
+const CACHE_BYTES: usize = 24 << 20;
 
 type Ready = Box<dyn Fn(&gdk::Texture)>;
 type Key = (CoverKey, u32);
@@ -31,6 +33,7 @@ pub(crate) struct CoverCache {
     backend: RefCell<Option<Backend>>,
     textures: RefCell<HashMap<Key, gdk::Texture>>,
     order: RefCell<VecDeque<Key>>,
+    bytes: Cell<usize>,
     waiting: RefCell<HashMap<Key, Vec<Ready>>>,
     loading: RefCell<HashSet<Key>>,
 }
@@ -125,6 +128,21 @@ impl CoverCache {
         art.show(seed, texture);
     }
 
+    /// Shows `cover` on `art` if its texture is cached, else the placeholder
+    /// for `seed`, without asking for it.
+    pub(crate) fn show_cached(
+        &self,
+        art: &CoverArt,
+        cover: Option<CoverKey>,
+        seed: u64,
+        logical: i32,
+    ) {
+        art.want(cover);
+        let size = thumbnail_size(logical, art.scale_factor());
+        let texture = cover.and_then(|c| self.textures.borrow().get(&(c, size)).cloned());
+        art.show(seed, texture);
+    }
+
     /// A thumbnail the library announced.
     pub(crate) fn thumbnail_ready(
         self: &Rc<Self>,
@@ -148,11 +166,15 @@ impl CoverCache {
         if !self.loading.borrow_mut().insert(key) {
             return;
         }
+        let Some(backend) = self.backend.borrow().clone() else {
+            self.loading.borrow_mut().remove(&key);
+            return;
+        };
         let me = self.clone();
         glib::spawn_future_local(async move {
-            let texture = gio::spawn_blocking(move || gdk::Texture::from_filename(&path).ok())
+            let texture = backend
+                .work(move || gdk::Texture::from_filename(&path).ok())
                 .await
-                .ok()
                 .flatten();
             me.loading.borrow_mut().remove(&key);
             let readies = me.waiting.borrow_mut().remove(&key).unwrap_or_default();
@@ -166,16 +188,22 @@ impl CoverCache {
     }
 
     fn store(&self, key: Key, texture: gdk::Texture) {
+        let size = |t: &gdk::Texture| {
+            usize::try_from(t.width()).unwrap_or(0) * usize::try_from(t.height()).unwrap_or(0) * 4
+        };
         let mut order = self.order.borrow_mut();
         let mut textures = self.textures.borrow_mut();
-        if textures.insert(key, texture).is_none() {
-            order.push_back(key);
+        let mut bytes = self.bytes.get() + size(&texture);
+        match textures.insert(key, texture) {
+            Some(old) => bytes -= size(&old),
+            None => order.push_back(key),
         }
-        while order.len() > CACHE {
-            if let Some(old) = order.pop_front() {
-                textures.remove(&old);
+        while bytes > CACHE_BYTES && order.len() > 1 {
+            if let Some(old) = order.pop_front().and_then(|k| textures.remove(&k)) {
+                bytes -= size(&old);
             }
         }
+        self.bytes.set(bytes);
     }
 
     /// Forgets the requests for `cover` at `size` (a recycled tile).

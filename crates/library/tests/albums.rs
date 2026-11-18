@@ -1087,6 +1087,65 @@ fn tracks_of_an_album_and_an_artist() {
 }
 
 #[test]
+fn the_order_of_whole_lists_matches_their_pages() {
+    let (library, root) = library();
+    add(
+        &library,
+        root,
+        &[
+            T::new("/music/z/02.flac", "Two", "Ann", "Old")
+                .by("Ann")
+                .year(1990)
+                .no(2),
+            T::new("/music/z/01.flac", "One", "Ann", "Old")
+                .by("Ann")
+                .year(1990)
+                .no(1),
+            T::new("/music/b/x.flac", "Untracked", "Ann", "Old")
+                .by("Ann")
+                .year(1990),
+            T::new("/music/a/01.flac", "Disc two", "Ann", "Set")
+                .by("Ann")
+                .year(1975)
+                .disc(2)
+                .no(1),
+            T::new("/music/a/02.flac", "Disc one", "Ann", "Set")
+                .by("Ann")
+                .year(1975)
+                .disc(1)
+                .no(1),
+            T::new("/music/c/01.flac", "Guest", "Ann", "Theirs")
+                .by("Bo")
+                .year(1980)
+                .no(1),
+            T::new("/music/d/01.flac", "Undated", "Ann", "Someday")
+                .by("Bo")
+                .no(1),
+            T::new("/music/e/01.flac", "Nobody's", "Ann", "Anonymous").no(1),
+        ],
+    );
+    let ann = person(&library, ArtistRole::Artist, "Ann");
+    for filter in [TrackFilter::All, TrackFilter::Artist(ann, None)] {
+        for sort in [vec![], vec![TrackOrder::descending(TrackSortKey::Title)]] {
+            let query = TrackQuery {
+                filter,
+                sort,
+                ..TrackQuery::default()
+            };
+            let pages: Vec<_> = library
+                .tracks(&query)
+                .unwrap()
+                .items
+                .iter()
+                .map(|t| (t.id, t.album))
+                .collect();
+            assert_eq!(pages.len(), 8);
+            assert_eq!(library.track_order(&query).unwrap(), pages, "{filter:?}");
+        }
+    }
+}
+
+#[test]
 fn masked_folders_are_hidden() {
     let (library, root) = library();
     let usb = library.add_root("/media/usb").unwrap();

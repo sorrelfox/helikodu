@@ -127,8 +127,13 @@ pub(crate) fn ask(
 
     let body = gtk::Box::new(gtk::Orientation::Vertical, 0);
     body.add_css_class("hk-dialog-body");
+    body.add_css_class("hk-confirm");
+    // 480 × 300 as designed; the buttons sit at the bottom.
+    body.set_size_request(480, 300);
 
-    let top = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+    let top = gtk::Box::new(gtk::Orientation::Horizontal, 14);
+    // The icon centres itself in its tile; the extra height goes below.
+    top.set_vexpand(false);
     let tile = gtk::Box::new(gtk::Orientation::Vertical, 0);
     tile.add_css_class("hk-icon-tile");
     tile.set_valign(gtk::Align::Start);
@@ -137,7 +142,7 @@ pub(crate) fn ask(
     icon.set_valign(gtk::Align::Center);
     tile.append(&icon);
     top.append(&tile);
-    let text = gtk::Box::new(gtk::Orientation::Vertical, 6);
+    let text = gtk::Box::new(gtk::Orientation::Vertical, 7);
     text.set_hexpand(true);
     let question = gtk::Label::new(Some(&tr("Play at full output level?")));
     question.set_xalign(0.0);
@@ -162,11 +167,13 @@ pub(crate) fn ask(
     top.append(&text);
     body.append(&top);
 
-    let readout = gtk::Box::new(gtk::Orientation::Horizontal, 24);
+    let readout = gtk::Box::new(gtk::Orientation::Horizontal, 14);
     readout.add_css_class("hk-readout");
+    readout.add_css_class("hk-glass");
     readout.add_css_class("hk-confirm-readout");
     let column = |title: &str, value: &str| {
-        let column = gtk::Box::new(gtk::Orientation::Vertical, 4);
+        let column = gtk::Box::new(gtk::Orientation::Vertical, 3);
+        column.set_hexpand(true);
         column.append(&label(title, &["hk-micro-label"]));
         column.append(&label(value, &["hk-mono", "hk-confirm-value"]));
         column
@@ -185,6 +192,9 @@ pub(crate) fn ask(
         &format!("100 % · {}", control_name(&VolumeControl::Fixed)),
     ));
     body.append(&readout);
+    let space = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    space.set_vexpand(true);
+    body.append(&space);
 
     let bottom = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     bottom.add_css_class("hk-dialog-buttons");
@@ -224,6 +234,8 @@ pub(crate) fn ask(
     });
     window.present();
     cancel.grab_focus();
+    // The safe answer shows its focus ring from the start.
+    window.set_focus_visible(true);
     window
 }
 
