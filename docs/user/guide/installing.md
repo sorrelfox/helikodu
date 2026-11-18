@@ -19,7 +19,7 @@ sha256sum --check --ignore-missing SHA256SUMS
 
 ## The ready-built programs
 
-The programs were built on Debian 13 and need these libraries from your system, or newer versions with the same library names: glibc 2.41, GTK 4.18, FFmpeg 7.1 (`libavformat.so.61`, `libavcodec.so.61`, `libavutil.so.59`), PipeWire 1.2 and ALSA. SQLite is built in.
+The programs were built on Debian 13 and need these libraries from your system, or newer versions with the same library names: glibc 2.41, GTK 4.18, FFmpeg 7.1 (`libavformat.so.61`, `libavcodec.so.61`, `libavutil.so.59`), PipeWire 1.2, ALSA, libopenmpt (`libopenmpt.so.0`), libgme (`libgme.so.0`) and libsidplayfp (`libsidplayfp.so.6`). SQLite is built in. Most desktops have all but the last three installed already; install the ones that are missing with your distribution's package manager.
 
 Unpack the archive and copy its contents to `/usr/local`:
 
@@ -39,7 +39,7 @@ If your system already has a newer FFmpeg (for example FFmpeg 8) and no longer h
 
 ## Building from the source code
 
-You need Rust, Meson 1.0 or newer, gettext, and the development files of GTK 4.18, FFmpeg 7.1, PipeWire 1.2, ALSA and SQLite 3.43 (or newer versions of each). Then:
+You need Rust, a C and a C++ compiler, clang, Meson 1.0 or newer, gettext, and the development files of GTK 4.18, FFmpeg 7.1, PipeWire 1.2, ALSA, JACK, SQLite 3.43, libopenmpt, libgme and libsidplayfp (or newer versions of each). `README.md` in the source code lists them with their versions. Then:
 
 ```sh
 tar -xJf helikodu-<version>.tar.xz

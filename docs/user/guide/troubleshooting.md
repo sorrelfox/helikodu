@@ -4,6 +4,8 @@
 
 Run `helikodu` in a terminal. If it says that `libavformat.so.61` (or another FFmpeg library) cannot be found, your system has a newer FFmpeg than the programs were built for. Build Helikodu from the source code instead; see [Installing Helikodu](installing.md).
 
+If it names another library, such as `libsidplayfp.so.6`, `libopenmpt.so.0` or `libgme.so.0`, that library is not installed. Install it with your distribution's package manager and start Helikodu again.
+
 ## There is no sound
 
 - Check the output button in the player deck: is the device you expect selected? `helikodu-cli list-outputs` lists every device Helikodu can see.

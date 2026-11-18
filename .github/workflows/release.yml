@@ -143,9 +143,12 @@ jobs:
           Built on Debian 13 for the prefix /usr/local. It needs these libraries
           from the system, or newer versions with the same library names:
           glibc 2.41, GTK 4.18, FFmpeg 7.1 (libavformat.so.61, libavcodec.so.61,
-          libavutil.so.59), PipeWire 1.2 and ALSA. SQLite is built in.
+          libavutil.so.59), PipeWire 1.2, ALSA, libopenmpt (libopenmpt.so.0),
+          libgme (libgme.so.0) and libsidplayfp (libsidplayfp.so.6). SQLite is
+          built in. Install the libraries that are missing from the packages
+          of the distribution.
           Where a system has moved on to newer FFmpeg libraries, build from the
-          source tarball instead (see "Building" in README.md).
+          source tarball instead (see "Building from source" in README.md).
 
           Install (bin/, libexec/ and share/ go into /usr/local):
 

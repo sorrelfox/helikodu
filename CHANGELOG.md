@@ -130,6 +130,7 @@ The release candidate. This version brings everything planned for 1.0: smart pla
 - The bit-perfect check through an ALSA loopback device has not been run; bit-perfect output is verified through the WAV file output only.
 - The facet browser takes about 0.6 s to list the values of the whole library at 500,000 tracks.
 - The ready-built programs need the FFmpeg 7.1 libraries (`libavformat.so.61`, `libavcodec.so.61`, `libavutil.so.59`); on a system with only a newer FFmpeg, build from the source tarball instead.
+- The ready-built programs also need libopenmpt, libgme and libsidplayfp from the system (`libopenmpt.so.0`, `libgme.so.0`, `libsidplayfp.so.6`) and do not start where one of them is not installed. The installing notes now name them; those of 0.2.0 did not.
 
 ## [0.2.0] - 2026-11-18
 
