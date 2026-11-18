@@ -27,6 +27,10 @@ podman run --rm -it -e CI=true -v "$PWD:/src:Z" helikodu-ci:fedora \
 
 The lint job also installs `reuse` and `cargo-deny`, which `cargo xtask ci` requires when `CI` is set.
 
+## Architectures
+
+The checks run on x86_64. The Release workflow also builds and tests on aarch64, natively on GitHub's arm64 runner (`ubuntu-24.04-arm`, free for public repositories): Docker there pulls the arm64 variant of `debian:13`, and the same Containerfile, memory limit and job count apply. To try the aarch64 build locally on an x86_64 machine, Podman can emulate it with `qemu-user-static` installed (`podman build --platform linux/arm64 …`), which is slow but needs no changes.
+
 ## Offline audit
 
 The `offline-audit` job runs `cargo xtask offline-audit` in the Fedora container. The audit makes an unprivileged user and network namespace inside the container, which Docker's default seccomp profile refuses and which Ubuntu runners restrict through AppArmor. The job therefore sets `kernel.apparmor_restrict_unprivileged_userns=0` on the runner and starts the container with `--security-opt seccomp=unconfined --security-opt apparmor=unconfined`. It adds no capabilities and does not use `--privileged`. The container needs `unshare` from util-linux, which every image here has. The lint job runs `cargo xtask ci --no-offline-audit`, since the audit has its own job. Details are in [tests/system/README.md](../tests/system/README.md#offline-audit).

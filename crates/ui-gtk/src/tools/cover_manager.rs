@@ -719,6 +719,9 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
     let selection = gtk::NoSelection::new(Some(store.clone()));
     let factory = gtk::SignalListItemFactory::new();
     let view = gtk::ListView::new(Some(selection), Some(factory.clone()));
+    // Tab leaves the list after the focused row, instead of visiting
+    // every row: Tab and Shift+Tab reach the rest of the window.
+    view.set_tab_behavior(gtk::ListTabBehavior::Item);
     view.add_css_class("hk-dup-list");
     view.set_widget_name("cover-table");
     view.update_property(&[gtk::accessible::Property::Label(&tr("Albums"))]);

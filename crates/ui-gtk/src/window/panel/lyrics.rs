@@ -181,6 +181,7 @@ impl LyricsPage {
         more.add_css_class("hk-icon");
         more.add_css_class("small");
         more.set_menu_model(Some(&lyrics_menu()));
+        crate::widgets::menu_names::name_menus(&more);
         footer.append(&more);
         root.append(&footer);
 

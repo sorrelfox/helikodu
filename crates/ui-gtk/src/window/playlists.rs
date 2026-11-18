@@ -711,6 +711,7 @@ pub(crate) fn unused_name(base: &str, taken: &[String]) -> String {
 /// Shows `model` as a menu at `widget`.
 fn popup_menu(widget: &gtk::Widget, model: &gio::Menu) {
     let popover = gtk::PopoverMenu::from_model(Some(model));
+    crate::widgets::menu_names::name_menus(&popover);
     popover.set_parent(widget);
     popover.set_has_arrow(false);
     popover.connect_closed(|p| {

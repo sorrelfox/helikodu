@@ -158,6 +158,7 @@ impl Sync {
         content.append(&gtk::Image::from_icon_name("list-add-symbolic"));
         content.append(&label(&tr("New destination"), &["hk-t2"]));
         new_row.set_child(Some(&content));
+        new_row.update_property(&[gtk::accessible::Property::Label(&tr("New destination"))]);
         self.list.append(&new_row);
         let index = i32::try_from(self.chosen.get()).unwrap_or(0);
         self.filling.set(true);
@@ -264,6 +265,9 @@ impl Sync {
             &["hk-t2"],
         ));
         add.set_child(Some(&line));
+        add.update_property(&[gtk::accessible::Property::Label(&tr(
+            "Add an album, an artist or a search…",
+        ))]);
         self.sources.append(&add);
     }
 
@@ -743,11 +747,20 @@ pub(crate) fn open_with(main: &MainWindow, playlist: Option<PlaylistKey>) -> Opt
             return;
         }
         if row.widget_name() == "new-destination" {
-            this.new_destination();
+            // It acts when activated (below), not when the arrow keys or
+            // the window's first focus select it.
             return;
         }
         this.chosen.set(usize::try_from(row.index()).unwrap_or(0));
         this.show();
+    });
+    let weak = Rc::downgrade(&sync);
+    frame.list.connect_row_activated(move |_, row| {
+        if let Some(this) = weak.upgrade()
+            && row.widget_name() == "new-destination"
+        {
+            this.new_destination();
+        }
     });
     let weak = Rc::downgrade(&sync);
     sources.connect_row_activated(move |_, row| {

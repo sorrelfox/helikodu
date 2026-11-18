@@ -1,0 +1,64 @@
+.\" SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+.\" SPDX-License-Identifier: CC-BY-SA-4.0
+.TH HELIKODU-SCAN-WORKER 1 2026-11-18 Helikodu "User Commands"
+.SH NAME
+helikodu\-scan\-worker \- read the tags and properties of audio files for the Helikodu library scanner
+.SH SYNOPSIS
+.B helikodu\-scan\-worker
+.RB [ \-\-memory\-limit
+.IR bytes ]
+.SH DESCRIPTION
+.B helikodu\-scan\-worker
+is a helper program of Helikodu; it is not meant to be started by hand.
+.BR helikodu (1)
+and
+.BR helikodu\-cli (1)
+start one or more of these processes when they scan the library, measure
+loudness or read files again after their tags were written, and send them
+one file at a time over the standard input and output.
+The protocol between them is internal and may change between versions.
+.PP
+Reading a damaged or hostile file can crash or hang a decoder library.
+Doing the reading in a separate process with limited resources means that
+such a file stops only the worker, which is then started again, never the
+application.
+Before it reads anything, the worker limits its own address space and turns
+core dumps off; the limits cannot be raised again from inside the process.
+Tracker modules, game music, SID tunes and MIDI files are read by their own
+decoders, which also report the songs a file holds; every other file is read
+through FFmpeg.
+.PP
+The programs look for the worker beside themselves and in
+.I ../libexec/helikodu/
+relative to their own folder;
+.B helikodu\-cli
+also takes another path with
+.BR \-\-worker .
+.SH OPTIONS
+.TP
+.BI \-\-memory\-limit " bytes"
+The address-space limit of the process in bytes.
+The default is 1 GiB; 0 sets no limit.
+Also accepted as
+.BI \-\-memory\-limit= bytes\fR.
+.SH EXIT STATUS
+.TP
+.B 0
+The input was closed after the last request.
+.TP
+.B 1
+The limits could not be set, or reading or writing a request failed.
+.TP
+.B 2
+An unknown argument or a limit that is not a number.
+.SH FILES
+.TP
+.I <prefix>/libexec/helikodu/helikodu\-scan\-worker
+Where an installation puts the program.
+.SH SEE ALSO
+.BR helikodu (1),
+.BR helikodu\-cli (1)
+.SH BUGS
+Report bugs at
+.UR https://github.com/sorrelfox/helikodu/issues
+.UE .

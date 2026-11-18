@@ -157,6 +157,9 @@ pub(crate) fn open(parent: &gtk::Window) -> gtk::Window {
     let filter = gtk::SearchEntry::new();
     filter.add_css_class("hk-input");
     filter.set_placeholder_text(Some(&tr("Find an action or its keys")));
+    filter.update_property(&[gtk::accessible::Property::Label(&tr(
+        "Find an action or its keys",
+    ))]);
     filter.set_margin_top(18);
     filter.set_margin_start(28);
     filter.set_margin_end(28);

@@ -83,6 +83,7 @@ pub(crate) fn edit_rows(
                 model.append(Some(&tr("Rename…")), Some("row.rename"));
                 model.append(Some(&tr("Delete…")), Some("row.delete"));
                 let popover = gtk::PopoverMenu::from_model(Some(&model));
+                crate::widgets::menu_names::name_menus(&popover);
                 popover.set_has_arrow(false);
                 popover.set_parent(list);
                 let (x, y) = at.unwrap_or_else(|| {

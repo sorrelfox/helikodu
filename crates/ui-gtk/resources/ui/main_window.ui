@@ -151,6 +151,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
       <submenu>
         <attribute name="label" translatable="yes">Help</attribute>
         <item>
+          <attribute name="label" translatable="yes">User Guide</attribute>
+          <attribute name="action">app.help</attribute>
+        </item>
+        <item>
           <attribute name="label" translatable="yes">Keyboard Shortcuts</attribute>
           <attribute name="action">app.shortcuts</attribute>
         </item>

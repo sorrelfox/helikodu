@@ -187,6 +187,7 @@ impl Deck {
     /// Opens `model` as a menu above `anchor`.
     fn popup_menu(&self, anchor: &impl IsA<gtk::Widget>, model: &gtk::gio::Menu) {
         let popover = gtk::PopoverMenu::from_model(Some(model));
+        crate::widgets::menu_names::name_menus(&popover);
         popover.add_css_class("hk-play-menu");
         popover.set_parent(self);
         popover.set_pointing_to(area(anchor, self).as_ref());

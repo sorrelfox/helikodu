@@ -163,10 +163,12 @@ impl MainWindow {
         crate::play_modes::fill_playback_menu(&playback_menu, view);
         if let Some(popover) = &popover {
             popover.set_menu_model(Some(&menu));
+            crate::widgets::menu_names::name_menus(popover);
         }
         if bar.is_some() {
             imp.menubar
                 .set_menu_model(Some(&super::menubar_model(&menu)));
+            crate::widgets::menu_names::name_menus(&*imp.menubar);
         }
     }
 

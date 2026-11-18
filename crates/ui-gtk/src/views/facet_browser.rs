@@ -164,6 +164,9 @@ impl Pane {
             item.set_accessible_label(&value.name);
         });
         let list = gtk::ListView::new(Some(selection.clone()), Some(factory));
+        // Tab leaves the list after the focused row, instead of visiting
+        // every row: Tab and Shift+Tab reach the rest of the window.
+        list.set_tab_behavior(gtk::ListTabBehavior::Item);
         list.add_css_class("hk-list");
         list.add_css_class("facet");
         let scroller = gtk::ScrolledWindow::new();
@@ -333,6 +336,7 @@ impl FacetBrowser {
             menu.append_item(&item);
         }
         pane.field_button.set_menu_model(Some(&menu));
+        crate::widgets::menu_names::name_menus(&pane.field_button);
         // Choosing values.
         let weak = Rc::downgrade(self);
         pane.selection

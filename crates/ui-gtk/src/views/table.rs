@@ -330,6 +330,27 @@ impl TableCell {
         self.imp().position.get()
     }
 
+    /// Follows `item` as [`follow`](Self::follow) does, and names the list
+    /// row holding the cell after the track (its position, title and
+    /// artist), for screen readers.
+    pub(crate) fn follow_named(
+        &self,
+        list_item: &gtk::ListItem,
+        item: &TrackItem,
+        show: impl Fn(&Self, &TrackItem) + 'static,
+    ) {
+        let list_item = list_item.downgrade();
+        self.follow(item, move |cell, track| {
+            show(cell, track);
+            if let (Some(list_item), Some(row)) = (list_item.upgrade(), track.row()) {
+                list_item.set_accessible_label(&crate::i18n::fill(
+                    &crate::i18n::tr("{}. {}, {}"),
+                    &[&(track.position() + 1).to_string(), &row.title, &row.artist],
+                ));
+            }
+        });
+    }
+
     /// Follows `item`: `show` runs now and again when its row arrives.
     pub(crate) fn follow(&self, item: &TrackItem, show: impl Fn(&Self, &TrackItem) + 'static) {
         self.forget();

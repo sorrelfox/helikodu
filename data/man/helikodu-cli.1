@@ -60,6 +60,11 @@ helikodu\-cli \- play audio files, query the Helikodu library and control the ap
 .IR path ]
 .RI [ file | track-id ...]
 .br
+.B helikodu\-cli duplicates
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
 .B helikodu\-cli status
 .RB [ \-\-json ]
 .br
@@ -308,6 +313,16 @@ The default is half the processors.
 .BI \-\-worker " path"
 The scan worker program that reads written files again, as for
 .BR scan .
+.SS duplicates
+Lists the groups of copies in the library: files with exactly the same
+content.
+Each group shows its main copy, the other copies, and files that are the same
+file reached by another path (such as a hard link); missing files are
+marked.
+A summary line gives the number of groups and the size of the copies besides
+the main copies.
+Nothing is moved or deleted; the application's Find Duplicates window does
+that.
 .SH COMMANDS FOR THE RUNNING APPLICATION
 These commands talk to the running Helikodu window through its D-Bus
 interface,
@@ -499,7 +514,8 @@ helikodu\-cli status \-\-json
 .EE
 .RE
 .SH SEE ALSO
-.BR helikodu (1)
+.BR helikodu (1),
+.BR helikodu\-scan\-worker (1)
 .SH BUGS
 Report bugs at
 .UR https://github.com/sorrelfox/helikodu/issues

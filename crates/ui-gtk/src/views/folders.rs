@@ -229,6 +229,9 @@ impl FoldersView {
         selection.set_autoselect(false);
         selection.set_can_unselect(true);
         let tree = gtk::ListView::new(Some(selection.clone()), Some(Self::tree_factory()));
+        // Tab leaves the list after the focused row, instead of visiting
+        // every row: Tab and Shift+Tab reach the rest of the window.
+        tree.set_tab_behavior(gtk::ListTabBehavior::Item);
         tree.add_css_class("hk-list");
         tree.add_css_class("hk-tree");
         tree.update_property(&[gtk::accessible::Property::Label(&tr("Folders"))]);
@@ -418,6 +421,7 @@ impl FoldersView {
                 item.set_activatable(false);
                 expander.set_indent_for_icon(false);
                 expander.update_property(&[gtk::accessible::Property::Label(&heading)]);
+                item.set_accessible_label(&heading);
                 return;
             }
             expander.set_indent_for_icon(true);
@@ -463,6 +467,7 @@ impl FoldersView {
                 row.name.clone()
             };
             expander.update_property(&[gtk::accessible::Property::Label(&text)]);
+            item.set_accessible_label(&text);
         });
         factory
     }

@@ -87,6 +87,7 @@ pub(crate) fn sort_button(label_text: &str, menu: &gio::Menu) -> gtk::MenuButton
     button.set_label(label_text);
     button.add_css_class("hk-sort");
     button.set_menu_model(Some(menu));
+    crate::widgets::menu_names::name_menus(&button);
     button.set_tooltip_text(Some(&tr("Sort")));
     button
 }
@@ -107,6 +108,7 @@ impl GenresView {
         order_button.set_icon_name("view-sort-descending-symbolic");
         order_button.add_css_class("hk-menu");
         order_button.set_menu_model(Some(&order));
+        crate::widgets::menu_names::name_menus(&order_button);
         order_button.set_tooltip_text(Some(&tr("Sort the genres")));
         order_button.update_property(&[gtk::accessible::Property::Label(&tr("Sort the genres"))]);
         let (pane, count, list) = list_pane(&tr("Genres"), order_button.upcast_ref());

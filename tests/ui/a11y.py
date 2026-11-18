@@ -22,9 +22,22 @@ and:
    reaches the queue panel, Ctrl+comma opens Settings, and Space changes one
    setting (checked in settings.toml).
 
+3. audits every other window and view the same way: the sidebar views and
+   the pages they open, the facet browser, the tag editor and Tag tools,
+   playlists and the smart playlist editor, History, Statistics, query
+   search, Now Playing and the analyzer, the menus and popovers, Settings
+   with its search, and every dialog and tool window, opened through the
+   application's actions on the session bus (org.gtk.Actions) as their menu
+   items do; in each, Tab must keep the focus on a named object of the
+   window and must move it;
+4. serves a StatusNotifierWatcher so that the tray icon registers, and reads
+   the tray menu over D-Bus as a panel would: every item needs a label.
+
+    tests/ui/a11y.py --database library.db --skip-path --views "convert,view Home"
+
 Needs python3-gobject with Atspi 2.0 and mutter; skips with a message when
-either is missing. Prints the findings and exits non-zero when a step of the
-keyboard path fails or a control lacks a name or role.
+either is missing. Prints the findings and exits non-zero when a step fails,
+a control lacks a name or role, or Tab loses or traps the focus.
 """
 
 import argparse
@@ -52,6 +65,7 @@ KEYSYMS = {
     "Control_L": 0xFFE3, "Shift_L": 0xFFE1, "Alt_L": 0xFFE9, "Return": 0xFF0D,
     "Tab": 0xFF09, "Escape": 0xFF1B, "space": 0x20, "comma": 0x2C, "F6": 0xFFC3,
     "Up": 0xFF52, "Down": 0xFF54, "Left": 0xFF51, "Right": 0xFF53, "Home": 0xFF50,
+    "End": 0xFF57, "F4": 0xFFC1, "F10": 0xFFC7, "F11": 0xFFC8, "colon": 0x3A,
 }
 
 R = Atspi.Role
@@ -144,6 +158,13 @@ def walk(node, path=(), out=None, limit=20000):
     return out
 
 
+def empty_cell(node, role):
+    """A table cell that shows nothing (an unknown artist, say) needs no name."""
+    if role != R.TABLE_CELL:
+        return False
+    return not any(x[3].strip() for x in walk(node)[1:])
+
+
 def region(path, queue_root):
     names = list(path)
     frame = names[1] if len(names) > 1 else ("", "")
@@ -198,11 +219,28 @@ class App:
     def frames(self):
         return [self.app.get_child_at_index(i) for i in range(self.app.get_child_count())]
 
+    def active_frame(self):
+        """The name of the window in front, or None."""
+        for fr in self.frames():
+            try:
+                if fr.get_state_set().contains(Atspi.StateType.ACTIVE):
+                    return fr.get_name() or ""
+            except GLib.Error:
+                continue
+        return None
+
     def focused(self):
+        """The focused object of the window in front (of any window when none
+        says it is in front)."""
+        active = self.active_frame()
+        found = None
         for n in self.nodes():
             if n[5].contains(Atspi.StateType.FOCUSED) and n[1] not in (R.FRAME, R.WINDOW, R.DIALOG):
-                return n
-        return None
+                frame = n[6][1][1] if len(n[6]) > 1 else None
+                if active is None or frame == active:
+                    return n
+                found = found or n
+        return found if active is None else None
 
 
 def mpris_status():
@@ -234,6 +272,14 @@ class Findings:
         self.issues = {}
         self.steps = []
         self.audited = {}
+        self.tab_stops = {}
+
+    def problem(self, label, reg, text):
+        """A finding that is not about one object: focus, the tray."""
+        key = (reg, text, label)
+        entry = self.issues.setdefault(key, {"count": 0, "text": [], "views": set()})
+        entry["count"] += 1
+        entry["views"].add(label)
 
     def audit(self, app, label):
         nodes = app.nodes()
@@ -254,10 +300,14 @@ class Findings:
             problem = None
             if role in INTERACTIVE:
                 count += 1
-                if not name.strip() and role not in NAME_OPTIONAL:
+                if not name.strip() and role not in NAME_OPTIONAL and not empty_cell(node, role):
                     problem = f"{rn} has no accessible name"
             elif focusable and role in ANONYMOUS and not name.strip() and role != R.LABEL:
                 problem = f"focusable {rn} with no name and no meaningful role"
+            if problem is None and len(desc) > 300:
+                # GTK makes a description from what a widget holds, such as
+                # the rows of a popover: read in full, it buries the control.
+                problem = f"{rn} has a description of {len(desc)} characters"
             if problem:
                 # The nearest named list, table or window above, so that
                 # repeated rows count as one finding.
@@ -298,14 +348,15 @@ class Findings:
 
 
 def track_results(app):
-    """The names of the track results: the items after the third heading of
-    the search results (Artists, Albums, Tracks)."""
-    names, group = set(), 0
+    """The names of the track results: the items after the "Tracks" heading of
+    the search results (the Artists and Albums headings are left out when
+    nothing matches there)."""
+    names, in_tracks = set(), False
     for node, role, rn, name, desc, states, path in app.nodes():
         if len(path) >= 2 and path[-2] == ("list", "Search results") and role == R.LIST_ITEM:
             if not states.contains(Atspi.StateType.FOCUSABLE):
-                group += 1
-            elif group >= 3:
+                in_tracks = name.startswith("Tracks")
+            elif in_tracks:
                 names.add(name)
     return names
 
@@ -446,7 +497,459 @@ def keyboard_path(app, kb, f, profile):
     f.step(shown, "the sidebar opens Tracks from the keyboard: " + " | ".join(trail))
 
 
+# --- Every window and view ---------------------------------------------------
+
+APP_ID = "io.github.sorrelfox.Helikodu"
+APP_PATH = "/io/github/sorrelfox/Helikodu"
+
+
+class Actions:
+    """The application's and the main window's actions, which GTK exports on
+    the session bus (org.gtk.Actions). Opening a window this way is what its
+    menu item does; the keyboard path above covers reaching the menus."""
+
+    def __init__(self):
+        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        self.window_path = None
+        for k in range(1, 6):
+            path = f"{APP_PATH}/window/{k}"
+            try:
+                self._call(path, "List", None)
+                self.window_path = path
+                break
+            except GLib.Error:
+                continue
+
+    def _call(self, path, method, params):
+        return self.bus.call_sync(APP_ID, path, "org.gtk.Actions", method, params, None,
+                                  Gio.DBusCallFlags.NONE, 5000, None)
+
+    def names(self, scope):
+        path = APP_PATH if scope == "app" else self.window_path
+        try:
+            return set(self._call(path, "List", None).unpack()[0])
+        except (GLib.Error, TypeError):
+            return set()
+
+    def activate(self, scope, name, parameter=None):
+        path = APP_PATH if scope == "app" else self.window_path
+        params = [parameter] if parameter is not None else []
+        try:
+            self._call(path, "Activate", GLib.Variant("(sava{sv})", (name, params, {})))
+            return True
+        except (GLib.Error, TypeError) as error:
+            print(f"a11y: cannot activate {scope}.{name}: {error}", file=sys.stderr)
+            return False
+
+
+def wait_for(check, timeout=5.0, step=0.2):
+    end = time.time() + timeout
+    while time.time() < end:
+        value = check()
+        if value:
+            return value
+        time.sleep(step)
+    return check()
+
+
+def frame_names(app):
+    try:
+        app.app.clear_cache()
+    except (GLib.Error, AttributeError):
+        pass
+    names = []
+    for fr in app.frames():
+        try:
+            names.append(fr.get_name() or "")
+        except (GLib.Error, AttributeError):
+            continue
+    return names
+
+
+def tab_walk(app, kb, f, label, presses=24, frame=None):
+    """Tabs through the window in front: focus must stay on a named object of
+    that window and must move. Records the stops."""
+    stops, lost, outside = [], 0, []
+    for _ in range(presses):
+        kb.press("Tab", wait=0.25)
+        n = app.focused()
+        if n is None:
+            lost += 1
+            continue
+        here = n[6][1][1] if len(n[6]) > 1 else ""
+        if frame is not None and here != frame:
+            outside.append(describe(n)[:40])
+        stops.append((n[2], n[3]))
+    distinct = list(dict.fromkeys(stops))
+    f.tab_stops[label] = len(distinct)
+    if lost:
+        f.problem(label, "focus", f"focus was on nothing after {lost} of {presses} Tab presses")
+    if outside:
+        f.problem(label, "focus", f"Tab left the window: {', '.join(outside[:3])}")
+    if stops and len(distinct) < 2:
+        f.problem(label, "focus", f"Tab does not move focus (stays on {distinct[0][0]} "
+                                  f"{distinct[0][1]!r})")
+    return distinct
+
+
+def close_front(app, kb, base):
+    """Closes the window in front with Escape, or Alt+F4 when Escape does not."""
+    for keys in (("Escape",), ("Alt_L", "F4")):
+        if len(frame_names(app)) <= base:
+            return True
+        kb.press(*keys, wait=0.8)
+        wait_for(lambda: len(frame_names(app)) <= base, timeout=2.0)
+    return len(frame_names(app)) <= base
+
+
+def audit_window(app, kb, f, label, open_it, tab=True, after=None):
+    """Opens a window, audits it, tabs through it and closes it."""
+    base = len(frame_names(app))
+    if not open_it():
+        f.step(False, f"{label}: could not be opened")
+        return False
+    opened = wait_for(lambda: len(frame_names(app)) > base, timeout=6.0)
+    if not opened:
+        f.step(False, f"{label} opens (windows: {frame_names(app)})")
+        return False
+    time.sleep(0.8)
+    name = app.active_frame()
+    f.audit(app, label)
+    if tab:
+        tab_walk(app, kb, f, label, frame=name)
+    if after:
+        after(name)
+    closed = close_front(app, kb, base)
+    f.step(closed, f"{label} opens and closes from the keyboard (window {name!r})")
+    return True
+
+
+def go_sidebar(app, kb, item):
+    """Opens the sidebar item `item` with F6, the arrow keys and Return."""
+    for _ in range(6):
+        n = app.focused()
+        if n is not None and ("list", "Library") in n[6]:
+            break
+        kb.press("F6", wait=0.4)
+    else:
+        return False
+    kb.press("Home", wait=0.3)
+    for _ in range(40):
+        n = app.focused()
+        if n is not None and n[1] == R.LIST_ITEM and n[3] == item:
+            kb.press("Return", wait=1.5)
+            return True
+        kb.press("Down", wait=0.2)
+    return False
+
+
+def focus_content(app, kb):
+    """Moves focus into the content pane with F6."""
+    for _ in range(6):
+        kb.press("F6", wait=0.4)
+        n = app.focused()
+        if n is not None and ("filler", "Library") not in n[6] \
+                and ("grouping", "Player") not in n[6] and region(n[6], None) != "queue panel":
+            return n
+    return None
+
+
+def popover(app, kb, f, label, open_it):
+    """Opens a menu or popover, audits it and closes it with Escape. A popover
+    is open when it took the focus."""
+    before = app.focused()
+    if not open_it():
+        f.step(False, f"{label}: could not be opened")
+        return
+    time.sleep(0.8)
+    f.audit(app, label)
+    after = app.focused()
+    moved = after is not None and (before is None or after[6] != before[6])
+    kb.press("Escape", wait=0.6)
+    f.step(moved, f"{label} opens and takes the focus (focus: {describe(after)[:50]})")
+
+
+def sweep(app, kb, f, views):
+    """Audits every window and view the keyboard path does not reach."""
+    actions = Actions()
+    app_actions, win_actions = actions.names("app"), actions.names("win")
+    want = (lambda name: True) if not views else (lambda name: name in views)
+
+    def act(scope, name, parameter=None):
+        available = app_actions if scope == "app" else win_actions
+        if name not in available:
+            print(f"a11y: no action {scope}.{name}", file=sys.stderr)
+            return False
+        return lambda: actions.activate(scope, name, parameter)
+
+    # The views of the sidebar, each audited and tabbed through.
+    for item in ("Home", "Albums", "Artists", "Tracks", "Genres", "Composers", "Years",
+                 "Folders"):
+        label = f"view {item}"
+        if not want(label):
+            continue
+        reached = go_sidebar(app, kb, item)
+        f.step(reached, f"the sidebar opens {item} from the keyboard")
+        if not reached:
+            continue
+        time.sleep(1.0)
+        f.audit(app, label)
+        if focus_content(app, kb):
+            tab_walk(app, kb, f, label, presses=12, frame="Helikodu")
+        if item in ("Albums", "Artists", "Genres", "Folders"):
+            # The first entry's page: an album, an artist (with the photo
+            # menu), a genre, a folder.
+            n = focus_content(app, kb)
+            if n is not None:
+                kb.press("Down", wait=0.3)
+                kb.press("Return", wait=1.5)
+                f.audit(app, f"{label} › first entry")
+                kb.press("Alt_L", "Left", wait=1.0)
+        if item == "Tracks":
+            # The facet browser, and the tag editor for the first track.
+            n = focus_content(app, kb)
+            for _ in range(10):
+                n = app.focused()
+                if n is not None and n[2] == "toggle button" and "facet" in (n[3] + n[4]).lower():
+                    kb.press("space", wait=1.0)
+                    f.audit(app, "facet browser")
+                    kb.press("space", wait=0.6)
+                    break
+                kb.press("Tab", wait=0.2)
+            if want("tag editor"):
+                focus_content(app, kb)
+                # Select the first track: the table takes focus from F6.
+                kb.press("Down", wait=0.3)
+                kb.press("Up", wait=0.3)
+
+                def tag_tools(frame):
+                    for _ in range(40):
+                        n = app.focused()
+                        if n is not None and n[3] == "Tag tools":
+                            kb.press("Return", wait=0.8)
+                            f.audit(app, "tag tools menu")
+                            base = len(frame_names(app))
+                            kb.press("Return", wait=1.5)
+                            if len(frame_names(app)) > base:
+                                f.audit(app, "tag tools")
+                                tab_walk(app, kb, f, "tag tools", frame=app.active_frame())
+                                f.step(close_front(app, kb, base), "Tag tools close with Escape")
+                            return
+                        kb.press("Tab", wait=0.2)
+                    f.step(False, "the tag editor's Tag tools button is reached with Tab")
+
+                audit_window(app, kb, f, "tag editor", act("win", "track-properties"),
+                             after=tag_tools)
+
+    # Playlists: a new playlist and the smart playlist editor.
+    if want("new playlist") and act("app", "new-playlist"):
+        actions.activate("app", "new-playlist")
+        time.sleep(1.5)
+        f.audit(app, "new playlist")
+    if want("smart playlist editor") and act("win", "new-smart-playlist-in"):
+        actions.activate("win", "new-smart-playlist-in", GLib.Variant("t", 0))
+        time.sleep(1.5)
+        f.audit(app, "smart playlist editor")
+        if focus_content(app, kb):
+            tab_walk(app, kb, f, "smart playlist editor", presses=16, frame="Helikodu")
+
+    # Views opened from the menus.
+    for label, scope, name in (("history", "win", "show-history"),
+                               ("statistics", "win", "show-statistics")):
+        if want(label) and act(scope, name):
+            actions.activate(scope, name)
+            time.sleep(1.5)
+            f.audit(app, label)
+            if focus_content(app, kb):
+                tab_walk(app, kb, f, label, presses=12, frame="Helikodu")
+
+    # Search with query text and its completion.
+    if want("query search"):
+        kb.press("Control_L", "f", wait=0.6)
+        kb.type("genre")
+        kb.press("Shift_L", "colon", wait=0.8)
+        f.audit(app, "query search completion")
+        kb.press("Escape", wait=0.4)
+        kb.type("ocean year>2000")
+        time.sleep(1.5)
+        f.audit(app, "query search")
+        kb.press("Escape", wait=0.6)
+
+    # Now Playing, with its analyzer, while something plays.
+    if want("now playing") and act("win", "now-playing"):
+        actions.activate("app", "play-pause")
+        actions.activate("win", "now-playing")
+        time.sleep(1.5)
+        f.audit(app, "now playing")
+        tab_walk(app, kb, f, "now playing", presses=16, frame="Helikodu")
+        for _ in range(30):
+            n = app.focused()
+            if n is not None and n[3] == "Analyzer":
+                kb.press("space", wait=1.0)
+                f.audit(app, "analyzer")
+                break
+            kb.press("Tab", wait=0.2)
+        actions.activate("win", "now-playing")
+        actions.activate("app", "stop")
+        time.sleep(1.0)
+
+    # Menus and popovers.
+    if want("main menu"):
+        popover(app, kb, f, "main menu", lambda: kb.press("F10", wait=0.2) or True)
+    for label, name in (("output switcher", "output-switcher"), ("sleep timer", "sleep-timer")):
+        if want(label) and act("win", name):
+            popover(app, kb, f, label, act("win", name))
+
+    # Windows.
+    windows = [
+        ("settings search", "app", "preferences"),
+        ("keyboard shortcuts", "app", "shortcuts"),
+        ("supported formats", "app", "formats"),
+        ("about", "app", "about"),
+        ("organize files", "app", "organize-files"),
+        ("find duplicates", "app", "find-duplicates"),
+        ("convert", "app", "convert"),
+        ("sync and export", "app", "sync-export"),
+        ("cover manager", "app", "cover-manager"),
+        ("verify files", "app", "verify-files"),
+        ("missing files", "app", "missing-files"),
+    ]
+    for label, scope, name in windows:
+        if not want(label):
+            continue
+        opener = act(scope, name)
+        if not opener:
+            f.step(False, f"{label}: the action {scope}.{name} exists")
+            continue
+        after = None
+        if label == "settings search":
+            def after(frame):
+                for _ in range(40):
+                    n = app.focused()
+                    if n is not None and n[1] == R.ENTRY:
+                        kb.type("volume")
+                        time.sleep(1.0)
+                        f.audit(app, "settings search")
+                        kb.press("Escape", wait=0.5)
+                        return
+                    kb.press("Tab", wait=0.2)
+                f.step(False, "the settings search entry is reached with Tab")
+        audit_window(app, kb, f, label, opener, after=after)
+
+    # The mini player takes the main window's place (both are "Helikodu").
+    if want("mini player") and act("app", "mini-player"):
+        def sidebar_shown():
+            return any(n[6][-1] == ("filler", "Library") and n[5].contains(Atspi.StateType.SHOWING)
+                       for n in app.nodes())
+        actions.activate("app", "mini-player")
+        swapped = wait_for(lambda: not sidebar_shown(), timeout=5.0)
+        f.step(swapped, "the mini player takes the window's place")
+        time.sleep(0.8)
+        f.audit(app, "mini player")
+        tab_walk(app, kb, f, "mini player", presses=16, frame="Helikodu")
+        kb.press("Control_L", "Shift_L", "m", wait=1.5)
+        back = wait_for(sidebar_shown, timeout=5.0)
+        if not back:
+            actions.activate("app", "mini-player")
+        f.step(back, "Ctrl+Shift+M brings the full window back from the mini player")
+
+
+TRAY_WATCHER_XML = """
+<node><interface name="org.kde.StatusNotifierWatcher">
+  <method name="RegisterStatusNotifierItem"><arg type="s" direction="in"/></method>
+  <method name="RegisterStatusNotifierHost"><arg type="s" direction="in"/></method>
+  <property name="RegisteredStatusNotifierItems" type="as" access="read"/>
+  <property name="IsStatusNotifierHostRegistered" type="b" access="read"/>
+  <property name="ProtocolVersion" type="i" access="read"/>
+  <signal name="StatusNotifierItemRegistered"><arg type="s"/></signal>
+</interface></node>
+"""
+
+
+def tray_watcher(out):
+    """Serves a StatusNotifierWatcher with a host, as a desktop's panel does,
+    and writes the bus name of each item that registers to `out`."""
+    items = []
+    node = Gio.DBusNodeInfo.new_for_xml(TRAY_WATCHER_XML)
+
+    def method(conn, sender, path, iface, name, params, invocation):
+        if name == "RegisterStatusNotifierItem":
+            item = params.unpack()[0]
+            items.append(item if item.startswith(":") else sender)
+            with open(out, "a") as o:
+                o.write(f"{items[-1]}\n")
+        invocation.return_value(None)
+
+    def get_property(conn, sender, path, iface, name):
+        return {"RegisteredStatusNotifierItems": GLib.Variant("as", items),
+                "IsStatusNotifierHostRegistered": GLib.Variant("b", True),
+                "ProtocolVersion": GLib.Variant("i", 0)}[name]
+
+    def acquired(conn, name):
+        conn.register_object("/StatusNotifierWatcher", node.interfaces[0], method,
+                             get_property, None)
+
+    Gio.bus_own_name(Gio.BusType.SESSION, "org.kde.StatusNotifierWatcher",
+                     Gio.BusNameOwnerFlags.NONE, acquired, None, None)
+    GLib.MainLoop().run()
+
+
+def audit_tray(f, registered):
+    """The tray menu as the desktop's panel reads it: every item that is not
+    a separator needs a label, and the item a title and a tooltip."""
+    try:
+        names = [n for n in Path(registered).read_text().split() if n]
+    except OSError:
+        names = []
+    if not f.step(bool(names), "the tray icon registers with the desktop's tray"):
+        return
+    bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    item = names[-1]
+    service, _, path = item.partition("/")
+    path = "/" + path if path else "/StatusNotifierItem"
+
+    def prop(obj, iface, name):
+        return bus.call_sync(service, obj, "org.freedesktop.DBus.Properties", "Get",
+                             GLib.Variant("(ss)", (iface, name)), None,
+                             Gio.DBusCallFlags.NONE, 3000, None).unpack()[0]
+
+    try:
+        title = prop(path, "org.kde.StatusNotifierItem", "Title")
+        tooltip = prop(path, "org.kde.StatusNotifierItem", "ToolTip")
+        menu = prop(path, "org.kde.StatusNotifierItem", "Menu")
+        layout = bus.call_sync(service, menu, "com.canonical.dbusmenu", "GetLayout",
+                               GLib.Variant("(iias)", (0, -1, [])), None,
+                               Gio.DBusCallFlags.NONE, 3000, None).unpack()[1]
+    except GLib.Error as error:
+        f.step(False, f"the tray menu can be read: {error.message}")
+        return
+    if not title.strip():
+        f.problem("tray", "tray", "the tray item has no title")
+    if not (tooltip[2] or "").strip():
+        f.problem("tray", "tray", "the tray item has no tooltip title")
+    labels = []
+
+    def visit(node):
+        _, properties, children = node
+        kind = properties.get("type", "standard")
+        visible = properties.get("visible", True)
+        if kind != "separator" and visible and node[0] != 0:
+            text = properties.get("label", "").replace("_", "")
+            labels.append(text)
+            if not text.strip():
+                f.problem("tray", "tray", "a tray menu item has no label")
+        for child in children:
+            visit(child)
+
+    visit(layout)
+    f.audited["tray menu"] = len(labels)
+    f.step(bool(labels), f"the tray menu has labelled items: {', '.join(labels)}")
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--tray-watcher":
+        tray_watcher(sys.argv[2])
+        return
     headless.in_private_session(sys.argv)
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--library")
@@ -454,6 +957,11 @@ def main():
     p.add_argument("--target-dir")
     p.add_argument("--no-build", action="store_true")
     p.add_argument("--dump", help="append the accessibility tree of each audited view here")
+    p.add_argument("--skip-path", action="store_true", help="leave out the keyboard path")
+    p.add_argument("--skip-sweep", action="store_true",
+                   help="leave out the other windows and views")
+    p.add_argument("--views", help="audit only these windows and views of the sweep "
+                                   "(comma-separated labels, such as 'view Tracks,convert')")
     args = p.parse_args()
     if shutil.which("mutter") is None:
         print("a11y: mutter is not installed (keyboard input needs its remote desktop); skipped",
@@ -481,6 +989,10 @@ def main():
             Atspi.init()
             env = comp.env(**profile.env())
             env.pop("GTK_A11Y", None)
+            registered = profile.root / "tray-items"
+            watcher = subprocess.Popen([sys.executable, __file__, "--tray-watcher",
+                                        str(registered)])
+            time.sleep(0.5)
             process = subprocess.Popen([str(target / "release" / "helikodu"), "--scheme", "dark"],
                                        env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             app = App(process)
@@ -489,8 +1001,15 @@ def main():
                     sys.exit(1)
                 time.sleep(2)
                 kb = Keyboard()
-                keyboard_path(app, kb, f, profile)
+                if not args.skip_path:
+                    keyboard_path(app, kb, f, profile)
+                if not args.skip_sweep:
+                    views = set(v.strip() for v in args.views.split(",")) if args.views else None
+                    sweep(app, kb, f, views)
+                    if not views or "tray menu" in views:
+                        audit_tray(f, registered)
             finally:
+                watcher.terminate()
                 process.terminate()
                 try:
                     process.wait(10)
@@ -506,8 +1025,10 @@ def main():
         print(f"- {'pass' if ok else 'FAIL'}: {text}")
     print("\n## Controls audited per view\n")
     for label, count in f.audited.items():
-        print(f"- {label}: {count} interactive objects")
-    print("\n## Missing names or roles\n")
+        stops = f.tab_stops.get(label)
+        tabbed = f"; {stops} distinct Tab stops" if stops is not None else ""
+        print(f"- {label}: {count} interactive objects{tabbed}")
+    print("\n## Missing names or roles, focus problems\n")
     if not f.issues:
         print("None.")
     for (reg, problem, context), e in sorted(f.issues.items()):

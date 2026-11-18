@@ -978,6 +978,7 @@ fn options() -> Options {
     insert_content.append(&gtk::Image::from_icon_name("pan-down-symbolic"));
     insert.set_child(Some(&insert_content));
     insert.set_menu_model(Some(&menu));
+    crate::widgets::menu_names::name_menus(&insert);
     insert.add_css_class("hk-menu-btn");
     insert.update_property(&[gtk::accessible::Property::Label(&tr("Insert field"))]);
     insert.set_valign(gtk::Align::Center);
@@ -1053,6 +1054,9 @@ pub(crate) fn open(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Option<g
     selection.set_can_unselect(true);
     let factory = gtk::SignalListItemFactory::new();
     let view = gtk::ListView::new(Some(selection.clone()), Some(factory.clone()));
+    // Tab leaves the list after the focused row, instead of visiting
+    // every row: Tab and Shift+Tab reach the rest of the window.
+    view.set_tab_behavior(gtk::ListTabBehavior::Item);
     view.add_css_class("hk-dup-list");
     view.add_css_class("hk-organize-list");
     view.set_widget_name("organize-table");

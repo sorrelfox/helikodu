@@ -342,6 +342,7 @@ impl Converter {
         content.append(&gtk::Image::from_icon_name("list-add-symbolic"));
         content.append(&label(&tr("New preset"), &["hk-t2"]));
         new_row.set_child(Some(&content));
+        new_row.update_property(&[gtk::accessible::Property::Label(&tr("New preset"))]);
         new_row.add_css_class("hk-new-row");
         self.list.append(&new_row);
         self.filling.set(true);
@@ -993,6 +994,9 @@ pub(crate) fn open_with(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Opt
     selection.set_can_unselect(true);
     let factory = gtk::SignalListItemFactory::new();
     let view = gtk::ListView::new(Some(selection), Some(factory.clone()));
+    // Tab leaves the list after the focused row, instead of visiting
+    // every row: Tab and Shift+Tab reach the rest of the window.
+    view.set_tab_behavior(gtk::ListTabBehavior::Item);
     view.add_css_class("hk-dup-list");
     view.set_widget_name("convert-table");
     view.update_property(&[gtk::accessible::Property::Label(&tr("Tracks to convert"))]);
@@ -1112,14 +1116,13 @@ pub(crate) fn open_with(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Opt
             }
         },
     );
+    // "New preset" acts when activated (a click, Enter), not when selected:
+    // moving through the list with the arrow keys must not make presets.
     let weak = Rc::downgrade(&converter);
-    list.connect_row_selected(move |list, row| {
-        let (Some(this), Some(row)) = (weak.upgrade(), row) else {
+    list.connect_row_activated(move |list, row| {
+        let Some(this) = weak.upgrade() else {
             return;
         };
-        if this.filling.get() {
-            return;
-        }
         if row.widget_name() == "new-preset" {
             let mut preset = this.current.borrow().clone();
             let mut state = this.state.borrow_mut();
@@ -1133,6 +1136,14 @@ pub(crate) fn open_with(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Opt
             this.show_preset(&preset);
             this.replan();
             let _ = list;
+        }
+    });
+    let weak = Rc::downgrade(&converter);
+    list.connect_row_selected(move |_, row| {
+        let (Some(this), Some(row)) = (weak.upgrade(), row) else {
+            return;
+        };
+        if this.filling.get() {
             return;
         }
         let id = row.widget_name();

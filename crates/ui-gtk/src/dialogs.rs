@@ -3,7 +3,7 @@
 
 //! The dialogs: Settings, the full-output confirmation, the tag editor, the
 //! first run, Keyboard shortcuts, Supported formats and About, with the
-//! application actions that open them.
+//! application actions that open them, and the user guide.
 
 pub(crate) mod about;
 pub(crate) mod common;
@@ -16,6 +16,7 @@ pub(crate) mod settings;
 pub(crate) mod shortcuts;
 pub(crate) mod tag_editor;
 pub(crate) mod track_flags;
+pub(crate) mod user_guide;
 pub(crate) mod volume_confirm;
 
 use gtk::gio;
@@ -77,6 +78,7 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
     add(application, "shortcuts", |main| {
         shortcuts::open(main.upcast_ref());
     });
+    add(application, "help", user_guide::open);
     add(application, "about", |main| {
         if let Some(backend) = main.backend() {
             about::open(main.upcast_ref(), &backend);

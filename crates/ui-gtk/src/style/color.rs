@@ -309,6 +309,62 @@ mod tests {
         }
     }
 
+    /// Text in the token colours stays readable (WCAG AA, 4.5:1) on the
+    /// surfaces it is drawn on, in both schemes and with high contrast.
+    #[test]
+    fn text_tokens_have_their_contrast() {
+        for dark in [true, false] {
+            for high in [false, true] {
+                let p = palette(dark, high);
+                let surfaces = [
+                    ("win", p.win),
+                    ("pane", p.pane),
+                    ("side", p.side),
+                    ("field", p.field),
+                    ("hover", p.hover),
+                    ("menu", p.menu),
+                ];
+                let mut texts = vec![("t1", p.t1), ("t2", p.t2), ("t3", p.t3)];
+                for (text, color) in texts.drain(..) {
+                    for (surface, under) in surfaces {
+                        let ratio = color.contrast(under);
+                        assert!(
+                            ratio >= 4.5,
+                            "{text} on {surface} (dark {dark}, high contrast {high}): {ratio:.2}"
+                        );
+                    }
+                }
+                // The seg fill is a hover and checked background: t1 and t2
+                // only are drawn on it.
+                assert!(p.t2.contrast(p.seg) >= 4.5, "t2 on seg, dark {dark}");
+                // The accent text on the selection tint, as in the playing row.
+                for raw in [accent::DEFAULT, Rgba::rgb(0x35, 0x84, 0xE4)] {
+                    let set = AccentSet::new(raw, dark, high);
+                    let selected = set.sel.over(p.pane);
+                    assert!(
+                        set.text.contrast(selected) >= 4.5 || set.text.contrast(p.hover) >= 4.5
+                    );
+                    assert!(
+                        p.t1.contrast(selected) >= 4.5,
+                        "t1 on the selection, dark {dark}"
+                    );
+                }
+            }
+        }
+        for (text, color) in [("t1", glass::T1), ("t2", glass::T2), ("t3", glass::T3)] {
+            for (surface, under) in [
+                ("bg", glass::BG),
+                ("popover", glass::POPOVER),
+                ("hover", glass::HOVER),
+                ("tile", glass::TILE),
+            ] {
+                let ratio = color.contrast(under);
+                assert!(ratio >= 4.5, "glass {text} on {surface}: {ratio:.2}");
+            }
+        }
+        assert!(glass::T4.contrast(glass::BG) >= 4.5);
+    }
+
     #[test]
     fn oklab_round_trips() {
         for c in [Rgba::rgb(0xF0, 0xB2, 0x3C), Rgba::rgb(1, 2, 3), Rgba::WHITE] {

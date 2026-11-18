@@ -253,6 +253,7 @@ pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
     notice_box.append(&notice_text);
     notice_box.update_property(&[gtk::accessible::Property::Label(&tr("Problem"))]);
     let notice = gtk::Revealer::new();
+    crate::style::follow_reduced_motion(&notice, 250);
     notice.set_child(Some(&notice_box));
     main_column.append(&notice);
     let stack = gtk::Stack::new();

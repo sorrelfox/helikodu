@@ -375,6 +375,7 @@ impl Deck {
         );
         menu.append_section(None, &jump);
         let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        crate::widgets::menu_names::name_menus(&popover);
         popover.add_css_class("hk-play-menu");
         // On the deck, which disposes of it, pointing at the play button.
         popover.set_parent(self);

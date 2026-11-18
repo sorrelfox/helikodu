@@ -400,6 +400,9 @@ impl HistoryView {
         let store = gio::ListStore::new::<glib::BoxedAnyObject>();
         let selection = gtk::MultiSelection::new(Some(store.clone()));
         let list = gtk::ListView::new(Some(selection.clone()), None::<gtk::ListItemFactory>);
+        // Tab leaves the list after the focused row, instead of visiting
+        // every row: Tab and Shift+Tab reach the rest of the window.
+        list.set_tab_behavior(gtk::ListTabBehavior::Item);
         list.add_css_class("hk-history");
         list.set_vexpand(true);
         list.update_property(&[gtk::accessible::Property::Label(&tr("Play history"))]);
@@ -531,6 +534,7 @@ impl HistoryView {
             item.set_selectable(is_listen);
             item.set_activatable(is_listen);
             view.show_line(&cell, &line);
+            item.set_accessible_label(&Self::line_label(&line));
         });
         factory.connect_unbind(|_, item| {
             if let Some(cell) = item
@@ -555,6 +559,35 @@ impl HistoryView {
             .and_downcast::<PlayingIndicator>();
         if let Some(indicator) = indicator {
             indicator.set_visible(playing);
+        }
+    }
+
+    /// What a screen reader says for a line: the day and its summary, or a
+    /// listen's time, title, artist and listening time.
+    fn line_label(line: &Line) -> String {
+        match line {
+            Line::Day { title, summary } => format!("{title}, {summary}"),
+            Line::Listen(row) => {
+                let time = local(row.started_at)
+                    .and_then(|d| d.format("%H:%M").ok())
+                    .map(|s| s.to_string())
+                    .unwrap_or_default();
+                let title = if row.track.missing {
+                    tr("A track no longer in the library")
+                } else {
+                    row.track.title.clone()
+                };
+                let listened = if row.counted {
+                    format::duration(row.listened)
+                } else {
+                    fill(&tr("Skipped at {}"), &[&format::duration(row.listened)])
+                };
+                [time, title, row.track.artist.clone(), listened]
+                    .into_iter()
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            }
         }
     }
 

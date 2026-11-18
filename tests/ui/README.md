@@ -53,7 +53,14 @@ Starts the real `helikodu` program with the accessibility bus of the private ses
 - audits every object shown in the sidebar, header and search, the album grid, the track table, the queue panel, the player deck and each Settings page: interactive objects (buttons, toggles, entries, sliders, list items, table cells…) need a non-empty accessible name, and focusable objects need a role that says what they are;
 - walks a keyboard-only path, typing through mutter's remote-desktop D-Bus interface: Ctrl+F, a query, Tab and arrow keys to a track result, Return (checked over MPRIS: `PlaybackStatus` is `Playing`), F6 to the queue panel, Ctrl+comma to Settings, Space on a switch (checked in `settings.toml`), Escape, and the sidebar to Tracks.
 
-It is a stand-in for the screen-reader smoke test, not a replacement: run section 11 of the daily-driver checklist with Orca before a release.
+- then audits every other window and view the same way, opening each through the application's actions on the session bus (`org.gtk.Actions`, as its menu item does): every sidebar view and the first page each opens (album, artist, genre, folder), the facet browser, the tag editor and its Tag tools, a new playlist and the smart playlist editor, History and Statistics, query search and its completion, Now Playing and the analyzer, the main menu, the output switcher and the sleep timer, Settings with its search and its Shortcuts page, Keyboard shortcuts, Supported formats, About, every tool window (Organize, Find duplicates, Convert, Sync and export, Cover manager, Verify files, Missing files) and the mini player. In each it presses Tab two dozen times: focus must stay on a named object of that window and must move;
+- serves a StatusNotifierWatcher of its own, so that the tray icon registers, and reads the tray menu over D-Bus as a desktop's panel would: every item needs a label.
+
+Also flagged: a description over 300 characters (GTK builds one from what a widget holds, such as the rows of a popover). `--views` limits the sweep to some labels (as the report prints them), `--skip-path` and `--skip-sweep` leave out either part.
+
+Contrast is checked by the unit test `style::color::tests::text_tokens_have_their_contrast` (every text token on every surface it is drawn on, 4.5:1); reduced motion by the style tests and by step 12.29 of the checklist.
+
+It is a stand-in for the screen-reader test, not a replacement: run sections 11 and 12 of the daily-driver checklist with Orca before a release.
 
 ## Visual: `visual.py`
 

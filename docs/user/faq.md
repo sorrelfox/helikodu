@@ -1,10 +1,10 @@
 # Frequently asked questions
 
-## Why is Helikodu offline? Why is there no internet radio, streaming or online lookup?
+## Why is Helikodu offline? Why is there no internet radio or other online feature?
 
 Helikodu is a player for the music you own and keep on your computer. Leaving out every online feature keeps it simple, private and dependable: it starts and works the same with or without a network, it never waits for a server, and nothing about your listening leaves your computer.
 
-This is a deliberate rule, not a missing feature. Helikodu contains no network code at all: no internet radio, no streaming services, no online cover or lyrics lookup, no scrobbling, no update checks and no telemetry. Every release is tested inside a sandbox without network access, and the tests fail if anything tries to open an internet connection. The only connections Helikodu makes are local ones on your computer: D-Bus (for media keys and desktop integration) and the sound server.
+This is a deliberate rule, not a missing feature, and it will not change: internet radio, streaming and online lookups would each bring a network connection, accounts or services that change without notice, and a reason for the player to wait. Helikodu contains no network code at all: no internet radio, no streaming services, no online cover, artist photo or lyrics lookup, no scrobbling, no update checks and no telemetry. Covers, artist photos and lyrics come from your own files; the play history can be exported to a file for a scrobbling service, which you then submit yourself. Even the user guide (F1) is the copy installed with Helikodu. Every release is tested inside a sandbox without network access, and the tests fail if anything tries to open an internet connection. The only connections Helikodu makes are local ones on your computer: D-Bus (for media keys and desktop integration) and the sound server.
 
 Playlists that contain web addresses keep them, but those entries are shown as unavailable and never fetched.
 
@@ -69,7 +69,11 @@ Settings are in `~/.config/helikodu/settings.toml`, the library (with ratings, p
 
 ## Does Helikodu change my music files?
 
-Only when you ask it to. It reads your files and keeps everything it learns, including your ratings and play counts, in its own library database. It does not move, rename or copy files. The files change only when you save tags in the [tag editor](guide/tags.md); ratings are not written into the files.
+Only when you ask it to. It reads your files and keeps everything it learns, including your ratings and play counts, in its own library database. The files change only when you save tags in the [tag editor](guide/tags.md), write loudness values to the tags, organize files (renaming and moving them, which can be undone) or move copies to the desktop trash; Convert and Sync and Export write new files and leave the originals alone. Ratings are not written into the files.
+
+## Can I use Helikodu with only the keyboard, or with a screen reader?
+
+Yes. Every feature can be reached from the keyboard: **F6** moves between the sidebar, the content, the right panel and the player bar, **F10** opens the main menu, the arrow keys move inside lists and grids, **Return** plays or opens, and the Menu key or **Shift+F10** opens a context menu. See [Keyboard shortcuts](guide/keyboard-shortcuts.md). Every control has a name and a role for screen readers such as Orca. Helikodu also follows the desktop's high contrast and reduced motion settings. If something cannot be reached or is read wrongly, please [report it](#how-do-i-report-a-bug).
 
 ## How do I report a bug?
 

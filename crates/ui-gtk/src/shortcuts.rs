@@ -181,6 +181,7 @@ pub(crate) fn bindings() -> Vec<Binding> {
             tr("Keyboard shortcuts"),
             &["<Control>question"],
         ),
+        b(Window, "app.help", tr("User guide"), &["F1"]),
         b(Window, "app.quit", tr("Quit"), &["<Control>q"]),
     ]
 }

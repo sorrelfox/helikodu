@@ -69,6 +69,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Local crash reports: after a crash, the next start says so, with the report behind **Details** (**Copy**, **Open folder**). Nothing is sent anywhere.
 - A log on disk with **Normal detail** or **Full detail**, rotated within the Logs storage limit, and **Open log folder**; **No logs** writes nothing. **Copy diagnostics** also lists the build, the output devices and the state of the library database.
 
+- **Help ▸ User Guide** (F1) opens the user guide installed with the application, one page with every chapter and the FAQ, in the web browser; it is a local file, so it opens without a network. Meson builds and installs it to `share/helikodu/guide/`.
+- Ready-built programs for 64-bit ARM (aarch64) on the GitHub Releases page, beside the x86_64 build.
+- A manual page for `helikodu-scan-worker`, and `helikodu-cli duplicates` in the manual page of `helikodu-cli`.
+
 ### Changed
 
 - The player deck at the bottom of the window follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.
@@ -90,6 +94,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The Keyboard shortcuts window (Ctrl+?) lists the keys of every action from the settings, so Undo, Redo and Select all no longer read "Not set" when it was opened from a text field.
 - MP3 files whose lyrics were written by FFmpeg (as a `TXXX` frame named `USLT` or `lyrics-…` instead of a `USLT` frame) are counted as having lyrics when scanned.
 - DSD played as DoP no longer makes the DAC leave DSD mode or click when pausing, seeking, waiting for the next track or at the end: the device gets DSD silence (the DoP idle pattern) instead of PCM silence, and the DoP data is never faded.
+- Screen readers: the items of every menu (the main menu, the menu bar and the context menus) now have their names; with GTK 4.24 they were read without one.
+- Keyboard: Tab now leaves the track table, the album grid, the play history and the other long lists after the focused row, instead of visiting every row; Shift+Tab goes back the same way.
+- Convert no longer makes a new preset when the arrow keys reach **New preset**, and Sync and export no longer opens the folder chooser when its window opens or the arrow keys reach **New destination**: both act on Enter or a click.
+- Screen readers: the rows of Supported formats, the tag editor's files, the history, the playlists and smart playlists, the Folders tree and the new-item rows of Convert and Sync and export have names; the search fields of Keyboard shortcuts and Supported formats have labels; Home's albums and the rows of Settings › Shortcuts are read as buttons; the output button is no longer described with every device's capabilities.
+- Reduced motion also stops the slide of the notices in Settings and the tag editor, the sleep timer's minutes row and the mini player's drawer when the desktop asks for it through its settings portal.
 
 ## [0.2.0] - 2026-11-18
 

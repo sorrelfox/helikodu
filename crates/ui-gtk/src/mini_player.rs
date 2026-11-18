@@ -357,9 +357,7 @@ impl MiniPlayer {
                 }
             });
         }
-        let reduced = crate::style::current().reduced_motion;
-        self.drawer
-            .set_transition_duration(if reduced { 0 } else { 150 });
+        crate::style::follow_reduced_motion(&self.drawer, 150);
 
         // The queue: a double click or Enter plays a row, Delete removes it.
         let backend = self.backend.clone();

@@ -234,6 +234,9 @@ impl TracksView {
         let model = TrackListModel::new(backend);
         let selection = gtk::MultiSelection::new(Some(model.clone()));
         let table = gtk::ColumnView::new(Some(selection.clone()));
+        // Tab leaves the list after the focused row, instead of visiting
+        // every row: Tab and Shift+Tab reach the rest of the window.
+        table.set_tab_behavior(gtk::ListTabBehavior::Item);
         table.add_css_class("hk-table");
         table.set_reorderable(true);
         table.set_show_row_separators(false);
@@ -306,6 +309,7 @@ impl TracksView {
             }
         });
         columns_button.set_menu_model(Some(&view.columns_menu()));
+        crate::widgets::menu_names::name_menus(&columns_button);
         view.connect(playback);
         view.connect_browser();
         view.show_sort();

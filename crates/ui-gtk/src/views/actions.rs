@@ -356,6 +356,7 @@ pub(crate) fn popup(
     }
     window.set_target(Some(target));
     let popover = gtk::PopoverMenu::from_model(Some(&model));
+    crate::widgets::menu_names::name_menus(&popover);
     popover.add_css_class("hk-context-menu");
     popover.set_parent(widget);
     popover.set_has_arrow(false);

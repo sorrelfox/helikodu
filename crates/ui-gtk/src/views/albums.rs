@@ -105,6 +105,7 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
+            crate::widgets::menu_names::name_menus(&*self.sort_button);
             for (button, filter) in [
                 (self.filter_all.get(), AlbumFilter::All),
                 (self.filter_lossless.get(), AlbumFilter::Lossless),

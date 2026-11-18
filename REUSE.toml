@@ -18,6 +18,8 @@ path = [
     "AUTHORS",
     "po/LINGUAS",
     "po/POTFILES.in",
+    "po/*.pot",
+    "po/*.po",
     "**/proptest-regressions/**",
     ".github/**",
 ]

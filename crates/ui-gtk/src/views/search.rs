@@ -1072,6 +1072,7 @@ impl SearchView {
         edit.append(Some(&tr("Delete…")), Some("saved.delete"));
         menu.append_section(None, &edit);
         let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        crate::widgets::menu_names::name_menus(&popover);
         popover.set_has_arrow(false);
         popover.set_parent(&self.saved_list);
         let (x, y) = at.unwrap_or_else(|| {

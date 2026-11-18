@@ -114,6 +114,7 @@ impl SleepPopover {
         }
         body.append(&grid);
         let other_row = gtk::Revealer::new();
+        crate::style::follow_reduced_motion(&other_row, 250);
         let other_line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         other_line.add_css_class("hk-sleep-other");
         let other_minutes = gtk::SpinButton::with_range(1.0, 720.0, 5.0);

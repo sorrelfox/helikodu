@@ -313,6 +313,7 @@ impl State {
             menu.append_item(&item);
         }
         insert.set_menu_model(Some(&menu));
+        crate::widgets::menu_names::name_menus(&insert);
         row.append(&insert);
         self.pattern.replace(Some(entry));
         let hint = note(&tr(

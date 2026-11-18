@@ -230,6 +230,9 @@ impl PlaylistView {
         let store = gio::ListStore::new::<TrackItem>();
         let selection = gtk::MultiSelection::new(Some(store.clone()));
         let list = gtk::ListView::new(Some(selection.clone()), None::<gtk::ListItemFactory>);
+        // Tab leaves the list after the focused row, instead of visiting
+        // every row: Tab and Shift+Tab reach the rest of the window.
+        list.set_tab_behavior(gtk::ListTabBehavior::Item);
         list.add_css_class("hk-playlist");
         list.set_vexpand(true);
         list.update_property(&[gtk::accessible::Property::Label(&tr("Playlist entries"))]);
@@ -418,7 +421,7 @@ impl PlaylistView {
             };
             cell.set_position(Some(track.position()));
             let w = Rc::downgrade(&view);
-            cell.follow(&track, move |cell, track| {
+            cell.follow_named(item, &track, move |cell, track| {
                 if let Some(view) = w.upgrade() {
                     view.show_row(cell, track);
                 }
@@ -595,6 +598,7 @@ impl PlaylistView {
             Some("export.folder"),
         );
         let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        crate::widgets::menu_names::name_menus(&popover);
         popover.set_parent(export);
         popover.set_has_arrow(false);
         let shown = popover.downgrade();
@@ -1169,6 +1173,7 @@ impl PlaylistView {
             }
         }
         let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        crate::widgets::menu_names::name_menus(&popover);
         popover.add_css_class("hk-playlist-menu");
         let locked = self.locked();
         for (custom, text, action) in [

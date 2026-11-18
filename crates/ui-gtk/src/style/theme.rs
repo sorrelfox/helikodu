@@ -199,6 +199,22 @@ pub(crate) fn current() -> Look {
     theme().look.get().unwrap_or_default()
 }
 
+/// Lets `revealer` slide for `duration` milliseconds, or show and hide at
+/// once while the desktop asks for reduced motion. GTK itself only stops
+/// animations for its own setting, not for the portal's; this is read again
+/// each time the revealer is shown.
+pub(crate) fn follow_reduced_motion(revealer: &gtk::Revealer, duration: u32) {
+    let apply = move |revealer: &gtk::Revealer| {
+        revealer.set_transition_duration(if current().reduced_motion {
+            0
+        } else {
+            duration
+        });
+    };
+    apply(revealer);
+    revealer.connect_map(apply);
+}
+
 /// Calls `listener` after every change of the look.
 pub(crate) fn connect_changed(listener: impl Fn(&Look) + 'static) {
     theme().listeners.borrow_mut().push(Box::new(listener));

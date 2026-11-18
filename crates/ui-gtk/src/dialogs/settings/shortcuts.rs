@@ -266,7 +266,12 @@ impl Page {
         binding: &Binding,
         settings: &helikodu_model::settings::ShortcutSettings,
     ) -> gtk::Box {
-        let row = gtk::Box::new(gtk::Orientation::Horizontal, 3);
+        // A button to screen readers: Enter or a click records new keys.
+        let row = glib::Object::builder::<gtk::Box>()
+            .property("orientation", gtk::Orientation::Horizontal)
+            .property("spacing", 3)
+            .property("accessible-role", gtk::AccessibleRole::Button)
+            .build();
         row.add_css_class("hk-shortcut-edit");
         row.set_focusable(true);
         row.set_widget_name(binding.action);

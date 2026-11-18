@@ -263,6 +263,8 @@ popover.menu modelbutton arrow.left { margin: 0 8px 0 0; }
 popover.menu modelbutton:hover, popover.menu modelbutton:selected { background-color: var(--hk-seg); }
 popover.menu modelbutton:disabled { color: var(--hk-t3); }
 popover.menu modelbutton accelerator { margin: 0 0 0 16px; color: var(--hk-t3); font-size: 12px; }
+/* t3 on the hover fill is under 4.5:1 in the dark scheme; t2 keeps the keys readable. */
+popover.menu modelbutton:hover accelerator, popover.menu modelbutton:selected accelerator { color: var(--hk-t2); }
 popover.menu separator { min-height: 1px; margin: 4px 6px; background-color: var(--hk-line); }
 popover.menu > contents > stack > box > box > separator, popover.menu.background separator { margin: 4px 6px; }
 popover.menu label.title { min-height: 26px; padding: 0 10px; margin: 0; color: var(--hk-t3); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }

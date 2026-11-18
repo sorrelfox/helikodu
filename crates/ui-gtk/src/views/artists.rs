@@ -129,6 +129,7 @@ impl ArtistsView {
         order.append(Some(&tr("Name")), Some("artists.order::name"));
         order.append(Some(&tr("Number of albums")), Some("artists.order::count"));
         filter.set_menu_model(Some(&order));
+        crate::widgets::menu_names::name_menus(&filter);
         filter.set_tooltip_text(Some(&tr("Sort the artists")));
         filter.update_property(&[gtk::accessible::Property::Label(&tr("Sort the artists"))]);
         let (pane, count, list) = list_pane(&tr("Artists"), filter.upcast_ref());
@@ -172,6 +173,7 @@ impl ArtistsView {
         let photo_menu = gio::Menu::new();
         more_menu.append_section(None, &photo_menu);
         more.set_menu_model(Some(&more_menu));
+        crate::widgets::menu_names::name_menus(&more);
         let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         buttons.set_valign(gtk::Align::Center);
         buttons.append(&play);
@@ -849,6 +851,7 @@ impl ArtistsView {
             gesture.set_state(gtk::EventSequenceState::Claimed);
             let menu = artist_photo::menu_section(key, view.own_photo(key));
             let popover = gtk::PopoverMenu::from_model(Some(&menu));
+            crate::widgets::menu_names::name_menus(&popover);
             popover.add_css_class("hk-context-menu");
             popover.set_parent(&hero);
             popover.set_has_arrow(false);

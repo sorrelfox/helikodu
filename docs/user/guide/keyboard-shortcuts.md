@@ -2,6 +2,10 @@
 
 **Ctrl+?** opens the **Keyboard shortcuts** window, which lists every shortcut; on most keyboard layouts that is **Ctrl+Shift+/**. It is also in the main menu (**Keyboard Shortcuts**, and **Help ▸ Keyboard Shortcuts**). Type in **Find an action or its keys** at the top to narrow the list.
 
+## Moving around without a mouse
+
+Every part of Helikodu can be used from the keyboard. **F6** moves the focus between the sidebar, the content, the right panel and the player bar. **Tab** and **Shift+Tab** move between controls; in a list, a grid or a table they leave it after the focused row, and the arrow keys move inside it. **Return** plays or opens what is focused, **F10** opens the main menu, and **Escape** closes a menu, a popover or a window. Screen readers such as Orca read the name and kind of every control.
+
 ## Playback
 
 | Keys | Action |
@@ -45,6 +49,7 @@ While you type in a text field, Space, Ctrl+A and Ctrl+Z work in the field inste
 | Alt+Right | Forward |
 | Ctrl+, | Settings |
 | Ctrl+? | Keyboard shortcuts |
+| F1 | User guide |
 | Ctrl+Q | Quit |
 
 Media keys (Play/Pause, Next, Previous) work through your desktop's media controls.

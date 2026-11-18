@@ -230,6 +230,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
               <object class="GtkButton" id="output">
                 <property name="valign">center</property>
                 <property name="tooltip-text" translatable="yes">Output device</property>
+                <!-- Set, so that the device list it opens is not read as its description. -->
+                <accessibility>
+                  <property name="description" translatable="yes">Output device</property>
+                </accessibility>
                 <style><class name="hk-output"/></style>
                 <child>
                   <object class="GtkBox">

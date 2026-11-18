@@ -553,7 +553,10 @@ impl HomeView {
     }
 
     fn tile(self: &Rc<Self>, album: &AlbumRow) -> gtk::Widget {
-        let tile = AlbumTile::default();
+        // A button to screen readers: Enter plays the album, a click opens it.
+        let tile = glib::Object::builder::<AlbumTile>()
+            .property("accessible-role", gtk::AccessibleRole::Button)
+            .build();
         tile.cover().set_shape(0, 6.0);
         tile.hide_meta();
         tile.set_focusable(true);

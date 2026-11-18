@@ -1,6 +1,6 @@
 # Website
 
-The static website, published with GitHub Pages at <https://sorrelfox.github.io/helikodu/>. It will later carry the user guide and the release notes.
+The static website, published with GitHub Pages at <https://sorrelfox.github.io/helikodu/>. It carries the user guide, built from `docs/user/` by `docs/user/build-guide.py` when the site is published, and will later carry the release notes.
 
 ## Content
 
@@ -11,6 +11,6 @@ The site uses no JavaScript, no external fonts, no CDNs and no trackers. The app
 
 ## Publishing
 
-`.github/workflows/pages.yml` runs when a release is tagged and can be started by hand from the Actions tab. It assembles the folder `_site` from this folder plus the icon and deploys it with GitHub Pages. In the repository settings, Pages must use "GitHub Actions" as its source.
+`.github/workflows/pages.yml` runs when a release is tagged and can be started by hand from the Actions tab. It assembles the folder `_site` from this folder plus the icon and the user guide (`guide/index.html`) and deploys it with GitHub Pages. In the repository settings, Pages must use "GitHub Actions" as its source.
 
 HTML and CSS are licensed under CC-BY-SA-4.0.

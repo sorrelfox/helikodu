@@ -174,6 +174,25 @@ fn status_cell(family: &FamilyStatus) -> gtk::Box {
     cell
 }
 
+/// What a screen reader says for a family's row: its name, formats, decoder
+/// and status, as the row shows them.
+fn family_label(family: &FamilyStatus) -> String {
+    let status = if available(family.availability) {
+        tr("Available")
+    } else if family.availability == Availability::NeedsSoundFont {
+        tr("Needs a SoundFont")
+    } else {
+        tr("Not available")
+    };
+    [
+        family_name(family.family),
+        family.family.formats().join(", "),
+        family.decoder.name().to_owned(),
+        status,
+    ]
+    .join(", ")
+}
+
 fn family_row(
     family: &FamilyStatus,
     window: &gtk::Window,
@@ -181,6 +200,7 @@ fn family_row(
 ) -> gtk::ListBoxRow {
     let row = gtk::ListBoxRow::new();
     row.set_activatable(false);
+    row.update_property(&[gtk::accessible::Property::Label(&family_label(family))]);
     let column = gtk::Box::new(gtk::Orientation::Vertical, 4);
     column.add_css_class("hk-format-row");
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
@@ -214,6 +234,7 @@ fn family_row(
             let services = services.clone();
             let window = window.downgrade();
             let (weak_line, weak_second) = (line.downgrade(), second.downgrade());
+            let weak_row = row.downgrade();
             let mut chosen = family.clone();
             chosen.availability = Availability::Available;
             choose.connect_clicked(move |_| {
@@ -221,6 +242,7 @@ fn family_row(
                     return;
                 };
                 let (weak_line, weak_second) = (weak_line.clone(), weak_second.clone());
+                let weak_row = weak_row.clone();
                 let chosen = chosen.clone();
                 decoder_files::choose(
                     &window,
@@ -240,6 +262,11 @@ fn family_row(
                         if let Some(second) = weak_second.upgrade() {
                             second.set_visible(false);
                         }
+                        if let Some(row) = weak_row.upgrade() {
+                            row.update_property(&[gtk::accessible::Property::Label(
+                                &family_label(&chosen),
+                            )]);
+                        }
                     },
                 );
             });
@@ -258,6 +285,9 @@ fn family_row(
 
 fn decoder_row(title: &str, line: &str, icon: Option<(&str, bool)>, dim: bool) -> gtk::ListBoxRow {
     let row = gtk::ListBoxRow::new();
+    row.update_property(&[gtk::accessible::Property::Label(&format!(
+        "{title}, {line}"
+    ))]);
     let content = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let text = gtk::Box::new(gtk::Orientation::Vertical, 1);
     text.set_hexpand(true);
@@ -376,6 +406,9 @@ pub(crate) fn open(parent: &gtk::Window, report: FormatReport) -> gtk::Window {
     filter.set_placeholder_text(Some(&tr(
         "Find a format or file extension, for example opus",
     )));
+    filter.update_property(&[gtk::accessible::Property::Label(&tr(
+        "Find a format or file extension",
+    ))]);
     toolbar.append(&filter);
     let total = report.families.len();
     let ok = report.available();

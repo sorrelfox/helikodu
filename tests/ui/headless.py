@@ -11,6 +11,7 @@ desktop session they are started from.
 
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -133,6 +134,21 @@ def start_a11y_bus():
     return process
 
 
+def copy_database(source, target):
+    """Copies a library database with what is still in its write-ahead log:
+    a plain file copy leaves out the changes not yet written back, and the
+    copy can then look empty."""
+    src = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+    try:
+        dst = sqlite3.connect(target)
+        try:
+            src.backup(dst)
+        finally:
+            dst.close()
+    finally:
+        src.close()
+
+
 class Profile:
     """A throw-away home for the program: XDG folders with settings that select
     the null output, and optionally a copy of a library database."""
@@ -147,7 +163,7 @@ class Profile:
         if database:
             target = self.root / "data" / "helikodu" / "library.db"
             if not target.exists():
-                shutil.copyfile(database, target)
+                copy_database(database, target)
         self.library = self.root / "data" / "helikodu" / "library.db"
 
     def env(self):

@@ -1585,6 +1585,12 @@ fn file_list(editor: &Rc<Editor>) -> gtk::Box {
         problem.set_visible(false);
         line.append(&problem);
         row.set_child(Some(&line));
+        let file = track.file_name();
+        row.update_property(&[gtk::accessible::Property::Label(&if number.is_empty() {
+            fill(&tr("{}, {}"), &[&title, &file])
+        } else {
+            fill(&tr("{}. {}, {}"), &[&number, &title, &file])
+        })]);
         list.append(&row);
         rows.push(row);
     }
@@ -1647,6 +1653,7 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
     problems_text.set_wrap(true);
     problems_text.set_hexpand(true);
     let problems = gtk::Revealer::new();
+    crate::style::follow_reduced_motion(&problems, 250);
     let problem_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     problem_box.add_css_class("hk-notice");
     problem_box.append(&gtk::Image::from_icon_name("dialog-warning-symbolic"));
@@ -1830,6 +1837,7 @@ fn tools_button(editor: &Rc<Editor>) -> gtk::MenuButton {
         menu.append_item(&item);
     }
     button.set_menu_model(Some(&menu));
+    crate::widgets::menu_names::name_menus(&button);
     button
 }
 

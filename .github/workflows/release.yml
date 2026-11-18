@@ -1,13 +1,14 @@
 # Publishes a release. A version tag (v0.1.0) builds the source tarball with
-# vendored crates and the x86_64 Linux build, and publishes both with a
-# SHA256SUMS file as a GitHub Release whose notes are the tag's section of
-# CHANGELOG.md. Started by hand, it is a dry run: everything is built and kept
-# as workflow artifacts, and nothing is published.
+# vendored crates and the Linux builds for x86_64 and aarch64, and publishes
+# them with a SHA256SUMS file as a GitHub Release whose notes are the tag's
+# section of CHANGELOG.md. Started by hand, it is a dry run: everything is
+# built and kept as workflow artifacts, and nothing is published.
 #
-# The build runs in the Debian 13 container of ci/containers: the oldest
-# supported base (glibc 2.41, GTK 4.18, FFmpeg 7.1), so the binary runs on
-# that and newer systems that still ship the FFmpeg 7 libraries.
-# See docs/dev/releasing.md.
+# Each architecture builds on a native runner (aarch64 on GitHub's arm64
+# runner, ubuntu-24.04-arm), in the Debian 13 container of ci/containers: the
+# oldest supported base (glibc 2.41, GTK 4.18, FFmpeg 7.1), so the binary runs
+# on that and newer systems that still ship the FFmpeg 7 libraries. Both build
+# from the same source tarball. See docs/dev/releasing.md.
 name: Release
 
 on:
@@ -28,15 +29,15 @@ env:
   CARGO_BUILD_JOBS: 4
 
 jobs:
-  build:
-    name: Build the release files (Debian 13)
+  source:
+    name: Make the source tarball
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       # No cache: release files are built from a clean state only.
       - name: Build container
         run: docker build -t helikodu-ci:debian -f ci/containers/debian.Containerfile ci/containers
-      - name: Test, make the source tarball and build from it
+      - name: Make the source tarball and the release notes
         env:
           # Only a tag push checks the tag against the workspace version.
           RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
@@ -46,21 +47,75 @@ jobs:
             helikodu-ci:debian sh -euxc '
               git config --global --add safe.directory /src
               apt-get update
-              apt-get install -y --no-install-recommends appstream desktop-file-utils gettext xz-utils
+              apt-get install -y --no-install-recommends xz-utils
               rustup toolchain install
 
-              cargo xtask ci --tests-only
-
-              version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
-              name="helikodu-$version"
-              out=/src/target/release-assets
+              out=/src/target/release-source
               rm -rf "$out"
               if [ -n "$RELEASE_TAG" ]; then
                 cargo xtask dist --out "$out" --tag "$RELEASE_TAG"
               else
                 cargo xtask dist --out "$out"
               fi
-              source_tarball="$out/$name.tar.xz"
+              rm -rf "$out/staging" "$out"/*.sha256
+              ls -l "$out"
+            '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-source
+          path: target/release-source/
+          if-no-files-found: error
+
+  build:
+    name: Test and build (${{ matrix.arch }}, Debian 13)
+    needs: source
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # One architecture failing stops the release; the other still reports.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            # GitHub's native arm64 runner (free for public repositories);
+            # no emulation, so the tests run on the real architecture.
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-source
+          path: target/release-source
+      # No cache: release files are built from a clean state only.
+      - name: Build container
+        run: docker build -t helikodu-ci:debian -f ci/containers/debian.Containerfile ci/containers
+      - name: Test, then build from the source tarball
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          docker run --rm --memory 12g --memory-swap 12g -e CI=true -e CARGO_TERM_COLOR -e CARGO_BUILD_JOBS -e ARCH \
+            -v "$PWD:/src" \
+            helikodu-ci:debian sh -euxc '
+              git config --global --add safe.directory /src
+              apt-get update
+              apt-get install -y --no-install-recommends appstream desktop-file-utils gettext xz-utils
+              rustup toolchain install
+
+              # The container must be the architecture the files are named for.
+              case "$(uname -m)" in
+                "$ARCH") ;;
+                *) echo "built on $(uname -m), expected $ARCH" >&2; exit 1 ;;
+              esac
+
+              cargo xtask ci --tests-only
+
+              version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
+              name="helikodu-$version"
+              source_tarball="/src/target/release-source/$name.tar.xz"
+              out=/src/target/release-assets
+              rm -rf "$out"
+              mkdir -p "$out"
               epoch=$(git log -1 --format=%ct)
 
               # The binaries are built from the source tarball, offline, as a
@@ -74,12 +129,12 @@ jobs:
               meson test -C /tmp/build --print-errorlogs
               meson install -C /tmp/build --destdir /tmp/stage
 
-              binary="helikodu-$version-x86_64-linux"
+              binary="helikodu-$version-$ARCH-linux"
               mkdir -p "/tmp/pack/$binary"
               cp -a /tmp/stage/usr/local/. "/tmp/pack/$binary/"
               cp LICENSE README.md CHANGELOG.md "/tmp/pack/$binary/"
               cat > "/tmp/pack/$binary/INSTALL.txt" <<EOF
-          Helikodu $version for x86_64 Linux
+          Helikodu $version for $ARCH Linux
 
           Built on Debian 13 for the prefix /usr/local. It needs these libraries
           from the system, or newer versions with the same library names:
@@ -95,39 +150,59 @@ jobs:
             sudo update-desktop-database -q /usr/local/share/applications
 
           The programs must stay in /usr/local: the scan worker is looked up
-          in ../libexec/helikodu/ beside them, and the D-Bus service file and
-          the translations use /usr/local paths.
+          in ../libexec/helikodu/ beside them, and the D-Bus service file, the
+          translations and the user guide use /usr/local paths.
 
           Uninstall:
 
             sudo rm /usr/local/bin/helikodu /usr/local/bin/helikodu-cli
-            sudo rm -r /usr/local/libexec/helikodu
+            sudo rm -r /usr/local/libexec/helikodu /usr/local/share/helikodu
             sudo rm /usr/local/share/applications/io.github.sorrelfox.Helikodu.desktop
             sudo rm /usr/local/share/metainfo/io.github.sorrelfox.Helikodu.metainfo.xml
             sudo rm /usr/local/share/dbus-1/services/io.github.sorrelfox.Helikodu.service
             sudo rm /usr/local/share/icons/hicolor/*/apps/io.github.sorrelfox.Helikodu*.svg
             sudo rm /usr/local/share/man/man1/helikodu.1 /usr/local/share/man/man1/helikodu-cli.1
+            sudo rm /usr/local/share/man/man1/helikodu-scan-worker.1
           EOF
               tar --create --file=- --sort=name --format=posix \
                   --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime \
                   --mtime="@$epoch" --owner=0 --group=0 --numeric-owner \
                   --mode=u+rw,go+r,go-w --directory /tmp/pack "$binary" \
                 | xz --compress --stdout -6 --threads=1 > "$out/$binary.tar.xz"
-
-              cd "$out"
-              sha256sum "$name.tar.xz" "$binary.tar.xz" > SHA256SUMS
-              rm -f ./*.sha256
-              cat SHA256SUMS
+              ls -l "$out"
             '
       - uses: actions/upload-artifact@v4
         with:
-          name: release-assets
+          name: release-binary-${{ matrix.arch }}
           path: target/release-assets/
+          if-no-files-found: error
+
+  assemble:
+    name: Collect the release files and their checksums
+    needs: [source, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          set -eux
+          cd release-assets
+          ls -l
+          sha256sum ./*.tar.xz | sed "s| \./| |" > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets/
           if-no-files-found: error
 
   publish:
     name: Publish the GitHub Release
-    needs: build
+    needs: assemble
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -159,4 +234,5 @@ jobs:
             $prerelease \
             "helikodu-$version.tar.xz" \
             "helikodu-$version-x86_64-linux.tar.xz" \
+            "helikodu-$version-aarch64-linux.tar.xz" \
             SHA256SUMS

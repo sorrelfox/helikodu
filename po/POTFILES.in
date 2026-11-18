@@ -65,8 +65,6 @@ crates/ui-gtk/src/dialogs/settings/dsp.rs
 crates/ui-gtk/src/dialogs/settings/dsp/stages.rs
 crates/ui-gtk/src/dialogs/track_flags.rs
 crates/ui-gtk/src/i18n.rs
-crates/ui-gtk/src/models/album_list.rs
-crates/ui-gtk/src/models/track_list.rs
 crates/ui-gtk/src/play_modes.rs
 crates/ui-gtk/src/popovers/sleep_timer.rs
 crates/ui-gtk/src/widgets/eq_graph.rs
@@ -116,3 +114,9 @@ crates/ui-gtk/src/tools/sync_export.rs
 crates/ui-gtk/src/tools/cover_manager.rs
 crates/ui-gtk/src/backend/service/export.rs
 crates/ui-gtk/src/dialogs/maintenance.rs
+crates/ui-gtk/src/backend/sample/export.rs
+crates/ui-gtk/src/widgets/now_links.rs
+crates/ui-gtk/src/dialogs/user_guide.rs
+crates/ui-gtk/src/views/table.rs
+crates/ui-gtk/src/backend/sample/services.rs
+crates/ui-gtk/src/backend/service/mpris.rs

@@ -31,6 +31,10 @@ jobs:
           mkdir _site
           cp docs/site/index.html docs/site/style.css _site/
           cp data/icons/hicolor/scalable/apps/io.github.sorrelfox.Helikodu.svg _site/
+          # The user guide, the same page the application installs for Help.
+          mkdir _site/guide
+          python3 docs/user/build-guide.py --out _site/guide/index.html \
+            --version "$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

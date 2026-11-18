@@ -348,12 +348,11 @@ impl Verify {
                             .unwrap_or_default();
                         let took = started.elapsed().as_secs();
                         let took = if took >= 60 {
-                            fill(
-                                &ntr("{} min", "{} min", (took / 60) as usize),
-                                &[&(took / 60).to_string()],
-                            )
+                            // Unit abbreviations, as elsewhere: one msgid for
+                            // every number.
+                            fill(&tr("{} min"), &[&(took / 60).to_string()])
                         } else {
-                            fill(&ntr("{} s", "{} s", took as usize), &[&took.to_string()])
+                            fill(&tr("{} s"), &[&took.to_string()])
                         };
                         this.last_when
                             .set_text(&fill(&tr("Today at {} · took {}"), &[&now, &took]));
@@ -679,6 +678,9 @@ pub(crate) fn open(
     selection.set_can_unselect(true);
     let factory = gtk::SignalListItemFactory::new();
     let view = gtk::ListView::new(Some(selection), Some(factory.clone()));
+    // Tab leaves the list after the focused row, instead of visiting
+    // every row: Tab and Shift+Tab reach the rest of the window.
+    view.set_tab_behavior(gtk::ListTabBehavior::Item);
     view.add_css_class("hk-dup-list");
     view.add_css_class("hk-verify-list");
     view.set_widget_name("verify-table");

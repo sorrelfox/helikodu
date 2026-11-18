@@ -30,6 +30,9 @@ prefix = get_option('prefix')
 bindir = prefix / get_option('bindir')
 datadir = prefix / get_option('datadir')
 localedir = prefix / get_option('localedir')
+# The user guide is application data, not optional documentation: Help opens
+# it, so it is installed where packages do not strip documentation.
+guidedir = datadir / 'helikodu' / 'guide'
 
 # The programs look for the scan worker beside themselves or in
 # ../libexec/helikodu/ relative to their own folder (find_worker_program in
@@ -70,6 +73,8 @@ cargo_env = environment()
 cargo_env.set('CARGO_TARGET_DIR', meson.current_build_dir() / 'cargo-target')
 # Where the GTK front end looks for the compiled translations.
 cargo_env.set('HELIKODU_LOCALEDIR', localedir)
+# Where the GTK front end finds the user guide for the Help menu.
+cargo_env.set('HELIKODU_GUIDEDIR', guidedir)
 
 # Cargo runs in the source folder so that it reads .cargo/config.toml there
 # (the vendored sources of a release tarball), then the programs are copied
@@ -137,7 +142,41 @@ install_data(
   install_dir: datadir / 'icons' / 'hicolor' / 'symbolic' / 'apps',
 )
 
-install_man('data/man/helikodu.1', 'data/man/helikodu-cli.1')
+install_man('data/man/helikodu.1', 'data/man/helikodu-cli.1', 'data/man/helikodu-scan-worker.1')
+
+# The user guide as one HTML page, opened by Help › User Guide (F1) without a
+# network. The script also fails on links to chapters or headings that do not
+# exist.
+python = import('python').find_installation('python3')
+custom_target(
+  'user-guide',
+  input: files(
+    'docs/user/build-guide.py',
+    'docs/user/faq.md',
+    'docs/user/guide/README.md',
+    'docs/user/guide/audio-output.md',
+    'docs/user/guide/browsing.md',
+    'docs/user/guide/command-line.md',
+    'docs/user/guide/converting-and-sync.md',
+    'docs/user/guide/dsp.md',
+    'docs/user/guide/file-tools.md',
+    'docs/user/guide/files.md',
+    'docs/user/guide/first-run.md',
+    'docs/user/guide/installing.md',
+    'docs/user/guide/keyboard-shortcuts.md',
+    'docs/user/guide/loudness.md',
+    'docs/user/guide/playing.md',
+    'docs/user/guide/playlists-and-ratings.md',
+    'docs/user/guide/settings.md',
+    'docs/user/guide/tags.md',
+    'docs/user/guide/troubleshooting.md',
+  ),
+  output: 'index.html',
+  command: [python, '@INPUT0@', '--out', '@OUTPUT@', '--version', version],
+  build_by_default: true,
+  install: true,
+  install_dir: guidedir,
+)
 
 desktop_file_validate = find_program('desktop-file-validate', required: false)
 if desktop_file_validate.found()
@@ -169,6 +208,7 @@ summary(
     'Prefix': prefix,
     'Scan worker': worker_dir,
     'Locale folder': localedir,
+    'User guide': guidedir / 'index.html',
   },
   section: 'Install',
 )

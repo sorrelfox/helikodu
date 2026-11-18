@@ -1,12 +1,15 @@
 # Installing Helikodu
 
-Helikodu is published on the project's [GitHub Releases](https://github.com/sorrelfox/helikodu/releases) page. Each release has three files:
+Helikodu is published on the project's [GitHub Releases](https://github.com/sorrelfox/helikodu/releases) page. Each release has these files:
 
 | File | What it is |
 |---|---|
 | `helikodu-<version>-x86_64-linux.tar.xz` | The ready-built programs for 64-bit PCs (x86_64) |
+| `helikodu-<version>-aarch64-linux.tar.xz` | The ready-built programs for 64-bit ARM computers (aarch64) |
 | `helikodu-<version>.tar.xz` | The source code, with everything needed to build it offline |
-| `SHA256SUMS` | Checksums of both files |
+| `SHA256SUMS` | Checksums of the files |
+
+`uname -m` in a terminal tells which of the two ready-built archives your computer needs. The steps below use the x86_64 one; for ARM, write `aarch64` in its place.
 
 Check the download before you unpack it:
 

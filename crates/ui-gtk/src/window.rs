@@ -395,6 +395,8 @@ impl MainWindow {
         if let Some(popover) = imp.menu_button.popover() {
             popover.add_css_class("hk-main-menu");
         }
+        crate::widgets::menu_names::name_menus(&*imp.menu_button);
+        crate::widgets::menu_names::name_menus(&*imp.menubar);
         self.set_style(style);
         self.go(Page::Library("albums"), true);
         self.load_counts();

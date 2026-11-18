@@ -1,6 +1,6 @@
 .\" SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 .\" SPDX-License-Identifier: CC-BY-SA-4.0
-.TH HELIKODU 1 2026-11-17 Helikodu "User Commands"
+.TH HELIKODU 1 2026-11-18 Helikodu "User Commands"
 .SH NAME
 helikodu \- offline audio player and music library manager
 .SH SYNOPSIS
@@ -94,6 +94,14 @@ which is used to recover after an abnormal end
 .I $XDG_CACHE_HOME/helikodu/thumbnails/
 Cover thumbnails; safe to delete
 .RI ( ~/.cache/helikodu/ ).
+.TP
+.I <prefix>/share/helikodu/guide/index.html
+The user guide, one page with every chapter and the FAQ.
+.B F1
+or
+.B Help \[u203A] User Guide
+opens it in the web browser; it is a local file, so it opens without a
+network.
 .SH EXIT STATUS
 0 on success; 1 when an option is not recognised or the application cannot
 start.
@@ -114,10 +122,13 @@ helikodu \-\-demo \-\-scheme light
 .EE
 .RE
 .SH SEE ALSO
-.BR helikodu\-cli (1)
+.BR helikodu\-cli (1),
+.BR helikodu\-scan\-worker (1)
 .PP
-The user guide, installed with the application and published at
-.UR https://sorrelfox.github.io/helikodu/
+The user guide, installed with the application (see
+.BR FILES )
+and published at
+.UR https://sorrelfox.github.io/helikodu/guide/
 .UE .
 .SH BUGS
 Report bugs at

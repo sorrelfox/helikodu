@@ -141,6 +141,9 @@ fn table(editing: bool) -> Table {
     let store = gio::ListStore::new::<TrackItem>();
     let selection = gtk::MultiSelection::new(Some(store.clone()));
     let list = gtk::ListView::new(Some(selection.clone()), None::<gtk::ListItemFactory>);
+    // Tab leaves the list after the focused row, instead of visiting
+    // every row: Tab and Shift+Tab reach the rest of the window.
+    list.set_tab_behavior(gtk::ListTabBehavior::Item);
     list.add_css_class("hk-playlist");
     if editing {
         list.add_css_class("compact");
@@ -558,7 +561,7 @@ impl SmartPlaylistView {
             };
             cell.set_position(Some(track.position()));
             let w = Rc::downgrade(&view);
-            cell.follow(&track, move |cell, track| {
+            cell.follow_named(item, &track, move |cell, track| {
                 if let Some(view) = w.upgrade() {
                     view.show_row(cell, track, editing);
                 }
@@ -651,6 +654,7 @@ impl SmartPlaylistView {
                 return;
             };
             more.set_menu_model(Some(&window.playlist_menu_model(key)));
+            crate::widgets::menu_names::name_menus(more);
         });
         for editing in [false, true] {
             let weak = Rc::downgrade(self);

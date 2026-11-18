@@ -206,6 +206,7 @@ impl CategoryView {
         order_button.set_icon_name("view-sort-descending-symbolic");
         order_button.add_css_class("hk-menu");
         order_button.set_menu_model(Some(&order));
+        crate::widgets::menu_names::name_menus(&order_button);
         let order_text = match category {
             Category::Composers => tr("Sort the composers"),
             Category::Years => tr("Sort the years"),
