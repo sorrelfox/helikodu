@@ -944,7 +944,12 @@ impl LibrarySource for ServiceLibrary {
                 ids.insert(key, p.id);
                 PlaylistRow {
                     key,
-                    name: p.name.clone(),
+                    // The built-in one is named in the interface's language.
+                    name: if p.builtin {
+                        tr("Favourites")
+                    } else {
+                        p.name.clone()
+                    },
                     items: p.items,
                     duration: p.duration,
                     modified: Some(p.modified),
@@ -957,9 +962,23 @@ impl LibrarySource for ServiceLibrary {
                     dead: p.dead,
                     can_undo: p.can_undo,
                     can_redo: p.can_redo,
+                    builtin: p.builtin,
                 }
             })
             .collect())
+    }
+
+    fn is_favourite(&self, track: TrackKey) -> Result<bool, BackendError> {
+        if track.0 == 0 {
+            return Ok(false);
+        }
+        self.library()?.is_favourite(track_id(track)).map_err(error)
+    }
+
+    fn set_favourite(&self, track: TrackKey, favourite: bool) -> Result<bool, BackendError> {
+        self.library()?
+            .set_favourite(track_id(track), favourite)
+            .map_err(error)
     }
 
     fn playlist_items(&self, key: PlaylistKey) -> Result<Vec<TrackRow>, BackendError> {

@@ -22,6 +22,8 @@
 
 use std::f64::consts::PI;
 
+pub use helikodu_model::player::LimiterActivity;
+
 use super::DspStage;
 use super::plan::LimiterPlan;
 
@@ -37,17 +39,6 @@ const MARGIN_DB: f64 = 0.2;
 const RELEASE: f64 = 0.06;
 /// The Kaiser window's shape parameter.
 const KAISER_BETA: f64 = 7.0;
-
-/// What the limiter has done, for the activity readout.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct LimiterActivity {
-    /// The gain reduction applied to the last frame, in dB (0 or positive).
-    pub reduction_db: f64,
-    /// The largest reduction since the statistics were reset, in dB.
-    pub largest_db: f64,
-    /// How often limiting has started since the statistics were reset.
-    pub times: u64,
-}
 
 /// The lookahead limiter for one rate and channel count.
 #[derive(Debug, Clone)]

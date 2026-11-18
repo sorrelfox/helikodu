@@ -88,6 +88,10 @@ const USER_TEXT: Table = &[
     ("originalyear", Field::OriginalYear),
     ("TOTALTRACKS", Field::TotalTracks),
     ("TOTALDISCS", Field::TotalDiscs),
+    // FFmpeg stores its `lyrics` key in an MP3 file as `TXXX:USLT` instead of a
+    // `USLT` frame.
+    ("USLT", Field::Lyrics),
+    ("UNSYNCED LYRICS", Field::Lyrics),
 ];
 
 /// The field of a frame ID that maps by itself.
@@ -97,6 +101,13 @@ pub(crate) fn frame_field(id: &str) -> Option<Field> {
 
 /// The field of a `TXXX` description (or an MP4 freeform name).
 pub(crate) fn user_text_field(description: &str) -> Option<Field> {
+    // FFmpeg also names a copied `USLT` frame `lyrics-<language>`.
+    if description
+        .get(..7)
+        .is_some_and(|p| p.eq_ignore_ascii_case("lyrics-"))
+    {
+        return Some(Field::Lyrics);
+    }
     lookup(USER_TEXT, description).or_else(|| vorbis::field(description))
 }
 
@@ -140,5 +151,20 @@ mod tests {
         );
         assert_eq!(user_text_field("FMPS_Rating"), Some(Field::FmpsRating));
         assert_eq!(involvement_field("DJ-mix"), Some(Field::DjMixer));
+    }
+
+    #[test]
+    fn lyrics_in_user_text_frames() {
+        for name in [
+            "USLT",
+            "uslt",
+            "LYRICS",
+            "UNSYNCEDLYRICS",
+            "Unsynced Lyrics",
+            "lyrics-eng",
+        ] {
+            assert_eq!(user_text_field(name), Some(Field::Lyrics), "{name}");
+        }
+        assert_eq!(user_text_field("lyricist"), Some(Field::Lyricist));
     }
 }

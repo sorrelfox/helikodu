@@ -60,6 +60,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - A narrow window: below the widths that leave the content 560 pixels, the queue panel and then the sidebar open over the content; below 720 pixels the deck is compact.
 - `helikodu-cli` controls the running application: `status`, `queue`, `playlists`, `play-pause`, `pause`, `resume`, `stop`, `next`, `previous`, `seek`, `volume`, `shuffle`, `repeat`, `enqueue` (files or a query, next or last), `play-query`, `rate` and `export-playlist`, with `--json` where they print. Exit code 4 means the application is not running.
 - A documented D-Bus interface for scripts, `io.github.sorrelfox.Helikodu.Control1`, which `helikodu-cli` uses (`docs/dev/dbus-api.md`).
+- Favourites: the heart on the player deck adds the playing track to **Favourites**, a playlist that is always first under **Playlists** with its count, and takes it out again. It cannot be renamed, moved, locked or deleted. A playlist you named "Favourites" before becomes it.
+- The limiter's editor in **Settings → DSP and EQ** shows its activity while music plays: the gain reduction now, the largest in this track and how often it limited.
+- **Follow the playing track** in the View menu is remembered between runs.
 
 ### Changed
 
@@ -77,6 +80,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Home's Most played and the mini player's queue mark the playing track too: the row in the accent, with the playing indicator in place of its number, moving while playing. Home's tiles ring the playing album when playback changes, not only when the page is filled.
 - While a text field has the focus, Ctrl+Shift+Z and Ctrl+Y redo in the field instead of redoing a playlist or tag edit, as Ctrl+Z and Ctrl+A already did; shortcuts changed in the settings are lifted the same way.
 - The Keyboard shortcuts window (Ctrl+?) lists the keys of every action from the settings, so Undo, Redo and Select all no longer read "Not set" when it was opened from a text field.
+- MP3 files whose lyrics were written by FFmpeg (as a `TXXX` frame named `USLT` or `lyrics-…` instead of a `USLT` frame) are counted as having lyrics when scanned.
+- DSD played as DoP no longer makes the DAC leave DSD mode or click when pausing, seeking, waiting for the next track or at the end: the device gets DSD silence (the DoP idle pattern) instead of PCM silence, and the DoP data is never faded.
 
 ## [0.2.0] - 2026-11-18
 

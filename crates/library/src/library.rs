@@ -408,6 +408,29 @@ impl Library {
         self.playlist_write(move |c| playlists::remove_items(c, playlist, &positions, now))
     }
 
+    /// The built-in Favourites playlist.
+    pub fn favourites(&self) -> Result<PlaylistId, PlaylistError> {
+        self.playlist_write(playlists::favourites)
+    }
+
+    /// Whether `track` is in Favourites.
+    pub fn is_favourite(&self, track: TrackId) -> Result<bool, DbError> {
+        self.db.read(move |c| playlists::is_favourite(c, track))
+    }
+
+    /// Which of `tracks` are in Favourites.
+    pub fn favourite_tracks(&self, tracks: Vec<TrackId>) -> Result<Vec<TrackId>, DbError> {
+        self.db
+            .read(move |c| playlists::favourite_tracks(c, &tracks))
+    }
+
+    /// Adds `track` to Favourites, or takes it out; returns whether it is a
+    /// favourite now. The change can be undone like any edit of a playlist.
+    pub fn set_favourite(&self, track: TrackId, favourite: bool) -> Result<bool, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::set_favourite(c, track, favourite, now))
+    }
+
     /// One page of the static playlists that are not in a folder, in their order.
     pub fn playlists(&self, page: Page) -> Result<crate::Paged<PlaylistSummary>, DbError> {
         let now = to_unix_seconds(SystemTime::now());

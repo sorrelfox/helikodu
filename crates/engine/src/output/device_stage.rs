@@ -48,6 +48,12 @@ pub enum DeviceAction {
     /// Whether every sample is dithered (the audio was processed, or the source has
     /// more bits than the device), or only while volume or a fade changes them.
     AlwaysDither(bool),
+    /// Whether the frames from here are DSD over PCM (DoP). While they are, the
+    /// device side never changes a sample: fades become instant, and wherever it
+    /// would play silence (paused, held, short of frames, draining) it plays the
+    /// DoP idle pattern instead, so that the DAC stays in DSD mode and does not
+    /// click.
+    Dop(bool),
 }
 
 /// Software volume, the fader and dither, in the order of the
@@ -107,12 +113,19 @@ impl DeviceStage {
             }
             DeviceAction::Discard { hold, .. } => self.held |= hold,
             DeviceAction::AlwaysDither(always) => self.always_dither = always,
+            // The ring reader handles it.
+            DeviceAction::Dop(_) => {}
         }
     }
 
     /// Whether the device side waits for a fade in before taking frames.
     pub(crate) fn is_held(&self) -> bool {
         self.held
+    }
+
+    /// Whether the fader is fully open.
+    pub(crate) fn is_open(&self) -> bool {
+        self.fader.is_open()
     }
 
     /// Whether the fader is shut and not moving.

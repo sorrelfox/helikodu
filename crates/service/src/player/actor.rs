@@ -1504,6 +1504,10 @@ impl Actor {
                     .update_status(|status| status.signal_path.clone_from(&path));
                 self.emit(PlayerEvent::SignalPath(path));
             }
+            EngineEvent::Limiter(activity) => {
+                self.shared
+                    .update_status(|status| status.limiter = activity);
+            }
             EngineEvent::PlaybackStats(stats) => {
                 self.shared
                     .update_status(|status| status.stats = Some(stats));

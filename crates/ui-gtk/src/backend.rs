@@ -452,6 +452,9 @@ pub struct PlaylistRow {
     pub can_undo: bool,
     /// Whether an undone edit can be done again.
     pub can_redo: bool,
+    /// Whether it is the built-in Favourites playlist, which the heart on the
+    /// deck fills: listed first, and never renamed, moved, locked or deleted.
+    pub builtin: bool,
 }
 
 /// Something pinned to the sidebar.
@@ -671,6 +674,17 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     /// The playlists and folders in the sidebar's order: each folder followed
     /// by what is in it.
     fn playlists(&self) -> Result<Vec<PlaylistRow>, BackendError>;
+    /// Whether `track` is in Favourites.
+    fn is_favourite(&self, track: TrackKey) -> Result<bool, BackendError> {
+        let _ = track;
+        Ok(false)
+    }
+    /// Adds `track` to Favourites, or takes it out; returns whether it is a
+    /// favourite now.
+    fn set_favourite(&self, track: TrackKey, favourite: bool) -> Result<bool, BackendError> {
+        let _ = (track, favourite);
+        Err(unsupported())
+    }
     /// The entries of a playlist, in order; each `entry` is its position.
     fn playlist_items(&self, key: PlaylistKey) -> Result<Vec<TrackRow>, BackendError>;
     /// Makes an empty playlist.

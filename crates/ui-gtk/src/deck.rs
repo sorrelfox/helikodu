@@ -13,6 +13,7 @@ use gtk::{CompositeTemplate, glib};
 
 mod chapters;
 mod compact;
+mod favourite;
 mod modes;
 
 use crate::backend::{Backend, CoverKey, PlaybackState, PlayerRequest, SignalState};
@@ -47,6 +48,8 @@ mod imp {
         pub(super) title: TemplateChild<gtk::Label>,
         #[template_child]
         pub(super) subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) favourite: TemplateChild<gtk::Button>,
         #[template_child]
         pub(super) play: TemplateChild<gtk::Button>,
         #[template_child]
@@ -95,6 +98,9 @@ mod imp {
         /// The chapters of the playing file, while a chapter plays.
         pub(super) chapters: RefCell<Option<super::chapters::ChapterSpan>>,
         pub(super) backend: RefCell<Option<Backend>>,
+        /// The library track the heart is for, and whether it is a favourite.
+        pub(super) favourite_track: Cell<Option<crate::backend::TrackKey>>,
+        pub(super) favourite_on: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -192,6 +198,7 @@ impl Deck {
         });
         self.setup_play_menu();
         self.setup_links(backend);
+        self.setup_favourite();
     }
 
     /// The title opens the album at the playing track; "Artist · Album" are
@@ -461,6 +468,7 @@ impl Deck {
                 imp.previous.set_sensitive(has_track);
                 imp.next.set_sensitive(has_track);
                 self.show_now(view.now.as_ref());
+                self.follow_favourite(view.now.as_ref().map(|n| n.track.key));
                 if change == Change::Track
                     && let Some(backend) = imp.backend.borrow().clone()
                 {

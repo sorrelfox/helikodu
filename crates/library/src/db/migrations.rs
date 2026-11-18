@@ -60,6 +60,7 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
     migration!(14, "0014", "file_organizer"),
     migration!(15, "0015", "artist_photos"),
     migration!(16, "0016", "undo_order"),
+    migration!(17, "0017", "favourites"),
 ];
 
 /// The schema version this build creates and understands.
@@ -183,5 +184,49 @@ mod tests {
         for (index, migration) in MIGRATIONS.iter().enumerate() {
             assert_eq!(migration.version as usize, index + 1);
         }
+    }
+
+    /// The database up to the migration before `version`.
+    fn migrated_before(version: u32) -> Connection {
+        let mut c = Connection::open_in_memory().unwrap();
+        crate::db::collation::LocaleCollation::root()
+            .register(&c)
+            .unwrap();
+        crate::db::functions::register(&c).unwrap();
+        for migration in MIGRATIONS.iter().filter(|m| m.version < version) {
+            apply(&mut c, migration).unwrap();
+        }
+        c
+    }
+
+    fn favourites_rows(c: &Connection) -> Vec<(i64, String)> {
+        c.prepare("SELECT id, name FROM playlists WHERE builtin != 0")
+            .unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap()
+    }
+
+    #[test]
+    fn favourites_are_made_or_taken_over() {
+        let version = 17;
+        assert_eq!(MIGRATIONS[version as usize - 1].name, "favourites");
+        // A new library gets an empty one.
+        let mut c = migrated_before(version);
+        apply(&mut c, &MIGRATIONS[version as usize - 1]).unwrap();
+        let rows = favourites_rows(&c);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].1, "Favourites");
+
+        // A static playlist of that name at the top becomes it.
+        let mut c = migrated_before(version);
+        c.execute_batch(
+            "INSERT INTO playlists (id, name, kind, position) VALUES (7, 'favourites', 1, 3);
+             INSERT INTO playlists (id, name, kind, position) VALUES (8, 'Favourites', 0, 4);",
+        )
+        .unwrap();
+        apply(&mut c, &MIGRATIONS[version as usize - 1]).unwrap();
+        assert_eq!(favourites_rows(&c), [(7, "favourites".to_owned())]);
     }
 }

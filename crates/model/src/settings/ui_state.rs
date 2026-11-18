@@ -27,6 +27,9 @@ pub struct UiState {
     pub last_view: String,
     /// The mini player.
     pub mini_player: MiniPlayerState,
+    /// Whether "Follow the playing track" is on: the queue panel scrolls to
+    /// each new track. The play modes themselves are kept with the session.
+    pub follow_playing: bool,
 }
 
 impl UiState {
@@ -61,6 +64,7 @@ impl Default for UiState {
             panes: PaneState::default(),
             last_view: String::new(),
             mini_player: MiniPlayerState::default(),
+            follow_playing: false,
         }
     }
 }
@@ -177,5 +181,18 @@ mod tests {
         assert_eq!(state.panes.details_width, 220);
         assert_eq!(state.window.width, 360);
         assert!(state.panes.queue_visible);
+    }
+
+    #[test]
+    fn follow_playing_is_kept() {
+        let state = UiState {
+            follow_playing: true,
+            ..UiState::default()
+        };
+        let text = toml::to_string(&state).unwrap();
+        assert_eq!(toml::from_str::<UiState>(&text).unwrap(), state);
+        // A file from before the key reads as off.
+        let old: UiState = toml::from_str("last_view = \"albums\"\n").unwrap();
+        assert!(!old.follow_playing);
     }
 }

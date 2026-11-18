@@ -10,8 +10,8 @@ use std::sync::{Arc, Mutex, PoisonError};
 use helikodu_model::audio::{AudioSpec, MediaTime, OutputSelection};
 use helikodu_model::library::TrackRef;
 use helikodu_model::player::{
-    EntryId, PlayModes, PlaybackState, PlaybackStats, QueueContext, QueueEntry, SignalPath,
-    StopAfter, TransportState, Volume,
+    EntryId, LimiterActivity, PlayModes, PlaybackState, PlaybackStats, QueueContext, QueueEntry,
+    SignalPath, StopAfter, TransportState, Volume,
 };
 
 use super::timers::{AbLoop, SleepTimerStatus};
@@ -122,6 +122,9 @@ pub struct PlayerStatus {
     pub signal_path: Option<Box<SignalPath>>,
     /// The output's counters, as last reported while playing.
     pub stats: Option<PlaybackStats>,
+    /// What the limiter does, as the engine last reported it; `None` while the
+    /// limiter is off.
+    pub limiter: Option<LimiterActivity>,
     /// The A-B loop of the playing track.
     pub ab_loop: Option<AbLoop>,
     /// The sleep timer, while one runs.
@@ -143,6 +146,7 @@ impl Default for PlayerStatus {
             stop_after: StopAfter::Off,
             signal_path: None,
             stats: None,
+            limiter: None,
             ab_loop: None,
             sleep_timer: None,
             cursor: None,

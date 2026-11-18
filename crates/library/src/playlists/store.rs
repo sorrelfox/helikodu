@@ -9,13 +9,15 @@ use std::collections::HashMap;
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use super::history::record;
-use super::items::{insert_rows, track_rows};
+use super::items::{append_tracks, insert_rows, remove_items, track_rows};
 use super::smart::{self, smart_track_ids};
 use super::{
     FOLDER, NewItem, PlaylistId, PlaylistNode, PlaylistSummary, PlaylistType, Refusal, SMART,
     STATIC,
 };
-use crate::catalog::{Page, Paged};
+use helikodu_model::library::TrackId;
+
+use crate::catalog::{Page, Paged, sql_track_id};
 use crate::db::unix_time::{from_millis, from_unix_seconds};
 use crate::db::{path_from_blob, path_to_blob};
 
@@ -106,6 +108,99 @@ pub(crate) fn check_editable(c: &Connection, playlist: PlaylistId) -> rusqlite::
     }
 }
 
+/// Fails if `playlist` is the built-in Favourites playlist.
+fn check_not_builtin(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<()> {
+    let builtin: bool = c
+        .prepare_cached("SELECT builtin != 0 FROM playlists WHERE id = ?1")?
+        .query_row([playlist.0], |row| row.get(0))
+        .optional()?
+        .unwrap_or(false);
+    if builtin {
+        Refusal::Builtin(playlist).raise()
+    } else {
+        Ok(())
+    }
+}
+
+/// The built-in Favourites playlist. A database that has lost it gets a new,
+/// empty one.
+pub(crate) fn favourites(c: &Connection) -> rusqlite::Result<PlaylistId> {
+    let found: Option<i64> = c
+        .prepare_cached("SELECT id FROM playlists WHERE builtin != 0")?
+        .query_row([], |row| row.get(0))
+        .optional()?;
+    if let Some(id) = found {
+        return Ok(PlaylistId(id));
+    }
+    c.prepare_cached(
+        "INSERT INTO playlists (parent_id, name, kind, position, created_at, modified_at, builtin)
+         VALUES (NULL, 'Favourites', ?1, -1, CAST(strftime('%s', 'now') AS INTEGER),
+                 CAST(strftime('%s', 'now') AS INTEGER), 1)
+         RETURNING id",
+    )?
+    .query_row([STATIC], |row| row.get(0).map(PlaylistId))
+}
+
+/// Whether `track` is in Favourites: an item of it stands for the track's
+/// identity, so a copy of the same file counts too.
+pub(crate) fn is_favourite(c: &Connection, track: TrackId) -> rusqlite::Result<bool> {
+    c.prepare_cached(
+        "SELECT EXISTS (SELECT 1 FROM playlist_items i
+                        JOIN playlists p ON p.id = i.playlist_id AND p.builtin != 0
+                        JOIN tracks t ON t.identity_id = i.identity_id
+                        WHERE t.id = ?1)",
+    )?
+    .query_row([sql_track_id(track)], |row| row.get(0))
+}
+
+/// Which of `tracks` are in Favourites.
+pub(crate) fn favourite_tracks(
+    c: &Connection,
+    tracks: &[TrackId],
+) -> rusqlite::Result<Vec<TrackId>> {
+    let mut found = Vec::new();
+    for &track in tracks {
+        if is_favourite(c, track)? {
+            found.push(track);
+        }
+    }
+    Ok(found)
+}
+
+/// Adds `track` to the end of Favourites, or takes every item of it out. Does
+/// nothing when it already is, or is not, there. Returns whether it is a
+/// favourite now. The change can be undone like any edit of a playlist.
+pub(crate) fn set_favourite(
+    c: &Connection,
+    track: TrackId,
+    favourite: bool,
+    now: i64,
+) -> rusqlite::Result<bool> {
+    let list = favourites(c)?;
+    if favourite {
+        if !is_favourite(c, track)? {
+            append_tracks(c, list, &[track], now)?;
+        }
+        return Ok(true);
+    }
+    let positions: Vec<usize> = c
+        .prepare_cached(
+            "SELECT i.position FROM playlist_items i
+             JOIN tracks t ON t.identity_id = i.identity_id
+             WHERE i.playlist_id = ?1 AND t.id = ?2
+             ORDER BY i.position",
+        )?
+        .query_map(params![list.0, sql_track_id(track)], |row| {
+            row.get::<_, i64>(0)
+        })?
+        .map(|p| p.map(|p| usize::try_from(p).unwrap_or(0)))
+        .collect::<rusqlite::Result<_>>()?;
+    if !positions.is_empty() {
+        remove_items(c, list, &positions, now)?;
+    }
+    Ok(false)
+}
+
 /// Fails unless `folder` exists and is a folder.
 fn check_folder(c: &Connection, folder: PlaylistId) -> rusqlite::Result<()> {
     match kind_of(c, folder)? {
@@ -129,6 +224,7 @@ pub(crate) fn rename(
     now: i64,
 ) -> rusqlite::Result<()> {
     let (kind, _) = kind_of(c, playlist)?;
+    check_not_builtin(c, playlist)?;
     if kind != FOLDER {
         record(c, playlist, now)?;
     }
@@ -141,6 +237,7 @@ pub(crate) fn rename(
 /// move up into its parent.
 pub(crate) fn delete(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<()> {
     let (kind, _) = kind_of(c, playlist)?;
+    check_not_builtin(c, playlist)?;
     if kind == FOLDER {
         let parent: Option<i64> = c
             .prepare_cached("SELECT parent_id FROM playlists WHERE id = ?1")?
@@ -200,6 +297,9 @@ pub(crate) fn set_locked(
     locked: bool,
 ) -> rusqlite::Result<()> {
     kind_of(c, playlist)?;
+    if locked {
+        check_not_builtin(c, playlist)?;
+    }
     c.prepare_cached("UPDATE playlists SET locked = ?2 WHERE id = ?1")?
         .execute(params![playlist.0, i64::from(locked)])?;
     Ok(())
@@ -226,6 +326,7 @@ pub(crate) fn move_to(
     position: Option<usize>,
 ) -> rusqlite::Result<()> {
     kind_of(c, playlist)?;
+    check_not_builtin(c, playlist)?;
     if let Some(parent) = parent {
         check_folder(c, parent)?;
         // Up from `parent`: the playlist must not be met.
@@ -274,7 +375,8 @@ const SUMMARY: &str = "p.id, p.name, p.created_at, p.modified_at,
     p.kind, p.parent_id, p.locked, p.grouped, p.source_path, p.query,
     (SELECT count(*) FROM playlists c WHERE c.parent_id = p.id),
     EXISTS (SELECT 1 FROM playlist_history h WHERE h.playlist_id = p.id AND h.redo = 0),
-    EXISTS (SELECT 1 FROM playlist_history h WHERE h.playlist_id = p.id AND h.redo = 1)";
+    EXISTS (SELECT 1 FROM playlist_history h WHERE h.playlist_id = p.id AND h.redo = 1),
+    p.builtin != 0";
 
 /// A summary row, and the query text of a smart playlist.
 fn summary(row: &Row<'_>) -> rusqlite::Result<(PlaylistSummary, Option<String>)> {
@@ -300,6 +402,7 @@ fn summary(row: &Row<'_>) -> rusqlite::Result<(PlaylistSummary, Option<String>)>
             source: row.get::<_, Option<Vec<u8>>>(11)?.map(path_from_blob),
             can_undo: row.get(14)?,
             can_redo: row.get(15)?,
+            builtin: row.get(16)?,
         },
         row.get(12)?,
     ))
@@ -331,7 +434,7 @@ pub(crate) fn playlists(
         .prepare_cached(&format!(
             "SELECT {SUMMARY} FROM playlists p
              WHERE p.kind = ?1 AND p.parent_id IS NULL
-             ORDER BY p.position, p.id LIMIT ?2 OFFSET ?3"
+             ORDER BY p.builtin DESC, p.position, p.id LIMIT ?2 OFFSET ?3"
         ))?
         .query_map(params![STATIC, limit, offset], summary)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -367,7 +470,7 @@ pub(crate) fn playlist(
 pub(crate) fn playlist_tree(c: &Connection, now: i64) -> rusqlite::Result<Vec<PlaylistNode>> {
     let rows = c
         .prepare_cached(&format!(
-            "SELECT {SUMMARY} FROM playlists p ORDER BY p.position, p.id"
+            "SELECT {SUMMARY} FROM playlists p ORDER BY p.builtin DESC, p.position, p.id"
         ))?
         .query_map([], summary)?
         .collect::<rusqlite::Result<Vec<_>>>()?;

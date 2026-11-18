@@ -521,3 +521,81 @@ fn dop_falls_back_to_pcm_on_a_path_that_changes_samples() {
     let words = play_dop(&dsf, "dop-off.wav", VolumeControl::Fixed, DsdOutput::Pcm);
     assert!(!is_dop(&words));
 }
+
+#[test]
+fn dop_pauses_with_the_dsd_idle_pattern() {
+    // About a second of DSD64 played in real time, paused for a moment in the
+    // middle and to its end: the DAC must see DoP frames throughout, with the
+    // markers alternating, and DSD silence where nothing plays.
+    let blocks = 90;
+    let dsf = write_dsf("dop-pause.dsf", blocks);
+    let out = dir().join("dop-pause.wav");
+    let mut config = wav_config(&out);
+    config.sink_pacing = Pacing::RealTime;
+    config.output.mode = OutputMode::Exclusive;
+    config.output.format = OutputFormat::S32;
+    config.output.volume = VolumeControl::Fixed;
+    config.output.dsd = DsdOutput::Dop;
+    let (engine, events) = Engine::spawn(config).unwrap();
+    engine
+        .send(EngineCommand::Load {
+            item: PlaybackItem::new(ItemId::new(4), MediaSource::file(&dsf)),
+            start: MediaTime::ZERO,
+            paused: false,
+        })
+        .unwrap();
+    wait_for(&events, &engine, |event| match event {
+        EngineEvent::Position { position, .. }
+            if position.as_duration() >= Duration::from_millis(250) =>
+        {
+            Some(())
+        }
+        _ => None,
+    });
+    engine.send(EngineCommand::Pause).unwrap();
+    wait_for(&events, &engine, |event| {
+        matches!(event, EngineEvent::StateChanged(TransportState::Paused)).then_some(())
+    });
+    std::thread::sleep(Duration::from_millis(100));
+    engine.send(EngineCommand::Play).unwrap();
+    wait_for(&events, &engine, stopped);
+    drop(engine);
+
+    let (data, container) = read_output(&out);
+    assert_eq!(container, 32);
+    let words: Vec<u32> = data
+        .chunks_exact(4)
+        .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+        .collect();
+    let bytes = blocks * 4096;
+    let channels = [dsd_bytes(0, bytes), dsd_bytes(1, bytes)];
+    let mut idle = 0;
+    let mut music = 0;
+    // The file's frames that were heard, in order.
+    let mut next = 0;
+    for (frame, pair) in words.chunks_exact(2).enumerate() {
+        let marker = if frame % 2 == 0 { 0x05 } else { 0xFA };
+        for &word in pair {
+            assert_eq!(
+                (word >> 24) as u8,
+                marker,
+                "frame {frame}: {word:#010x} breaks the DoP markers"
+            );
+            assert_eq!(word & 0xFF, 0, "frame {frame}: {word:#010x}");
+        }
+        let payload = |w: u32| [(w >> 16) as u8, (w >> 8) as u8];
+        if pair.iter().all(|&w| payload(w) == [0x69, 0x69]) {
+            idle += 1;
+            continue;
+        }
+        let at = (next..bytes / 2)
+            .find(|&i| {
+                (0..2).all(|c| payload(pair[c]) == [channels[c][2 * i], channels[c][2 * i + 1]])
+            })
+            .unwrap_or_else(|| panic!("frame {frame} is neither the file nor DSD silence"));
+        next = at + 1;
+        music += 1;
+    }
+    assert!(music > bytes / 4, "only {music} frames of the file");
+    assert!(idle > 0, "no DSD silence around the pause");
+}

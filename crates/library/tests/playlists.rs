@@ -131,14 +131,15 @@ fn create_rename_duplicate_delete() {
     assert_eq!(tracks(&library, copy), [Some(a), Some(a)]);
 
     let listed = library.playlists(Page::default()).unwrap();
-    assert_eq!(listed.total, 3);
+    // The built-in Favourites comes first.
+    assert_eq!(listed.total, 4);
     let names: Vec<_> = listed.items.iter().map(|p| p.name.as_str()).collect();
-    assert_eq!(names, ["Dawn", "Evening", "Dawn (copy)"]);
-    assert_eq!(listed.items[0].items, 2);
-    assert_eq!(listed.items[0].duration, Duration::from_secs(200));
-    assert!(listed.items[0].modified >= listed.items[0].created);
+    assert_eq!(names, ["Favourites", "Dawn", "Evening", "Dawn (copy)"]);
+    assert_eq!(listed.items[1].items, 2);
+    assert_eq!(listed.items[1].duration, Duration::from_secs(200));
+    assert!(listed.items[1].modified >= listed.items[1].created);
     assert_eq!(
-        library.playlists(Page::new(1, 1)).unwrap().items[0].id,
+        library.playlists(Page::new(2, 1)).unwrap().items[0].id,
         second
     );
 
@@ -637,4 +638,60 @@ fn hostile_files_are_refused_or_bounded() {
         .unwrap();
     assert_eq!(report.entries, 0);
     assert!(library.playlist(report.playlist).unwrap().is_some());
+}
+
+#[test]
+fn favourites_is_built_in() {
+    let dir = folder("favourites");
+    let (library, root) = library(&dir);
+    let a = add(
+        &library,
+        record(root, dir.join("music/a.flac"), "a", ("A", "X", 100)),
+    );
+    let b = add(
+        &library,
+        record(root, dir.join("music/b.flac"), "b", ("B", "X", 100)),
+    );
+    let favourites = library.favourites().unwrap();
+    let summary = library.playlist(favourites).unwrap().unwrap();
+    assert!(summary.builtin);
+    assert_eq!(summary.name, "Favourites");
+    assert_eq!(summary.items, 0);
+
+    // The heart adds a track once, and takes it out again.
+    assert!(!library.is_favourite(a).unwrap());
+    assert!(library.set_favourite(a, true).unwrap());
+    assert!(library.set_favourite(a, true).unwrap());
+    assert!(library.set_favourite(b, true).unwrap());
+    assert_eq!(tracks(&library, favourites), [Some(a), Some(b)]);
+    assert!(library.is_favourite(a).unwrap());
+    assert_eq!(library.favourite_tracks(vec![a, b]).unwrap(), [a, b]);
+    assert!(!library.set_favourite(a, false).unwrap());
+    assert!(!library.is_favourite(a).unwrap());
+    assert_eq!(tracks(&library, favourites), [Some(b)]);
+    // Added by hand too, it is the same list.
+    library.add_to_playlist(favourites, vec![a]).unwrap();
+    assert!(library.is_favourite(a).unwrap());
+
+    // It stays first and cannot be renamed, moved, locked or deleted.
+    let other = library.create_playlist("Other").unwrap();
+    library.move_playlist(other, None, Some(0)).unwrap();
+    assert_eq!(
+        library.playlists(Page::default()).unwrap().items[0].id,
+        favourites
+    );
+    let folder = library.create_playlist_folder("Folder", None).unwrap();
+    for refused in [
+        library.rename_playlist(favourites, "Loved"),
+        library.delete_playlist(favourites),
+        library.move_playlist(favourites, Some(folder), None),
+        library.set_playlist_locked(favourites, true),
+    ] {
+        assert!(
+            matches!(refused, Err(PlaylistError::Builtin(id)) if id == favourites),
+            "{refused:?}"
+        );
+    }
+    assert!(library.playlist(favourites).unwrap().is_some());
+    assert_eq!(library.favourites().unwrap(), favourites);
 }

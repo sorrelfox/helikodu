@@ -22,6 +22,29 @@ use super::{
 use crate::Event;
 
 impl MusicLibrary {
+    /// The built-in Favourites playlist, first among the playlists.
+    pub fn favourites(&self) -> Result<PlaylistId, LibraryError> {
+        Ok(self.library.favourites()?)
+    }
+
+    /// Whether `track` is in Favourites.
+    pub fn is_favourite(
+        &self,
+        track: helikodu_model::library::TrackId,
+    ) -> Result<bool, LibraryError> {
+        Ok(self.library.is_favourite(track)?)
+    }
+
+    /// Adds `track` to Favourites, or takes it out; returns whether it is a
+    /// favourite now.
+    pub fn set_favourite(
+        &self,
+        track: helikodu_model::library::TrackId,
+        favourite: bool,
+    ) -> Result<bool, LibraryError> {
+        Ok(self.library.set_favourite(track, favourite)?)
+    }
+
     /// Every playlist and folder, each folder followed by what is in it.
     pub fn playlist_tree(&self) -> Result<Vec<PlaylistNode>, LibraryError> {
         Ok(self.library.playlist_tree()?)

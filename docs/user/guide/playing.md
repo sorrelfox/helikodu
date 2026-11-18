@@ -9,6 +9,7 @@ The bar at the bottom of the window is the player deck. It shows the cover, titl
 - **Shuffle** (on or off) and **Repeat** (off, all, this track).
 - The **volume** control.
 - The **output device** switcher; see [Choosing the audio output](audio-output.md).
+- The **heart** after the title adds the playing track to **Favourites**, or takes it out; see [Playlists and ratings](playlists-and-ratings.md).
 
 Tracks of the same format follow each other without a gap, so live albums and DJ mixes play as they were recorded.
 
@@ -44,7 +45,7 @@ The panel on the right shows the **Queue**: what played before (**History**), wh
 
 With shuffle on, "Previous" retraces the tracks in the order they actually played; turning shuffle off returns to the album order.
 
-**Ctrl+J** jumps to the playing track.
+**Ctrl+J** jumps to the playing track. With **Follow the playing track** in the View menu, the queue panel scrolls to each new track; Helikodu remembers this setting.
 
 ## When Helikodu starts again
 

@@ -975,8 +975,16 @@ impl Services for ServiceServices {
     }
 
     fn limiter_activity(&self) -> Option<LimiterReading> {
-        // The player does not report the limiter's activity yet.
-        None
+        // As the engine last reported it; `None` while the limiter is off.
+        self.service
+            .player()
+            .status()
+            .limiter
+            .map(|a| LimiterReading {
+                reduction_db: a.reduction_db,
+                largest_db: a.largest_db,
+                times: a.times,
+            })
     }
 
     fn copies_of(&self, track: TrackKey) -> Result<Option<CopyGroup>, BackendError> {

@@ -203,6 +203,8 @@ impl MainWindow {
         self.install_playlist_actions();
         self.load_playlists(None);
         self.load_pins();
+        // The heart follows Favourites, whatever changed it.
+        self.imp().deck.refresh_favourite();
     }
 
     /// The search entry of the content header.
@@ -703,6 +705,9 @@ impl MainWindow {
     /// beside its sidebar row.
     pub(crate) fn rename_playlist(&self, key: PlaylistKey) {
         let Some(pages) = self.pages() else { return };
+        if self.is_builtin_playlist(key) {
+            return;
+        }
         match self.playlist_row(key).map(|p| p.kind) {
             Some(PlaylistType::Folder) => self.ask_folder_name(key),
             Some(PlaylistType::Smart) => {
@@ -740,6 +745,9 @@ impl MainWindow {
 
     /// Asks before deleting the playlist `key`.
     pub(crate) fn delete_playlist(&self, key: PlaylistKey) {
+        if self.is_builtin_playlist(key) {
+            return;
+        }
         let name = self
             .playlist_rows()
             .into_iter()

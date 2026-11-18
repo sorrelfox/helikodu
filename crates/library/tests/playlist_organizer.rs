@@ -111,13 +111,14 @@ fn folders_hold_playlists_and_give_them_back() {
     assert_eq!(
         shape,
         [
+            ("Favourites".into(), 0, PlaylistType::Static),
             ("Workouts".into(), 0, PlaylistType::Folder),
             ("Morning".into(), 1, PlaylistType::Static),
             ("Running".into(), 1, PlaylistType::Folder),
             ("Evening".into(), 2, PlaylistType::Static),
         ]
     );
-    assert_eq!(tree[0].summary.items, 2);
+    assert_eq!(tree[1].summary.items, 2);
 
     // A folder cannot go into itself or below itself, nor anything into a playlist.
     assert!(matches!(
@@ -136,7 +137,15 @@ fn folders_hold_playlists_and_give_them_back() {
         .iter()
         .map(|n| (n.summary.name.as_str(), n.depth))
         .collect();
-    assert_eq!(names, [("Morning", 0), ("Running", 0), ("Evening", 1)]);
+    assert_eq!(
+        names,
+        [
+            ("Favourites", 0),
+            ("Morning", 0),
+            ("Running", 0),
+            ("Evening", 1)
+        ]
+    );
 }
 
 #[test]
@@ -313,10 +322,12 @@ fn playlist_files_in_the_library_are_picked_up_and_followed() {
     let report = library.import_found_playlists(&skip).unwrap();
     assert_eq!((report.imported, report.refreshed), (1, 0));
     let tree = library.playlist_tree().unwrap();
-    assert_eq!(tree.len(), 1);
-    let list = tree[0].summary.id;
-    assert_eq!(tree[0].summary.name, "Mix");
-    assert_eq!(tree[0].summary.source.as_deref(), Some(file.as_path()));
+    // Favourites, then the file.
+    assert_eq!(tree.len(), 2);
+    assert!(tree[0].summary.builtin);
+    let list = tree[1].summary.id;
+    assert_eq!(tree[1].summary.name, "Mix");
+    assert_eq!(tree[1].summary.source.as_deref(), Some(file.as_path()));
     assert_eq!(tracks(&library, list), [Some(t[0]), Some(t[1])]);
 
     // Unchanged: nothing happens.

@@ -832,6 +832,29 @@ impl LibrarySource for SampleLibrary {
         self.sample_rename(key, name)
     }
 
+    fn is_favourite(&self, track: TrackKey) -> Result<bool, BackendError> {
+        Ok(self.sample_is_favourite(track))
+    }
+
+    fn set_favourite(&self, track: TrackKey, favourite: bool) -> Result<bool, BackendError> {
+        let key = self
+            .sample_favourites()
+            .ok_or_else(|| BackendError("no Favourites playlist".into()))?;
+        if favourite == self.sample_is_favourite(track) {
+            return Ok(favourite);
+        }
+        self.edit(key, |p| {
+            if favourite {
+                p.entries.push(Entry::Track(track));
+            } else {
+                p.entries
+                    .retain(|e| !matches!(e, Entry::Track(t) if *t == track));
+            }
+            Ok(())
+        })?;
+        Ok(favourite)
+    }
+
     fn delete_playlist(&self, key: PlaylistKey) -> Result<(), BackendError> {
         self.sample_delete(key);
         Ok(())

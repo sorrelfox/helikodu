@@ -32,8 +32,8 @@ pub use queue::{
     QueueEntry, RepeatMode, ShuffleMode, StopAfter,
 };
 pub use signal_path::{
-    PlaybackStats, SignalDevice, SignalLamp, SignalPath, SignalSource, SignalStage, StageKind,
-    StageState,
+    LimiterActivity, PlaybackStats, SignalDevice, SignalLamp, SignalPath, SignalSource,
+    SignalStage, StageKind, StageState,
 };
 pub use track_flags::TrackFlags;
 pub use transport_state::TransportState;

@@ -55,7 +55,7 @@ Migrations 5 and 6 clear the modification time of every file that was read, so t
 
 ### Schema
 
-Version 16 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fingerprint.sql`, `0004_search_support.sql`, `0005_album_model.sql`, `0006_covers.sql`, `0007_static_playlists.sql`, `0008_loudness_measurements.sql`, `0009_saved_searches.sql`, `0010_copies.sql`, `0011_chosen_kinds.sql`, `0012_playlist_organizer.sql`, `0013_tag_journal.sql`, `0014_file_organizer.sql`, `0015_artist_photos.sql`, `0016_undo_order.sql`):
+Version 17 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fingerprint.sql`, `0004_search_support.sql`, `0005_album_model.sql`, `0006_covers.sql`, `0007_static_playlists.sql`, `0008_loudness_measurements.sql`, `0009_saved_searches.sql`, `0010_copies.sql`, `0011_chosen_kinds.sql`, `0012_playlist_organizer.sql`, `0013_tag_journal.sql`, `0014_file_organizer.sql`, `0015_artist_photos.sql`, `0016_undo_order.sql`, `0017_favourites.sql`):
 
 | Area | Tables |
 |---|---|

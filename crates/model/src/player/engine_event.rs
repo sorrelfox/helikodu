@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{EngineError, ItemId, PlaybackStats, SignalPath, TransportState};
+use super::{EngineError, ItemId, LimiterActivity, PlaybackStats, SignalPath, TransportState};
 use crate::audio::{AudioSpec, DeviceInfo, MediaTime, OutputBackendKind};
 
 /// One audio stream of a file with several, as the stream selector shows it.
@@ -81,6 +81,10 @@ pub enum EngineEvent {
     SignalPath(Option<Box<SignalPath>>),
     /// The open stream's counters, a few times per second while playing.
     PlaybackStats(PlaybackStats),
+    /// What the limiter does: sent when it changes, at most a few times per
+    /// second, so nothing is sent while the limiter is idle. The counts start
+    /// anew with each track. `None` when the limiter is off.
+    Limiter(Option<LimiterActivity>),
     /// The audio streams of an item's file, sent when the item starts and the file
     /// has more than one, for the stream selector.
     AudioStreams {
@@ -147,6 +151,12 @@ mod tests {
                 silent_frames: 256,
                 total_underruns: 2,
             }),
+            EngineEvent::Limiter(Some(LimiterActivity {
+                reduction_db: 1.5,
+                largest_db: 2.25,
+                times: 3,
+            })),
+            EngineEvent::Limiter(None),
         ];
         for event in events {
             let json = serde_json::to_string(&event).unwrap();

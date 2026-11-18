@@ -40,6 +40,10 @@ const MIN_BUFFER: Duration = Duration::from_millis(20);
 const MAX_BUFFER: Duration = Duration::from_secs(5);
 /// How many device actions can wait to be applied.
 const ACTION_QUEUE: usize = 64;
+/// The DoP markers of even and odd frames.
+const DOP_MARKERS: [u8; 2] = [0x05, 0xFA];
+/// The DSD idle pattern, the byte of DSD silence.
+const DSD_IDLE: u8 = 0x69;
 
 /// State and counters shared by a stream's handle, its writer and its device side.
 #[derive(Debug)]
@@ -246,6 +250,8 @@ pub(crate) fn ring_tapped(
         taken: 0,
         shared: shared.clone(),
         tap: tap.map(|tap| tap.feed(spec)),
+        dop: false,
+        dop_marker: DOP_MARKERS[0],
     };
     (writer, reader, shared)
 }
@@ -420,6 +426,10 @@ pub(crate) struct SampleReader {
     shared: Arc<StreamShared>,
     /// Where a copy of the delivered frames goes, for the analyzer.
     tap: Option<TapFeed>,
+    /// The frames are DSD over PCM ([`DeviceAction::Dop`]).
+    dop: bool,
+    /// The DoP marker the next frame carries.
+    dop_marker: u8,
 }
 
 impl SampleReader {
@@ -465,7 +475,23 @@ impl SampleReader {
         let done = self.take(out, sink.as_deref_mut());
         let channels = self.shared.channels;
         let wanted = out.len() / channels;
-        if done < wanted {
+        if done < wanted && self.dop {
+            // DSD silence keeps the DAC in DSD mode where PCM zeros would not.
+            let rest = &mut out[done * channels..];
+            self.dop_idle(rest);
+            if let Some(sink) = sink {
+                sink.encode(done, rest);
+            }
+            self.publish();
+            let quiet = self.stage.is_held() || self.stage.is_silent();
+            let shared = &self.shared;
+            if !quiet && !shared.draining.load(Ordering::Acquire) {
+                shared.underruns.fetch_add(1, Ordering::Relaxed);
+                shared
+                    .silent_frames
+                    .fetch_add((wanted - done) as u64, Ordering::Relaxed);
+            }
+        } else if done < wanted {
             let rest = &mut out[done * channels..];
             rest.fill(0.0);
             // The fader moves on through the silence, so a fade out completes even
@@ -519,8 +545,10 @@ impl SampleReader {
                 break;
             }
             let block = &mut out[done * channels..(done + frames) * channels];
-            // Integers that nothing changes go to the encoder as they are.
-            let exact = self.shared.integer && sink.is_some() && self.stage.is_transparent();
+            // Integers that nothing changes go to the encoder as they are. DoP
+            // frames are checked one by one instead.
+            let exact =
+                self.shared.integer && sink.is_some() && !self.dop && self.stage.is_transparent();
             if let Ok(chunk) = self.consumer.read_chunk(block.len()) {
                 let (first, second) = chunk.as_slices();
                 match sink.as_deref_mut() {
@@ -544,7 +572,15 @@ impl SampleReader {
                 chunk.commit_all();
             }
             self.note_silence_start(frames);
-            if !exact {
+            if self.dop {
+                self.dop_frames(block);
+                if let Some(sink) = sink.as_deref_mut() {
+                    sink.encode(done, block);
+                }
+                if let Some(tap) = &mut self.tap {
+                    tap.push(block);
+                }
+            } else if !exact {
                 self.stage.apply(block);
                 if let Some(sink) = sink.as_deref_mut() {
                     sink.encode(done, block);
@@ -569,10 +605,16 @@ impl SampleReader {
             if next.at > self.taken {
                 break;
             }
-            let action = next.action;
+            let mut action = next.action;
             let _ = self.actions.pop();
-            if let DeviceAction::Discard { until, .. } = action {
-                self.discard(until);
+            match action {
+                DeviceAction::Discard { until, .. } => self.discard(until),
+                DeviceAction::Dop(on) => self.dop = on,
+                // A fade would change the DSD bits: DoP is cut instead.
+                DeviceAction::Fade { open, .. } if self.dop => {
+                    action = DeviceAction::SetOpen(open);
+                }
+                _ => {}
             }
             let was_silent = self.stage.is_silent();
             self.stage.act(action);
@@ -602,6 +644,42 @@ impl SampleReader {
             .fetch_add(frames as u64, Ordering::Relaxed);
     }
 
+    /// Fills `block` with the DoP idle pattern: DSD silence under markers that go
+    /// on alternating from the last frame played.
+    fn dop_idle(&mut self, block: &mut [f32]) {
+        let channels = self.shared.channels;
+        for frame in block.chunks_exact_mut(channels) {
+            let word = i32::from_be_bytes([self.dop_marker, DSD_IDLE, DSD_IDLE, 0]);
+            frame.fill(s32_to_f32(word));
+            self.dop_marker = other_marker(self.dop_marker);
+        }
+    }
+
+    /// Passes the DoP frames of `block` while the fader is open, and replaces the
+    /// rest, and any frame without a DoP marker (the silence before the first
+    /// frame of a stream), by the idle pattern. The DSD bits are never touched;
+    /// only a marker is changed where frames were left out (a pause, a seek), so
+    /// that the markers keep alternating.
+    fn dop_frames(&mut self, block: &mut [f32]) {
+        let channels = self.shared.channels;
+        let open = self.stage.is_open() && !self.stage.is_held();
+        for frame in block.chunks_exact_mut(channels) {
+            let marker = (f32_to_s32(frame[0]) >> 24) as u8;
+            if !open || !DOP_MARKERS.contains(&marker) {
+                self.dop_idle(frame);
+                continue;
+            }
+            if marker != self.dop_marker {
+                for sample in frame.iter_mut() {
+                    let bits = (f32_to_s32(*sample) & 0x00FF_FFFF) as u32;
+                    let word = (u32::from(self.dop_marker) << 24) | bits;
+                    *sample = s32_to_f32(word as i32);
+                }
+            }
+            self.dop_marker = other_marker(self.dop_marker);
+        }
+    }
+
     /// Records where a fade out ends if it ends within the next `frames` frames.
     fn note_silence_start(&self, frames: usize) {
         if let Some(left) = self.stage.frames_to_silence()
@@ -617,6 +695,15 @@ impl SampleReader {
         self.shared
             .silent
             .store(self.stage.is_silent(), Ordering::Release);
+    }
+}
+
+/// The DoP marker that follows `marker`.
+fn other_marker(marker: u8) -> u8 {
+    if marker == DOP_MARKERS[0] {
+        DOP_MARKERS[1]
+    } else {
+        DOP_MARKERS[0]
     }
 }
 

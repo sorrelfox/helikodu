@@ -57,8 +57,9 @@ pub use pins::{Pin, PinTarget};
 pub(crate) use pins::{pin, pins, unpin};
 pub(crate) use smart::{added_times, create_smart, set_query, smart_query, smart_tracks};
 pub(crate) use store::{
-    create, create_folder, delete, duplicate, insert_imported, move_to, playlist, playlist_tree,
-    playlists, rename, set_grouped, set_locked,
+    create, create_folder, delete, duplicate, favourite_tracks, favourites, insert_imported,
+    is_favourite, move_to, playlist, playlist_tree, playlists, rename, set_favourite, set_grouped,
+    set_locked,
 };
 
 /// A playlist.
@@ -140,6 +141,9 @@ pub struct PlaylistSummary {
     pub can_undo: bool,
     /// Whether an undone edit can be done again.
     pub can_redo: bool,
+    /// Whether it is the built-in Favourites playlist: always first, and never
+    /// renamed, moved, locked or deleted.
+    pub builtin: bool,
 }
 
 /// A row of the tree of playlists and folders, in the order the sidebar shows it.
@@ -316,6 +320,10 @@ pub enum PlaylistError {
         /// The number of items.
         len: usize,
     },
+    /// The built-in Favourites playlist cannot be renamed, moved, locked or
+    /// deleted.
+    #[error("playlist {0} is built in")]
+    Builtin(PlaylistId),
     /// A playlist name must hold more than white space.
     #[error("a playlist needs a name")]
     EmptyName,
@@ -343,6 +351,7 @@ pub(crate) enum Refusal {
     BadFolder(PlaylistId),
     UnknownTrack(TrackId),
     BadPosition { position: usize, len: usize },
+    Builtin(PlaylistId),
 }
 
 impl fmt::Display for Refusal {
@@ -377,6 +386,7 @@ impl PlaylistError {
                         Refusal::BadPosition { position, len } => {
                             Self::BadPosition { position, len }
                         }
+                        Refusal::Builtin(id) => Self::Builtin(id),
                     },
                     Err(other) => Self::Db(DbError::Sqlite(crate::db::SqliteError(
                         rusqlite::Error::UserFunctionError(other),

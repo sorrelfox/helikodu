@@ -37,6 +37,11 @@ impl MainWindow {
         self.playlist_rows().into_iter().find(|p| p.key == key)
     }
 
+    /// Whether `key` is the built-in Favourites playlist.
+    pub(crate) fn is_builtin_playlist(&self, key: PlaylistKey) -> bool {
+        self.playlist_row(key).is_some_and(|p| p.builtin)
+    }
+
     /// Whether `key` is pinned to the sidebar.
     pub(crate) fn is_pinned(&self, key: PinKey) -> bool {
         self.pages()
@@ -199,6 +204,8 @@ impl MainWindow {
             .find(|p| p.key == key)
             .map(|p| p.kind)
             .unwrap_or_default();
+        // Favourites is never renamed, moved or deleted.
+        let builtin = rows.iter().any(|p| p.key == key && p.builtin);
         let id = key.0;
         let item = |label: &str, action: &str| {
             let item = gio::MenuItem::new(Some(label), None);
@@ -232,7 +239,9 @@ impl MainWindow {
             rename = item(&tr("Rename…"), "win.playlist-rename");
             rename.set_attribute_value("accel", Some(&"F2".to_variant()));
         }
-        edit.append_item(&rename);
+        if !builtin {
+            edit.append_item(&rename);
+        }
         match kind {
             PlaylistType::Static => {
                 edit.append_item(&item(&tr("Duplicate"), "win.playlist-duplicate"));
@@ -245,7 +254,9 @@ impl MainWindow {
             }
             PlaylistType::Folder => {}
         }
-        edit.append_submenu(Some(&tr("Move to folder")), &self.move_menu(key, &rows));
+        if !builtin {
+            edit.append_submenu(Some(&tr("Move to folder")), &self.move_menu(key, &rows));
+        }
         let pinned = self.is_pinned(PinKey::Playlist(key));
         edit.append_item(&item(
             &if pinned {
@@ -260,14 +271,16 @@ impl MainWindow {
         if kind == PlaylistType::Static {
             last.append_item(&item(&tr("Export…"), "win.playlist-export"));
         }
-        last.append_item(&item(
-            &if kind == PlaylistType::Folder {
-                tr("Delete folder…")
-            } else {
-                tr("Delete playlist…")
-            },
-            "win.playlist-delete",
-        ));
+        if !builtin {
+            last.append_item(&item(
+                &if kind == PlaylistType::Folder {
+                    tr("Delete folder…")
+                } else {
+                    tr("Delete playlist…")
+                },
+                "win.playlist-delete",
+            ));
+        }
         menu.append_section(None, &last);
         menu
     }
@@ -416,6 +429,9 @@ impl MainWindow {
 
     /// Moves the playlist `key` into `folder` (the top for `None`), with Undo.
     pub(crate) fn move_playlist_to(&self, key: PlaylistKey, folder: Option<PlaylistKey>) {
+        if self.is_builtin_playlist(key) {
+            return;
+        }
         let before = self.playlist_row(key).and_then(|p| p.parent);
         let Some(backend) = self.backend() else {
             return;
@@ -446,6 +462,9 @@ impl MainWindow {
 
     /// Sets the lock or the grouping of `key` (`lock` picks which), with Undo.
     pub(crate) fn set_playlist_flag(&self, key: PlaylistKey, lock: bool, on: bool) {
+        if lock && on && self.is_builtin_playlist(key) {
+            return;
+        }
         let Some(backend) = self.backend() else {
             return;
         };

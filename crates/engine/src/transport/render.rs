@@ -425,6 +425,12 @@ impl Worker {
             // A new stream: the DAC warm-up's silence comes first, and the item
             // starts after it.
             let preroll = output.preroll_frames();
+            // Before DoP, the warm-up is DSD silence too.
+            if let Some(source) = &self.current
+                && source.decoder_info().dop
+            {
+                self.schedule(0, DeviceAction::Dop(true));
+            }
             self.timeline.reset(preroll);
             self.push_segment(preroll);
             if let Some(duration) = fade {
@@ -523,8 +529,10 @@ impl Worker {
         };
         let segment = self.segment_of(source, at);
         let dither = source.plan().is_some_and(|plan| plan.always_dither);
+        let dop = source.decoder_info().dop;
         self.timeline.push(segment);
         self.schedule(at, DeviceAction::AlwaysDither(dither));
+        self.schedule(at, DeviceAction::Dop(dop));
     }
 
     /// A timeline segment for `source` from its current position.

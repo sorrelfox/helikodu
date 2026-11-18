@@ -108,6 +108,7 @@ crates/ui-gtk/src/views/facet_browser.rs
 crates/ui-gtk/src/views/statistics.rs
 crates/ui-gtk/src/window/narrow.rs
 crates/ui-gtk/src/deck/compact.rs
+crates/ui-gtk/src/deck/favourite.rs
 crates/ui-gtk/src/backend/service/insights.rs
 crates/ui-gtk/src/tools.rs
 crates/ui-gtk/src/tools/converter.rs

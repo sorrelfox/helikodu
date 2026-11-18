@@ -141,6 +141,8 @@ pub(crate) struct PlaylistView {
     more: gtk::MenuButton,
     /// Set while the lock button is set from the playlist, so it changes nothing.
     quiet: Cell<bool>,
+    /// The page's rename and delete actions, off for Favourites.
+    page_actions: RefCell<Option<gio::SimpleActionGroup>>,
 }
 
 impl std::fmt::Debug for PlaylistView {
@@ -268,6 +270,7 @@ impl PlaylistView {
             lock,
             more,
             quiet: Cell::new(false),
+            page_actions: RefCell::new(None),
         });
         view.list.set_factory(Some(&view.factory()));
         view.fill_header(false);
@@ -619,6 +622,7 @@ impl PlaylistView {
             group.add_action(&action);
         }
         self.root.insert_action_group("playlist-page", Some(&group));
+        self.page_actions.replace(Some(group));
         let weak = Rc::downgrade(self);
         self.list.connect_activate(move |_, position| {
             if let Some(view) = weak.upgrade() {
@@ -928,6 +932,20 @@ impl PlaylistView {
         let grouped = info.as_ref().is_some_and(|i| i.grouped);
         let was_grouped = self.grouped();
         let locked = info.as_ref().is_some_and(|i| i.locked);
+        // Favourites cannot be locked, renamed or deleted: the heart must
+        // always reach it.
+        let builtin = info.as_ref().is_some_and(|i| i.builtin);
+        self.lock.set_visible(!builtin);
+        if let Some(group) = self.page_actions.borrow().as_ref() {
+            for name in ["rename", "delete"] {
+                if let Some(action) = group
+                    .lookup_action(name)
+                    .and_downcast::<gio::SimpleAction>()
+                {
+                    action.set_enabled(!builtin);
+                }
+            }
+        }
         self.info.replace(info);
         self.quiet.set(true);
         self.lock.set_active(locked);

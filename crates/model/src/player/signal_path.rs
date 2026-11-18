@@ -248,6 +248,17 @@ impl fmt::Display for SignalLamp {
     }
 }
 
+/// What the limiter has done, for its activity readout.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct LimiterActivity {
+    /// The gain reduction applied to the last frame, in dB (0 or positive).
+    pub reduction_db: f64,
+    /// The largest reduction in the track, in dB.
+    pub largest_db: f64,
+    /// How often limiting has started in the track.
+    pub times: u64,
+}
+
 /// Playback counters of the open stream, sent a few times per second while playing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlaybackStats {

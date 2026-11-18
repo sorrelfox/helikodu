@@ -43,6 +43,7 @@ pub(super) struct SamplePlaylist {
     locked: bool,
     grouped: bool,
     from_file: bool,
+    builtin: bool,
     query: Option<Query>,
     undo: Vec<Snapshot>,
     redo: Vec<Snapshot>,
@@ -60,6 +61,7 @@ impl SamplePlaylist {
             locked: false,
             grouped: false,
             from_file: false,
+            builtin: false,
             query: None,
             undo: Vec::new(),
             redo: Vec::new(),
@@ -156,6 +158,9 @@ impl SampleLibrary {
         };
         let mut lists = self.lists();
         let favourites = lists.add("Favourites", PlaylistType::Static, None);
+        if let Ok(list) = lists.get(favourites) {
+            list.builtin = true;
+        }
         let workouts = lists.add("Workouts", PlaylistType::Folder, None);
         let intervals = lists.add("Intervals", PlaylistType::Static, Some(workouts));
         let long_run = lists.add("Long run", PlaylistType::Static, Some(workouts));
@@ -240,6 +245,24 @@ impl SampleLibrary {
         }
     }
 
+    /// The built-in Favourites playlist, if the sample has playlists.
+    pub(super) fn sample_favourites(&self) -> Option<PlaylistKey> {
+        self.lists().lists.iter().find(|p| p.builtin).map(|p| p.key)
+    }
+
+    /// Whether `track` is in Favourites.
+    pub(super) fn sample_is_favourite(&self, track: TrackKey) -> bool {
+        self.lists()
+            .lists
+            .iter()
+            .find(|p| p.builtin)
+            .is_some_and(|p| {
+                p.entries
+                    .iter()
+                    .any(|e| matches!(e, Entry::Track(t) if *t == track))
+            })
+    }
+
     pub(super) fn sample_playlists(&self) -> Vec<PlaylistRow> {
         let lists = self.lists();
         lists
@@ -292,6 +315,7 @@ impl SampleLibrary {
                     dead,
                     can_undo: !p.undo.is_empty(),
                     can_redo: !p.redo.is_empty(),
+                    builtin: p.builtin,
                 }
             })
             .collect()

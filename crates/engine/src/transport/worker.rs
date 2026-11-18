@@ -334,6 +334,7 @@ impl Worker {
             _ => {}
         }
         self.update_signal();
+        self.update_limiter();
     }
 
     /// Follows the heard position: item starts and ends, `NearEnd`, position ticks.
@@ -364,6 +365,7 @@ impl Worker {
             if let EngineEvent::TrackStarted { item, .. } = event {
                 self.near_end_sent = None;
                 self.keep_loop_of(item);
+                self.reset_limiter();
             }
             self.emit(event);
         }

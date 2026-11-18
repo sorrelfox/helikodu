@@ -10,6 +10,10 @@ Your playlists are listed under **Playlists** in the sidebar.
 - Open a playlist to see its tracks, with **Play**, **Shuffle**, **Export**, the lock and **More**. Drag entries to change their order. **Remove from playlist** in the right-click menu, or **Delete**, takes tracks out of it.
 - Right-click a playlist in the sidebar for **Play**, **Rename…**, **Duplicate**, **Move to folder**, **Pin to the sidebar**, **Export…** and **Delete playlist…**. Deleting a playlist keeps its tracks in the library.
 
+### Favourites
+
+**Favourites** is always the first playlist. The heart on the player deck adds the playing track to it, or takes it out again; you can also add tracks to it like to any other playlist. It cannot be renamed, moved into a folder, locked or deleted.
+
 ### Undo and the lock
 
 Every change of a playlist shows a toast with **Undo**. **Ctrl+Z** undoes the last change of the open playlist, even after the toast is gone, and **Ctrl+Shift+Z** (or **Ctrl+Y**) does it again. Only deleting a playlist asks first.

@@ -17,8 +17,8 @@ use helikodu_model::audio::{
     DeviceSelection, OutputBackendKind, OutputMode, SampleFormat, SampleRate,
 };
 use helikodu_model::player::{
-    EngineEvent, ItemId, PlaybackStats, SignalDevice, SignalLamp, SignalPath, SignalSource,
-    SignalStage, StageKind, StageState, TransportState, Volume,
+    EngineEvent, ItemId, LimiterActivity, PlaybackStats, SignalDevice, SignalLamp, SignalPath,
+    SignalSource, SignalStage, StageKind, StageState, TransportState, Volume,
 };
 use helikodu_model::settings::DspSettings;
 
@@ -27,6 +27,8 @@ use crate::pipeline::{LoudnessMode, PathPlan, VolumePlan};
 
 /// How often the playback counters are sent while playing.
 const STATS_INTERVAL: Duration = Duration::from_millis(250);
+/// The shortest time between two reports of the limiter's activity.
+const LIMITER_INTERVAL: Duration = Duration::from_millis(200);
 /// How many items' plans are remembered: the heard one and those written after it.
 const PLANS: usize = 4;
 
@@ -40,6 +42,9 @@ pub(super) struct SignalTracker {
     /// was sent.
     sent: Option<Key>,
     last_stats: Option<Instant>,
+    /// The limiter's activity sent last (`Some(None)`: that it is off), and when.
+    limiter_sent: Option<Option<LimiterActivity>>,
+    last_limiter: Option<Instant>,
 }
 
 #[derive(Debug)]
@@ -138,6 +143,40 @@ impl Worker {
         {
             self.signal.last_stats = Some(Instant::now());
             self.emit(EngineEvent::PlaybackStats(stats));
+        }
+    }
+
+    /// Sends the limiter's activity when it has changed since it was last sent,
+    /// at most every [`LIMITER_INTERVAL`]. An idle limiter does not change, so
+    /// nothing is sent then. The activity is copied out of the chain, which
+    /// only this thread touches; nothing waits on a lock.
+    pub(super) fn update_limiter(&mut self) {
+        let now = self.dsp.as_ref().and_then(|dsp| dsp.limiter_activity());
+        if self.signal.limiter_sent == Some(now) {
+            return;
+        }
+        // Turning the limiter on or off is told at once; activity is paced.
+        let switched = self
+            .signal
+            .limiter_sent
+            .is_none_or(|sent| sent.is_some() != now.is_some());
+        if !switched
+            && self
+                .signal
+                .last_limiter
+                .is_some_and(|last| last.elapsed() < LIMITER_INTERVAL)
+        {
+            return;
+        }
+        self.signal.limiter_sent = Some(now);
+        self.signal.last_limiter = Some(Instant::now());
+        self.emit(EngineEvent::Limiter(now));
+    }
+
+    /// Starts the limiter's counts anew for the item that is now heard.
+    pub(super) fn reset_limiter(&mut self) {
+        if let Some(dsp) = &mut self.dsp {
+            dsp.reset_limiter_activity();
         }
     }
 

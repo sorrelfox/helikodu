@@ -275,6 +275,8 @@ impl Sidebar {
                 && playlists.iter().any(|p| p.parent == Some(playlist.key));
             let icon = if open {
                 "folder-open-symbolic"
+            } else if playlist.builtin {
+                "starred-symbolic"
             } else {
                 playlist_icon(playlist.kind, playlist.from_file)
             };

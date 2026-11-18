@@ -19,7 +19,7 @@ The output button in the player deck shows the device in use. Click it to see th
 | **Resampler quality** | **Fast**, **Medium**, **High** or **Maximum**, for when the rate has to be converted |
 | **Sample format** | **Automatic**, 16-bit, 24-bit (packed or in 32-bit words), 32-bit or 32-bit float |
 | **Volume control** | **System volume** (the default), **Software volume in Helikodu**, the device's **Hardware mixer**, or **Fixed at 100 % (bit-perfect)** |
-| **DSD files** | **Convert to PCM**, or **DoP when the device can**: in exclusive mode, with nothing changing the samples on the way |
+| **DSD files** | **Convert to PCM**, or **DoP when the device can**: in exclusive mode, with nothing changing the samples on the way. With DoP, pauses and the gaps between tracks send DSD silence, so the DAC stays in DSD mode |
 | **Release the device** | In exclusive mode, **On stop only** or **On stop and after a pause** of some seconds (30 s by default) |
 | **If the device disappears** | **Pause** (the default), **Continue on the default device** or **Stop** |
 | **Buffer** | How much audio is prepared ahead, 50 to 2000 ms (default 200 ms) |

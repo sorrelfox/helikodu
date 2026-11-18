@@ -18,6 +18,7 @@ use helikodu_meta::lyrics::{
     EmbeddedKind, LocalLyrics, Lyrics, LyricsProvider, LyricsQuery, LyricsSource, SidecarKind,
     read_embedded, read_sidecar, sidecar_paths,
 };
+use helikodu_meta::tags::{ReadOptions, read_tags};
 use lofty::TextEncoding;
 use lofty::config::{ParseOptions, WriteOptions};
 use lofty::file::AudioFile;
@@ -171,6 +172,9 @@ fn ffmpeg_lyrics_in_an_mp3_file() {
     let found = read_embedded(&path).expect("tags");
     assert_eq!(found.len(), 1);
     assert_eq!(texts(&found[0]), ["First line", "Second line"]);
+    // The scanner sees them too.
+    let tags = read_tags(&path, &ReadOptions::default()).expect("read the tags");
+    assert!(tags.tags.has_lyrics);
 }
 
 #[test]

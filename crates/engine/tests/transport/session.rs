@@ -167,6 +167,7 @@ impl Session {
                         | EngineEvent::NearEnd { .. }
                         | EngineEvent::SignalPath(_)
                         | EngineEvent::PlaybackStats(_)
+                        | EngineEvent::Limiter(_)
                 )
             })
             .cloned()

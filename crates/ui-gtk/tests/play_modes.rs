@@ -261,6 +261,49 @@ fn play_mode_queue_cursor(app: &gtk::Application) {
     window.destroy();
 }
 
+fn play_mode_follow_playing_is_remembered(app: &gtk::Application) {
+    let (window, backend) = playing_window(app);
+    let state = |w: &MainWindow| {
+        w.lookup_action("follow-playing")
+            .and_then(|a| a.state())
+            .and_then(|s| s.get::<bool>())
+    };
+    assert_eq!(state(&window), Some(false));
+    WidgetExt::activate_action(&window, "win.follow-playing", None).unwrap();
+    assert_eq!(state(&window), Some(true));
+    assert!(backend.ui_state().load().follow_playing);
+    window.destroy();
+    // The next window starts with it on.
+    let again = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    assert_eq!(state(&again), Some(true));
+    again.destroy();
+}
+
+fn play_mode_favourite_heart(app: &gtk::Application) {
+    let (window, _) = playing_window(app);
+    wait_for("the playlists", || !window.playlist_counts().is_empty());
+    let favourites = || window.playlist_counts()[0].clone();
+    // Favourites is first and built in.
+    assert!(favourites().2, "{:?}", window.playlist_counts());
+    let before = favourites().1;
+    // The library's answer about the playing track has come.
+    spin(100);
+    let shown = window.deck_favourite();
+    window.toggle_deck_favourite();
+    wait_for("the heart", || window.deck_favourite() != shown);
+    // Taken out (every entry of it) or added once.
+    let changed = |now: usize, from: usize, adding: bool| {
+        if adding { now == from + 1 } else { now < from }
+    };
+    wait_for("the count", || changed(favourites().1, before, !shown));
+    let after = favourites().1;
+    // And back.
+    window.toggle_deck_favourite();
+    wait_for("the heart again", || window.deck_favourite() == shown);
+    wait_for("the count again", || changed(favourites().1, after, shown));
+    window.destroy();
+}
+
 fn play_mode_track_flags(app: &gtk::Application) {
     let (window, backend) = playing_window(app);
     let library = backend.library();
@@ -607,6 +650,11 @@ const TESTS: &[Test] = &[
         play_mode_chips_draw_nothing_while_paused,
     ),
     ("play_mode_screenshots", play_mode_screenshots),
+    (
+        "play_mode_follow_playing_is_remembered",
+        play_mode_follow_playing_is_remembered,
+    ),
+    ("play_mode_favourite_heart", play_mode_favourite_heart),
 ];
 
 fn main() -> ExitCode {

@@ -3,16 +3,18 @@
 
 //! The DSP chain in a playing engine: off it leaves the samples bit-identical, a
 //! change while playing crossfades without a click, and the limiter's lookahead
-//! neither loses nor adds audio.
+//! neither loses nor adds audio, and its activity is reported, paced, and only
+//! when it acts.
 
+use helikodu_engine::output::Pacing;
 use helikodu_model::audio::MediaTime;
-use helikodu_model::player::{EngineCommand, TransportState};
+use helikodu_model::player::{EngineCommand, EngineEvent, LimiterActivity, TransportState};
 use helikodu_model::settings::{
     ChannelMode, DspSettings, EqMode, LoudnessMode, LoudnessSettings, OutputSettings,
 };
 
 use crate::media;
-use crate::session::{Session, item, wav_config};
+use crate::session::{Session, item, null_config, wav_config};
 
 const RATE: u32 = 44_100;
 const FRAMES: usize = 3 * 44_100;
@@ -117,4 +119,78 @@ fn the_limiter_delays_but_loses_nothing() {
             "sample {i}"
         );
     }
+}
+
+/// Loud bursts every 300 ms in a quiet sine, so the limiter acts a few times.
+fn bursts(rate: u32, frames: usize) -> media::Signal {
+    let mut signal = media::sine(rate, frames);
+    let period = rate as usize * 3 / 10;
+    let burst = rate as usize / 50;
+    for i in 0..frames {
+        if i % period < burst {
+            let t = i as f64 / f64::from(rate);
+            let v = (0.99 * (std::f64::consts::TAU * 1000.0 * t).sin() * 32_767.0) as i16;
+            signal.samples[2 * i] = v;
+            signal.samples[2 * i + 1] = v;
+        }
+    }
+    signal
+}
+
+fn limiter_events(log: &[EngineEvent]) -> Vec<Option<LimiterActivity>> {
+    log.iter()
+        .filter_map(|e| match e {
+            EngineEvent::Limiter(a) => Some(*a),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn the_limiter_reports_its_activity_a_few_times_a_second() {
+    let frames = RATE as usize * 3 / 2;
+    let path = media::write_wav("dsp-limiter-bursts.wav", &bursts(RATE, frames));
+    let mut config = null_config();
+    config.sink_pacing = Pacing::RealTime;
+    config.dsp.limiter.enabled = true;
+    let mut session = Session::new(config);
+    let started = std::time::Instant::now();
+    session.load(&item(1, &path), MediaTime::ZERO);
+    session.wait_state(TransportState::Stopped);
+    let seconds = started.elapsed().as_secs_f64();
+    let events = limiter_events(&session.log);
+    let acted = events
+        .iter()
+        .flatten()
+        .find(|a| a.times > 0)
+        .expect("the limiter's activity was reported");
+    assert!(acted.largest_db > 0.0, "{acted:?}");
+    // Paced: at most one report every 200 ms, plus the first.
+    let most = (seconds / 0.2).ceil() as usize + 2;
+    assert!(
+        events.len() <= most,
+        "{} reports in {seconds:.2} s",
+        events.len()
+    );
+}
+
+#[test]
+fn an_idle_limiter_reports_nothing() {
+    let signal = media::sine(RATE, RATE as usize);
+    let path = media::write_wav("dsp-limiter-idle.wav", &signal);
+    let mut config = null_config();
+    config.sink_pacing = Pacing::RealTime;
+    config.dsp.limiter.enabled = true;
+    let mut session = Session::new(config);
+    session.load(&item(1, &path), MediaTime::ZERO);
+    session.wait_state(TransportState::Stopped);
+    // Only that it runs, never anything it did.
+    let events = limiter_events(&session.log);
+    assert!(events.len() <= 2, "{events:?}");
+    assert!(
+        events
+            .iter()
+            .all(|a| a.is_none_or(|a| a == LimiterActivity::default())),
+        "{events:?}"
+    );
 }

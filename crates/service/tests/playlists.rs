@@ -52,11 +52,14 @@ fn folders_smart_playlists_and_pins() {
     assert_eq!(
         kinds,
         [
+            // Favourites, built in, first.
+            (PlaylistType::Static, 0),
             (PlaylistType::Folder, 0),
             (PlaylistType::Smart, 1),
             (PlaylistType::Static, 0),
         ]
     );
+    assert!(tree[0].summary.builtin);
     assert!(music.smart_playlist_tracks(smart).unwrap().is_empty());
     assert_eq!(
         music
@@ -85,15 +88,16 @@ fn switching_the_setting_on_picks_up_playlist_files() {
     let service =
         LibraryService::start(music.clone(), bus, LibraryServiceOptions::default()).unwrap();
     service.set_import_playlists(&LibrarySettings::default());
-    assert!(music.playlist_tree().unwrap().is_empty());
+    // Only the built-in Favourites.
+    assert_eq!(music.playlist_tree().unwrap().len(), 1);
     service.set_import_playlists(&LibrarySettings {
         import_playlists: true,
         ..LibrarySettings::default()
     });
     events.recv_timeout(Duration::from_secs(30)).unwrap();
     let tree = music.playlist_tree().unwrap();
-    assert_eq!(tree.len(), 1);
-    assert_eq!(tree[0].summary.name, "Road trip");
-    assert_eq!(tree[0].summary.items, 2);
-    assert_eq!(tree[0].summary.dead, 2);
+    assert_eq!(tree.len(), 2);
+    assert_eq!(tree[1].summary.name, "Road trip");
+    assert_eq!(tree[1].summary.items, 2);
+    assert_eq!(tree[1].summary.dead, 2);
 }

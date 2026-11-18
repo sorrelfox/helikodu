@@ -58,7 +58,12 @@ impl PlaylistSource for Playlists {
             .into_iter()
             .map(|p| MprisPlaylist {
                 id: u64::try_from(p.id.get()).unwrap_or(0),
-                name: p.name,
+                // The built-in one is named in the interface's language.
+                name: if p.builtin {
+                    crate::i18n::tr("Favourites")
+                } else {
+                    p.name
+                },
                 created: Some(p.created),
                 modified: Some(p.modified),
             })

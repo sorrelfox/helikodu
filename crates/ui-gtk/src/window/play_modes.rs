@@ -77,14 +77,17 @@ impl MainWindow {
                 window.open_output_switcher();
             })
             .build();
+        // Remembered between runs with the window's state.
+        let follow_on = backend.ui_state().load().follow_playing;
         let follow = gio::ActionEntry::builder("follow-playing")
-            .state(false.to_variant())
-            .activate(|_: &Self, action, _| {
-                let on = action
+            .state(follow_on.to_variant())
+            .activate(|window: &Self, action, _| {
+                let on = !action
                     .state()
                     .and_then(|s| s.get::<bool>())
                     .unwrap_or(false);
-                action.set_state(&(!on).to_variant());
+                action.set_state(&on.to_variant());
+                window.save_follow_playing(on);
             })
             .build();
         self.add_action_entries([sleep, output, follow]);
@@ -164,6 +167,19 @@ impl MainWindow {
         if bar.is_some() {
             imp.menubar
                 .set_menu_model(Some(&super::menubar_model(&menu)));
+        }
+    }
+
+    /// Remembers whether "Follow the playing track" is on.
+    fn save_follow_playing(&self, on: bool) {
+        let Some(backend) = self.imp().backend.borrow().clone() else {
+            return;
+        };
+        let store = backend.ui_state();
+        let mut state = store.load();
+        state.follow_playing = on;
+        if let Err(error) = store.save(&state) {
+            eprintln!("helikodu: cannot save the window state: {error}");
         }
     }
 
@@ -290,6 +306,28 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn deck_chip_texts(&self) -> (Option<String>, Option<String>) {
         self.imp().deck.chip_texts()
+    }
+
+    /// Whether the deck's heart shows the playing track as a favourite.
+    #[doc(hidden)]
+    pub fn deck_favourite(&self) -> bool {
+        self.imp().deck.is_favourite_shown()
+    }
+
+    /// Clicks the deck's heart.
+    #[doc(hidden)]
+    pub fn toggle_deck_favourite(&self) {
+        self.imp().deck.toggle_favourite();
+    }
+
+    /// The playlists in the sidebar's order, with their counts, and whether
+    /// each is built in.
+    #[doc(hidden)]
+    pub fn playlist_counts(&self) -> Vec<(String, usize, bool)> {
+        self.playlist_rows()
+            .into_iter()
+            .map(|p| (p.name, p.items, p.builtin))
+            .collect()
     }
 
     /// Opens the sleep timer popover.
