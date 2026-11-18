@@ -142,6 +142,7 @@ pub fn install_actions(application: &gtk::Application, backend: &Backend) {
         }
     });
     application.add_action(&quit);
+    crate::dialogs::install_actions(application, backend);
     for (action, accels) in [
         ("app.play-pause", &["space"][..]),
         ("app.next", &["<Control>Right"]),
@@ -157,6 +158,11 @@ pub fn install_actions(application: &gtk::Application, backend: &Backend) {
         ("win.back", &["<Alt>Left"]),
         ("win.forward", &["<Alt>Right"]),
         ("win.jump-to-playing", &["<Control>j"]),
+        ("win.search", &["<Control>f"]),
+        ("win.track-properties", &["<Alt>Return"]),
+        ("win.undo", &["<Control>z"]),
+        ("win.select-all", &["<Control>a"]),
+        ("app.new-playlist", &["<Control>n"]),
     ] {
         application.set_accels_for_action(action, accels);
     }

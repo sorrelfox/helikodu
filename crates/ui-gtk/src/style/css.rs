@@ -18,7 +18,7 @@ pub(crate) struct Providers {
 impl Providers {
     pub(crate) fn install(display: &gdk::Display) -> Self {
         let priority = gtk::STYLE_PROVIDER_PRIORITY_APPLICATION;
-        for file in ["tokens.css", "helikodu.css"] {
+        for file in ["tokens.css", "helikodu.css", "dialogs.css", "views.css"] {
             let provider = gtk::CssProvider::new();
             provider.load_from_resource(&format!("{}/style/{file}", crate::RESOURCE_BASE));
             gtk::style_context_add_provider_for_display(display, &provider, priority);

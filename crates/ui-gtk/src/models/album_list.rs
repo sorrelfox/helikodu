@@ -49,7 +49,8 @@ glib::wrapper! {
 }
 
 impl AlbumItem {
-    fn new(key: AlbumKey, position: u32, row: Option<Rc<AlbumRow>>) -> Self {
+    /// An item at `position`, with its row if it is known.
+    pub(crate) fn new(key: AlbumKey, position: u32, row: Option<Rc<AlbumRow>>) -> Self {
         let obj: Self = glib::Object::new();
         obj.imp().key.set(key.0);
         obj.imp().position.set(position);

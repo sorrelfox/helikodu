@@ -1,0 +1,525 @@
+// SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! The dialogs' access to an invented core: settings kept in memory, a few
+//! made-up output devices, a library folder, tags made from the sample
+//! library, and a scan that ends at once. Nothing touches the disk or a sound
+//! device.
+
+use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex, PoisonError};
+
+use helikodu_model::audio::{DeviceCapabilities, SampleFormat, SampleRate};
+
+use super::super::services::{
+    Availability, BackendSelection, DatabaseInfo, Decoder, DecoderStatus, DeviceId, DeviceInfo,
+    DeviceSelection, EditTrack, FamilyStatus, FileFacts, FolderState, FormatFamily, FormatReport,
+    LibraryFolder, OutputBackendKind, OutputMode, OutputSelection, ScanStatus, Services, Settings,
+    StorageUsage, TagEdit, TagField, Versions, WriteResult,
+};
+use super::super::{BackendError, OutputInfo, SignalState, TrackKey, Update};
+use super::SampleLibrary;
+
+#[derive(Debug)]
+struct MemoryState {
+    settings: Arc<Settings>,
+    output: OutputSelection,
+    roots: Vec<PathBuf>,
+    edits: HashMap<TrackKey, BTreeMap<TagField, Vec<String>>>,
+    ratings: HashMap<TrackKey, Option<u8>>,
+    lyrics: HashMap<TrackKey, String>,
+    covers_removed: Vec<TrackKey>,
+}
+
+/// Invented settings, devices, folders and tags. See the module documentation.
+#[derive(Debug)]
+pub struct MemoryServices {
+    library: Option<Arc<SampleLibrary>>,
+    updates: Option<async_channel::Sender<Update>>,
+    state: Mutex<MemoryState>,
+}
+
+impl Default for MemoryServices {
+    fn default() -> Self {
+        Self::new(None, None, Vec::new())
+    }
+}
+
+/// The music folder of the sample library.
+fn music_folder() -> PathBuf {
+    gtk::glib::home_dir().join("Music")
+}
+
+impl MemoryServices {
+    fn new(
+        library: Option<Arc<SampleLibrary>>,
+        updates: Option<async_channel::Sender<Update>>,
+        roots: Vec<PathBuf>,
+    ) -> Self {
+        let mut settings = Settings::default();
+        settings.library.folders.clone_from(&roots);
+        Self {
+            library,
+            updates,
+            state: Mutex::new(MemoryState {
+                settings: Arc::new(settings),
+                output: OutputSelection::default(),
+                roots,
+                edits: HashMap::new(),
+                ratings: HashMap::new(),
+                lyrics: HashMap::new(),
+                covers_removed: Vec::new(),
+            }),
+        }
+    }
+
+    /// Services over `library` with one library folder, reporting to `updates`.
+    pub(super) fn for_library(
+        library: Arc<SampleLibrary>,
+        updates: async_channel::Sender<Update>,
+    ) -> Self {
+        Self::new(Some(library), Some(updates), vec![music_folder()])
+    }
+
+    /// The same services with no library folder, as before the first run.
+    #[must_use]
+    pub fn empty(self) -> Self {
+        {
+            let mut state = self.lock();
+            state.roots.clear();
+            let mut settings = (*state.settings).clone();
+            settings.library.folders.clear();
+            state.settings = Arc::new(settings);
+        }
+        self
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, MemoryState> {
+        self.state.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn emit(&self, update: Update) {
+        if let Some(updates) = &self.updates {
+            let _ = updates.try_send(update);
+        }
+    }
+
+    fn device_name(&self, selection: &OutputSelection) -> String {
+        let backend = self.resolve_backend(selection.backend);
+        match &selection.device {
+            DeviceSelection::SystemDefault => "System default".into(),
+            DeviceSelection::Device(id) => sample_devices(backend)
+                .into_iter()
+                .find(|d| d.id == *id)
+                .map_or_else(|| id.as_str().to_owned(), |d| d.description),
+        }
+    }
+}
+
+fn device(
+    backend: OutputBackendKind,
+    id: &str,
+    description: &str,
+    is_default: bool,
+    rates: &[u32],
+) -> DeviceInfo {
+    DeviceInfo {
+        backend,
+        id: DeviceId::new(id).unwrap_or_else(|_| DeviceId::new("default").expect("a valid name")),
+        description: description.into(),
+        is_default,
+        capabilities: DeviceCapabilities {
+            sample_rates: rates.iter().filter_map(|&hz| SampleRate::new(hz)).collect(),
+            formats: vec![
+                SampleFormat::S16(helikodu_model::audio::Endianness::Little),
+                SampleFormat::S32(helikodu_model::audio::Endianness::Little),
+            ],
+            channel_counts: vec![2],
+        },
+    }
+}
+
+fn sample_devices(backend: OutputBackendKind) -> Vec<DeviceInfo> {
+    match backend {
+        OutputBackendKind::Alsa => vec![
+            device(
+                backend,
+                "hw:CARD=PCH,DEV=0",
+                "Built-in Audio",
+                true,
+                &[44_100, 48_000, 96_000, 192_000],
+            ),
+            device(
+                backend,
+                "hw:CARD=Studio,DEV=0",
+                "Studio Interface",
+                false,
+                &[44_100, 48_000, 88_200, 96_000, 176_400, 192_000, 384_000],
+            ),
+            device(
+                backend,
+                "hw:CARD=HDMI,DEV=3",
+                "HDMI / DisplayPort 1",
+                false,
+                &[32_000, 44_100, 48_000],
+            ),
+        ],
+        _ => vec![
+            device(
+                backend,
+                "alsa_output.pci-0000_00_1f.3.analog-stereo",
+                "Built-in Audio",
+                true,
+                &[44_100, 48_000, 96_000, 192_000],
+            ),
+            device(
+                backend,
+                "alsa_output.usb-Studio_Interface-00.analog-stereo",
+                "Studio Interface",
+                false,
+                &[44_100, 48_000, 88_200, 96_000, 176_400, 192_000, 384_000],
+            ),
+            device(
+                backend,
+                "alsa_output.pci-0000_01_00.1.hdmi-stereo",
+                "HDMI / DisplayPort 1",
+                false,
+                &[32_000, 44_100, 48_000],
+            ),
+        ],
+    }
+}
+
+impl Services for MemoryServices {
+    fn settings(&self) -> Arc<Settings> {
+        self.lock().settings.clone()
+    }
+
+    fn update_settings(&self, change: &mut dyn FnMut(&mut Settings)) -> Result<(), BackendError> {
+        let mut state = self.lock();
+        let mut settings = (*state.settings).clone();
+        change(&mut settings);
+        settings
+            .validate()
+            .map_err(|e| BackendError(e.to_string()))?;
+        let output = settings.output.selection();
+        let moved = output != state.output;
+        state.settings = Arc::new(settings);
+        if moved {
+            state.output = output.clone();
+        }
+        drop(state);
+        if moved {
+            self.set_output(output);
+        }
+        Ok(())
+    }
+
+    fn settings_file(&self) -> Option<PathBuf> {
+        Some(
+            gtk::glib::user_config_dir()
+                .join("helikodu")
+                .join("settings.toml"),
+        )
+    }
+
+    fn output_backends(&self) -> Vec<OutputBackendKind> {
+        vec![OutputBackendKind::PipeWire, OutputBackendKind::Alsa]
+    }
+
+    fn resolve_backend(&self, selection: BackendSelection) -> OutputBackendKind {
+        match selection {
+            BackendSelection::Automatic => OutputBackendKind::PipeWire,
+            BackendSelection::Backend(kind) => kind,
+        }
+    }
+
+    fn devices(&self, backend: OutputBackendKind) -> Result<Vec<DeviceInfo>, BackendError> {
+        match backend {
+            OutputBackendKind::PipeWire | OutputBackendKind::Alsa => Ok(sample_devices(backend)),
+            other => Err(BackendError(format!(
+                "this build has no {} output",
+                other.as_str()
+            ))),
+        }
+    }
+
+    fn output(&self) -> OutputSelection {
+        self.lock().output.clone()
+    }
+
+    fn set_output(&self, selection: OutputSelection) {
+        let name = self.device_name(&selection);
+        {
+            let mut state = self.lock();
+            state.output = selection.clone();
+            let mut settings = (*state.settings).clone();
+            settings.output.backend = selection.backend;
+            settings.output.device = selection.device.clone();
+            settings.output.mode = selection.mode;
+            state.settings = Arc::new(settings);
+        }
+        let signal = if selection.mode == OutputMode::Exclusive {
+            SignalState::BitPerfect
+        } else {
+            SignalState::Idle
+        };
+        self.emit(Update::Output(OutputInfo {
+            device: name,
+            signal,
+            sample_rate: None,
+            bits: None,
+        }));
+    }
+
+    fn library_folders(&self) -> Result<Vec<LibraryFolder>, BackendError> {
+        let state = self.lock();
+        let tracks = self
+            .library
+            .as_ref()
+            .map(|l| l.albums.iter().map(|a| a.tracks.len()).sum());
+        Ok(state
+            .roots
+            .iter()
+            .enumerate()
+            .map(|(i, path)| LibraryFolder {
+                path: path.clone(),
+                state: if !state.settings.library.watch {
+                    FolderState::Manual
+                } else if path.starts_with("/mnt") {
+                    FolderState::Polled(state.settings.library.rescan_interval_min)
+                } else {
+                    FolderState::Watched
+                },
+                tracks: if i == 0 { tracks } else { Some(0) },
+            })
+            .collect())
+    }
+
+    fn scan(&self, folders: &[PathBuf]) -> Result<(), BackendError> {
+        {
+            let mut state = self.lock();
+            for folder in folders {
+                if !state.roots.contains(folder) {
+                    state.roots.push(folder.clone());
+                }
+            }
+        }
+        let total = self
+            .library
+            .as_ref()
+            .map_or(0, |l| l.albums.iter().map(|a| a.tracks.len()).sum());
+        self.emit(Update::Scan(ScanStatus {
+            current: folders.first().cloned(),
+            done: total / 8,
+            total: Some(total),
+            finished: false,
+            error: None,
+        }));
+        self.emit(Update::Scan(ScanStatus {
+            current: None,
+            done: total,
+            total: Some(total),
+            finished: true,
+            error: None,
+        }));
+        self.emit(Update::LibraryChanged);
+        Ok(())
+    }
+
+    fn database(&self) -> Option<DatabaseInfo> {
+        Some(DatabaseInfo {
+            path: gtk::glib::user_data_dir()
+                .join("helikodu")
+                .join("library.db"),
+            size: Some(412 << 20),
+        })
+    }
+
+    fn storage(&self) -> StorageUsage {
+        StorageUsage {
+            covers: Some(1_288_490_189),
+            analysis: Some(310 << 20),
+            logs: Some(12 << 20),
+            undo: Some(38 << 20),
+        }
+    }
+
+    fn edit_tracks(&self, tracks: &[TrackKey]) -> Result<Vec<EditTrack>, BackendError> {
+        let Some(library) = &self.library else {
+            return Ok(Vec::new());
+        };
+        let state = self.lock();
+        let mut found = Vec::new();
+        for key in tracks {
+            for album in &library.albums {
+                let Some(track) = album.tracks.iter().find(|t| t.key == *key) else {
+                    continue;
+                };
+                let total = album.tracks.len();
+                let number = track.number.unwrap_or(0);
+                let mut fields = BTreeMap::new();
+                let year = album.row.year.map(|y| y.to_string()).unwrap_or_default();
+                for (field, value) in [
+                    (TagField::Title, track.title.clone()),
+                    (TagField::Artist, track.artist.clone()),
+                    (TagField::AlbumArtist, album.row.artist.clone()),
+                    (TagField::Album, album.row.title.clone()),
+                    (TagField::Track, number.to_string()),
+                    (TagField::TrackTotal, total.to_string()),
+                    (TagField::Disc, track.disc.unwrap_or(1).to_string()),
+                    (TagField::DiscTotal, "1".into()),
+                    (TagField::Year, year.clone()),
+                    (TagField::Genre, super::GENRES[album.genre].to_string()),
+                    (TagField::Composer, album.row.artist.clone()),
+                ] {
+                    fields.insert(field, vec![value]);
+                }
+                if number % 2 == 1 {
+                    fields.insert(TagField::Comment, vec!["Recorded live".into()]);
+                }
+                if let Some(edits) = state.edits.get(key) {
+                    for (field, values) in edits {
+                        if values.is_empty() {
+                            fields.remove(field);
+                        } else {
+                            fields.insert(field.clone(), values.clone());
+                        }
+                    }
+                }
+                let path = track.path.clone().unwrap_or_else(|| {
+                    album
+                        .folder
+                        .join(format!("{number:02} {}.flac", track.title))
+                });
+                let codec = album.row.format.codec.as_deref().unwrap_or_default();
+                let tag_format = match codec {
+                    "MP3" => "ID3v2.4",
+                    "AAC" | "ALAC" => "MP4",
+                    _ => "Vorbis comments",
+                };
+                found.push(EditTrack {
+                    key: *key,
+                    path,
+                    fields,
+                    other: vec![
+                        ("LABEL".into(), "Saar Records".into()),
+                        ("CATALOGNUMBER".into(), format!("SR-{:03}", album.row.key.0)),
+                        ("REPLAYGAIN_ALBUM_GAIN".into(), "-5.82 dB".into()),
+                    ],
+                    rating: state.ratings.get(key).copied().unwrap_or(track.rating),
+                    cover: if state.covers_removed.contains(key) {
+                        None
+                    } else {
+                        album.row.cover
+                    },
+                    cover_seed: album.row.cover_seed,
+                    lyrics: state.lyrics.get(key).cloned(),
+                    read_only: None,
+                    facts: FileFacts {
+                        size: Some(28_400_000),
+                        modified: Some("12 Oct 2026, 14:02".into()),
+                        format: album.row.format.clone(),
+                        duration: track.duration,
+                        encoder: (codec == "FLAC").then(|| "reference libFLAC 1.4.3".into()),
+                        tag_formats: vec![tag_format.into()],
+                        pictures: 2,
+                        track_gain_db: Some(-4.1),
+                        track_peak: Some(0.92),
+                        album_gain_db: Some(-5.8),
+                        album_peak: Some(0.98),
+                        added: Some("2 Mar 2024".into()),
+                        last_played: Some("9 Nov 2026".into()),
+                        plays: Some(u64::from(track.plays)),
+                        skips: Some(1),
+                    },
+                });
+                break;
+            }
+        }
+        Ok(found)
+    }
+
+    fn write_tags(&self, edit: &TagEdit) -> Vec<WriteResult> {
+        let names: HashMap<TrackKey, String> = self
+            .edit_tracks(&edit.tracks)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|t| (t.key, t.file_name()))
+            .collect();
+        let mut state = self.lock();
+        edit.tracks
+            .iter()
+            .map(|key| {
+                let entry = state.edits.entry(*key).or_default();
+                for (field, values) in &edit.fields {
+                    entry.insert(field.clone(), values.clone());
+                }
+                if let Some(rating) = edit.rating {
+                    state.ratings.insert(*key, rating);
+                }
+                if let Some(lyrics) = &edit.lyrics {
+                    state.lyrics.insert(*key, lyrics.clone());
+                }
+                if let Some(super::super::services::CoverEdit::Remove) = &edit.cover {
+                    state.covers_removed.push(*key);
+                }
+                WriteResult {
+                    track: *key,
+                    file: names.get(key).cloned().unwrap_or_default(),
+                    error: None,
+                }
+            })
+            .collect()
+    }
+
+    fn formats(&self) -> FormatReport {
+        let built = [Decoder::Ffmpeg, Decoder::Dsd];
+        FormatReport {
+            decoders: Decoder::ALL
+                .iter()
+                .map(|&decoder| DecoderStatus {
+                    decoder,
+                    availability: if built.contains(&decoder) {
+                        Availability::Available
+                    } else {
+                        Availability::NotBuilt
+                    },
+                    version: match decoder {
+                        Decoder::Ffmpeg => Some("9.0.2".into()),
+                        _ => None,
+                    },
+                })
+                .collect(),
+            families: FormatFamily::ALL
+                .iter()
+                .map(|&family| {
+                    let decoder = family
+                        .decoders()
+                        .iter()
+                        .copied()
+                        .find(|d| built.contains(d))
+                        .unwrap_or(family.decoders()[0]);
+                    FamilyStatus {
+                        family,
+                        decoder,
+                        availability: if built.contains(&decoder) {
+                            Availability::Available
+                        } else {
+                            Availability::NotBuilt
+                        },
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    fn versions(&self) -> Versions {
+        Versions {
+            ffmpeg: Some("9.0.2".into()),
+            pipewire: Some("1.6.2".into()),
+            sqlite: Some("3.46.1".into()),
+        }
+    }
+}

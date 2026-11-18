@@ -1,0 +1,141 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * The library views beyond Albums: Tracks, Artists, Genres, Folders, the
+ * playlist page and search, the tables they share, drag and drop.
+ * Colours come from the same --hk-* variables as helikodu.css.
+ */
+
+/* ---- 1. Toolbars, pane headers, status bars ----------------------------- */
+
+.hk-toolbar { padding: 16px 24px 12px; }
+.hk-toolbar .hk-view-title { margin-right: 4px; }
+entry.hk-filter { min-height: 30px; font-family: monospace; font-size: 12px; }
+entry.hk-filter > image { margin-right: 6px; }
+.hk-list-pane { background-color: var(--hk-pane); border-right: 1px solid var(--hk-line); }
+.hk-pane-header { min-height: 54px; padding: 0 12px 0 20px; }
+list.hk-pane-list { padding: 0 8px 8px; }
+list.hk-pane-list > row { min-height: 34px; }
+list.hk-artist-list > row { min-height: 40px; }
+.hk-letter { min-height: 26px; padding: 6px 10px 0; color: var(--hk-t3); font-size: 11px; font-weight: 600; }
+.hk-statusbar > label { color: var(--hk-t3); }
+
+/* ---- 2. Tables ---------------------------------------------------------- */
+
+columnview.hk-table { background: none; color: var(--hk-t1); }
+columnview.hk-table > header {
+  min-height: 32px; background-color: var(--hk-win);
+  border-top: 1px solid var(--hk-line); border-bottom: 1px solid var(--hk-line);
+}
+columnview.hk-table > header > button {
+  min-height: 32px; padding: 0 8px; border: none; border-radius: 0; box-shadow: none;
+  background: none; background-image: none;
+  color: var(--hk-t3); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+}
+columnview.hk-table > header > button:first-child { padding-left: 24px; }
+columnview.hk-table > header > button:last-child { padding-right: 28px; }
+columnview.hk-table > header > button:hover { color: var(--hk-t1); background-color: var(--hk-hover); }
+/* The sort keys are written in the titles, with their number; GTK's own
+   indicator only knows the first key. */
+columnview.hk-table > header > button sort-indicator { min-width: 0; min-height: 0; -gtk-icon-source: none; margin: 0; }
+columnview.hk-table > listview { background: none; }
+columnview.hk-table > listview > row { min-height: 30px; padding: 0; background: none; border-radius: 0; color: var(--hk-t1); }
+columnview.hk-table > listview > row:hover { background-color: var(--hk-hover); }
+columnview.hk-table > listview > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
+columnview.hk-table > listview > row > cell { padding: 0; }
+columnview.hk-table > listview > row > cell > .hk-cell { min-height: 30px; padding: 0 8px; }
+columnview.hk-table > listview > row > cell:first-child > .hk-cell { padding-left: 24px; }
+columnview.hk-table > listview > row > cell:last-child > .hk-cell { padding-right: 28px; }
+columnview.hk-table > listview > row:not(:selected):not(:hover) > cell > .hk-cell.hk-alt { background-color: var(--hk-zebra); }
+.hk-cell.hk-playing label { color: var(--hk-accent-text); font-weight: 600; }
+.hk-cell.hk-playing label.hk-mono-meta { font-weight: 500; }
+
+/* The hand-built tables: playlist, folder files, most played. */
+.hk-table-header.hk-playlist-row, .hk-table-header.hk-file-row {
+  min-height: 32px; padding: 0 28px 0 12px; background-color: var(--hk-win);
+  border-top: 1px solid var(--hk-line); border-bottom: 1px solid var(--hk-line);
+}
+listview.hk-playlist { background: none; color: var(--hk-t1); }
+listview.hk-playlist > row { padding: 0; border-radius: 0; background: none; color: var(--hk-t1); }
+listview.hk-playlist > row:hover { background-color: var(--hk-hover); }
+listview.hk-playlist > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
+.hk-playlist .hk-cell { min-height: 36px; padding: 0 28px 0 12px; }
+listview.hk-playlist > row:not(:selected):not(:hover) > .hk-cell.hk-alt { background-color: var(--hk-zebra); }
+.hk-playlist-row { min-height: 36px; }
+.hk-drag-handle { color: var(--hk-t3); -gtk-icon-size: 12px; }
+.hk-cell.hk-missing label { color: var(--hk-t3); }
+.hk-cell.hk-dragged { opacity: 0.4; }
+.hk-cell.hk-drop-above { box-shadow: inset 0 2px 0 var(--hk-accent-fill); }
+.hk-cell.hk-drop-below { box-shadow: inset 0 -2px 0 var(--hk-accent-fill); }
+.hk-drag-ghost {
+  min-height: 38px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--hk-line2);
+  background-color: var(--hk-field); color: var(--hk-t1); font-weight: 500;
+  box-shadow: 0 10px 24px -8px rgba(0,0,0,0.45);
+}
+list.hk-sidebar-drop > row.hk-drop-into, row.hk-drop-into { box-shadow: inset 0 0 0 2px var(--hk-accent-fill); }
+
+list.hk-files { background: none; color: var(--hk-t1); }
+list.hk-files > row { min-height: 34px; padding: 0 28px 0 24px; border-radius: 0; background: none; color: var(--hk-t1); }
+list.hk-files > row.hk-alt { background-color: var(--hk-zebra); }
+list.hk-files > row:hover { background-color: var(--hk-hover); }
+list.hk-files > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
+list.hk-files > row.hk-playing label { color: var(--hk-accent-text); font-weight: 600; }
+.hk-file-name { font-size: 12px; }
+.hk-table-header.hk-file-row { padding-left: 24px; }
+
+list.hk-tracks.hk-compact > row { min-height: 34px; padding: 0 0; border-radius: 0; color: var(--hk-t1); }
+list.hk-tracks.hk-compact > row:selected, list.hk-pane-list > row:selected { color: var(--hk-t1); }
+.hk-most-played { margin-top: 28px; }
+.hk-most-played > .hk-table-header { min-height: 30px; padding: 0; }
+
+/* ---- 3. Pages ----------------------------------------------------------- */
+
+.hk-artist-hero { padding: 28px 32px 22px; }
+.hk-page-tabs { min-height: 38px; padding: 0 32px; border-bottom: 1px solid var(--hk-line); }
+.hk-page-tabs > button { min-height: 37px; }
+.hk-releases { padding: 24px 32px 32px; }
+menubutton.hk-more > button {
+  min-width: 34px; min-height: 34px; padding: 0; border-radius: 8px; border: 1px solid var(--hk-line2);
+  background: none; background-image: none; box-shadow: none; color: var(--hk-t1);
+}
+menubutton.hk-more > button:hover { background-color: var(--hk-hover); }
+.hk-detail-header { padding: 20px 28px 16px 24px; }
+.hk-folder-header { padding: 20px 28px 18px 24px; }
+.hk-folder-title { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; }
+.hk-path { font-size: 11.5px; }
+.hk-playlist-hero { padding: 22px 28px 20px; }
+.hk-mosaic { border-radius: 6px; }
+coverart.hk-mosaic-tile { border-radius: 0; }
+
+list.hk-tree, listview.hk-tree { padding: 0 8px 8px; background: none; color: var(--hk-t1); }
+listview.hk-tree > row { min-height: 30px; padding: 0 10px; border-radius: 6px; color: var(--hk-t2); background: none; }
+listview.hk-tree > row:hover { background-color: var(--hk-hover); }
+listview.hk-tree > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); font-weight: 600; }
+listview.hk-tree treeexpander indent { -gtk-icon-size: 18px; }
+listview.hk-tree treeexpander expander { -gtk-icon-size: 12px; min-width: 12px; color: var(--hk-t3); }
+
+/* ---- 4. Search ---------------------------------------------------------- */
+
+.hk-search { padding: 0 16px; }
+.hk-search-head { min-height: 34px; padding: 16px 8px 4px; }
+list.hk-results { background: none; color: var(--hk-t1); padding-bottom: 16px; }
+list.hk-results > row { min-height: 40px; padding: 0 10px; border-radius: 6px; background: none; color: var(--hk-t1); }
+list.hk-results > row:hover { background-color: var(--hk-hover); }
+list.hk-results > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
+list.hk-results > row.hk-result-section { min-height: 0; padding: 14px 10px 6px; }
+list.hk-results > row.hk-result-section:hover { background: none; }
+list.hk-results > row.hk-show-all { min-height: 34px; }
+.hk-hint { font-size: 12px; }
+.hk-no-results { padding: 16px 34px; }
+.hk-no-results .hk-view-title { margin-top: 10px; }
+
+/* ---- 5. Menus ----------------------------------------------------------- */
+
+/* A check item shows a mark in a 16 px column, not a box. */
+popover.menu modelbutton check {
+  min-width: 16px; min-height: 16px; margin: 0 6px 0 0; padding: 0;
+  border: none; border-radius: 0; background: none; background-image: none; box-shadow: none;
+  -gtk-icon-source: none; -gtk-icon-size: 12px; color: var(--hk-t1);
+}
+popover.menu modelbutton check:checked { -gtk-icon-source: -gtk-icontheme("helikodu-check-symbolic"); }

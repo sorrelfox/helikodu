@@ -7,6 +7,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
   <gresource prefix="/io/github/sorrelfox/Helikodu">
     <file>style/helikodu.css</file>
     <file>style/tokens.css</file>
+    <file>style/dialogs.css</file>
+    <file>style/views.css</file>
     <file preprocess="xml-stripblanks">ui/albums.ui</file>
     <file preprocess="xml-stripblanks">ui/album.ui</file>
     <file preprocess="xml-stripblanks">ui/deck.ui</file>

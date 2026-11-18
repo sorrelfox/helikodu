@@ -15,6 +15,7 @@ The Cargo features `pipewire`, `alsa` and `dsd` (all on by default) pass on to t
 | `bus.rs`, `event.rs` | `EventBus`, `Subscription` (derefs to a `Receiver`), `Waker` for main loops; `Event` (`Player`, `Settings`, `Library`), `SubscribeOptions` (kinds of events, position throttling) |
 | `clock.rs` | `Clock`, `SystemClock`, `FakeClock` for tests |
 | `files.rs` | `AppDirs` (XDG config, state, data, cache), `write_atomic` |
+| `formats.rs` | `supported_formats()`: the decoders this build has (from the engine's decoder registry) and the families of formats each reads, for the Supported formats page; `sqlite_version()` |
 | `settings.rs`, `settings/migrate.rs` | `SettingsStore` (`settings.toml`), `migrate` and `MIGRATIONS`, `applies`, `UiStateStore` (`ui-state.toml`) |
 | `player.rs`, `player/` | The player service |
 | `library.rs`, `library/` | `MusicLibrary` (blocking, typed queries) and `LibraryService` (worker thread, thumbnails, scans, watcher) |
@@ -48,7 +49,7 @@ Events (`PlayerEvent`): `State { playback, transport }`, `TrackChanged` (now pla
 
 ## Library
 
-`MusicLibrary` opens the database (`open`, `open_existing`, `in_memory`, `from_library`) and offers browsing (`albums`, `album`, `artists`, `genres`, `tracks`, `all_tracks`), `search`, `track_info`, `file_info`, `track_source` (file and CUE span), statistics (`stats`, `record_listen`, `history`), `rate` (whole stars), `overview` and `scan`.
+`MusicLibrary` opens the database (`open`, `open_existing`, `in_memory`, `from_library`) and offers browsing (`albums`, `album`, `artists`, `genres`, `tracks`, `all_tracks`), `search`, `track_info`, `file_info`, `track_source` (file and CUE span), `track_details` (path, tags and audio properties from the database), static playlists (`playlists`, `playlist`, `playlist_items`, `create_playlist`, `rename_playlist`, `delete_playlist`, `add_to_playlist`, `move_playlist_items`, `remove_from_playlist`, `import_playlist`, `export_playlist` as M3U8), statistics (`stats`, `record_listen`, `history`), `rate` (whole stars), `overview` and `scan`.
 
 `LibraryService` runs the same queries on its own thread and hands each result to a callback; `describe` gives what the queue panel shows; `thumbnail` answers from the cache or schedules the artwork pool (`LibraryEvent::ThumbnailReady`); `scan`, `watch`, `rescan` announce progress as `LibraryEvent::Scan`, `Watch`, `ScanEnded` and `Changed`.
 

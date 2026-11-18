@@ -110,11 +110,25 @@ pub enum AlbumSort {
     Added,
 }
 
+/// Which albums to list by their audio format.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum AlbumQuality {
+    /// Every album.
+    #[default]
+    Any,
+    /// Albums whose tracks are all in a lossless format.
+    Lossless,
+    /// Lossless albums with a track above 48 kHz or 16 bits.
+    HiRes,
+}
+
 /// A request for a list of albums.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct AlbumQuery {
     /// Which albums.
     pub filter: AlbumFilter,
+    /// Which albums by their audio format; combined with `filter`.
+    pub quality: AlbumQuality,
     /// In which order.
     pub sort: AlbumSort,
     /// Which page.
@@ -153,6 +167,25 @@ pub struct AlbumSummary {
     pub added_at: Option<i64>,
     /// The hash of its cover, the key of the thumbnail cache; `None` without one.
     pub cover: Option<CoverHash>,
+    /// The audio format of its tracks; `None` when no track has one.
+    pub format: Option<AlbumFormat>,
+}
+
+/// The audio format of an album, summed up from its tracks.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AlbumFormat {
+    /// The codec most of its tracks have, such as `flac` or `mp3`.
+    pub codec: Option<String>,
+    /// The highest sample rate of its tracks, in Hz.
+    pub sample_rate: Option<u32>,
+    /// The highest bit depth of its tracks, for lossless formats.
+    pub bit_depth: Option<u16>,
+    /// The highest bit rate of its tracks, in bit/s.
+    pub bitrate: Option<u32>,
+    /// Whether every track is in a lossless format.
+    pub lossless: bool,
+    /// Whether it is lossless with a track above 48 kHz or 16 bits.
+    pub hi_res: bool,
 }
 
 /// An album with its discs and tracks.

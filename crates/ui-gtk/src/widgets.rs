@@ -4,6 +4,8 @@
 //! Small widgets shared by the views, most of them drawn by hand with colours
 //! from the palette.
 
+pub(crate) mod avatar;
+pub(crate) mod bipolar_scale;
 pub(crate) mod brand_mark;
 pub(crate) mod cover_art;
 pub(crate) mod empty_state;
@@ -14,6 +16,7 @@ pub(crate) mod waveform_seek_bar;
 
 use gtk::prelude::*;
 
+pub(crate) use bipolar_scale::BipolarScale;
 pub(crate) use brand_mark::BrandMark;
 pub(crate) use cover_art::CoverArt;
 pub(crate) use playing_indicator::PlayingIndicator;

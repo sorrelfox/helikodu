@@ -9,8 +9,8 @@ use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
 
 use super::tracks::{ALBUM_ORDER, COLUMNS, FROM, summary};
 use super::{
-    AlbumDetail, AlbumFilter, AlbumQuery, AlbumSort, AlbumSummary, ArtistRef, Disc, GenreRef,
-    Paged, Params,
+    AlbumDetail, AlbumFilter, AlbumFormat, AlbumQuality, AlbumQuery, AlbumSort, AlbumSummary,
+    ArtistRef, Disc, GenreRef, Paged, Params,
 };
 use crate::catalog::ids::{AlbumId, GenreId, PersonId};
 use crate::catalog::roots::visibility;
@@ -49,7 +49,28 @@ fn album_row(row: &Row<'_>) -> rusqlite::Result<AlbumSummary> {
         cover: row
             .get::<_, Option<Vec<u8>>>(9)?
             .and_then(|hash| CoverHash::from_bytes(&hash)),
+        format: None,
     })
+}
+
+/// Whether the track `t` is in a lossless format, by its codec.
+const LOSSLESS: &str = "(lower(t.codec) IN ('flac', 'alac', 'ape', 'wavpack', 'tta', 'tak')
+    OR lower(t.codec) LIKE 'pcm%' OR lower(t.codec) LIKE 'dsd%')";
+
+/// The condition of `quality` on the albums `a`.
+fn quality_sql(quality: AlbumQuality) -> String {
+    let lossless = format!(
+        "NOT EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id
+                     AND (t.codec IS NULL OR NOT {LOSSLESS}))"
+    );
+    match quality {
+        AlbumQuality::Any => "1".to_owned(),
+        AlbumQuality::Lossless => lossless,
+        AlbumQuality::HiRes => format!(
+            "{lossless} AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id
+                                    AND (t.sample_rate > 48000 OR t.bit_depth > 16))"
+        ),
+    }
 }
 
 /// Fills in the counts of `album` from its tracks that satisfy `visible`.
@@ -65,7 +86,63 @@ fn add_counts(c: &Connection, album: &mut AlbumSummary, visible: &str) -> rusqli
     album.track_count = usize::try_from(tracks).unwrap_or(0);
     album.disc_count = u32::try_from(discs).unwrap_or(0);
     album.duration = duration.map(unix_time::from_millis);
+    album.format = album_format(c, album.id, visible)?;
     Ok(())
+}
+
+/// The audio format of the album `id` from its tracks that satisfy `visible`: the
+/// most frequent codec, the highest rate, depth and bit rate, and whether all
+/// tracks are lossless.
+fn album_format(
+    c: &Connection,
+    id: AlbumId,
+    visible: &str,
+) -> rusqlite::Result<Option<AlbumFormat>> {
+    type Summary = (
+        Option<String>,
+        Option<i64>,
+        Option<i64>,
+        Option<i64>,
+        i64,
+        i64,
+    );
+    let (codec, rate, depth, bitrate, lossy, with_codec): Summary = c
+        .prepare_cached(&format!(
+            "SELECT (SELECT t.codec FROM tracks t
+                     WHERE t.album_id = ?1 AND t.codec IS NOT NULL AND {visible}
+                     GROUP BY t.codec ORDER BY count(*) DESC, t.codec LIMIT 1),
+                    max(t.sample_rate), max(t.bit_depth), max(t.bitrate),
+                    sum(CASE WHEN t.codec IS NOT NULL AND {LOSSLESS} THEN 0 ELSE 1 END),
+                    count(t.codec)
+             FROM tracks t WHERE t.album_id = ?1 AND {visible}"
+        ))?
+        .query_row([id.0], |row| {
+            Ok((
+                row.get(0)?,
+                row.get(1)?,
+                row.get(2)?,
+                row.get(3)?,
+                row.get::<_, Option<i64>>(4)?.unwrap_or(0),
+                row.get(5)?,
+            ))
+        })?;
+    if with_codec == 0 && rate.is_none() {
+        return Ok(None);
+    }
+    let sample_rate = rate.and_then(|r| u32::try_from(r).ok());
+    let lossless = with_codec > 0 && lossy == 0;
+    let bit_depth = depth
+        .and_then(|d| u16::try_from(d).ok())
+        .filter(|_| lossless);
+    Ok(Some(AlbumFormat {
+        codec,
+        sample_rate,
+        bit_depth,
+        bitrate: bitrate.and_then(|b| u32::try_from(b).ok()),
+        lossless,
+        hi_res: lossless
+            && (sample_rate.is_some_and(|r| r > 48_000) || bit_depth.is_some_and(|d| d > 16)),
+    }))
 }
 
 /// The condition and parameters of `filter` on the albums `a`.
@@ -121,6 +198,7 @@ pub(crate) fn albums(c: &Connection, query: &AlbumQuery) -> rusqlite::Result<Pag
         format!("EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id AND {visible})")
     };
     let (filter, mut params) = filter_sql(query.filter);
+    let filter = format!("{filter} AND {}", quality_sql(query.quality));
     let total: i64 = c
         .prepare_cached(&format!(
             "SELECT count(*) FROM albums a WHERE {filter} AND {shown}"

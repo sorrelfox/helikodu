@@ -7,6 +7,8 @@
 
 pub(crate) mod album_list;
 pub(crate) mod covers;
+pub(crate) mod track_list;
 
 pub(crate) use album_list::{AlbumItem, AlbumListModel};
 pub(crate) use covers::CoverCache;
+pub(crate) use track_list::{TrackItem, TrackListModel};

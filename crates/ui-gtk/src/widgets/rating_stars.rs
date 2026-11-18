@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! RatingStars: five stars on a 13 px pitch, filled in the accent fill, empty
-//! ones in `line2`. Shows a rating; editing it comes with the tag editor.
+//! ones in `line2`. Shows a rating; an editable one sets it: a click on a star
+//! sets that many, a click on the current value clears it, and the arrow keys
+//! change it by one.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
@@ -37,9 +39,21 @@ fn star(x: f32, y: f32, size: f32) -> gsk::Path {
 mod imp {
     use super::*;
 
-    #[derive(Debug, Default)]
+    type Changed = Box<dyn Fn(Option<u8>)>;
+
+    #[derive(Default)]
     pub(crate) struct RatingStars {
         pub(super) stars: Cell<Option<u8>>,
+        pub(super) editable: Cell<bool>,
+        pub(super) changed: RefCell<Option<Changed>>,
+    }
+
+    impl std::fmt::Debug for RatingStars {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("RatingStars")
+                .field("stars", &self.stars)
+                .finish_non_exhaustive()
+        }
     }
 
     #[glib::object_subclass]
@@ -102,6 +116,63 @@ impl Default for RatingStars {
 }
 
 impl RatingStars {
+    /// Lets the user set the rating; `changed` gets each new value.
+    pub(crate) fn set_editable(&self, changed: impl Fn(Option<u8>) + 'static) {
+        let imp = self.imp();
+        if imp.editable.replace(true) {
+            imp.changed.replace(Some(Box::new(changed)));
+            return;
+        }
+        imp.changed.replace(Some(Box::new(changed)));
+        self.set_accessible_role(gtk::AccessibleRole::Slider);
+        self.set_focusable(true);
+        self.set_cursor_from_name(Some("pointer"));
+        let click = gtk::GestureClick::new();
+        click.set_button(gtk::gdk::BUTTON_PRIMARY);
+        let weak = self.downgrade();
+        click.connect_pressed(move |gesture, _, x, _| {
+            let Some(stars) = weak.upgrade() else { return };
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            let clicked = ((x as f32 / PITCH).floor() as u8 + 1).clamp(1, 5);
+            let new = if stars.imp().stars.get() == Some(clicked) {
+                None
+            } else {
+                Some(clicked)
+            };
+            stars.change(new);
+        });
+        self.add_controller(click);
+        let keys = gtk::EventControllerKey::new();
+        let weak = self.downgrade();
+        keys.connect_key_pressed(move |_, key, _, _| {
+            let Some(stars) = weak.upgrade() else {
+                return glib::Propagation::Proceed;
+            };
+            let now = stars.imp().stars.get().unwrap_or(0);
+            let new = match key {
+                gtk::gdk::Key::Right | gtk::gdk::Key::Up => now.saturating_add(1).min(5),
+                gtk::gdk::Key::Left | gtk::gdk::Key::Down => now.saturating_sub(1),
+                gtk::gdk::Key::Home => 0,
+                gtk::gdk::Key::End => 5,
+                _ => return glib::Propagation::Proceed,
+            };
+            stars.change((new > 0).then_some(new));
+            glib::Propagation::Stop
+        });
+        self.add_controller(keys);
+        self.set_rating(self.imp().stars.get());
+    }
+
+    fn change(&self, stars: Option<u8>) {
+        if self.imp().stars.get() == stars {
+            return;
+        }
+        self.set_rating(stars);
+        if let Some(changed) = self.imp().changed.borrow().as_ref() {
+            changed(stars);
+        }
+    }
+
     /// Shows `stars` (1 to 5), or none.
     pub(crate) fn set_rating(&self, stars: Option<u8>) {
         self.imp().stars.set(stars.map(|s| s.min(5)));
@@ -112,7 +183,18 @@ impl RatingStars {
             ),
             None => tr("Not rated"),
         };
-        self.update_property(&[gtk::accessible::Property::Label(&text)]);
+        if self.imp().editable.get() {
+            self.update_property(&[
+                gtk::accessible::Property::Label(&tr("Rating")),
+                gtk::accessible::Property::ValueMin(0.0),
+                gtk::accessible::Property::ValueMax(5.0),
+                gtk::accessible::Property::ValueNow(f64::from(stars.unwrap_or(0))),
+                gtk::accessible::Property::ValueText(&text),
+            ]);
+            self.set_tooltip_text(Some(&text));
+        } else {
+            self.update_property(&[gtk::accessible::Property::Label(&text)]);
+        }
         self.queue_draw();
     }
 }

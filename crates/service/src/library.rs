@@ -52,6 +52,11 @@ pub use helikodu_library::{
     ScanHandle, ScanSummary, SearchHit, Thumbnail, ThumbnailSize, TrackFilter, TrackKind,
     TrackQuery, TrackSection, TrackStats, TrackSummary, TrackTags, WatchEvent, WatchMode,
 };
+pub use helikodu_library::{
+    AlbumFormat, AlbumQuality, DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions,
+    ImportReport, ItemContent, PlaylistError, PlaylistId, PlaylistItem, PlaylistItemId,
+    PlaylistSummary, TrackDetails,
+};
 
 /// Why a library operation failed.
 #[derive(Debug, thiserror::Error)]
@@ -75,6 +80,9 @@ pub enum LibraryError {
     /// A rating outside 0 to 5 stars.
     #[error("{0} is not a rating from 0 to 5 stars")]
     InvalidRating(u8),
+    /// A playlist could not be read, changed, imported or exported.
+    #[error(transparent)]
+    Playlist(#[from] PlaylistError),
     /// A scan was asked for without folders, and the library has none.
     #[error("the library has no folders yet; name the folders to scan")]
     NoFolders,
@@ -369,6 +377,117 @@ impl MusicLibrary {
     /// The listening history, newest first.
     pub fn history(&self, query: &HistoryQuery) -> Result<Vec<HistoryEntry>, LibraryError> {
         Ok(self.library.history(query)?)
+    }
+
+    /// What the library holds about `track` without reading its file: its path, tags
+    /// and audio properties; `None` if there is no such track.
+    pub fn track_details(&self, track: TrackId) -> Result<Option<TrackDetails>, LibraryError> {
+        Ok(self.library.track_details(track)?)
+    }
+
+    /// Every static playlist, in the order they were created.
+    pub fn playlists(&self) -> Result<Vec<PlaylistSummary>, LibraryError> {
+        let mut all = Vec::new();
+        loop {
+            let page = self.library.playlists(Page::new(all.len(), MAX_PAGE))?;
+            let done = page.items.is_empty() || all.len() + page.items.len() >= page.total;
+            all.extend(page.items);
+            if done {
+                return Ok(all);
+            }
+        }
+    }
+
+    /// The static playlist `playlist`, if there is one.
+    pub fn playlist(&self, playlist: PlaylistId) -> Result<Option<PlaylistSummary>, LibraryError> {
+        Ok(self.library.playlist(playlist)?)
+    }
+
+    /// Every item of the static playlist `playlist`, in order.
+    pub fn playlist_items(&self, playlist: PlaylistId) -> Result<Vec<PlaylistItem>, LibraryError> {
+        let mut all = Vec::new();
+        loop {
+            let page = self
+                .library
+                .playlist_items(playlist, Page::new(all.len(), MAX_PAGE))?;
+            let done = page.items.is_empty() || all.len() + page.items.len() >= page.total;
+            all.extend(page.items);
+            if done {
+                return Ok(all);
+            }
+        }
+    }
+
+    /// Creates an empty static playlist named `name`.
+    pub fn create_playlist(&self, name: &str) -> Result<PlaylistId, LibraryError> {
+        Ok(self.library.create_playlist(name)?)
+    }
+
+    /// Renames `playlist`.
+    pub fn rename_playlist(&self, playlist: PlaylistId, name: &str) -> Result<(), LibraryError> {
+        Ok(self.library.rename_playlist(playlist, name)?)
+    }
+
+    /// Deletes `playlist` with its items.
+    pub fn delete_playlist(&self, playlist: PlaylistId) -> Result<(), LibraryError> {
+        Ok(self.library.delete_playlist(playlist)?)
+    }
+
+    /// Inserts `tracks` into `playlist` at `position`, or adds them at its end.
+    pub fn add_to_playlist(
+        &self,
+        playlist: PlaylistId,
+        tracks: Vec<TrackId>,
+        position: Option<usize>,
+    ) -> Result<(), LibraryError> {
+        match position {
+            Some(position) => self
+                .library
+                .insert_into_playlist(playlist, position, tracks)?,
+            None => {
+                self.library.add_to_playlist(playlist, tracks)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Moves the items at `positions` of `playlist` before the item at `to`, keeping
+    /// their order; returns the new position of the first.
+    pub fn move_playlist_items(
+        &self,
+        playlist: PlaylistId,
+        positions: Vec<usize>,
+        to: usize,
+    ) -> Result<usize, LibraryError> {
+        Ok(self.library.move_playlist_items(playlist, positions, to)?)
+    }
+
+    /// Removes the items at `positions` from `playlist`; returns how many went.
+    pub fn remove_from_playlist(
+        &self,
+        playlist: PlaylistId,
+        positions: Vec<usize>,
+    ) -> Result<usize, LibraryError> {
+        Ok(self.library.remove_from_playlist(playlist, positions)?)
+    }
+
+    /// Imports the playlist file at `path` (M3U, M3U8, PLS or XSPF) as a new playlist.
+    pub fn import_playlist(&self, path: &Path) -> Result<ImportReport, LibraryError> {
+        Ok(self
+            .library
+            .import_playlist(path, &ImportOptions::default())?)
+    }
+
+    /// Exports `playlist` to `path` as M3U8 with relative paths, replacing the file
+    /// atomically.
+    pub fn export_playlist(
+        &self,
+        playlist: PlaylistId,
+        path: &Path,
+    ) -> Result<ExportReport, LibraryError> {
+        Ok(self
+            .library
+            .export_playlist(playlist, path, ExportOptions::default())?)
     }
 
     /// The library folders and whether each is masked or polled.

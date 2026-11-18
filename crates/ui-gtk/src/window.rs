@@ -8,6 +8,8 @@
 //! drag it and hold the desktop's window buttons. In the classic style the
 //! desktop draws its title bar, and the menu bar can be shown (Ctrl+M).
 
+pub(crate) mod dialog_hooks;
+pub(crate) mod pages;
 pub(crate) mod pane_handle;
 pub(crate) mod panel;
 pub(crate) mod sidebar;
@@ -21,7 +23,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{CompositeTemplate, gio, glib};
 
-use crate::backend::{AlbumKey, Backend, Update};
+use crate::backend::{AlbumKey, ArtistKey, Backend, GenreKey, PlaylistKey, Update};
 use crate::deck::Deck;
 use crate::i18n::tr;
 use crate::models::CoverCache;
@@ -90,9 +92,13 @@ fn menubar_model(menu: &gio::MenuModel) -> gio::Menu {
 
 /// A page of the content area.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Page {
+pub(crate) enum Page {
     Library(&'static str),
     Album(AlbumKey),
+    Artist(ArtistKey),
+    Genre(GenreKey),
+    Playlist(PlaylistKey),
+    Search,
 }
 
 const SIDEBAR_WIDTH: (i32, (i32, i32)) = (228, (180, 360));
@@ -145,6 +151,7 @@ mod imp {
         pub(super) index: Cell<usize>,
         pub(super) placeholders: RefCell<HashSet<&'static str>>,
         pub(super) notifications: Cell<bool>,
+        pub(super) pages: RefCell<Option<Rc<pages::Pages>>>,
     }
 
     #[glib::object_subclass]
@@ -263,8 +270,10 @@ impl MainWindow {
         imp.views.add_named(&album, Some("album"));
         imp.albums.replace(Some(albums));
         imp.album.replace(Some(album));
+        self.setup_pages(backend, &playback, &covers);
 
         imp.deck.bind(backend, &playback, &covers);
+        self.setup_dialogs(backend, &playback);
         imp.panel.bind(backend, &playback, &covers);
         let toasts = ToastOverlay::new(&imp.toast_overlay);
         imp.toasts.replace(Some(toasts));
@@ -285,6 +294,7 @@ impl MainWindow {
                         albums.reload();
                     }
                     window.load_counts();
+                    window.library_changed();
                 }
                 Update::Raise => window.present(),
                 Update::Quit => {
@@ -479,12 +489,15 @@ impl MainWindow {
             "tracks" => "tracks",
             "genres" => "genres",
             "folders" => "folders",
-            _ => return,
+            other => {
+                self.open_sidebar_row(other);
+                return;
+            }
         };
         self.go(Page::Library(page), true);
     }
 
-    fn go(&self, page: Page, record: bool) {
+    pub(crate) fn go(&self, page: Page, record: bool) {
         let imp = self.imp();
         if record {
             let mut history = imp.history.borrow_mut();
@@ -497,14 +510,18 @@ impl MainWindow {
                 imp.index.set(history.len() - 1);
             }
         }
-        let selected = match page {
+        let selected: String = match page {
+            Page::Library(name) if self.has_page(name) => self.show_page(page),
+            Page::Artist(_) | Page::Genre(_) | Page::Playlist(_) | Page::Search => {
+                self.show_page(page)
+            }
             Page::Library(name) => {
                 if name != "albums" && imp.placeholders.borrow_mut().insert(name) {
                     imp.views
                         .add_named(&placeholder(page_icon(name), &page_title(name)), Some(name));
                 }
                 imp.views.set_visible_child_name(name);
-                name
+                name.into()
             }
             Page::Album(key) => {
                 if let Some(album) = imp.album.borrow().as_ref()
@@ -513,11 +530,11 @@ impl MainWindow {
                     album.show_album(key);
                 }
                 imp.views.set_visible_child_name("album");
-                "albums"
+                "albums".into()
             }
         };
         if let Some(sidebar) = imp.sidebar.borrow().as_ref() {
-            sidebar.select(Some(selected));
+            sidebar.select((!selected.is_empty()).then_some(selected.as_ref()));
         }
         self.update_history_actions();
     }
@@ -611,6 +628,7 @@ impl MainWindow {
         let content_target = match imp.views.visible_child_name().as_deref() {
             Some("albums") => imp.albums.borrow().as_ref().map(AlbumsView::focus_target),
             Some("album") => imp.album.borrow().as_ref().map(AlbumPage::focus_target),
+            Some(name) => self.page_focus_target(name),
             _ => None,
         }
         .unwrap_or_else(|| imp.back.get().upcast());

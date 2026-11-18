@@ -1,0 +1,921 @@
+// SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! A static playlist: the hero (a mosaic of the first covers, the name, a
+//! summary, Play, Shuffle, Export and more), the table of its entries, and the
+//! status bar.
+//!
+//! Entries are reordered by dragging them: the dragged rows fade, a line marks
+//! where they go, and the status bar says so. Tracks dragged in from other
+//! lists are inserted where they are dropped. Delete removes the selected
+//! entries, with Undo in the toast.
+
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
+use std::time::{Duration, SystemTime};
+
+use gtk::prelude::*;
+use gtk::{gdk, gio, glib};
+
+use crate::backend::{Backend, PlayerRequest, PlaylistKey, PlaylistRow, TrackKey, TrackRow};
+use crate::format;
+use crate::i18n::{fill, ntr, tr};
+use crate::models::{CoverCache, TrackItem};
+use crate::playback::{Change, Playback};
+use crate::views::actions::{self, Origin, Target};
+use crate::views::artists::button;
+use crate::views::drag::DraggedTracks;
+use crate::views::table::{TableCell, cell_at, selected_positions};
+use crate::widgets::{CoverArt, PlayingIndicator, label};
+
+/// "edited yesterday", from when a playlist last changed.
+fn edited(modified: Option<SystemTime>) -> Option<String> {
+    let modified = modified?;
+    let then = glib::DateTime::from_unix_local(
+        i64::try_from(
+            modified
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .ok()?
+                .as_secs(),
+        )
+        .ok()?,
+    )
+    .ok()?;
+    let now = glib::DateTime::now_local().ok()?;
+    let day = |d: &glib::DateTime| d.year() * 400 + d.day_of_year();
+    let days = day(&now) - day(&then);
+    Some(match days {
+        ..=0 => tr("edited today"),
+        1 => tr("edited yesterday"),
+        2..=6 => fill(
+            &ntr("edited {} day ago", "edited {} days ago", days as usize),
+            &[&days.to_string()],
+        ),
+        _ => fill(&tr("edited {}"), &[then.format("%x").ok()?.as_str()]),
+    })
+}
+
+/// The columns of the table: label, width (0 expands), right-aligned.
+fn columns() -> [(String, i32, bool); 6] {
+    [
+        (String::new(), 16, false),
+        ("#".to_owned(), 22, true),
+        (tr("Title"), 0, false),
+        (tr("Artist"), 0, false),
+        (tr("Album"), 0, false),
+        (tr("Length"), 48, true),
+    ]
+}
+
+/// A playlist page.
+pub(crate) struct PlaylistView {
+    pub(crate) root: gtk::Box,
+    mosaic: [CoverArt; 4],
+    name: gtk::Label,
+    summary: gtk::Label,
+    list: gtk::ListView,
+    store: gio::ListStore,
+    selection: gtk::MultiSelection,
+    status_left: gtk::Label,
+    status_right: gtk::Label,
+    backend: Backend,
+    covers: Rc<CoverCache>,
+    key: Cell<Option<PlaylistKey>>,
+    rows: RefCell<Vec<TrackRow>>,
+    info: RefCell<Option<PlaylistRow>>,
+    generation: Cell<u64>,
+    playing: Cell<Option<TrackKey>>,
+    cells: RefCell<Vec<glib::WeakRef<TableCell>>>,
+    drop_line: RefCell<Option<TableCell>>,
+}
+
+impl std::fmt::Debug for PlaylistView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PlaylistView")
+            .field("key", &self.key)
+            .finish_non_exhaustive()
+    }
+}
+
+impl PlaylistView {
+    /// The page over `backend`.
+    pub(crate) fn new(
+        backend: &Backend,
+        playback: &Rc<Playback>,
+        covers: &Rc<CoverCache>,
+    ) -> Rc<Self> {
+        let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let hero = gtk::Box::new(gtk::Orientation::Horizontal, 20);
+        hero.add_css_class("hk-playlist-hero");
+        let grid = gtk::Grid::new();
+        grid.add_css_class("hk-mosaic");
+        grid.set_valign(gtk::Align::Center);
+        grid.set_overflow(gtk::Overflow::Hidden);
+        let mosaic = [
+            CoverArt::new(44, 0.0),
+            CoverArt::new(44, 0.0),
+            CoverArt::new(44, 0.0),
+            CoverArt::new(44, 0.0),
+        ];
+        for (i, art) in mosaic.iter().enumerate() {
+            art.add_css_class("hk-mosaic-tile");
+            grid.attach(art, (i % 2) as i32, (i / 2) as i32, 1, 1);
+        }
+        hero.append(&grid);
+        let titles = gtk::Box::new(gtk::Orientation::Vertical, 2);
+        titles.set_hexpand(true);
+        titles.set_valign(gtk::Align::Center);
+        titles.append(&label(&tr("Playlist"), &["hk-section-label"]));
+        let name = label("", &["hk-hero-title", "small"]);
+        name.set_accessible_role(gtk::AccessibleRole::Heading);
+        titles.append(&name);
+        let summary = label("", &["hk-t3"]);
+        titles.append(&summary);
+        hero.append(&titles);
+        let play = button(&tr("Play"), Some("media-playback-start-symbolic"), true);
+        let shuffle = button(
+            &tr("Shuffle"),
+            Some("media-playlist-shuffle-symbolic"),
+            false,
+        );
+        let export = button(&tr("Export"), Some("helikodu-export-symbolic"), false);
+        let more = gtk::MenuButton::new();
+        more.set_icon_name("view-more-symbolic");
+        more.add_css_class("hk-more");
+        more.set_tooltip_text(Some(&tr("More")));
+        more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
+        let menu = gio::Menu::new();
+        menu.append(Some(&tr("Rename…")), Some("playlist-page.rename"));
+        let delete = gio::Menu::new();
+        delete.append(Some(&tr("Delete…")), Some("playlist-page.delete"));
+        menu.append_section(None, &delete);
+        more.set_menu_model(Some(&menu));
+        let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        buttons.set_valign(gtk::Align::Center);
+        for b in [
+            play.upcast_ref::<gtk::Widget>(),
+            shuffle.upcast_ref(),
+            export.upcast_ref(),
+            more.upcast_ref(),
+        ] {
+            buttons.append(b);
+        }
+        hero.append(&buttons);
+        root.append(&hero);
+
+        let header = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+        header.add_css_class("hk-table-header");
+        header.add_css_class("hk-playlist-row");
+        for (i, (text, width, right)) in columns().into_iter().enumerate() {
+            let l = label(&text, &["hk-section-label"]);
+            if width > 0 {
+                l.set_size_request(width, -1);
+            } else {
+                l.set_hexpand(true);
+                l.set_max_width_chars(1);
+            }
+            if right {
+                l.set_xalign(1.0);
+            }
+            if i == 2 {
+                // The rows' title cell starts with a cover; the same room here
+                // keeps the columns of header and rows in line.
+                let cell = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+                cell.set_hexpand(true);
+                cell.append(&l);
+                let room = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                room.set_size_request(24, -1);
+                cell.append(&room);
+                header.append(&cell);
+            } else {
+                header.append(&l);
+            }
+        }
+        root.append(&header);
+
+        let store = gio::ListStore::new::<TrackItem>();
+        let selection = gtk::MultiSelection::new(Some(store.clone()));
+        let list = gtk::ListView::new(Some(selection.clone()), None::<gtk::ListItemFactory>);
+        list.add_css_class("hk-playlist");
+        list.set_vexpand(true);
+        list.update_property(&[gtk::accessible::Property::Label(&tr("Playlist entries"))]);
+        let scroller = gtk::ScrolledWindow::new();
+        scroller.set_hscrollbar_policy(gtk::PolicyType::Never);
+        scroller.set_vexpand(true);
+        scroller.set_child(Some(&list));
+        root.append(&scroller);
+        let status = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        status.add_css_class("hk-statusbar");
+        let status_left = label("", &[]);
+        status_left.set_hexpand(true);
+        status.append(&status_left);
+        let status_right = label("", &[]);
+        status.append(&status_right);
+        root.append(&status);
+
+        let view = Rc::new(Self {
+            root,
+            mosaic,
+            name,
+            summary,
+            list,
+            store,
+            selection,
+            status_left,
+            status_right,
+            backend: backend.clone(),
+            covers: covers.clone(),
+            key: Cell::new(None),
+            rows: RefCell::new(Vec::new()),
+            info: RefCell::new(None),
+            generation: Cell::new(0),
+            playing: Cell::new(None),
+            cells: RefCell::new(Vec::new()),
+            drop_line: RefCell::new(None),
+        });
+        view.list.set_factory(Some(&view.factory()));
+        view.connect(playback, &play, &shuffle, &export);
+        view
+    }
+
+    fn factory(self: &Rc<Self>) -> gtk::SignalListItemFactory {
+        let factory = gtk::SignalListItemFactory::new();
+        let weak = Rc::downgrade(self);
+        factory.connect_setup(move |_, item| {
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+                return;
+            };
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+            line.add_css_class("hk-playlist-row");
+            let handle = gtk::Image::from_icon_name("helikodu-drag-handle-symbolic");
+            handle.add_css_class("hk-drag-handle");
+            handle.set_size_request(16, -1);
+            line.append(&handle);
+            let lead = gtk::Stack::new();
+            lead.set_size_request(22, -1);
+            let number = label("", &["hk-t3", "hk-numeric"]);
+            number.set_xalign(1.0);
+            lead.add_named(&number, Some("number"));
+            let indicator = PlayingIndicator::default();
+            indicator.set_halign(gtk::Align::End);
+            lead.add_named(&indicator, Some("playing"));
+            line.append(&lead);
+            let title_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+            title_box.set_hexpand(true);
+            let cover = CoverArt::new(24, 4.0);
+            cover.add_css_class("small");
+            title_box.append(&cover);
+            let title = label("", &["hk-medium"]);
+            title.set_max_width_chars(1);
+            title.set_hexpand(true);
+            title_box.append(&title);
+            line.append(&title_box);
+            for _ in 0..2 {
+                let l = label("", &["hk-t2"]);
+                l.set_hexpand(true);
+                l.set_max_width_chars(1);
+                line.append(&l);
+            }
+            let length = label("", &["hk-t2", "hk-numeric"]);
+            length.set_xalign(1.0);
+            length.set_size_request(48, -1);
+            line.append(&length);
+            let cell = TableCell::new(&line);
+            if let Some(view) = weak.upgrade() {
+                view.cells.borrow_mut().push(cell.downgrade());
+            }
+            item.set_child(Some(&cell));
+        });
+        let weak = Rc::downgrade(self);
+        factory.connect_bind(move |_, item| {
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+                return;
+            };
+            let (Some(cell), Some(track), Some(view)) = (
+                item.child().and_downcast::<TableCell>(),
+                item.item().and_downcast::<TrackItem>(),
+                weak.upgrade(),
+            ) else {
+                return;
+            };
+            cell.set_position(Some(track.position()));
+            let w = Rc::downgrade(&view);
+            cell.follow(&track, move |cell, track| {
+                if let Some(view) = w.upgrade() {
+                    view.show_row(cell, track);
+                }
+            });
+        });
+        factory.connect_unbind(|_, item| {
+            if let Some(cell) = item
+                .downcast_ref::<gtk::ListItem>()
+                .and_then(|i| i.child().and_downcast::<TableCell>())
+            {
+                cell.forget();
+                cell.set_position(None);
+            }
+        });
+        factory
+    }
+
+    fn show_row(&self, cell: &TableCell, track: &TrackItem) {
+        let Some(row) = track.row() else { return };
+        let Some(line) = cell.child() else { return };
+        let children: Vec<gtk::Widget> = {
+            let mut out = Vec::new();
+            let mut child = line.first_child();
+            while let Some(w) = child {
+                child = w.next_sibling();
+                out.push(w);
+            }
+            out
+        };
+        let [_, lead, title_box, artist, album, length] = children.as_slice() else {
+            return;
+        };
+        let playing = !row.missing && self.playing.get() == Some(row.key);
+        if let Some(lead) = lead.downcast_ref::<gtk::Stack>() {
+            lead.set_visible_child_name(if playing { "playing" } else { "number" });
+            if let Some(number) = lead.child_by_name("number").and_downcast::<gtk::Label>() {
+                number.set_text(&(track.position() + 1).to_string());
+            }
+        }
+        if let Some(cover) = title_box.first_child().and_downcast::<CoverArt>() {
+            self.covers.show(&cover, row.cover, row.cover_seed, 24);
+        }
+        if let Some(title) = title_box.last_child().and_downcast::<gtk::Label>() {
+            if row.missing {
+                title.set_text(&fill(&tr("{} · Missing"), &[&row.title]));
+            } else {
+                title.set_text(&row.title);
+            }
+        }
+        if let Some(l) = artist.downcast_ref::<gtk::Label>() {
+            l.set_text(&row.artist);
+        }
+        if let Some(l) = album.downcast_ref::<gtk::Label>() {
+            l.set_text(&row.album_title);
+        }
+        if let Some(l) = length.downcast_ref::<gtk::Label>() {
+            l.set_text(&row.duration.map(format::duration).unwrap_or_default());
+        }
+        for (class, on) in [("hk-playing", playing), ("hk-missing", row.missing)] {
+            if on {
+                cell.add_css_class(class);
+            } else {
+                cell.remove_css_class(class);
+            }
+        }
+    }
+
+    fn connect(
+        self: &Rc<Self>,
+        playback: &Rc<Playback>,
+        play: &gtk::Button,
+        shuffle: &gtk::Button,
+        export: &gtk::Button,
+    ) {
+        for (button, random) in [(play, false), (shuffle, true)] {
+            let weak = Rc::downgrade(self);
+            button.connect_clicked(move |_| {
+                if let Some(view) = weak.upgrade() {
+                    view.play_from(0, random);
+                }
+            });
+        }
+        let weak = Rc::downgrade(self);
+        export.connect_clicked(move |_| {
+            if let (Some(view), Some(window)) =
+                (weak.upgrade(), weak.upgrade().and_then(|v| v.window()))
+                && let Some(key) = view.key.get()
+            {
+                window.export_playlist(key);
+            }
+        });
+        let group = gio::SimpleActionGroup::new();
+        for name in ["rename", "delete"] {
+            let action = gio::SimpleAction::new(name, None);
+            let weak = Rc::downgrade(self);
+            action.connect_activate(move |action, _| {
+                let Some(view) = weak.upgrade() else { return };
+                let (Some(key), Some(window)) = (view.key.get(), view.window()) else {
+                    return;
+                };
+                if action.name() == "rename" {
+                    window.rename_playlist(key);
+                } else {
+                    window.delete_playlist(key);
+                }
+            });
+            group.add_action(&action);
+        }
+        self.root.insert_action_group("playlist-page", Some(&group));
+        let weak = Rc::downgrade(self);
+        self.list.connect_activate(move |_, position| {
+            if let Some(view) = weak.upgrade() {
+                view.play_from(position as usize, false);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        playback.connect(move |player, change| {
+            if let Some(view) = weak.upgrade()
+                && change == Change::Track
+            {
+                let key = player.now.as_ref().map(|n| n.track.key);
+                if view.playing.replace(key) != key {
+                    view.redraw();
+                }
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.selection.connect_selection_changed(move |_, _, _| {
+            if let Some(view) = weak.upgrade() {
+                view.show_status();
+            }
+        });
+        // Context menu, Menu key, Delete.
+        let click = gtk::GestureClick::new();
+        click.set_button(gdk::BUTTON_SECONDARY);
+        let weak = Rc::downgrade(self);
+        click.connect_pressed(move |gesture, _, x, y| {
+            let Some(view) = weak.upgrade() else { return };
+            if let Some(position) = cell_at(&view.list, x, y).and_then(|c| c.position()) {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                if !view.selection.is_selected(position) {
+                    view.selection.select_item(position, true);
+                }
+                if let Some(target) = view.target() {
+                    actions::popup(&view.list, target, Some((x, y)));
+                }
+            }
+        });
+        self.list.add_controller(click);
+        let keys = gtk::EventControllerKey::new();
+        let weak = Rc::downgrade(self);
+        keys.connect_key_pressed(move |_, key, _, state| {
+            let Some(view) = weak.upgrade() else {
+                return glib::Propagation::Proceed;
+            };
+            let Some(target) = view.target() else {
+                return glib::Propagation::Proceed;
+            };
+            if actions::is_menu_key(key, state) {
+                actions::popup(&view.list, target, None);
+                return glib::Propagation::Stop;
+            }
+            if key == gdk::Key::Delete
+                && let Some(window) = view.window()
+            {
+                window.set_target(Some(target));
+                WidgetExt::activate_action(&window, "win.sel-remove", None).ok();
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        self.list.add_controller(keys);
+        // Dragging rows out (and within, to reorder).
+        let weak = Rc::downgrade(self);
+        let source = DraggedTracks::source(&self.list, move |x, y| {
+            let view = weak.upgrade()?;
+            let key = view.key.get()?;
+            let position = cell_at(&view.list, x, y)?.position()?;
+            if !view.selection.is_selected(position) {
+                view.selection.select_item(position, true);
+            }
+            let positions: Vec<usize> = selected_positions(&view.selection)
+                .into_iter()
+                .map(|p| p as usize)
+                .collect();
+            let rows = view.rows.borrow();
+            let keys = positions
+                .iter()
+                .filter_map(|p| rows.get(*p))
+                .filter(|r| !r.missing)
+                .map(|r| r.key)
+                .collect();
+            let label = match positions.as_slice() {
+                [one] => rows.get(*one).map(|r| r.title.clone()).unwrap_or_default(),
+                many => fill(
+                    &ntr("{} track", "{} tracks", many.len()),
+                    &[&many.len().to_string()],
+                ),
+            };
+            Some((
+                DraggedTracks {
+                    keys,
+                    album: None,
+                    from_playlist: Some((key, positions)),
+                },
+                label,
+            ))
+        });
+        let weak = Rc::downgrade(self);
+        source.connect_drag_begin(move |_, _| {
+            if let Some(view) = weak.upgrade() {
+                view.mark_dragged(true);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        source.connect_drag_end(move |_, _, _| {
+            if let Some(view) = weak.upgrade() {
+                view.mark_dragged(false);
+                view.clear_drop_line();
+                view.show_status();
+            }
+        });
+        let target = DraggedTracks::target(gdk::DragAction::COPY | gdk::DragAction::MOVE);
+        let weak = Rc::downgrade(self);
+        target.connect_motion(move |target, x, y| {
+            let Some(view) = weak.upgrade() else {
+                return gdk::DragAction::empty();
+            };
+            let moving = target
+                .value()
+                .and_then(|v| v.get::<DraggedTracks>().ok())
+                .and_then(|d| d.from_playlist.filter(|(k, _)| Some(*k) == view.key.get()))
+                .map(|(_, positions)| positions.len());
+            let to = view.drop_position(x, y);
+            match moving {
+                Some(count) => {
+                    view.status_left.set_text(&fill(
+                        &ntr(
+                            "Moving {} track to position {}",
+                            "Moving {} tracks to position {}",
+                            count,
+                        ),
+                        &[&count.to_string(), &(to + 1).to_string()],
+                    ));
+                    view.status_right.set_text(&tr("Esc cancels"));
+                    gdk::DragAction::MOVE
+                }
+                None => gdk::DragAction::COPY,
+            }
+        });
+        let weak = Rc::downgrade(self);
+        target.connect_leave(move |_| {
+            if let Some(view) = weak.upgrade() {
+                view.clear_drop_line();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        target.connect_drop(move |_, value, x, y| {
+            let (Some(view), Ok(dragged)) = (weak.upgrade(), value.get::<DraggedTracks>()) else {
+                return false;
+            };
+            let to = view.drop_position(x, y);
+            view.clear_drop_line();
+            view.dropped(dragged, to);
+            true
+        });
+        self.list.add_controller(target);
+    }
+
+    fn window(&self) -> Option<crate::window::MainWindow> {
+        self.root.root().and_downcast::<crate::window::MainWindow>()
+    }
+
+    /// The entry position a drop at `(x, y)` goes before; draws the line.
+    fn drop_position(&self, x: f64, y: f64) -> usize {
+        let count = self.rows.borrow().len();
+        let Some(cell) = cell_at(&self.list, x, y) else {
+            self.clear_drop_line();
+            return count;
+        };
+        let Some(position) = cell.position() else {
+            return count;
+        };
+        let below = cell
+            .compute_point(&self.list, &gtk::graphene::Point::new(0.0, 0.0))
+            .is_some_and(|p| y - f64::from(p.y()) > f64::from(cell.height()) / 2.0);
+        self.clear_drop_line();
+        cell.add_css_class(if below {
+            "hk-drop-below"
+        } else {
+            "hk-drop-above"
+        });
+        self.drop_line.replace(Some(cell));
+        (position as usize + usize::from(below)).min(count)
+    }
+
+    fn clear_drop_line(&self) {
+        if let Some(cell) = self.drop_line.take() {
+            cell.remove_css_class("hk-drop-above");
+            cell.remove_css_class("hk-drop-below");
+        }
+    }
+
+    fn mark_dragged(&self, on: bool) {
+        let selected = selected_positions(&self.selection);
+        for cell in self
+            .cells
+            .borrow()
+            .iter()
+            .filter_map(glib::WeakRef::upgrade)
+        {
+            let dragged = on && cell.position().is_some_and(|p| selected.contains(&p));
+            if dragged {
+                cell.add_css_class("hk-dragged");
+            } else {
+                cell.remove_css_class("hk-dragged");
+            }
+        }
+    }
+
+    fn dropped(&self, dragged: DraggedTracks, to: usize) {
+        let Some(key) = self.key.get() else { return };
+        let Some(window) = self.window() else { return };
+        match dragged.from_playlist {
+            Some((from, positions)) if from == key => {
+                let backend = self.backend.clone();
+                let weak = window.downgrade();
+                glib::spawn_future_local(async move {
+                    let result = backend
+                        .query(move |l| l.move_in_playlist(key, &positions, to))
+                        .await;
+                    if let Some(window) = weak.upgrade() {
+                        if let Err(error) = result {
+                            window.toast(&error.0, true);
+                        }
+                        window.playlists_changed(Some(key));
+                    }
+                });
+            }
+            _ => window.drop_on_playlist(key, dragged, Some(to)),
+        }
+    }
+
+    /// Shows the playlist `key`.
+    pub(crate) fn show(self: &Rc<Self>, key: PlaylistKey) {
+        if self.key.replace(Some(key)) != Some(key) {
+            self.selection.unselect_all();
+            self.store.remove_all();
+            self.rows.borrow_mut().clear();
+            self.name.set_text("");
+            self.summary.set_text("");
+        }
+        self.reload();
+    }
+
+    /// The playlist shown.
+    pub(crate) fn key(&self) -> Option<PlaylistKey> {
+        self.key.get()
+    }
+
+    /// Fetches the entries again.
+    pub(crate) fn reload(self: &Rc<Self>) {
+        let Some(key) = self.key.get() else { return };
+        let generation = self.generation.get() + 1;
+        self.generation.set(generation);
+        let backend = self.backend.clone();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let result = backend
+                .query(move |l| {
+                    let info = l.playlists()?.into_iter().find(|p| p.key == key);
+                    Ok((info, l.playlist_items(key)?))
+                })
+                .await;
+            let Some(view) = weak.upgrade() else { return };
+            if view.generation.get() != generation {
+                return;
+            }
+            match result {
+                Ok((info, rows)) => view.show_rows(info, rows),
+                Err(error) => {
+                    if let Some(window) = view.window() {
+                        window.toast(&error.0, true);
+                    }
+                }
+            }
+        });
+    }
+
+    fn show_rows(&self, info: Option<PlaylistRow>, rows: Vec<TrackRow>) {
+        if let Some(info) = &info {
+            self.name.set_text(&info.name);
+            let mut parts = vec![
+                fill(
+                    &ntr("{} track", "{} tracks", info.items),
+                    &[&info.items.to_string()],
+                ),
+                format::minutes(info.duration),
+            ];
+            parts.extend(edited(info.modified));
+            self.summary.set_text(&parts.join(" · "));
+        }
+        self.info.replace(info);
+        let mut seeds = Vec::new();
+        for row in rows.iter().filter(|r| !r.missing) {
+            if !seeds.iter().any(|(s, _)| *s == row.cover_seed) {
+                seeds.push((row.cover_seed, row.cover));
+            }
+            if seeds.len() == 4 {
+                break;
+            }
+        }
+        for (i, art) in self.mosaic.iter().enumerate() {
+            match seeds.get(i).or(seeds.first()) {
+                Some((seed, cover)) => self.covers.show(art, *cover, *seed, 44),
+                None => art.show(i as u64 * 7 + 3, None),
+            }
+        }
+        let selected = selected_positions(&self.selection);
+        let items: Vec<TrackItem> = rows
+            .iter()
+            .enumerate()
+            .map(|(i, r)| TrackItem::new(r.key, i as u32, Some(Rc::new(r.clone()))))
+            .collect();
+        self.rows.replace(rows);
+        self.store.splice(0, self.store.n_items(), &items);
+        for p in selected {
+            if p < self.store.n_items() {
+                self.selection.select_item(p, false);
+            }
+        }
+        self.show_status();
+    }
+
+    fn redraw(&self) {
+        for cell in self
+            .cells
+            .borrow()
+            .iter()
+            .filter_map(glib::WeakRef::upgrade)
+        {
+            if let Some(item) = cell.item() {
+                self.show_row(&cell, &item);
+            }
+        }
+    }
+
+    fn show_status(&self) {
+        let rows = self.rows.borrow();
+        let selected = selected_positions(&self.selection);
+        let length: Duration = if selected.is_empty() {
+            rows.iter().filter_map(|r| r.duration).sum()
+        } else {
+            selected
+                .iter()
+                .filter_map(|p| rows.get(*p as usize))
+                .filter_map(|r| r.duration)
+                .sum()
+        };
+        let count = if selected.is_empty() {
+            fill(
+                &ntr("{} track", "{} tracks", rows.len()),
+                &[&rows.len().to_string()],
+            )
+        } else {
+            fill(
+                &ntr("{} selected", "{} selected", selected.len()),
+                &[&selected.len().to_string()],
+            )
+        };
+        self.status_left
+            .set_text(&fill(&tr("{} · {}"), &[&count, &format::minutes(length)]));
+        self.status_right.set_text("");
+    }
+
+    fn play_from(&self, start: usize, shuffle: bool) {
+        let rows = self.rows.borrow();
+        let playable: Vec<(usize, TrackKey)> = rows
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| !r.missing && r.key.0 != 0)
+            .map(|(i, r)| (i, r.key))
+            .collect();
+        let start = playable.iter().position(|(i, _)| *i >= start).unwrap_or(0);
+        let title = self
+            .info
+            .borrow()
+            .as_ref()
+            .map(|i| i.name.clone())
+            .unwrap_or_default();
+        self.backend.send(PlayerRequest::PlayTracks {
+            tracks: playable.into_iter().map(|(_, k)| k).collect(),
+            start,
+            title,
+            shuffle,
+        });
+    }
+
+    /// The selected entries as a context menu target.
+    pub(crate) fn target(&self) -> Option<Target> {
+        let key = self.key.get()?;
+        let positions = selected_positions(&self.selection);
+        if positions.is_empty() {
+            return None;
+        }
+        let rows = self.rows.borrow();
+        let chosen: Vec<Rc<TrackRow>> = positions
+            .iter()
+            .filter_map(|p| rows.get(*p as usize))
+            .map(|r| Rc::new(r.clone()))
+            .collect();
+        Some(Target::Tracks {
+            rows: chosen,
+            origin: Origin::Playlist {
+                key,
+                positions: positions.into_iter().map(|p| p as usize).collect(),
+            },
+        })
+    }
+
+    /// Asks for a new name in a popover under the name.
+    pub(crate) fn ask_name(self: &Rc<Self>) {
+        let Some(key) = self.key.get() else { return };
+        let popover = gtk::Popover::new();
+        popover.add_css_class("hk-rename");
+        let line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let entry = gtk::Entry::new();
+        entry.add_css_class("hk-input");
+        entry.set_width_chars(28);
+        entry.set_text(&self.name.text());
+        entry.update_property(&[gtk::accessible::Property::Label(&tr("Playlist name"))]);
+        line.append(&entry);
+        let save = gtk::Button::with_label(&tr("Rename"));
+        save.add_css_class("hk-btn");
+        save.add_css_class("primary");
+        save.add_css_class("compact");
+        line.append(&save);
+        popover.set_child(Some(&line));
+        // On the hero box, which disposes of it, under the name.
+        let Some(hero) = self.name.parent().and_then(|t| t.parent()) else {
+            return;
+        };
+        popover.set_parent(&hero);
+        if let Some(bounds) = self.name.compute_bounds(&hero) {
+            popover.set_pointing_to(Some(&gtk::gdk::Rectangle::new(
+                bounds.x() as i32,
+                bounds.y() as i32,
+                bounds.width() as i32,
+                bounds.height() as i32,
+            )));
+        }
+        popover.set_position(gtk::PositionType::Bottom);
+        let weak = Rc::downgrade(self);
+        let commit = move |entry: &gtk::Entry, popover: &gtk::Popover| {
+            let name = entry.text().trim().to_owned();
+            popover.popdown();
+            let Some(view) = weak.upgrade() else { return };
+            if name.is_empty() || name == view.name.text() {
+                return;
+            }
+            let backend = view.backend.clone();
+            let window = view.window().map(|w| w.downgrade());
+            glib::spawn_future_local(async move {
+                let result = backend.query(move |l| l.rename_playlist(key, &name)).await;
+                if let Some(window) = window.and_then(|w| w.upgrade()) {
+                    if let Err(error) = result {
+                        window.toast(&error.0, true);
+                    }
+                    window.playlists_changed(Some(key));
+                }
+            });
+        };
+        let commit = Rc::new(commit);
+        let (c, p) = (commit.clone(), popover.downgrade());
+        entry.connect_activate(move |entry| {
+            if let Some(p) = p.upgrade() {
+                c(entry, &p);
+            }
+        });
+        let (c, p, e) = (commit, popover.downgrade(), entry.downgrade());
+        save.connect_clicked(move |_| {
+            if let (Some(p), Some(e)) = (p.upgrade(), e.upgrade()) {
+                c(&e, &p);
+            }
+        });
+        popover.connect_closed(|p| {
+            let p = p.clone();
+            glib::idle_add_local_once(move || p.unparent());
+        });
+        popover.popup();
+        entry.grab_focus();
+        entry.select_region(0, -1);
+    }
+
+    /// Selects the entries `from..to` and opens their context menu (for
+    /// screenshots).
+    pub(crate) fn demo_menu(&self, from: u32, to: u32) -> Option<gtk::PopoverMenu> {
+        self.selection.select_range(from, to - from, true);
+        let target = self.target()?;
+        let y = 36.0 * f64::from(from) + 18.0;
+        actions::popup(&self.list, target, Some((140.0, y)))
+    }
+
+    /// Selects every entry.
+    pub(crate) fn select_all(&self) {
+        self.selection.select_all();
+    }
+
+    /// The list, for keyboard focus.
+    pub(crate) fn focus_target(&self) -> gtk::Widget {
+        self.list.clone().upcast()
+    }
+
+    /// The titles of the entries (for tests).
+    pub(crate) fn titles(&self) -> Vec<String> {
+        self.rows.borrow().iter().map(|r| r.title.clone()).collect()
+    }
+}

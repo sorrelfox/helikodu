@@ -90,6 +90,16 @@ impl AlbumTile {
         self.imp().key.get().map(AlbumKey)
     }
 
+    /// The title shown.
+    pub(crate) fn title(&self) -> String {
+        self.imp()
+            .title
+            .borrow()
+            .as_ref()
+            .map(|l| l.text().to_string())
+            .unwrap_or_default()
+    }
+
     /// The cover widget.
     pub(crate) fn cover(&self) -> &CoverArt {
         &self.imp().cover
@@ -166,7 +176,7 @@ impl AlbumTile {
             Some(covers) => covers.show(&imp.cover, row.cover, row.cover_seed, TILE),
             None => imp.cover.show(row.cover_seed, None),
         }
-        // The list may not know the format; the track count stands in for it.
+        // The format if the list knows it; the track count stands in for it.
         let detail = if row.format.codec.is_some() {
             format::short(&row.format)
         } else {

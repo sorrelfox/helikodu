@@ -13,9 +13,9 @@
 mod support;
 
 use helikodu_library::{
-    AlbumDetail, AlbumFilter, AlbumId, AlbumQuery, AlbumSort, AlbumSummary, ArtistQuery,
-    ArtistRole, Credit, DatabaseConfig, GenreQuery, Library, LocaleCollation, Page, PersonId,
-    RootId, TrackFilter, TrackQuery, TrackRecord,
+    AlbumDetail, AlbumFilter, AlbumId, AlbumQuality, AlbumQuery, AlbumSort, AlbumSummary,
+    ArtistQuery, ArtistRole, Credit, DatabaseConfig, GenreQuery, Library, LocaleCollation, Page,
+    PersonId, RootId, TrackFilter, TrackQuery, TrackRecord,
 };
 use support::{library, record};
 
@@ -775,6 +775,73 @@ fn album_lists_sort_in_the_locale_order() {
         sorted_titles("et", &estonian),
         ["Saar", "Šaak", "Zoo", "Tee", "Wõru", "Õun", "Ülo", "Xenon"]
     );
+}
+
+#[test]
+fn albums_sum_up_their_format_and_filter_by_it() {
+    let (library, root) = library();
+    // (album, codec, rate, depth) of each track.
+    let tracks = [
+        ("Lossy", "mp3", 44_100, None),
+        ("Lossy", "mp3", 44_100, None),
+        ("Cd", "flac", 44_100, Some(16)),
+        ("Cd", "flac", 44_100, Some(16)),
+        ("Studio", "flac", 96_000, Some(24)),
+        ("Studio", "flac", 44_100, Some(16)),
+        ("Mixed", "flac", 96_000, Some(24)),
+        ("Mixed", "aac", 44_100, None),
+    ];
+    for (i, (album, codec, rate, depth)) in tracks.iter().enumerate() {
+        let path = format!("/music/{album}/{i}.x");
+        let mut r = T::new(&path, "t", "A", album)
+            .by("A")
+            .no(i as u32 + 1)
+            .record(root);
+        r.audio.codec = Some((*codec).to_owned());
+        r.audio.sample_rate = Some(*rate);
+        r.audio.bit_depth = *depth;
+        r.audio.bitrate = Some(if depth.is_some() { 900_000 } else { 320_000 });
+        library.upsert_track(r).unwrap();
+    }
+    let format = |title: &str| {
+        all_albums(&library)
+            .into_iter()
+            .find(|a| a.title.as_deref() == Some(title))
+            .and_then(|a| a.format)
+            .unwrap()
+    };
+    let lossy = format("Lossy");
+    assert_eq!(lossy.codec.as_deref(), Some("mp3"));
+    assert!(!lossy.lossless && !lossy.hi_res);
+    assert_eq!(lossy.bit_depth, None);
+    assert_eq!(lossy.bitrate, Some(320_000));
+    let cd = format("Cd");
+    assert!(cd.lossless && !cd.hi_res);
+    assert_eq!((cd.sample_rate, cd.bit_depth), (Some(44_100), Some(16)));
+    let studio = format("Studio");
+    assert!(studio.lossless && studio.hi_res);
+    assert_eq!(
+        (studio.sample_rate, studio.bit_depth),
+        (Some(96_000), Some(24))
+    );
+    assert!(!format("Mixed").lossless);
+
+    let with = |quality| {
+        let page = library
+            .albums(&AlbumQuery {
+                quality,
+                page: Page::first(100),
+                ..AlbumQuery::default()
+            })
+            .unwrap();
+        assert_eq!(page.items.len(), page.total);
+        titles(&page.items)
+    };
+    assert_eq!(with(AlbumQuality::Any).len(), 4);
+    assert_eq!(with(AlbumQuality::Lossless), ["Cd", "Studio"]);
+    assert_eq!(with(AlbumQuality::HiRes), ["Studio"]);
+    let detail = detail(&library, album_of(&library, "/music/Studio/4.x"));
+    assert!(detail.summary.format.is_some_and(|f| f.hi_res));
 }
 
 #[test]

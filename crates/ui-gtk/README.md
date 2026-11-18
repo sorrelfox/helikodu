@@ -15,9 +15,11 @@ The desktop user interface, built with GTK 4 without libadwaita. It talks to the
 | `src/style.rs`, `src/style/` | The theme system: `tokens.rs` (generated), `color.rs` (OKLab mixing, contrast, the accent variants), `theme.rs` (dark or light, the accent, high contrast and reduced motion from `GtkSettings` and the Settings portal), `css.rs` (the providers) |
 | `src/window.rs`, `src/window/` | The main window: sidebar, content header and view history, the panel with its tabs, resizable panes, toasts |
 | `src/deck.rs` | The player deck |
-| `src/views/` | Albums (the grid), the album page, and stand-ins for the views that come later |
-| `src/models/` | ID-backed list models: the album list fetches its rows in batches on worker threads; cover thumbnails load newest first into a texture cache |
-| `src/widgets/` | Drawn widgets: cover art with the generated placeholder, the waveform seek bar, the signal lamp, rating stars, the playing indicator, the brand mark |
+| `src/views/` | Albums (the grid), the album page, Artists, Genres, Tracks (the column view), Folders, the playlist page and search; the one context menu and its window actions (`actions.rs`), drag and drop (`drag.rs`), the table cell (`table.rs`), and stand-ins for the views that come later |
+| `src/models/` | ID-backed list models: the album and track lists fetch their rows in batches on worker threads; cover thumbnails load newest first into a texture cache |
+| `src/widgets/` | Drawn widgets: cover art with the generated placeholder, the waveform seek bar, the signal lamp, rating stars, the playing indicator, the brand mark, the bipolar scale of the preamps, the artist avatar with initials |
+| `src/dialogs/` | Settings (Library, Playback, Audio output, Loudness, Appearance, Advanced), the full-output confirmation, the tag editor, the first run with the scan footer, Supported formats, About; the application actions that open them |
+| `src/popovers/` | The output quick switcher above the deck's output button |
 | `resources/` | Compiled into the resource bundle by `build.rs`: `style/helikodu.css`, `style/tokens.css` (generated), the templates in `ui/` and the bundled symbolic icons |
 
 `resources/style/tokens.json` holds the design's colours, type styles and sizes. `src/style/tokens.rs` and `resources/style/tokens.css` are generated from it; never edit them by hand:
@@ -37,6 +39,11 @@ Widgets see only the types of `backend.rs`. `backend/service.rs` maps them onto 
 - **Covers:** `LibraryService::thumbnail` (the artwork pool and thumbnail cache, newest request first). Files are decoded on worker threads into a texture cache; the grid's visibility pass asks again for visible covers once per frame after scrolling and drops the requests of recycled tiles.
 - **Player:** commands, and the service's events read on a thread of the adapter, which also feeds MPRIS (`helikodu-desktop`) and keeps the system from suspending while playing.
 - **Window state:** pane widths, visible panes and the window size in `ui-state.toml`.
+- **Browsing:** album artists, genres and their albums, an artist's releases (albums, EPs and singles by release type, appears on) and most played tracks, through `MusicLibrary`. The album list carries each album's format summary, so the tiles show it and the Lossless and Hi-res filters run in the library. The track table's keys come from `all_tracks` (or `search` while filtered); the library has no track sort yet, so the adapter sorts the keys on the worker thread by the columns the summaries carry (number, title, artist, album, year, length) and reports Format, Rating and Plays as not sortable. Rows are fetched by key with `track_details` and `stats`.
+- **Playlists:** the static playlists through `MusicLibrary` (list, entries with dead ones, create, rename, delete, add, move, remove, import, and export as M3U8).
+- **Folders:** the library folders and their states from `root_states`; their subfolders and files are read from the file system on the worker threads, and each audio file is matched to its track with `track_at`.
+- **Dialogs** (`backend/services.rs`, `Backend::services`): the settings store (every change validated and saved at once), the output backends and their devices, the library folders with scans and the folder watcher (started at launch when the settings ask for it, and after each scan), the tags of tracks for the editor, ratings, and the decoders for Supported formats. The library's tag writer is not offered by the service yet, so in the running program the tag editor opens files read only and saves ratings; the sample backend keeps edits in memory.
+- **Full output:** a gate on `Backend::send` holds requests that would start playback while the output's volume is fixed at 100 % on a device the user has not confirmed, and asks first. Playback started from outside the window (MPRIS) does not pass the gate.
 
 When the service's interface changes, only `service.rs` follows it.
 
@@ -52,7 +59,18 @@ The unit tests check the accent maths against the design's worked examples, the 
 crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test widgets
 ```
 
-Without it they report that they were skipped.
+Without it they report that they were skipped. `tests/dialogs.rs` does the same for the dialogs: settings that round-trip through the store, the full-output confirmation, the tag editor with mixed values, the first run, the output switcher, Supported formats and About:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test dialogs
+```
+
+`tests/views.rs` covers the library views: the track table loading lazily and sorting by several keys, Artists, Genres and Folders, playlist edits with Undo, the context menu's actions, search with and without results, the menus, the empty library, and the frame times of the track table scrolling 100,000 tracks (slowly, fast, and jumping at random), which it prints:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test views
+crates/ui-gtk/tests/headless.sh cargo test --release -p helikodu-ui-gtk --test views -- frame_times
+```
 
 ## Screenshots
 
@@ -62,4 +80,16 @@ Without it they report that they were skipped.
 crates/ui-gtk/tests/headless.sh cargo run -p helikodu-ui-gtk --example screenshot -- --out target/screenshots
 # a real library instead of the sample one; the player plays to the null output
 crates/ui-gtk/tests/headless.sh cargo run -p helikodu-ui-gtk --example screenshot -- --database library.db
+```
+
+`examples/dialogs.rs` renders the dialogs the same way over the sample backend: each Settings page, the full-output confirmation, the output switcher, the tag editor (Tags, Cover, File info), the first run, a scan in progress, Supported formats and About:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo run -p helikodu-ui-gtk --example dialogs -- --out target/screenshots
+```
+
+`examples/views.rs` renders the library views, the empty library and the main, context and play button menus, dark and light:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo run -p helikodu-ui-gtk --example views -- --out target/views
 ```

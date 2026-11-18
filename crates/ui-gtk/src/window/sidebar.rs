@@ -8,8 +8,9 @@ use std::rc::Rc;
 
 use gtk::prelude::*;
 
-use crate::backend::LibraryCounts;
+use crate::backend::{LibraryCounts, PlaylistKey, PlaylistRow};
 use crate::i18n::tr;
+use crate::views::drag::DraggedTracks;
 use crate::widgets::{BrandMark, icon_button, label};
 
 /// One library row: its page name, icon, and whether it shows a count.
@@ -44,6 +45,8 @@ pub(crate) fn page_icon(page: &str) -> &'static str {
 }
 
 type Navigate = Box<dyn Fn(&str)>;
+type PlaylistMenu = Rc<dyn Fn(&gtk::Widget, PlaylistKey)>;
+type PlaylistDrop = Rc<dyn Fn(PlaylistKey, DraggedTracks)>;
 
 /// The sidebar and its list.
 pub(crate) struct Sidebar {
@@ -53,6 +56,9 @@ pub(crate) struct Sidebar {
     counts: RefCell<Vec<(String, gtk::Label)>>,
     quiet: Cell<bool>,
     navigate: RefCell<Option<Navigate>>,
+    playlist_rows: RefCell<Vec<gtk::ListBoxRow>>,
+    playlist_menu: RefCell<Option<PlaylistMenu>>,
+    playlist_drop: RefCell<Option<PlaylistDrop>>,
 }
 
 impl std::fmt::Debug for Sidebar {
@@ -103,6 +109,9 @@ impl Sidebar {
             counts: RefCell::new(Vec::new()),
             quiet: Cell::new(false),
             navigate: RefCell::new(None),
+            playlist_rows: RefCell::new(Vec::new()),
+            playlist_menu: RefCell::new(None),
+            playlist_drop: RefCell::new(None),
         });
         for (page, icon) in LIBRARY {
             sidebar.add_row(page, icon, &page_title(page), &[]);
@@ -114,9 +123,13 @@ impl Sidebar {
             &["hk-dim"],
         );
         sidebar.list.set_header_func(|row, before| {
-            let text = match (row.widget_name().as_str(), before) {
+            let name = row.widget_name();
+            let playlist = |n: &str| n == "new-playlist" || n.starts_with("playlist:");
+            let text = match (name.as_str(), before) {
                 (_, None) => Some((tr("Library"), true)),
-                ("new-playlist", _) => Some((tr("Playlists"), false)),
+                (n, Some(b)) if playlist(n) && !playlist(b.widget_name().as_str()) => {
+                    Some((tr("Playlists"), false))
+                }
                 _ => None,
             };
             row.set_header(
@@ -161,11 +174,114 @@ impl Sidebar {
         line.append(&count);
         self.counts.borrow_mut().push((page.to_owned(), count));
         row.set_child(Some(&line));
-        if page == "new-playlist" {
-            // Playlists come in a later version.
-            row.set_sensitive(false);
-        }
         self.list.append(&row);
+    }
+
+    /// Lists `playlists` between the library rows and "New playlist".
+    pub(crate) fn set_playlists(self: &Rc<Self>, playlists: &[PlaylistRow]) {
+        let selected = self.list.selected_row().map(|r| r.widget_name());
+        for row in self.playlist_rows.take() {
+            self.list.remove(&row);
+        }
+        self.counts
+            .borrow_mut()
+            .retain(|(page, _)| !page.starts_with("playlist:"));
+        let position = i32::try_from(LIBRARY.len()).unwrap_or(0);
+        let mut rows = Vec::new();
+        for (i, playlist) in playlists.iter().enumerate() {
+            let name = format!("playlist:{}", playlist.key.0);
+            let row = gtk::ListBoxRow::new();
+            row.set_widget_name(&name);
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+            line.append(&gtk::Image::from_icon_name("helikodu-playlist-symbolic"));
+            let title = label(&playlist.name, &[]);
+            title.set_hexpand(true);
+            line.append(&title);
+            let count = label(&playlist.items.to_string(), &["hk-count"]);
+            count.set_xalign(1.0);
+            line.append(&count);
+            row.set_child(Some(&line));
+            row.update_property(&[gtk::accessible::Property::Label(&playlist.name)]);
+            self.attach_playlist_controllers(&row, playlist.key);
+            self.list
+                .insert(&row, position + i32::try_from(i).unwrap_or(0));
+            rows.push(row);
+        }
+        self.playlist_rows.replace(rows);
+        self.list.invalidate_headers();
+        if let Some(selected) = selected {
+            self.select(Some(selected.as_str()));
+        }
+    }
+
+    fn attach_playlist_controllers(self: &Rc<Self>, row: &gtk::ListBoxRow, key: PlaylistKey) {
+        let click = gtk::GestureClick::new();
+        click.set_button(gtk::gdk::BUTTON_SECONDARY);
+        let weak = Rc::downgrade(self);
+        click.connect_pressed(move |gesture, _, _, _| {
+            let (Some(sidebar), Some(widget)) = (weak.upgrade(), gesture.widget()) else {
+                return;
+            };
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            let menu = sidebar.playlist_menu.borrow().clone();
+            if let Some(menu) = menu {
+                menu(&widget, key);
+            }
+        });
+        row.add_controller(click);
+        let keys = gtk::EventControllerKey::new();
+        let weak = Rc::downgrade(self);
+        keys.connect_key_pressed(move |controller, key_pressed, _, state| {
+            let (Some(sidebar), Some(widget)) = (weak.upgrade(), controller.widget()) else {
+                return gtk::glib::Propagation::Proceed;
+            };
+            if !crate::views::actions::is_menu_key(key_pressed, state) {
+                return gtk::glib::Propagation::Proceed;
+            }
+            let menu = sidebar.playlist_menu.borrow().clone();
+            if let Some(menu) = menu {
+                menu(&widget, key);
+            }
+            gtk::glib::Propagation::Stop
+        });
+        row.add_controller(keys);
+        let target = DraggedTracks::target(gtk::gdk::DragAction::COPY);
+        let weak = Rc::downgrade(self);
+        target.connect_drop(move |_, value, _, _| {
+            let (Some(sidebar), Ok(dragged)) = (weak.upgrade(), value.get::<DraggedTracks>())
+            else {
+                return false;
+            };
+            let drop = sidebar.playlist_drop.borrow().clone();
+            if let Some(drop) = drop {
+                drop(key, dragged);
+            }
+            true
+        });
+        let row_weak = row.downgrade();
+        target.connect_enter(move |_, _, _| {
+            if let Some(row) = row_weak.upgrade() {
+                row.add_css_class("hk-drop-into");
+            }
+            gtk::gdk::DragAction::COPY
+        });
+        let row_weak = row.downgrade();
+        target.connect_leave(move |_| {
+            if let Some(row) = row_weak.upgrade() {
+                row.remove_css_class("hk-drop-into");
+            }
+        });
+        row.add_controller(target);
+    }
+
+    /// Calls `menu` for the context menu of a playlist row.
+    pub(crate) fn connect_playlist_menu(&self, menu: impl Fn(&gtk::Widget, PlaylistKey) + 'static) {
+        self.playlist_menu.replace(Some(Rc::new(menu)));
+    }
+
+    /// Calls `drop` with tracks dropped on a playlist row.
+    pub(crate) fn connect_drop(&self, drop: impl Fn(PlaylistKey, DraggedTracks) + 'static) {
+        self.playlist_drop.replace(Some(Rc::new(drop)));
     }
 
     /// Calls `navigate` with the page name when the user picks a row.

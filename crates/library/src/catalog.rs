@@ -22,9 +22,9 @@ mod track_record;
 pub(crate) mod write;
 
 pub use browse::{
-    AlbumDetail, AlbumFilter, AlbumQuery, AlbumSort, AlbumSummary, ArtistQuery, ArtistRef,
-    ArtistSummary, Disc, GenreQuery, GenreRef, GenreSummary, MAX_PAGE, Page, Paged, TrackFilter,
-    TrackQuery, TrackSummary,
+    AlbumDetail, AlbumFilter, AlbumFormat, AlbumQuality, AlbumQuery, AlbumSort, AlbumSummary,
+    ArtistQuery, ArtistRef, ArtistSummary, Disc, GenreQuery, GenreRef, GenreSummary, MAX_PAGE,
+    Page, Paged, TrackFilter, TrackQuery, TrackSummary,
 };
 pub(crate) use browse::{album, albums, artists, genres, tracks};
 pub use covers::{CoverInfo, CoverLocation};

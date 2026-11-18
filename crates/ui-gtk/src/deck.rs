@@ -168,6 +168,79 @@ impl Deck {
                 deck.update(view, change);
             }
         });
+        self.setup_play_menu();
+    }
+
+    /// The play button's menu: right click, long press or the Menu key.
+    fn setup_play_menu(&self) {
+        let play = self.imp().play.get();
+        let click = gtk::GestureClick::new();
+        click.set_button(gtk::gdk::BUTTON_SECONDARY);
+        let weak = self.downgrade();
+        click.connect_pressed(move |gesture, _, _, _| {
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            if let Some(deck) = weak.upgrade() {
+                deck.popup_play_menu();
+            }
+        });
+        play.add_controller(click);
+        let press = gtk::GestureLongPress::new();
+        let weak = self.downgrade();
+        press.connect_pressed(move |gesture, _, _| {
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            if let Some(deck) = weak.upgrade() {
+                deck.popup_play_menu();
+            }
+        });
+        play.add_controller(press);
+        let keys = gtk::EventControllerKey::new();
+        let weak = self.downgrade();
+        keys.connect_key_pressed(move |_, key, _, state| {
+            if crate::views::actions::is_menu_key(key, state)
+                && let Some(deck) = weak.upgrade()
+            {
+                deck.popup_play_menu();
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        play.add_controller(keys);
+    }
+
+    /// Opens the play button's menu above it: Stop, Stop after this track,
+    /// Jump to the playing track.
+    pub(crate) fn popup_play_menu(&self) -> gtk::PopoverMenu {
+        let menu = gtk::gio::Menu::new();
+        let stop = gtk::gio::Menu::new();
+        stop.append(Some(&tr("Stop")), Some("app.stop"));
+        stop.append(Some(&tr("Stop after this track")), Some("app.stop-after"));
+        menu.append_section(None, &stop);
+        let jump = gtk::gio::Menu::new();
+        jump.append(
+            Some(&tr("Jump to the playing track")),
+            Some("win.jump-to-playing"),
+        );
+        menu.append_section(None, &jump);
+        let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        // On the deck, which disposes of it, pointing at the play button.
+        popover.set_parent(self);
+        let play = self.imp().play.get();
+        if let Some(bounds) = play.compute_bounds(self) {
+            popover.set_pointing_to(Some(&gtk::gdk::Rectangle::new(
+                bounds.x() as i32,
+                bounds.y() as i32,
+                bounds.width() as i32,
+                bounds.height() as i32,
+            )));
+        }
+        popover.set_position(gtk::PositionType::Top);
+        popover.set_has_arrow(false);
+        popover.connect_closed(|p| {
+            let p = p.clone();
+            glib::idle_add_local_once(move || p.unparent());
+        });
+        popover.popup();
+        popover
     }
 
     fn show_volume_icon(&self, value: f64) {
@@ -244,7 +317,8 @@ impl Deck {
                     }
                     None => {
                         imp.title.set_text(&tr("Nothing playing"));
-                        imp.subtitle.set_text(&tr("Choose an album to play"));
+                        imp.subtitle
+                            .set_text(&tr("Pick an album, or drop files on the window"));
                         self.show_cover(None, 0);
                     }
                 }

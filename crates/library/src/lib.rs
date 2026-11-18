@@ -23,10 +23,10 @@ mod track_source;
 mod watch;
 
 pub use catalog::{
-    AlbumDetail, AlbumFilter, AlbumId, AlbumQuery, AlbumSort, AlbumSummary, ArtistQuery, ArtistRef,
-    ArtistRole, ArtistSummary, CatalogTags, Credit, Disc, GenreId, GenreQuery, GenreRef,
-    GenreSummary, MAX_PAGE, Page, Paged, PersonId, RootState, TrackFilter, TrackQuery,
-    TrackSection, TrackSummary,
+    AlbumDetail, AlbumFilter, AlbumFormat, AlbumId, AlbumQuality, AlbumQuery, AlbumSort,
+    AlbumSummary, ArtistQuery, ArtistRef, ArtistRole, ArtistSummary, CatalogTags, Credit, Disc,
+    GenreId, GenreQuery, GenreRef, GenreSummary, MAX_PAGE, Page, Paged, PersonId, RootState,
+    TrackFilter, TrackQuery, TrackSection, TrackSummary,
 };
 pub use catalog::{
     AudioProperties, CoverInfo, CoverLocation, FileStamp, IdentityId, ReplayGain, RootId,

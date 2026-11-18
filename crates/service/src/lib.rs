@@ -13,6 +13,7 @@ pub mod bus;
 pub mod clock;
 mod event;
 pub mod files;
+pub mod formats;
 pub mod library;
 pub mod player;
 mod service;

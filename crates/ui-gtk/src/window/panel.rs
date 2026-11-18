@@ -193,6 +193,11 @@ impl Panel {
         imp.hide_button.set_visible(!integrated);
     }
 
+    /// The queue list, whose rows are named by their entry.
+    pub(crate) fn queue_list(&self) -> gtk::ListBox {
+        self.imp().list.get()
+    }
+
     /// The tab strip, for keyboard focus.
     pub(crate) fn focus_target(&self) -> gtk::Widget {
         self.imp().queue_tab.get().upcast()

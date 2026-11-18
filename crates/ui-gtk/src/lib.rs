@@ -12,10 +12,12 @@
 mod application;
 pub mod backend;
 mod deck;
+mod dialogs;
 mod format;
 pub mod i18n;
 mod models;
 mod playback;
+mod popovers;
 pub mod snapshot;
 pub mod style;
 mod views;

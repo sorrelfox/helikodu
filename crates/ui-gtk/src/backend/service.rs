@@ -10,7 +10,10 @@
 //! service's events are read on a thread of this adapter, which turns them into
 //! [`Update`]s for the main loop and feeds MPRIS.
 
-use std::collections::HashMap;
+mod services;
+
+use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::mpsc::RecvTimeoutError;
@@ -23,16 +26,18 @@ use helikodu_desktop::power::SuspendInhibition;
 use helikodu_model::audio::{
     BackendSelection, DeviceSelection, MediaTime, OutputBackendKind, OutputSelection,
 };
-use helikodu_model::library::{MediaSource, TrackRef};
+use helikodu_model::library::{MediaSource, TrackId, TrackRef};
 use helikodu_model::player::{
-    ContextSource, EntryId, PlayModes, PlaybackState as ServicePlayback, RepeatMode, ShuffleMode,
-    StopAfter, Volume,
+    ContextSource, EnqueueAt, EntryId, PlayModes, PlaybackState as ServicePlayback, QueueContext,
+    RepeatMode, ShuffleMode, StopAfter, Volume,
 };
 use helikodu_model::settings::UiState;
 use helikodu_service::bus::Subscription;
 use helikodu_service::library::{
-    AlbumId, AlbumQuery as ServiceAlbumQuery, AlbumSort as ServiceAlbumSort, AlbumSummary,
-    CoverHash, LibraryEvent, MAX_PAGE, MusicLibrary, Page, QueueItemInfo, Thumbnail, ThumbnailSize,
+    AlbumFilter as ServiceAlbumFilter, AlbumId, AlbumQuality, AlbumQuery as ServiceAlbumQuery,
+    AlbumSort as ServiceAlbumSort, AlbumSummary, ArtistQuery, ArtistRole, ArtistSummary, CoverHash,
+    GenreId, GenreQuery, ItemContent, LibraryEvent, MAX_PAGE, MusicLibrary, Page, PersonId,
+    PlaylistId, QueueItemInfo, Thumbnail, ThumbnailSize, TrackFilter, TrackSummary,
 };
 use helikodu_service::player::{
     ContextRequest, EndReason, Notice, PlayerCommand, PlayerEvent, QueueSnapshot as Snapshot,
@@ -40,10 +45,12 @@ use helikodu_service::player::{
 use helikodu_service::{Event, Service, SubscribeOptions};
 
 use super::{
-    AlbumDetail, AlbumKey, AlbumQuery, AlbumRow, AlbumSort, AudioFormat, Backend, BackendError,
-    CoverKey, DiscGroup, LibraryCounts, LibrarySource, NowPlaying, OutputInfo, PlaybackState,
-    PlayerControl, PlayerRequest, QueueSnapshot, Repeat, SignalState, ThumbnailState, TrackKey,
-    TrackRow, UiStateAccess, Update,
+    AlbumDetail, AlbumFilter, AlbumKey, AlbumQuery, AlbumRow, AlbumScope, AlbumSort, ArtistDetail,
+    ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, CoverKey, DiscGroup, FolderFile,
+    FolderListing, FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts, LibrarySource,
+    NowPlaying, OutputInfo, PlaybackState, PlayerControl, PlayerRequest, PlaylistKey, PlaylistRow,
+    QueueSnapshot, Repeat, SearchResults, SignalState, ThumbnailState, TrackColumn, TrackKey,
+    TrackQuery, TrackRow, TrackScope, UiStateAccess, Update,
 };
 use crate::i18n::{fill, tr};
 
@@ -95,6 +102,95 @@ pub struct ServiceLibrary {
     service: Arc<Service>,
     /// The library's album identifiers by key, learned from the lists.
     ids: Mutex<HashMap<AlbumKey, AlbumId>>,
+    /// The library's playlist identifiers by key, learned from the lists.
+    playlists: Mutex<HashMap<PlaylistKey, PlaylistId>>,
+    /// The album of each track seen in a list, which the track details lack.
+    albums_of: Mutex<HashMap<TrackKey, AlbumKey>>,
+    /// The album list in album-artist order, for search.
+    album_rows: Mutex<Vec<AlbumRow>>,
+    /// The artist list, for search and names.
+    artist_rows: Mutex<Vec<ArtistRow>>,
+}
+
+fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// The audio file extensions the folder view lists.
+const AUDIO_EXTENSIONS: &[&str] = &[
+    "flac", "mp3", "ogg", "oga", "opus", "m4a", "m4b", "mp4", "aac", "wav", "aif", "aiff", "ape",
+    "wv", "mpc", "tta", "tak", "dsf", "dff", "wma", "spx",
+];
+
+fn is_audio(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| AUDIO_EXTENSIONS.iter().any(|a| a.eq_ignore_ascii_case(e)))
+}
+
+fn person(key: ArtistKey) -> PersonId {
+    PersonId::from_raw(i64::try_from(key.0).unwrap_or(-1))
+}
+
+fn genre_id(key: GenreKey) -> GenreId {
+    GenreId::from_raw(i64::try_from(key.0).unwrap_or(-1))
+}
+
+fn track_id(key: TrackKey) -> TrackId {
+    TrackId::new(key.0)
+}
+
+fn artist_row(artist: &ArtistSummary) -> ArtistRow {
+    ArtistRow {
+        key: ArtistKey(u64::try_from(artist.id.get()).unwrap_or(0)),
+        name: artist.name.clone(),
+        sort_name: artist
+            .sort_name
+            .clone()
+            .unwrap_or_else(|| artist.name.clone()),
+        album_count: artist.album_count,
+        track_count: artist.track_count,
+    }
+}
+
+/// A folder name as shown: the home folder as `~`.
+fn display_path(path: &Path) -> String {
+    let home = gtk::glib::home_dir();
+    match path.strip_prefix(&home) {
+        Ok(rest) if rest.as_os_str().is_empty() => "~".to_owned(),
+        Ok(rest) => format!("~/{}", rest.display()),
+        Err(_) => path.display().to_string(),
+    }
+}
+
+fn file_name(path: &Path) -> String {
+    path.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// Whether `path` has a folder in it that is not hidden.
+fn has_subfolders(path: &Path) -> bool {
+    std::fs::read_dir(path).is_ok_and(|entries| {
+        entries.flatten().any(|e| {
+            !e.file_name().as_encoded_bytes().starts_with(b".")
+                && e.file_type().is_ok_and(|t| t.is_dir())
+        })
+    })
+}
+
+/// Compares two track summaries by one column, smallest first.
+fn compare(a: &TrackSummary, b: &TrackSummary, column: TrackColumn) -> Ordering {
+    let text = |s: &Option<String>| s.as_deref().unwrap_or_default().to_lowercase();
+    match column {
+        TrackColumn::Number => (a.disc_no, a.track_no).cmp(&(b.disc_no, b.track_no)),
+        TrackColumn::Title => text(&a.title).cmp(&text(&b.title)),
+        TrackColumn::Artist => text(&a.artist).cmp(&text(&b.artist)),
+        TrackColumn::Album => text(&a.album_title).cmp(&text(&b.album_title)),
+        TrackColumn::Year => a.year.cmp(&b.year),
+        TrackColumn::Length => a.duration.cmp(&b.duration),
+        TrackColumn::Format | TrackColumn::Rating | TrackColumn::Plays => Ordering::Equal,
+    }
 }
 
 impl ServiceLibrary {
@@ -110,9 +206,115 @@ impl ServiceLibrary {
                 AlbumSort::Year => ServiceAlbumSort::Year,
                 AlbumSort::DateAdded => ServiceAlbumSort::Added,
             },
+            filter: match query.scope {
+                AlbumScope::All => ServiceAlbumFilter::All,
+                AlbumScope::Artist(key) => ServiceAlbumFilter::ByArtist(person(key)),
+                AlbumScope::AppearsOn(key) => ServiceAlbumFilter::AppearsOn(person(key)),
+                AlbumScope::Genre(key) => ServiceAlbumFilter::Genre(genre_id(key)),
+            },
+            quality: match query.filter {
+                AlbumFilter::All => AlbumQuality::Any,
+                AlbumFilter::Lossless => AlbumQuality::Lossless,
+                AlbumFilter::HiRes => AlbumQuality::HiRes,
+            },
             page,
             ..ServiceAlbumQuery::default()
         }
+    }
+
+    /// Every album of `query`, page after page.
+    fn all_albums(&self, query: &AlbumQuery) -> Result<Vec<AlbumRow>, BackendError> {
+        let Some(music) = self.music() else {
+            return Ok(Vec::new());
+        };
+        let mut rows = Vec::new();
+        loop {
+            let page = music
+                .albums(&Self::query(query, Page::new(rows.len(), MAX_PAGE)))
+                .map_err(error)?;
+            self.remember(&page.items);
+            let got = page.items.len();
+            rows.extend(page.items.iter().map(Self::row));
+            if got == 0 || rows.len() >= page.total {
+                return Ok(rows);
+            }
+        }
+    }
+
+    /// The row of a track from a list, remembering its album.
+    fn summary_row(&self, track: &TrackSummary) -> TrackRow {
+        let key = TrackKey(track.id.get());
+        let album = track.album.map_or(AlbumKey(0), album_key);
+        lock(&self.albums_of).insert(key, album);
+        TrackRow {
+            key,
+            album,
+            number: track.track_no,
+            disc: track.disc_no,
+            title: track.title.clone().unwrap_or_else(|| tr("Unknown title")),
+            artist: track.artist.clone().unwrap_or_default(),
+            duration: track.duration,
+            from_context: true,
+            cover_seed: seed(album),
+            album_title: track.album_title.clone().unwrap_or_default(),
+            year: track.year,
+            missing: track.missing,
+            ..TrackRow::default()
+        }
+    }
+
+    /// The row of one track by its key, from the database.
+    fn track_row(&self, music: &MusicLibrary, key: TrackKey) -> Option<TrackRow> {
+        let details = music.track_details(track_id(key)).ok().flatten()?;
+        let stats = music.stats(track_id(key)).ok();
+        let album = lock(&self.albums_of).get(&key).copied().unwrap_or_default();
+        let audio = &details.audio;
+        Some(TrackRow {
+            key,
+            album,
+            number: details.tags.track_no,
+            disc: details.tags.disc_no,
+            title: details
+                .tags
+                .title
+                .clone()
+                .unwrap_or_else(|| file_name(&details.path)),
+            artist: details.tags.artists.join(", "),
+            duration: audio.duration,
+            plays: stats
+                .as_ref()
+                .map_or(0, |s| u32::try_from(s.play_count).unwrap_or(u32::MAX)),
+            rating: stats.and_then(|s| s.rating).map(|r| r.stars_rounded()),
+            from_context: true,
+            cover_seed: seed(album),
+            album_title: details.tags.album.clone().unwrap_or_default(),
+            year: details.tags.year,
+            format: AudioFormat {
+                codec: audio.codec.as_ref().map(|c| c.to_uppercase()),
+                sample_rate: audio.sample_rate,
+                bits: audio.bit_depth,
+                bitrate_kbps: audio.bitrate.map(|b| b / 1000),
+                channels: audio.channels,
+            },
+            path: Some(details.path),
+            ..TrackRow::default()
+        })
+    }
+
+    fn playlist_id(&self, key: PlaylistKey) -> Result<PlaylistId, BackendError> {
+        if let Some(id) = lock(&self.playlists).get(&key) {
+            return Ok(*id);
+        }
+        self.playlists()?;
+        lock(&self.playlists)
+            .get(&key)
+            .copied()
+            .ok_or_else(|| BackendError(tr("The playlist is gone.")))
+    }
+
+    fn library(&self) -> Result<&MusicLibrary, BackendError> {
+        self.music()
+            .ok_or_else(|| BackendError(tr("There is no library.")))
     }
 
     fn remember(&self, albums: &[AlbumSummary]) {
@@ -132,7 +334,17 @@ impl ServiceLibrary {
                 .clone()
                 .unwrap_or_else(|| tr("Various artists")),
             year: album.original_year.or(album.year),
-            format: AudioFormat::default(),
+            format: album
+                .format
+                .as_ref()
+                .map(|f| AudioFormat {
+                    codec: f.codec.as_ref().map(|c| c.to_uppercase()),
+                    sample_rate: f.sample_rate,
+                    bits: f.bit_depth,
+                    bitrate_kbps: f.bitrate.map(|b| b / 1000),
+                    channels: None,
+                })
+                .unwrap_or_default(),
             track_count: album.track_count,
             cover_seed: seed(key),
             cover: album.cover.as_ref().map(cover_key),
@@ -163,18 +375,13 @@ impl LibrarySource for ServiceLibrary {
         let Some(music) = self.music() else {
             return Ok(Vec::new());
         };
-        let mut keys = Vec::new();
-        loop {
-            let page = music
-                .albums(&Self::query(query, Page::new(keys.len(), MAX_PAGE)))
-                .map_err(error)?;
-            self.remember(&page.items);
-            let got = page.items.len();
-            keys.extend(page.items.iter().map(|a| album_key(a.id)));
-            if got == 0 || keys.len() >= page.total {
-                return Ok(keys);
-            }
+        let _ = music;
+        let rows = self.all_albums(query)?;
+        let keys = rows.iter().map(|r| r.key).collect();
+        if *query == AlbumQuery::default() {
+            *lock(&self.album_rows) = rows;
         }
+        Ok(keys)
     }
 
     fn album_rows(
@@ -224,22 +431,20 @@ impl LibrarySource for ServiceLibrary {
                         folder = source.source.path().parent().map(Path::to_path_buf);
                     }
                 }
-                tracks.push(TrackRow {
-                    key: TrackKey(track.id.get()),
-                    album: key,
-                    number: track.track_no,
-                    disc: track.disc_no,
-                    title: track.title.clone().unwrap_or_else(|| tr("Unknown title")),
-                    artist: track.artist.clone().unwrap_or_default(),
-                    duration: track.duration,
-                    plays: stats
-                        .as_ref()
-                        .map_or(0, |s| u32::try_from(s.play_count).unwrap_or(u32::MAX)),
-                    rating: stats.and_then(|s| s.rating).map(|r| r.stars_rounded()),
-                    entry: None,
-                    from_context: true,
-                    cover: row.cover,
-                });
+                let path = music
+                    .track_source(track.id)
+                    .ok()
+                    .flatten()
+                    .map(|s| s.source.path().to_path_buf());
+                let mut track_row = self.summary_row(track);
+                track_row.plays = stats
+                    .as_ref()
+                    .map_or(0, |s| u32::try_from(s.play_count).unwrap_or(u32::MAX));
+                track_row.rating = stats.and_then(|s| s.rating).map(|r| r.stars_rounded());
+                track_row.cover = row.cover;
+                track_row.format = row.format.clone();
+                track_row.path = path;
+                tracks.push(track_row);
             }
             discs.push(DiscGroup {
                 number: several.then_some(disc.number),
@@ -281,8 +486,465 @@ impl LibrarySource for ServiceLibrary {
         }))
     }
 
-    fn supports_quality_filters(&self) -> bool {
-        false
+    fn artists(&self) -> Result<Vec<ArtistRow>, BackendError> {
+        let music = self.library()?;
+        let mut rows = Vec::new();
+        loop {
+            let mut query = ArtistQuery::new(ArtistRole::AlbumArtist);
+            query.page = Page::new(rows.len(), MAX_PAGE);
+            let page = music.artists(&query).map_err(error)?;
+            let got = page.items.len();
+            rows.extend(page.items.iter().map(artist_row));
+            if got == 0 || rows.len() >= page.total {
+                break;
+            }
+        }
+        lock(&self.artist_rows).clone_from(&rows);
+        Ok(rows)
+    }
+
+    fn artist(&self, key: ArtistKey) -> Result<Option<ArtistDetail>, BackendError> {
+        let music = self.library()?;
+        let known = lock(&self.artist_rows)
+            .iter()
+            .find(|a| a.key == key)
+            .cloned();
+        let row = match known {
+            Some(row) => row,
+            None => match self.artists()?.into_iter().find(|a| a.key == key) {
+                Some(row) => row,
+                None => return Ok(None),
+            },
+        };
+        let query = |scope| AlbumQuery {
+            scope,
+            sort: AlbumSort::Year,
+            ..AlbumQuery::default()
+        };
+        let own = self.all_albums(&query(AlbumScope::Artist(key)))?;
+        let appears_on = self.all_albums(&query(AlbumScope::AppearsOn(key)))?;
+        let mut types = HashMap::new();
+        for page in 0.. {
+            let found = music
+                .albums(&ServiceAlbumQuery {
+                    filter: ServiceAlbumFilter::ByArtist(person(key)),
+                    page: Page::new(page * MAX_PAGE, MAX_PAGE),
+                    ..ServiceAlbumQuery::default()
+                })
+                .map_err(error)?;
+            for album in &found.items {
+                types.insert(
+                    album_key(album.id),
+                    album.release_types.first().cloned().unwrap_or_default(),
+                );
+            }
+            if found.items.len() < MAX_PAGE {
+                break;
+            }
+        }
+        let single = |row: &AlbumRow| {
+            types
+                .get(&row.key)
+                .is_some_and(|t| t.eq_ignore_ascii_case("ep") || t.eq_ignore_ascii_case("single"))
+        };
+        let (singles, albums): (Vec<AlbumRow>, Vec<AlbumRow>) = own.into_iter().partition(single);
+        let tracks = music
+            .all_tracks(TrackFilter::Artist(person(key), None))
+            .map_err(error)?;
+        let duration = tracks.iter().filter_map(|t| t.duration).sum();
+        let mut played: Vec<(u64, &TrackSummary)> = tracks
+            .iter()
+            .take(500)
+            .map(|t| (music.stats(t.id).map_or(0, |s| s.play_count), t))
+            .collect();
+        played.sort_by_key(|(plays, _)| std::cmp::Reverse(*plays));
+        let most_played = played
+            .into_iter()
+            .take(5)
+            .map(|(plays, t)| {
+                let mut row = self.summary_row(t);
+                row.plays = u32::try_from(plays).unwrap_or(u32::MAX);
+                row
+            })
+            .collect();
+        Ok(Some(ArtistDetail {
+            row,
+            albums,
+            singles,
+            appears_on,
+            most_played,
+            duration,
+        }))
+    }
+
+    fn find_artist(&self, name: &str) -> Result<Option<ArtistKey>, BackendError> {
+        let name = name.to_lowercase();
+        let find = |rows: &[ArtistRow]| {
+            rows.iter()
+                .find(|a| a.name.to_lowercase() == name)
+                .map(|a| a.key)
+        };
+        if let Some(key) = find(&lock(&self.artist_rows)) {
+            return Ok(Some(key));
+        }
+        Ok(find(&self.artists()?))
+    }
+
+    fn genres(&self) -> Result<Vec<GenreRow>, BackendError> {
+        let music = self.library()?;
+        let mut rows = Vec::new();
+        loop {
+            let page = music
+                .genres(&GenreQuery {
+                    page: Page::new(rows.len(), MAX_PAGE),
+                    ..GenreQuery::default()
+                })
+                .map_err(error)?;
+            let got = page.items.len();
+            rows.extend(page.items.iter().map(|g| GenreRow {
+                key: GenreKey(u64::try_from(g.id.get()).unwrap_or(0)),
+                name: g.name.clone(),
+                album_count: g.album_count,
+                track_count: g.track_count,
+            }));
+            if got == 0 || rows.len() >= page.total {
+                return Ok(rows);
+            }
+        }
+    }
+
+    fn track_keys(&self, query: &TrackQuery) -> Result<Vec<TrackKey>, BackendError> {
+        let music = self.library()?;
+        let text = query.text.trim();
+        let mut found: Option<Vec<TrackKey>> = None;
+        if !text.is_empty() {
+            let mut keys = Vec::new();
+            loop {
+                let page = music.search(text, keys.len(), 1000).map_err(error)?;
+                let got = page.hits.len();
+                keys.extend(page.hits.iter().map(|h| TrackKey(h.hit.track.get())));
+                if got == 0 || keys.len() >= page.total {
+                    break;
+                }
+            }
+            if query.scope == TrackScope::All && query.sort.is_empty() {
+                return Ok(keys);
+            }
+            found = Some(keys);
+        }
+        let filter = match query.scope {
+            TrackScope::All => TrackFilter::All,
+            TrackScope::Artist(key) => TrackFilter::Artist(person(key), None),
+            TrackScope::Genre(key) => TrackFilter::Genre(genre_id(key)),
+        };
+        let mut tracks = music.all_tracks(filter).map_err(error)?;
+        if let Some(found) = found {
+            let found: HashSet<TrackKey> = found.into_iter().collect();
+            tracks.retain(|t| found.contains(&TrackKey(t.id.get())));
+        }
+        {
+            let mut albums = lock(&self.albums_of);
+            for t in &tracks {
+                albums.insert(TrackKey(t.id.get()), t.album.map_or(AlbumKey(0), album_key));
+            }
+        }
+        if !query.sort.is_empty() {
+            tracks.sort_by(|a, b| {
+                query
+                    .sort
+                    .iter()
+                    .map(|key| {
+                        let order = compare(a, b, key.column);
+                        if key.descending {
+                            order.reverse()
+                        } else {
+                            order
+                        }
+                    })
+                    .find(|o| *o != Ordering::Equal)
+                    .unwrap_or(Ordering::Equal)
+            });
+        }
+        Ok(tracks.iter().map(|t| TrackKey(t.id.get())).collect())
+    }
+
+    fn track_rows(&self, keys: &[TrackKey]) -> Result<Vec<TrackRow>, BackendError> {
+        let music = self.library()?;
+        Ok(keys
+            .iter()
+            .filter_map(|key| self.track_row(music, *key))
+            .collect())
+    }
+
+    fn sortable(&self, column: TrackColumn) -> bool {
+        !matches!(
+            column,
+            TrackColumn::Format | TrackColumn::Rating | TrackColumn::Plays
+        )
+    }
+
+    fn search(&self, text: &str) -> Result<SearchResults, BackendError> {
+        let music = self.library()?;
+        let text = text.trim();
+        if text.is_empty() {
+            return Ok(SearchResults::default());
+        }
+        let words: Vec<String> = text.split_whitespace().map(str::to_lowercase).collect();
+        let hit = |name: &str| {
+            let name = name.to_lowercase();
+            words.iter().all(|w| name.contains(w.as_str()))
+        };
+        if lock(&self.artist_rows).is_empty() {
+            self.artists()?;
+        }
+        if lock(&self.album_rows).is_empty() {
+            self.album_keys(&AlbumQuery::default())?;
+        }
+        let artists = lock(&self.artist_rows)
+            .iter()
+            .filter(|a| hit(&a.name))
+            .take(5)
+            .cloned()
+            .collect();
+        let albums = lock(&self.album_rows)
+            .iter()
+            .filter(|a| hit(&a.title))
+            .take(8)
+            .cloned()
+            .collect();
+        let page = music.search(text, 0, 50).map_err(error)?;
+        let known = lock(&self.albums_of).clone();
+        let tracks = page
+            .hits
+            .iter()
+            .map(|found| {
+                let key = TrackKey(found.hit.track.get());
+                let album = known.get(&key).copied().unwrap_or_default();
+                TrackRow {
+                    key,
+                    album,
+                    title: found.hit.title.clone().unwrap_or_default(),
+                    artist: found.hit.artist.clone().unwrap_or_default(),
+                    album_title: found.hit.album.clone().unwrap_or_default(),
+                    duration: found.hit.duration,
+                    path: found.path.clone(),
+                    cover_seed: seed(album),
+                    from_context: true,
+                    ..TrackRow::default()
+                }
+            })
+            .collect();
+        Ok(SearchResults {
+            artists,
+            albums,
+            tracks,
+            track_total: page.total,
+        })
+    }
+
+    fn set_rating(&self, track: TrackKey, stars: Option<u8>) -> Result<(), BackendError> {
+        self.library()?
+            .rate(track_id(track), stars.filter(|s| *s > 0))
+            .map_err(error)
+    }
+
+    fn playlists(&self) -> Result<Vec<PlaylistRow>, BackendError> {
+        let lists = self.library()?.playlists().map_err(error)?;
+        let mut ids = lock(&self.playlists);
+        Ok(lists
+            .iter()
+            .map(|p| {
+                let key = PlaylistKey(u64::try_from(p.id.get()).unwrap_or(0));
+                ids.insert(key, p.id);
+                PlaylistRow {
+                    key,
+                    name: p.name.clone(),
+                    items: p.items,
+                    duration: p.duration,
+                    modified: Some(p.modified),
+                }
+            })
+            .collect())
+    }
+
+    fn playlist_items(&self, key: PlaylistKey) -> Result<Vec<TrackRow>, BackendError> {
+        let id = self.playlist_id(key)?;
+        let items = self.library()?.playlist_items(id).map_err(error)?;
+        Ok(items
+            .iter()
+            .map(|item| {
+                let mut row = match &item.content {
+                    ItemContent::Track(track) => self.summary_row(track),
+                    ItemContent::Dead(dead) => TrackRow {
+                        title: dead.title.clone().unwrap_or_else(|| tr("Unknown title")),
+                        artist: dead.artist.clone().unwrap_or_default(),
+                        album_title: dead.album.clone().unwrap_or_default(),
+                        duration: dead.duration,
+                        missing: true,
+                        ..TrackRow::default()
+                    },
+                };
+                row.entry = Some(item.position as u64);
+                row
+            })
+            .collect())
+    }
+
+    fn create_playlist(&self, name: &str) -> Result<PlaylistKey, BackendError> {
+        let id = self.library()?.create_playlist(name).map_err(error)?;
+        let key = PlaylistKey(u64::try_from(id.get()).unwrap_or(0));
+        lock(&self.playlists).insert(key, id);
+        Ok(key)
+    }
+
+    fn rename_playlist(&self, key: PlaylistKey, name: &str) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?.rename_playlist(id, name).map_err(error)
+    }
+
+    fn delete_playlist(&self, key: PlaylistKey) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?.delete_playlist(id).map_err(error)
+    }
+
+    fn add_to_playlist(
+        &self,
+        key: PlaylistKey,
+        tracks: &[TrackKey],
+        position: Option<usize>,
+    ) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        let tracks = tracks.iter().map(|t| track_id(*t)).collect();
+        self.library()?
+            .add_to_playlist(id, tracks, position)
+            .map_err(error)
+    }
+
+    fn move_in_playlist(
+        &self,
+        key: PlaylistKey,
+        positions: &[usize],
+        to: usize,
+    ) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?
+            .move_playlist_items(id, positions.to_vec(), to)
+            .map(|_| ())
+            .map_err(error)
+    }
+
+    fn remove_from_playlist(
+        &self,
+        key: PlaylistKey,
+        positions: &[usize],
+    ) -> Result<(), BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?
+            .remove_from_playlist(id, positions.to_vec())
+            .map(|_| ())
+            .map_err(error)
+    }
+
+    fn import_playlist(&self, path: &Path) -> Result<(PlaylistKey, String), BackendError> {
+        let report = self.library()?.import_playlist(path).map_err(error)?;
+        let key = PlaylistKey(u64::try_from(report.playlist.get()).unwrap_or(0));
+        lock(&self.playlists).insert(key, report.playlist);
+        Ok((key, report.name))
+    }
+
+    fn export_playlist(&self, key: PlaylistKey, path: &Path) -> Result<usize, BackendError> {
+        let id = self.playlist_id(key)?;
+        self.library()?
+            .export_playlist(id, path)
+            .map(|r| r.entries)
+            .map_err(error)
+    }
+
+    fn folder_roots(&self) -> Result<Vec<FolderRow>, BackendError> {
+        let states = self.library()?.root_states().map_err(error)?;
+        Ok(states
+            .iter()
+            .map(|root| FolderRow {
+                path: root.path.clone(),
+                name: display_path(&root.path),
+                root: true,
+                state: if root.masked {
+                    FolderState::Absent
+                } else if root.polled {
+                    FolderState::Polled
+                } else {
+                    FolderState::Watched
+                },
+                has_children: !root.masked && has_subfolders(&root.path),
+            })
+            .collect())
+    }
+
+    fn subfolders(&self, path: &Path) -> Result<Vec<FolderRow>, BackendError> {
+        let entries = std::fs::read_dir(path).map_err(error)?;
+        let mut rows: Vec<FolderRow> = entries
+            .flatten()
+            .filter(|e| {
+                !e.file_name().as_encoded_bytes().starts_with(b".")
+                    && e.file_type().is_ok_and(|t| t.is_dir())
+            })
+            .map(|e| {
+                let path = e.path();
+                FolderRow {
+                    name: file_name(&path),
+                    root: false,
+                    state: FolderState::Watched,
+                    has_children: has_subfolders(&path),
+                    path,
+                }
+            })
+            .collect();
+        rows.sort_by(|a, b| a.path.cmp(&b.path));
+        Ok(rows)
+    }
+
+    fn folder(&self, path: &Path) -> Result<FolderListing, BackendError> {
+        let music = self.library()?;
+        let state = self
+            .folder_roots()?
+            .into_iter()
+            .filter(|r| path.starts_with(&r.path))
+            .map(|r| r.state)
+            .next();
+        let mut files = Vec::new();
+        let mut other_files = 0;
+        let mut entries: Vec<std::fs::DirEntry> =
+            std::fs::read_dir(path).map_err(error)?.flatten().collect();
+        entries.sort_by_key(std::fs::DirEntry::path);
+        for entry in entries {
+            let file = entry.path();
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            if kind.is_dir() || entry.file_name().as_encoded_bytes().starts_with(b".") {
+                continue;
+            }
+            if !is_audio(&file) {
+                other_files += 1;
+                continue;
+            }
+            let track = music
+                .track_at(&file)
+                .ok()
+                .flatten()
+                .and_then(|id| self.track_row(music, TrackKey(id.get())));
+            files.push(FolderFile {
+                name: file_name(&file),
+                size: entry.metadata().map_or(0, |m| m.len()),
+                track,
+                path: file,
+            });
+        }
+        Ok(FolderListing {
+            files,
+            other_files,
+            state,
+        })
     }
 
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {
@@ -313,6 +975,14 @@ pub struct ServicePlayer {
 }
 
 impl ServicePlayer {
+    fn shuffle(&self, on: bool) {
+        self.command(PlayerCommand::SetShuffle(if on {
+            ShuffleMode::Tracks
+        } else {
+            ShuffleMode::Off
+        }));
+    }
+
     fn command(&self, command: PlayerCommand) {
         if self.service.player().send(command).is_err() {
             let _ = self.updates.try_send(Update::Problem {
@@ -362,6 +1032,63 @@ impl PlayerControl for ServicePlayer {
                     self.command(PlayerCommand::PlayFiles { files, start: 0 });
                 }
             }
+            PlayerRequest::PlayTracks {
+                tracks,
+                start,
+                title,
+                shuffle,
+            } => {
+                self.command(PlayerCommand::SetShuffle(if shuffle {
+                    ShuffleMode::Tracks
+                } else {
+                    ShuffleMode::Off
+                }));
+                self.command(PlayerCommand::PlayTracks {
+                    context: QueueContext {
+                        source: ContextSource::Query(title.clone()),
+                        title: Some(title),
+                    },
+                    tracks: tracks
+                        .into_iter()
+                        .map(|t| TrackRef::Library(track_id(t)))
+                        .collect(),
+                    start,
+                });
+            }
+            PlayerRequest::PlayArtist { artist, shuffle } => {
+                self.shuffle(shuffle);
+                self.command(PlayerCommand::PlayContext {
+                    context: ContextRequest::Artist(person(artist)),
+                    title: None,
+                    start: 0,
+                });
+            }
+            PlayerRequest::PlayGenre { genre, shuffle } => {
+                self.shuffle(shuffle);
+                self.command(PlayerCommand::PlayContext {
+                    context: ContextRequest::Genre(genre_id(genre)),
+                    title: None,
+                    start: 0,
+                });
+            }
+            PlayerRequest::Enqueue { tracks, next } => self.command(PlayerCommand::Enqueue {
+                tracks: tracks
+                    .into_iter()
+                    .map(|t| TrackRef::Library(track_id(t)))
+                    .collect(),
+                at: if next {
+                    EnqueueAt::Next
+                } else {
+                    EnqueueAt::End
+                },
+            }),
+            PlayerRequest::RemoveEntries(entries) => self.command(PlayerCommand::Remove(
+                entries.into_iter().map(EntryId::new).collect(),
+            )),
+            PlayerRequest::MoveEntry { entry, to } => self.command(PlayerCommand::Move {
+                entry: EntryId::new(entry),
+                to,
+            }),
             PlayerRequest::PlayEntry(entry) => {
                 self.command(PlayerCommand::PlayEntry(EntryId::new(entry)));
             }
@@ -486,6 +1213,10 @@ fn track_row(
         entry: entry.map(EntryId::get),
         from_context,
         cover: info.cover.as_ref().map(cover_key),
+        cover_seed: seed(album),
+        album_title: info.album.clone().unwrap_or_default(),
+        path: info.path.clone(),
+        ..TrackRow::default()
     }
 }
 
@@ -534,6 +1265,7 @@ impl Forwarder {
                     entry: Some(e.id.get()),
                     from_context: e.from_context,
                     cover: None,
+                    ..TrackRow::default()
                 })
                 .collect();
             let _ = self.updates.send_blocking(Update::Queue(QueueSnapshot {
@@ -601,6 +1333,8 @@ impl Forwarder {
                 entry: Some(entry.get()),
                 from_context,
                 cover: None,
+                path: Some(path.clone()),
+                ..TrackRow::default()
             };
             let _ = self
                 .updates
@@ -764,6 +1498,12 @@ impl Forwarder {
                 })
             }
             LibraryEvent::Changed => self.send(Update::LibraryChanged),
+            LibraryEvent::Scan(_) | LibraryEvent::ScanEnded(_) => {
+                if matches!(event, LibraryEvent::ScanEnded(_)) {
+                    services::follow_folders(&self.service, false);
+                }
+                services::scan_update(event).is_none_or(|update| self.send(update))
+            }
             _ => true,
         }
     }
@@ -889,13 +1629,23 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
     let library = Arc::new(ServiceLibrary {
         service: Arc::clone(&service),
         ids: Mutex::new(HashMap::new()),
+        playlists: Mutex::new(HashMap::new()),
+        albums_of: Mutex::new(HashMap::new()),
+        album_rows: Mutex::new(Vec::new()),
+        artist_rows: Mutex::new(Vec::new()),
     });
     let player = Rc::new(ServicePlayer {
         service: Arc::clone(&service),
         library: Arc::clone(&library),
         updates: sender,
     });
-    Ok(Backend::new(library, player, receiver).with_ui_state(Rc::new(ServiceUiState(service))))
+    services::follow_folders(&service, true);
+    let services = Arc::new(services::ServiceServices {
+        service: Arc::clone(&service),
+    });
+    Ok(Backend::new(library, player, receiver)
+        .with_ui_state(Rc::new(ServiceUiState(service)))
+        .with_services(services))
 }
 
 #[cfg(test)]

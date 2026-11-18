@@ -229,6 +229,7 @@ fn browse(library: &Library) {
         sort,
         page: Page::new(offset, 50),
         include_masked: false,
+        ..AlbumQuery::default()
     };
     let all = library
         .albums(&page(AlbumSort::Title, 0, AlbumFilter::All))

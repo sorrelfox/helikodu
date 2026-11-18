@@ -1,0 +1,218 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * The dialogs: Settings, the full-output confirmation, the output switcher,
+ * the tag editor, the first run, Supported formats and About.
+ *
+ * Like helikodu.css, this only paints: sizes of boxes, gaps and alignment come
+ * from the widgets. Restyled stock widgets set background-image: none.
+ */
+
+/* ---- 1. Frame ----------------------------------------------------------- */
+
+window.hk-dialog { background-color: var(--hk-pane); color: var(--hk-t1); }
+.hk-strip { min-height: 45px; padding: 0 12px 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-strip.plain { padding-left: 18px; border-bottom: none; }
+.hk-title { font-size: 14px; font-weight: 600; }
+.hk-dialog-title { font-size: 16px; font-weight: 600; }
+.hk-note { font-size: 12px; color: var(--hk-t3); }
+.hk-row-label { font-weight: 500; }
+.hk-lead { font-size: 14px; color: var(--hk-t2); }
+.hk-mono-small { font-family: monospace; font-size: 12px; font-feature-settings: "tnum", "liga" 0, "calt" 0; }
+separator.hk-divider { min-height: 1px; min-width: 1px; background-color: var(--hk-line); }
+.hk-dialog-body { padding: 24px; }
+.hk-dialog-buttons { margin-top: 22px; }
+.hk-dialog-footer { min-height: 59px; padding: 0 24px; border-top: 1px solid var(--hk-line); background-color: var(--hk-win); }
+.hk-icon-tile { min-width: 36px; min-height: 36px; border-radius: 9px; border: 1px solid var(--hk-line); background-color: var(--hk-field); color: var(--hk-t1); }
+.hk-notice { margin: 12px 28px 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--hk-line2); background-color: var(--hk-win); color: var(--hk-t1); }
+.hk-tag-form > .hk-notice { margin: 0; }
+button.hk-btn.tall { min-height: 36px; padding: 0 20px; }
+
+/* ---- 2. Settings -------------------------------------------------------- */
+
+.hk-settings-nav { background-color: var(--hk-side); border-right: 1px solid var(--hk-line); }
+.hk-settings-main { background-color: var(--hk-pane); }
+.hk-settings-page { padding: 22px 28px 24px; }
+.hk-setting { min-height: 32px; }
+
+.hk-bordered-list { border-radius: 8px; border: 1px solid var(--hk-line); }
+.hk-bordered-list > * { border-bottom: 1px solid var(--hk-line); }
+.hk-bordered-list > *:last-child { border-bottom: none; }
+.hk-bordered-list > .hk-rows > * { border-bottom: 1px solid var(--hk-line); }
+.hk-folder-row { min-height: 52px; padding: 0 8px 0 14px; }
+.hk-folder-row.hk-dim .hk-path { color: var(--hk-t3); }
+.hk-path { font-size: 12px; font-weight: 500; }
+.hk-tag { letter-spacing: 0.04em; }
+.hk-list-footer { min-height: 44px; padding: 0 8px 0 4px; border-radius: 0 0 8px 8px; background-color: var(--hk-win); }
+.hk-device-choice { min-height: 40px; padding: 0 14px; }
+.hk-device-choice.selected { background-color: var(--hk-sel); }
+.hk-bordered-list > .hk-device-choice:first-child { border-radius: 7px 7px 0 0; }
+.hk-bordered-list > .hk-device-choice:last-child { border-radius: 0 0 7px 7px; }
+
+.hk-option-card { padding: 11px 14px; border-radius: 8px; border: 1px solid var(--hk-line); }
+.hk-option-card.selected { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); }
+.hk-option-card:disabled { opacity: 0.6; }
+
+dropdown.hk-input > button {
+  min-height: 30px; border-radius: 7px; border: 1px solid var(--hk-line);
+  background-color: var(--hk-field); background-image: none; box-shadow: none; color: var(--hk-t1);
+}
+dropdown.hk-input > button { padding: 0 10px; }
+dropdown.hk-input > button:hover { background-color: var(--hk-hover); }
+dropdown.hk-input:disabled > button { color: var(--hk-t2); }
+searchentry.hk-input, entry.hk-input.hk-mono { min-height: 30px; }
+searchentry.hk-input { padding: 0 10px; border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); background-image: none; box-shadow: none; color: var(--hk-t1); }
+searchentry.hk-input:disabled { color: var(--hk-t3); }
+
+switch.hk-switch {
+  min-width: 28px; min-height: 16px; padding: 1px; border: none; border-radius: 9px;
+  background-color: var(--hk-line2); background-image: none; box-shadow: none; outline-offset: 2px;
+}
+switch.hk-switch:checked { background-color: var(--hk-accent-fill); }
+switch.hk-switch > slider {
+  min-width: 14px; min-height: 14px; margin: 1px; border: none; border-radius: 7px;
+  background-color: #FFFFFF; background-image: none; box-shadow: none;
+}
+switch.hk-switch image { color: transparent; }
+switch.hk-switch:disabled { opacity: 0.45; }
+
+.hk-dialog check, .hk-dialog radio, .hk-first-run check, .hk-first-run radio {
+  min-width: 15px; min-height: 15px; padding: 0; border: 1px solid var(--hk-line2);
+  background-color: var(--hk-field); background-image: none; box-shadow: none; color: var(--hk-on-accent);
+}
+.hk-dialog check:checked, .hk-dialog radio:checked, .hk-first-run check:checked {
+  border-color: var(--hk-accent-fill); background-color: var(--hk-accent-fill);
+}
+
+/* As the volume slider: the 3 px trough is a band inside a 14 px trough, so
+   the knob needs no negative margins. */
+scale.hk-slider { padding: 0 3px; min-height: 14px; }
+scale.hk-slider > trough { min-height: 14px; border: none; border-radius: 2px; outline: none;
+  background-color: transparent;
+  background-image: linear-gradient(to bottom, transparent 5px, var(--hk-line2) 5px, var(--hk-line2) 8px, transparent 8px); }
+scale.hk-slider > trough > highlight { min-height: 14px; margin: 0; border: none; border-radius: 2px; background-color: transparent;
+  background-image: linear-gradient(to bottom, transparent 5px, var(--hk-accent-fill) 5px, var(--hk-accent-fill) 8px, transparent 8px); }
+scale.hk-slider > trough > slider { min-width: 14px; min-height: 14px; margin: 0; border: none; border-radius: 7px; background-color: var(--hk-t1); background-image: none; box-shadow: 0 0 0 3px var(--hk-pane); }
+
+levelbar.hk-meter > trough { min-height: 4px; padding: 0; border: none; border-radius: 2px; background-color: var(--hk-line2); background-image: none; box-shadow: none; }
+levelbar.hk-meter > trough > block { min-height: 4px; border: none; border-radius: 2px; background-image: none; box-shadow: none; }
+levelbar.hk-meter > trough > block.filled { background-color: var(--hk-t2); }
+levelbar.hk-meter > trough > block.empty { background-color: transparent; }
+
+togglebutton.hk-toggle, button.hk-toggle {
+  min-height: 30px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--hk-line2);
+  background: none; background-image: none; box-shadow: none; color: var(--hk-t1); font-weight: 500;
+}
+button.hk-toggle:checked { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); font-weight: 600; }
+
+button.hk-swatch {
+  min-width: 22px; min-height: 22px; padding: 0; border: none; border-radius: 11px;
+  background-image: none; box-shadow: none;
+}
+button.hk-swatch.amber { background-color: #F0B23C; }
+button.hk-swatch.blue { background-color: #6CA8F0; }
+button.hk-swatch.green { background-color: #63CB8F; }
+button.hk-swatch.violet { background-color: #B59DF5; }
+button.hk-swatch:checked { box-shadow: 0 0 0 2px var(--hk-pane), 0 0 0 4px var(--hk-t1); }
+
+/* ---- 3. Full-output confirmation ---------------------------------------- */
+
+.hk-confirm-readout { margin-top: 20px; background-color: var(--hk-side); border: 1px solid var(--hk-line); }
+.hk-confirm-value { font-size: 12.5px; font-weight: 500; }
+
+/* ---- 4. Output switcher (on glass) -------------------------------------- */
+
+.hk-switcher-head { min-height: 50px; padding: 0 16px 0 18px; }
+.hk-switcher-rows { padding: 0 8px 8px; }
+.hk-switcher-section { padding: 8px 10px 4px; }
+button.hk-device-row {
+  min-height: 54px; padding: 0 12px 0 10px; border: none; border-radius: 9px;
+  background: none; background-image: none; box-shadow: none; color: var(--hk-glass-t1);
+}
+button.hk-device-row:hover { background-color: var(--hk-glass-hover); }
+button.hk-device-row.active { background-color: var(--hk-glass-hover); }
+button.hk-device-row.active .hk-device-name { font-weight: 600; }
+button.hk-device-row.missing .hk-device-name { color: var(--hk-glass-t2); }
+.hk-device-name { font-size: 13px; font-weight: 500; }
+.hk-device-caption { color: var(--hk-glass-t3); letter-spacing: 0.03em; }
+.hk-device-tile { min-width: 32px; min-height: 32px; border-radius: 8px; background-color: var(--hk-glass-tile); color: var(--hk-glass-t2); }
+button.hk-device-row.bit-perfect .hk-device-caption,
+button.hk-device-row.bit-perfect .hk-device-tile { color: var(--hk-signal-bit-perfect-text); }
+.hk-switcher separator.hk-divider { margin: 0 16px; background-color: var(--hk-glass-line); }
+.hk-switcher-mode { min-height: 48px; padding: 0 12px 0 18px; }
+button.hk-switcher-footer {
+  min-height: 44px; padding: 0 16px 0 18px; border: none; border-top: 1px solid var(--hk-glass-line);
+  border-radius: 0 0 14px 14px; background: none; background-image: none; box-shadow: none; color: var(--hk-glass-t1);
+}
+button.hk-switcher-footer:hover { background-color: var(--hk-glass-hover); }
+
+/* ---- 5. Tag editor ------------------------------------------------------ */
+
+.hk-tag-files { background-color: var(--hk-side); border-right: 1px solid var(--hk-line); }
+list.hk-file-list { margin: 0 8px; }
+list.hk-file-list > row { min-height: 46px; padding: 0 10px; color: var(--hk-t1); font-weight: 400; }
+list.hk-file-list > row:selected { font-weight: 400; }
+.hk-tag-files-foot { padding: 12px 18px; border-top: 1px solid var(--hk-line); }
+.hk-tag-tabs { min-height: 40px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-tag-tabs > button { min-height: 40px; }
+.hk-tabs > button.edited { color: var(--hk-accent-text); }
+.hk-tag-form { padding: 18px 24px; }
+.hk-field-label { font-size: 12px; font-weight: 500; color: var(--hk-t2); }
+entry.hk-input.edited, .hk-chips.edited { border-color: var(--hk-accent-fill); }
+entry.hk-keep > text > placeholder { font-style: italic; }
+.hk-edited-dot { min-width: 6px; min-height: 6px; border-radius: 3px; background-color: var(--hk-accent-fill); }
+.hk-chips { min-height: 30px; padding: 0 6px; border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); }
+.hk-chips:focus-within { border-color: var(--hk-accent-fill); box-shadow: 0 0 0 3px var(--hk-sel); }
+.hk-chip { min-height: 22px; padding: 0 2px 0 8px; margin: 4px 0; border-radius: 5px; background-color: var(--hk-seg); }
+button.hk-chip-remove { min-width: 18px; min-height: 18px; padding: 0; border: none; border-radius: 4px; background: none; background-image: none; box-shadow: none; color: var(--hk-t2); }
+button.hk-chip-remove image { -gtk-icon-size: 10px; }
+entry.hk-chip-entry, entry.hk-plain-entry { min-height: 28px; padding: 0 4px; border: none; background: none; background-image: none; box-shadow: none; outline: none; color: var(--hk-t1); }
+entry.hk-plain-entry { padding: 0; }
+.hk-others-head { margin-top: 10px; }
+.hk-other-row { min-height: 32px; border-bottom: 1px solid var(--hk-line); }
+.hk-field-key { letter-spacing: 0.03em; text-transform: uppercase; }
+.hk-rating-field { min-height: 30px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); }
+.hk-rating-field:focus-visible { outline: 2px solid var(--hk-accent-text); outline-offset: 1px; }
+.hk-text-frame { border-radius: 8px; border: 1px solid var(--hk-line); background-color: var(--hk-field); }
+textview.hk-text, textview.hk-text > text { background-color: var(--hk-field); color: var(--hk-t1); }
+textview.hk-text { padding: 12px 14px; border-radius: 8px; }
+.hk-badge.hk-badge-plain { font-family: inherit; font-size: 12px; font-weight: 400; color: var(--hk-t1); }
+
+/* ---- 6. First run and the scan footer ------------------------------------ */
+
+.hk-first-run { background-color: var(--hk-pane); }
+.hk-first-run-strip { background-color: var(--hk-win); padding-left: 18px; }
+.hk-first-run-column { margin: 40px 24px; }
+button.hk-add-row {
+  min-height: 44px; padding: 0 14px; border: none; border-radius: 0 0 8px 8px;
+  background: none; background-image: none; box-shadow: none; color: var(--hk-t1);
+}
+button.hk-add-row:hover { background-color: var(--hk-hover); }
+.hk-output-box { padding: 12px 14px 12px 16px; border-radius: 8px; border: 1px solid var(--hk-line); background-color: var(--hk-win); }
+
+.hk-scan-footer { padding: 12px 18px 14px; border-top: 1px solid var(--hk-line); font-size: 12.5px; }
+progressbar.hk-scan-bar > trough { min-height: 3px; border: none; border-radius: 2px; background-color: var(--hk-line2); background-image: none; box-shadow: none; }
+progressbar.hk-scan-bar > trough > progress { min-height: 3px; min-width: 0; margin: 0; border: none; border-radius: 2px; background-color: var(--hk-accent-fill); background-image: none; box-shadow: none; }
+
+/* ---- 7. Supported formats and About -------------------------------------- */
+
+.hk-toolbar { min-height: 54px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-format-head { padding: 0 24px; background-color: var(--hk-win); }
+list.hk-format-table { background: none; color: var(--hk-t1); }
+list.hk-format-table > row { padding: 0; background: none; }
+.hk-format-row { min-height: 18px; padding: 8px 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-formats { font-size: 12px; }
+.hk-format-footer { min-height: 44px; padding: 0 12px 0 24px; border-top: 1px solid var(--hk-line); background-color: var(--hk-win); }
+.hk-side-foot { padding: 12px 18px 16px; }
+list.hk-list > row.two-line { min-height: 44px; }
+
+.hk-about { padding: 22px 24px 24px; }
+.hk-logo-tile { min-width: 68px; min-height: 68px; border-radius: 16px; }
+.hk-about-name { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; }
+.hk-about-row { min-height: 34px; padding: 0 14px; }
+button.hk-about-link {
+  min-height: 36px; padding: 0 14px; border: none; border-radius: 0 0 7px 7px;
+  background-color: var(--hk-win); background-image: none; box-shadow: none; color: var(--hk-t1);
+}
+button.hk-about-link:hover { background-color: var(--hk-hover); }

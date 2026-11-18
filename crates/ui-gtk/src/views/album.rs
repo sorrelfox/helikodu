@@ -9,14 +9,17 @@ use std::rc::Rc;
 
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{CompositeTemplate, glib};
+use gtk::{CompositeTemplate, gdk, gio, glib};
 
 use crate::backend::{AlbumDetail, AlbumKey, Backend, PlayerRequest, TrackKey, TrackRow};
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
 use crate::playback::{Change, Playback};
+use crate::views::actions::{self, Target};
+use crate::views::drag::DraggedTracks;
 use crate::widgets::{CoverArt, PlayingIndicator, RatingStars, label};
+use crate::window::MainWindow;
 
 mod imp {
     use super::*;
@@ -170,6 +173,7 @@ impl AlbumPage {
     pub(crate) fn bind(&self, backend: &Backend, playback: &Rc<Playback>, covers: &Rc<CoverCache>) {
         self.imp().backend.replace(Some(backend.clone()));
         self.imp().covers.replace(Some(covers.clone()));
+        self.install_actions();
         let weak = self.downgrade();
         playback.connect(move |view, change| {
             if let Some(page) = weak.upgrade()
@@ -181,6 +185,87 @@ impl AlbumPage {
                 }
             }
         });
+    }
+
+    /// The page's actions: Add to queue, More, Edit tags, Open folder; the
+    /// track rows' context menu and dragging.
+    fn install_actions(&self) {
+        let group = gio::SimpleActionGroup::new();
+        for name in ["enqueue", "more", "edit-tags", "open-folder"] {
+            let action = gio::SimpleAction::new(name, None);
+            let weak = self.downgrade();
+            action.connect_activate(move |action, _| {
+                let Some(page) = weak.upgrade() else { return };
+                let (Some(window), Some(album), Some(backend)) = (
+                    page.root().and_downcast::<MainWindow>(),
+                    page.imp().album.get(),
+                    page.imp().backend.borrow().clone(),
+                ) else {
+                    return;
+                };
+                let tracks: Vec<TrackKey> = page
+                    .imp()
+                    .detail
+                    .borrow()
+                    .as_ref()
+                    .map(|d| d.tracks().map(|t| t.key).collect())
+                    .unwrap_or_default();
+                match action.name().as_str() {
+                    "enqueue" => actions::play(&window, backend, Target::Album(album), Some(false)),
+                    "more" => {
+                        actions::popup(&page.imp().play.get(), Target::Album(album), None);
+                    }
+                    "edit-tags" => window.open_tag_editor(tracks),
+                    _ => {
+                        let path = page
+                            .imp()
+                            .detail
+                            .borrow()
+                            .as_ref()
+                            .and_then(|d| d.tracks().find_map(|t| t.path.clone()));
+                        actions::open_folder(&window, path);
+                    }
+                }
+            });
+            group.add_action(&action);
+        }
+        self.insert_action_group("album-page", Some(&group));
+        let tracks = self.imp().tracks.get();
+        let click = gtk::GestureClick::new();
+        click.set_button(gdk::BUTTON_SECONDARY);
+        let weak = self.downgrade();
+        click.connect_pressed(move |gesture, _, x, y| {
+            let Some(page) = weak.upgrade() else { return };
+            if let Some(target) = page.row_target(y) {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                actions::popup(&page.imp().tracks.get(), target, Some((x, y)));
+            }
+        });
+        tracks.add_controller(click);
+        let weak = self.downgrade();
+        DraggedTracks::source(&tracks, move |_, y| {
+            let page = weak.upgrade()?;
+            let Some(Target::Tracks { rows, .. }) = page.row_target(y) else {
+                return None;
+            };
+            let row = rows.first()?;
+            Some((
+                DraggedTracks {
+                    keys: vec![row.key],
+                    ..DraggedTracks::default()
+                },
+                row.title.clone(),
+            ))
+        });
+    }
+
+    /// The track under `y` of the track list, as a menu target.
+    fn row_target(&self, y: f64) -> Option<Target> {
+        let row = self.imp().tracks.row_at_y(y as i32)?;
+        let index = row.widget_name().parse::<usize>().ok()?;
+        let detail = self.imp().detail.borrow();
+        let track = detail.as_ref()?.tracks().nth(index)?.clone();
+        Some(Target::tracks(vec![Rc::new(track)]))
     }
 
     /// The album shown.

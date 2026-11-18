@@ -39,3 +39,28 @@ pub fn save_png(window: &impl IsA<gtk::Window>, path: &Path) -> Result<(), Rende
         .save_to_png(path)
         .map_err(|e| RenderError(format!("cannot write {}: {e}", path.display())))
 }
+
+/// Renders `widget`, such as an open popover, into the PNG file `path`,
+/// with the renderer of the surface it is on.
+pub fn save_widget_png(widget: &impl IsA<gtk::Widget>, path: &Path) -> Result<(), RenderError> {
+    let widget = widget.upcast_ref::<gtk::Widget>();
+    let paintable = gtk::WidgetPaintable::new(Some(widget));
+    let snapshot = gtk::Snapshot::new();
+    let (w, h) = (widget.width(), widget.height());
+    if w <= 0 || h <= 0 {
+        return Err(RenderError("the widget is not shown".into()));
+    }
+    paintable.snapshot(&snapshot, f64::from(w), f64::from(h));
+    let node = snapshot
+        .to_node()
+        .ok_or_else(|| RenderError("the widget drew nothing".into()))?;
+    let renderer = widget
+        .native()
+        .and_then(|n| n.renderer())
+        .ok_or_else(|| RenderError("the widget is not realised".into()))?;
+    let bounds = gtk::graphene::Rect::new(0.0, 0.0, w as f32, h as f32);
+    let texture = renderer.render_texture(&node, Some(&bounds));
+    texture
+        .save_to_png(path)
+        .map_err(|e| RenderError(format!("cannot write {}: {e}", path.display())))
+}

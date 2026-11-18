@@ -14,23 +14,38 @@
 
 pub mod sample;
 pub mod service;
+pub mod services;
 
 use std::cell::RefCell;
 use std::fmt;
+use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 pub use helikodu_model::settings::UiState;
 
 /// Identifies an album for as long as the backend runs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct AlbumKey(pub u64);
 
-/// Identifies a track for as long as the backend runs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// Identifies a track for as long as the backend runs. `TrackKey(0)` is a track
+/// that is not in the library: a loose file or a missing playlist entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct TrackKey(pub u64);
+
+/// Identifies an artist (an album artist) for as long as the backend runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub struct ArtistKey(pub u64);
+
+/// Identifies a genre for as long as the backend runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub struct GenreKey(pub u64);
+
+/// Identifies a static playlist for as long as the backend runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub struct PlaylistKey(pub u64);
 
 /// Identifies a cover picture: the content hash the thumbnail cache uses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -85,6 +100,20 @@ pub enum AlbumFilter {
     HiRes,
 }
 
+/// Which part of the library an album list shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum AlbumScope {
+    /// Every album.
+    #[default]
+    All,
+    /// The albums of an album artist.
+    Artist(ArtistKey),
+    /// The albums an artist appears on without being their album artist.
+    AppearsOn(ArtistKey),
+    /// The albums with a track of a genre.
+    Genre(GenreKey),
+}
+
 /// Which albums, in which order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct AlbumQuery {
@@ -92,6 +121,8 @@ pub struct AlbumQuery {
     pub sort: AlbumSort,
     /// The quick filter.
     pub filter: AlbumFilter,
+    /// The part of the library.
+    pub scope: AlbumScope,
 }
 
 /// Totals for the sidebar.
@@ -143,8 +174,8 @@ pub struct AlbumRow {
     pub cover: Option<CoverKey>,
 }
 
-/// One track of an album or the queue.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// One track of an album, a list or the queue.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TrackRow {
     /// The track.
     pub key: TrackKey,
@@ -171,6 +202,18 @@ pub struct TrackRow {
     pub from_context: bool,
     /// Its album's cover, if known.
     pub cover: Option<CoverKey>,
+    /// The seed of its album's generated cover.
+    pub cover_seed: u64,
+    /// Its album's title.
+    pub album_title: String,
+    /// Its year.
+    pub year: Option<i32>,
+    /// Its format, as far as known.
+    pub format: AudioFormat,
+    /// Its file, if known.
+    pub path: Option<PathBuf>,
+    /// Whether it is missing: a playlist entry whose track left the library.
+    pub missing: bool,
 }
 
 /// One disc of an album.
@@ -215,6 +258,185 @@ impl AlbumDetail {
     }
 }
 
+/// One artist of the artist list.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ArtistRow {
+    /// The artist.
+    pub key: ArtistKey,
+    /// The name as credited.
+    pub name: String,
+    /// The name it sorts by ("Linden Quartet, The").
+    pub sort_name: String,
+    /// The number of albums.
+    pub album_count: usize,
+    /// The number of tracks.
+    pub track_count: usize,
+}
+
+/// Everything the artist page shows.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ArtistDetail {
+    /// The list row.
+    pub row: ArtistRow,
+    /// The albums.
+    pub albums: Vec<AlbumRow>,
+    /// The EPs and singles.
+    pub singles: Vec<AlbumRow>,
+    /// The albums the artist appears on.
+    pub appears_on: Vec<AlbumRow>,
+    /// The most played tracks, most played first.
+    pub most_played: Vec<TrackRow>,
+    /// The length of all their tracks.
+    pub duration: Duration,
+}
+
+/// One genre of the genre list.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct GenreRow {
+    /// The genre.
+    pub key: GenreKey,
+    /// Its name.
+    pub name: String,
+    /// The number of albums with a track of it.
+    pub album_count: usize,
+    /// The number of its tracks.
+    pub track_count: usize,
+}
+
+/// A column of the track table, which is also a sort key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum TrackColumn {
+    /// Disc and track number.
+    Number,
+    /// The title.
+    Title,
+    /// The artists.
+    Artist,
+    /// The album title.
+    Album,
+    /// The year.
+    Year,
+    /// The audio format.
+    Format,
+    /// The rating.
+    Rating,
+    /// How often it was played.
+    Plays,
+    /// The length.
+    Length,
+}
+
+/// One key of a track list's order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TrackSort {
+    /// The column.
+    pub column: TrackColumn,
+    /// Largest first.
+    pub descending: bool,
+}
+
+/// Which part of the library a track list shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum TrackScope {
+    /// Every track.
+    #[default]
+    All,
+    /// The tracks of an artist, in any role.
+    Artist(ArtistKey),
+    /// The tracks of a genre.
+    Genre(GenreKey),
+}
+
+/// Which tracks, in which order.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct TrackQuery {
+    /// The part of the library.
+    pub scope: TrackScope,
+    /// Words the tracks must match, as in search; empty for all.
+    pub text: String,
+    /// The order, most significant key first; empty for album order.
+    pub sort: Vec<TrackSort>,
+}
+
+/// A static playlist in the sidebar.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlaylistRow {
+    /// The playlist.
+    pub key: PlaylistKey,
+    /// Its name.
+    pub name: String,
+    /// The number of its entries.
+    pub items: usize,
+    /// The length of its entries.
+    pub duration: Duration,
+    /// When it last changed.
+    pub modified: Option<SystemTime>,
+}
+
+/// What a search found.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SearchResults {
+    /// Matching artists.
+    pub artists: Vec<ArtistRow>,
+    /// Matching albums.
+    pub albums: Vec<AlbumRow>,
+    /// The best matching tracks.
+    pub tracks: Vec<TrackRow>,
+    /// The number of matching tracks.
+    pub track_total: usize,
+}
+
+/// How a library folder is kept current.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FolderState {
+    /// Changes are seen as they happen.
+    #[default]
+    Watched,
+    /// It is rescanned now and then (a network or FUSE file system).
+    Polled,
+    /// Its drive is not connected.
+    Absent,
+}
+
+/// A folder of the folder tree.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FolderRow {
+    /// The folder.
+    pub path: PathBuf,
+    /// Its name as shown: the path with `~` for a library folder, else the name.
+    pub name: String,
+    /// Whether it is a library folder.
+    pub root: bool,
+    /// How it is kept current.
+    pub state: FolderState,
+    /// Whether it has folders in it.
+    pub has_children: bool,
+}
+
+/// An audio file of a folder.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FolderFile {
+    /// The file.
+    pub path: PathBuf,
+    /// Its name as shown (lossily where it is not UTF-8).
+    pub name: String,
+    /// Its track, when it is in the library.
+    pub track: Option<TrackRow>,
+    /// Its size in bytes.
+    pub size: u64,
+}
+
+/// The audio files of a folder.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct FolderListing {
+    /// The audio files, by name.
+    pub files: Vec<FolderFile>,
+    /// The number of other files.
+    pub other_files: usize,
+    /// Whether the folder is in the library, and how it is kept current.
+    pub state: Option<FolderState>,
+}
+
 /// Library data. Called on worker threads, never on the main thread.
 pub trait LibrarySource: Send + Sync + fmt::Debug {
     /// The totals for the sidebar.
@@ -244,6 +466,67 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     fn retain_thumbnails(&self, keep: &mut dyn FnMut(&CoverKey, u32) -> bool) {
         let _ = keep;
     }
+    /// The album artists, in the order of their sort names.
+    fn artists(&self) -> Result<Vec<ArtistRow>, BackendError>;
+    /// One artist with their releases and most played tracks.
+    fn artist(&self, key: ArtistKey) -> Result<Option<ArtistDetail>, BackendError>;
+    /// The artist named `name`, ignoring case.
+    fn find_artist(&self, name: &str) -> Result<Option<ArtistKey>, BackendError>;
+    /// The genres, by name.
+    fn genres(&self) -> Result<Vec<GenreRow>, BackendError>;
+    /// The tracks matching `query`, in its order.
+    fn track_keys(&self, query: &TrackQuery) -> Result<Vec<TrackKey>, BackendError>;
+    /// The rows of `keys`; a key without a track is left out.
+    fn track_rows(&self, keys: &[TrackKey]) -> Result<Vec<TrackRow>, BackendError>;
+    /// Whether track lists can be sorted by `column`.
+    fn sortable(&self, column: TrackColumn) -> bool {
+        let _ = column;
+        true
+    }
+    /// The artists, albums and tracks matching `text`.
+    fn search(&self, text: &str) -> Result<SearchResults, BackendError>;
+    /// Sets the rating of `track` in whole stars, or clears it.
+    fn set_rating(&self, track: TrackKey, stars: Option<u8>) -> Result<(), BackendError>;
+    /// The static playlists, in the order they were made.
+    fn playlists(&self) -> Result<Vec<PlaylistRow>, BackendError>;
+    /// The entries of a playlist, in order; each `entry` is its position.
+    fn playlist_items(&self, key: PlaylistKey) -> Result<Vec<TrackRow>, BackendError>;
+    /// Makes an empty playlist.
+    fn create_playlist(&self, name: &str) -> Result<PlaylistKey, BackendError>;
+    /// Renames a playlist.
+    fn rename_playlist(&self, key: PlaylistKey, name: &str) -> Result<(), BackendError>;
+    /// Deletes a playlist.
+    fn delete_playlist(&self, key: PlaylistKey) -> Result<(), BackendError>;
+    /// Inserts `tracks` at `position`, or adds them at the end.
+    fn add_to_playlist(
+        &self,
+        key: PlaylistKey,
+        tracks: &[TrackKey],
+        position: Option<usize>,
+    ) -> Result<(), BackendError>;
+    /// Moves the entries at `positions` before the entry now at `to`.
+    fn move_in_playlist(
+        &self,
+        key: PlaylistKey,
+        positions: &[usize],
+        to: usize,
+    ) -> Result<(), BackendError>;
+    /// Removes the entries at `positions`.
+    fn remove_from_playlist(
+        &self,
+        key: PlaylistKey,
+        positions: &[usize],
+    ) -> Result<(), BackendError>;
+    /// Imports a playlist file; returns the new playlist and its name.
+    fn import_playlist(&self, path: &Path) -> Result<(PlaylistKey, String), BackendError>;
+    /// Exports a playlist to a file; returns the number of entries written.
+    fn export_playlist(&self, key: PlaylistKey, path: &Path) -> Result<usize, BackendError>;
+    /// The library folders.
+    fn folder_roots(&self) -> Result<Vec<FolderRow>, BackendError>;
+    /// The folders in `path`, by name.
+    fn subfolders(&self, path: &Path) -> Result<Vec<FolderRow>, BackendError>;
+    /// The audio files in `path`.
+    fn folder(&self, path: &Path) -> Result<FolderListing, BackendError>;
 }
 
 /// The window state kept between runs.
@@ -287,6 +570,47 @@ pub enum PlayerRequest {
         files: Vec<PathBuf>,
         /// Add them instead of replacing the queue.
         enqueue: bool,
+    },
+    /// Play tracks, replacing the queue; `title` names where they came from.
+    PlayTracks {
+        /// The tracks, in order.
+        tracks: Vec<TrackKey>,
+        /// The index of the first to play.
+        start: usize,
+        /// Where they came from, as the queue panel shows it.
+        title: String,
+        /// Play them in random order.
+        shuffle: bool,
+    },
+    /// Play all tracks of an artist.
+    PlayArtist {
+        /// The artist.
+        artist: ArtistKey,
+        /// In random order.
+        shuffle: bool,
+    },
+    /// Play all tracks of a genre.
+    PlayGenre {
+        /// The genre.
+        genre: GenreKey,
+        /// In random order.
+        shuffle: bool,
+    },
+    /// "Play next" (`next`) or "Add to queue".
+    Enqueue {
+        /// The tracks.
+        tracks: Vec<TrackKey>,
+        /// After the current track instead of at the end.
+        next: bool,
+    },
+    /// Remove these queue entries.
+    RemoveEntries(Vec<u64>),
+    /// Move a queue entry to an index in play order (counted without it).
+    MoveEntry {
+        /// The entry.
+        entry: u64,
+        /// Where to.
+        to: usize,
     },
     /// Play this queue entry now.
     PlayEntry(u64),
@@ -464,6 +788,8 @@ pub enum Update {
     },
     /// The library changed: lists should be fetched again.
     LibraryChanged,
+    /// A library scan made progress or ended.
+    Scan(services::ScanStatus),
     /// Another program asked to show the window (MPRIS `Raise`).
     Raise,
     /// Another program asked to quit (MPRIS `Quit`).
@@ -483,6 +809,23 @@ pub struct Backend {
     player: Rc<dyn PlayerControl>,
     updates: Rc<RefCell<Option<async_channel::Receiver<Update>>>>,
     ui_state: Rc<dyn UiStateAccess>,
+    services: Arc<dyn services::Services>,
+    gate: GateSlot,
+}
+
+/// Looks at each request before it reaches the player and keeps it back by
+/// returning `false` (the full-output confirmation does).
+pub type RequestGate = Rc<dyn Fn(&PlayerRequest) -> bool>;
+
+#[derive(Clone, Default)]
+struct GateSlot(Rc<RefCell<Option<RequestGate>>>);
+
+impl fmt::Debug for GateSlot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("GateSlot")
+            .field(&self.0.borrow().is_some())
+            .finish()
+    }
 }
 
 impl Backend {
@@ -497,6 +840,8 @@ impl Backend {
             player,
             updates: Rc::new(RefCell::new(Some(updates))),
             ui_state: Rc::new(MemoryUiState::default()),
+            services: Arc::new(sample::MemoryServices::default()),
+            gate: GateSlot::default(),
         }
     }
 
@@ -519,7 +864,33 @@ impl Backend {
 
     /// Sends a request to the player.
     pub fn send(&self, request: PlayerRequest) {
+        let gate = self.gate.0.borrow().clone();
+        if gate.is_some_and(|gate| !gate(&request)) {
+            return;
+        }
         self.player.send(request);
+    }
+
+    /// Sends a request to the player past the gate.
+    pub fn send_ungated(&self, request: PlayerRequest) {
+        self.player.send(request);
+    }
+
+    /// Sets the gate requests pass before they reach the player.
+    pub fn set_gate(&self, gate: Option<RequestGate>) {
+        self.gate.0.replace(gate);
+    }
+
+    /// The same backend with the dialogs' access to the core.
+    #[must_use]
+    pub fn with_services(mut self, services: Arc<dyn services::Services>) -> Self {
+        self.services = services;
+        self
+    }
+
+    /// The dialogs' access to the core.
+    pub fn services(&self) -> Arc<dyn services::Services> {
+        self.services.clone()
     }
 
     /// The player's updates. Only the first caller gets them.

@@ -199,7 +199,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
                       <object class="GtkButton">
                         <property name="label" translatable="yes">Save as playlist</property>
                         <property name="valign">center</property>
-                        <property name="sensitive">False</property>
+                        <property name="action-name">win.save-queue</property>
                         <style>
                           <class name="hk-btn"/>
                           <class name="text"/>

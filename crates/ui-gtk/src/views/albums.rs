@@ -14,11 +14,15 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{CompositeTemplate, gdk, gio, glib};
 
-use crate::backend::{AlbumFilter, AlbumKey, AlbumQuery, AlbumSort, Backend, PlayerRequest};
+use crate::backend::{
+    AlbumFilter, AlbumKey, AlbumQuery, AlbumScope, AlbumSort, Backend, PlayerRequest,
+};
 use crate::i18n::tr;
 use crate::models::{AlbumItem, AlbumListModel, CoverCache};
 use crate::playback::{Change, Playback};
+use crate::views::actions::{self, Target};
 use crate::views::album_tile::AlbumTile;
+use crate::views::drag::DraggedTracks;
 use crate::widgets::empty_state::empty_state;
 
 type OpenHandler = Rc<dyn Fn(AlbumKey)>;
@@ -29,6 +33,8 @@ mod imp {
     #[derive(Default, CompositeTemplate)]
     #[template(resource = "/io/github/sorrelfox/Helikodu/ui/albums.ui")]
     pub(crate) struct AlbumsView {
+        #[template_child]
+        pub(super) toolbar: TemplateChild<gtk::Box>,
         #[template_child]
         pub(super) count: TemplateChild<gtk::Label>,
         #[template_child]
@@ -56,6 +62,7 @@ mod imp {
         pub(super) loaded: Cell<bool>,
         pub(super) click: Cell<u64>,
         pub(super) visibility_pass: Cell<bool>,
+        pub(super) embedded: Cell<bool>,
     }
 
     impl std::fmt::Debug for AlbumsView {
@@ -162,23 +169,6 @@ impl Default for AlbumsView {
     fn default() -> Self {
         glib::Object::new()
     }
-}
-
-fn context_menu(key: AlbumKey) -> gio::Menu {
-    let menu = gio::Menu::new();
-    let target = key.0.to_variant();
-    let play = gio::MenuItem::new(Some(&tr("Play")), None);
-    play.set_action_and_target_value(Some("albums.play"), Some(&target));
-    menu.append_item(&play);
-    let queue = gio::MenuItem::new(Some(&tr("Add to queue")), Some("albums.add-to-queue"));
-    menu.append_item(&queue);
-    let section = gio::Menu::new();
-    let open = gio::MenuItem::new(Some(&tr("Go to album")), None);
-    open.set_action_and_target_value(Some("albums.open"), Some(&target));
-    section.append_item(&open);
-    section.append(Some(&tr("Go to artist")), Some("albums.go-to-artist"));
-    menu.append_section(None, &section);
-    menu
 }
 
 impl AlbumsView {
@@ -332,20 +322,37 @@ impl AlbumsView {
             }
         });
         tile.add_controller(keys);
+        let weak_tile = tile.downgrade();
+        DraggedTracks::source(tile, move |_, _| {
+            let tile = weak_tile.upgrade()?;
+            let key = tile.key()?;
+            Some((
+                DraggedTracks {
+                    album: Some(key),
+                    ..DraggedTracks::default()
+                },
+                tile.title(),
+            ))
+        });
     }
 
     fn show_menu(&self, tile: &AlbumTile, key: AlbumKey, at: Option<(f64, f64)>) {
-        let popover = gtk::PopoverMenu::from_model(Some(&context_menu(key)));
-        popover.set_parent(tile);
-        popover.set_has_arrow(false);
-        if let Some((x, y)) = at {
-            popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+        actions::popup(tile, Target::Album(key), at);
+    }
+
+    /// Shows the albums of `scope` without the toolbar, as part of another page.
+    pub(crate) fn set_embedded(&self, scope: AlbumScope, sort: AlbumSort) {
+        let imp = self.imp();
+        imp.embedded.set(true);
+        imp.toolbar.set_visible(false);
+        let query = AlbumQuery {
+            scope,
+            sort,
+            filter: AlbumFilter::All,
+        };
+        if imp.query.replace(query) != query || !imp.loaded.get() {
+            self.reload();
         }
-        popover.connect_closed(|p| {
-            let p = p.clone();
-            glib::idle_add_local_once(move || p.unparent());
-        });
-        popover.popup();
     }
 
     fn open_later(&self, key: AlbumKey) {
@@ -446,9 +453,10 @@ impl AlbumsView {
             let keys = keys.unwrap_or_default();
             imp.count.set_text(&keys.len().to_string());
             if keys.is_empty() {
-                view.show_empty(query.filter == AlbumFilter::All);
+                view.show_empty(query.filter == AlbumFilter::All && query.scope == AlbumScope::All);
             } else {
                 imp.content.set_visible_child_name("grid");
+                imp.toolbar.set_visible(!imp.embedded.get());
             }
             if let Some(model) = imp.model.borrow().as_ref() {
                 model.set_keys(query, keys);
@@ -461,14 +469,24 @@ impl AlbumsView {
         while let Some(child) = imp.empty_slot.first_child() {
             imp.empty_slot.remove(&child);
         }
+        // An empty library shows only the empty state, as the design draws it.
+        imp.toolbar
+            .set_visible(!imp.embedded.get() && !library_empty);
         let block = if library_empty {
+            let add = gtk::Button::with_label(&tr("Add music folder"));
+            add.add_css_class("hk-btn");
+            add.add_css_class("primary");
+            add.set_action_name(Some("app.add-folder"));
+            let open = gtk::Button::with_label(&tr("Open files"));
+            open.add_css_class("hk-btn");
+            open.set_action_name(Some("app.open-files"));
             empty_state(
-                "media-optical-symbolic",
+                "folder-new-symbolic",
                 &tr("Your library is empty"),
                 &tr(
-                    "Scan a music folder with helikodu-cli, then start Helikodu again. Adding folders from here comes in a later version.",
+                    "Add a folder with music to build your library. You can also drop files here to play them without adding them.",
                 ),
-                &[],
+                &[add, open],
             )
         } else {
             empty_state(
