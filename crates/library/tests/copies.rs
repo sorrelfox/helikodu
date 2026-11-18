@@ -750,7 +750,11 @@ fn files_on_another_volume_go_to_its_trash() {
     let trashed = outcomes[0].result.as_ref().unwrap();
     assert_eq!(trashed.trash, volume.join(format!(".Trash/{uid}")));
 
-    // No usable trash: the file stays.
+    // No usable trash: the file stays. File modes do not bind root (the CI
+    // containers run as root), so a read-only volume cannot be made there.
+    if uid == 0 {
+        return;
+    }
     fs::remove_dir_all(volume.join(".Trash")).unwrap();
     fs::remove_dir_all(&own).unwrap();
     copy_tree(&a, &b);

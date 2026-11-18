@@ -449,7 +449,13 @@ impl Worker {
             if !running {
                 self.start_output()?;
             }
+            // The device side holds at `until` and applies the actions in order, so
+            // the fade in has to come before any action the refill schedules (a
+            // crossfade planned on the way, a join), which lie after `until`: held,
+            // the device side would never reach them, nor the fade in behind them.
+            self.deferred_actions = Some(Vec::new());
             self.refill(until);
+            let deferred = self.deferred_actions.take().unwrap_or_default();
             let open = match fade {
                 Some(duration) => DeviceAction::Fade {
                     open: true,
@@ -458,6 +464,9 @@ impl Worker {
                 None => DeviceAction::SetOpen(true),
             };
             self.schedule(until, open);
+            for (at, action) in deferred {
+                self.schedule(at, action);
+            }
         }
         Ok(())
     }
@@ -493,7 +502,13 @@ impl Worker {
         }
     }
 
-    fn schedule(&mut self, at: u64, action: DeviceAction) {
+    /// Has the device side carry out `action` at the ring position `at`, or holds it
+    /// back while a refill defers the actions it schedules.
+    pub(super) fn schedule(&mut self, at: u64, action: DeviceAction) {
+        if let Some(deferred) = &mut self.deferred_actions {
+            deferred.push((at, action));
+            return;
+        }
         if let Some(output) = &mut self.output {
             // The queue only fills when the device side has stopped taking actions;
             // the stream's state reports that.

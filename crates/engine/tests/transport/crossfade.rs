@@ -448,3 +448,31 @@ fn a_pause_during_a_crossfade_goes_on_without_a_click() {
         assert!(step <= limit, "{tag}: a step of {step} (limit {limit})");
     }
 }
+
+#[test]
+fn a_crossfade_planned_while_resuming_does_not_hold_playback() {
+    let sine = media::sine(RATE, 2 * RATE as usize);
+    let a = sine.slice(0, RATE as usize);
+    let b = sine.slice(0, RATE as usize);
+    let (path_a, path_b) = files("xfade-late-resume", &a, &b);
+    let out = media::path("xfade-late-resume.wav");
+    let mut config = config(&out, crossfading(600), false);
+    config.sink_pacing = Pacing::RealTime;
+    let mut session = Session::new(config);
+    session.play_queue(&[item(1, &path_a), item(2, &path_b)]);
+    // `NearEnd` is answered late and playback pauses at once: the crossfade into
+    // the next item is planned while the ring is refilled after the resume.
+    std::thread::sleep(Duration::from_millis(300));
+    session.wait_for(|e| matches!(e, EngineEvent::NearEnd { .. }));
+    session.send(EngineCommand::Pause);
+    session.wait_state(TransportState::Paused);
+    session.send(EngineCommand::Play);
+    session.wait_state(TransportState::Stopped);
+    let finished = Some(TrackEndReason::Finished);
+    assert_eq!(
+        starts_and_ends(&session),
+        [(1, None), (1, finished), (2, None), (2, finished)],
+        "{:#?}",
+        session.log
+    );
+}

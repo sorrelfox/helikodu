@@ -25,6 +25,13 @@
 #define HK_SID_BUFFERS 1
 #endif
 
+/* 3.0 creates the chip emulations on demand, so the builder has no create() and
+ * getStatus(); the stereo playback and fast sampling settings are gone as well (the
+ * shim mixes the chips itself, and 3.x always samples at full quality). */
+#if LIBSIDPLAYFP_VERSION_MAJ >= 3
+#define HK_SID_API3 1
+#endif
+
 namespace {
 
 /* Cycles emulated per step of the mixer API: about 5 ms. */
@@ -72,17 +79,21 @@ hk_sid *hk_sid_open(const uint8_t *data, uint32_t length, uint32_t rate, char *e
             delete sid;
             return nullptr;
         }
+#ifndef HK_SID_API3
         sid->builder.create(sid->player.info().maxsids());
         if (!sid->builder.getStatus()) {
             copy_message(sid->builder.error(), error, error_len);
             delete sid;
             return nullptr;
         }
+#endif
         SidConfig config;
         config.frequency = rate;
-        config.playback = SidConfig::STEREO;
         config.samplingMethod = SidConfig::RESAMPLE_INTERPOLATE;
+#ifndef HK_SID_API3
+        config.playback = SidConfig::STEREO;
         config.fastSampling = false;
+#endif
         /* A fixed power-on delay, so that a song starts the same way every time and a
          * seek (a restart and a run to the frame) lands where a straight run is. */
         config.powerOnDelay = 0;

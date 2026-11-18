@@ -32,7 +32,7 @@ use super::stats::EngineStats;
 use super::timeline::{Segment, Timeline};
 use crate::decode::DecoderRegistry;
 use crate::dsp::DspChain;
-use crate::output::{EventSender, OutputEvent};
+use crate::output::{DeviceAction, EventSender, OutputEvent};
 
 /// What reaches the engine thread.
 #[derive(Debug)]
@@ -95,6 +95,9 @@ pub(super) struct Worker {
     /// Rendered frames on their way into the ring buffer.
     pub(super) staging: Vec<f32>,
     pub(super) staged: std::ops::Range<usize>,
+    /// Device actions held back while the ring is refilled behind a hold, to be
+    /// scheduled after the action that ends it.
+    pub(super) deferred_actions: Option<Vec<(u64, DeviceAction)>>,
     pub(super) resume: Option<Resume>,
     pub(super) drain: Option<Drain>,
     /// Since when a freewheeling sink waits for the next item.
@@ -150,6 +153,7 @@ impl Worker {
             dsp: None,
             staging: Vec::new(),
             staged: 0..0,
+            deferred_actions: None,
             resume: None,
             drain: None,
             waiting_since: None,

@@ -281,7 +281,7 @@ impl Worker {
             let ended = ramp.apply(&mut self.staging[..frames * channels], channels);
             self.ramp = (!ended).then_some(ramp);
             if let Some(from) = touches {
-                self.schedule_at(at + from, DeviceAction::AlwaysDither(true));
+                self.schedule(at + from, DeviceAction::AlwaysDither(true));
             }
             if ended {
                 self.dither_as_planned(at + frames as u64);
@@ -431,7 +431,7 @@ impl Worker {
         let mixed = crossfade.mix(&mut self.staging[lead * channels..n * channels]);
         let end = lead + mixed;
         if began && mixed > 0 {
-            self.schedule_at(at + lead as u64, DeviceAction::AlwaysDither(true));
+            self.schedule(at + lead as u64, DeviceAction::AlwaysDither(true));
         }
         let Some(crossfade) = &mut self.crossfade else {
             return n;
@@ -585,15 +585,7 @@ impl Worker {
             .as_ref()
             .and_then(Source::plan)
             .is_some_and(|plan| plan.always_dither);
-        self.schedule_at(at, DeviceAction::AlwaysDither(dither));
-    }
-
-    fn schedule_at(&mut self, at: u64, action: DeviceAction) {
-        if let Some(output) = &mut self.output {
-            // A full queue means the device side has stopped; the stream's state
-            // reports that.
-            let _ = output.writer.schedule(at, action);
-        }
+        self.schedule(at, DeviceAction::AlwaysDither(dither));
     }
 }
 
