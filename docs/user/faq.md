@@ -52,13 +52,13 @@ Helikodu has its own design and does not use the desktop's widget theme, so it l
 - **Light or dark:** it follows the desktop's preference. On GNOME that is **Settings → Appearance**. On KDE Plasma, the colour scheme you choose in **System Settings → Colours & Themes → Colours** is reported as light or dark from its window background. If Helikodu shows the wrong one, check that `xdg-desktop-portal` and your desktop's portal (`xdg-desktop-portal-gnome` or `xdg-desktop-portal-kde`) are installed.
 - **Accent colour:** the desktop's accent colour where the desktop offers one (KDE Plasma, and GNOME 47 or newer), amber otherwise.
 - **High contrast and reduced motion**, where the desktop offers them.
-- **Window style:** on GNOME, Helikodu draws its own title bar (*Integrated*); elsewhere it uses the desktop's normal title bar (*Classic*), which on KDE matches your window decorations and can show a menu bar.
+- **Window style:** on GNOME and KDE Plasma, Helikodu draws its own header with the window buttons in it (*Integrated*); on other desktops it uses the desktop's normal title bar (*Classic*), which can also show a menu bar.
 
 You can choose all of these yourself in **Settings → Appearance**, or try them once with `helikodu --scheme dark --accent violet --style classic`.
 
 ## How do I get rid of the title bar on KDE Plasma?
 
-On desktops other than GNOME, Helikodu starts in the *Classic* window style, so KDE Plasma draws its usual title bar above the window. To have no title bar, choose **Integrated** in **Settings → Appearance → Window style** and start Helikodu again (or try it once with `helikodu --style integrated`). Helikodu then draws its own header with the window buttons in it and tells KWin not to decorate the window.
+Helikodu starts in the *Integrated* window style on KDE Plasma and asks KWin not to decorate the window. If you chose *Classic*, KDE draws its usual title bar; to have none, choose **Integrated** in **Settings → Appearance → Window style** and start Helikodu again (or try it once with `helikodu --style integrated`). Helikodu then draws its own header with the window buttons in it and tells KWin not to decorate the window.
 
 If a title bar is still drawn, a KWin rule forces it: look in **System Settings → Window Management → Window Rules** for a rule that matches Helikodu (or every window) and sets **No titlebar and frame**, and remove that property or set it to **Do Not Affect**. A rule can also hide the title bar in the *Classic* style: add **No titlebar and frame**, **Force**, **Yes** for the window class `io.github.sorrelfox.Helikodu`.
 

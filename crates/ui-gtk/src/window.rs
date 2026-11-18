@@ -46,15 +46,23 @@ pub enum WindowStyle {
 }
 
 impl WindowStyle {
-    /// Integrated on GNOME, classic elsewhere.
+    /// Integrated on GNOME and KDE Plasma, classic elsewhere.
     pub fn for_desktop() -> Self {
-        let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
-        if desktop.split(':').any(|d| d.eq_ignore_ascii_case("GNOME")) {
+        if integrated_by_default() {
             Self::Integrated
         } else {
             Self::Classic
         }
     }
+}
+
+/// Whether the current desktop gets the integrated window style when the
+/// setting is Auto: GNOME and KDE Plasma do, other desktops keep their title bar.
+pub(crate) fn integrated_by_default() -> bool {
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
+    desktop
+        .split(':')
+        .any(|d| d.eq_ignore_ascii_case("GNOME") || d.eq_ignore_ascii_case("KDE"))
 }
 
 /// The menu bar's model from the main menu: the menu's direct items go under

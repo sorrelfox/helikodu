@@ -17,7 +17,7 @@ Choose **Preferences** in the main menu, or press **Ctrl+,**, to open the **Sett
 
 - **Colour scheme**: **System** (as the desktop says, the default), **Light** or **Dark**.
 - **Accent colour**: **From the desktop** (amber when the desktop has none), or **Amber**, **Blue**, **Green** or **Violet**.
-- **Window style**: **Integrated** draws its own header with the window buttons in it, as GNOME applications do; **Classic** uses your desktop's normal title bar and can show a menu bar. By default Helikodu chooses Integrated on GNOME and Classic elsewhere. A new window style is used when Helikodu starts again.
+- **Window style**: **Integrated** draws its own header with the window buttons in it, as GNOME applications do; **Classic** uses your desktop's normal title bar and can show a menu bar. By default Helikodu chooses Integrated on GNOME and KDE Plasma and Classic elsewhere. A new window style is used when Helikodu starts again.
 - **Menu bar**: **Show the menu bar**, only in the Classic window style; **Ctrl+M** shows or hides it at any time.
 - **Tables**: **Shade every second row**.
 - **Language**: **Same as the desktop**; Helikodu uses the language of your desktop.

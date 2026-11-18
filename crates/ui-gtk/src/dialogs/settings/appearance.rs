@@ -212,9 +212,8 @@ fn window_style(context: &Rc<Context>) -> gtk::Box {
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     line.set_homogeneous(true);
     let current = context.settings().appearance.window_style;
-    let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
-    let gnome = desktop.split(':').any(|d| d.eq_ignore_ascii_case("GNOME"));
-    let integrated_on = current == WindowStyle::Integrated || current == WindowStyle::Auto && gnome;
+    let integrated_on = current == WindowStyle::Integrated
+        || current == WindowStyle::Auto && crate::window::integrated_by_default();
     let (integrated, integrated_check) = option_card(
         &tr("Integrated"),
         &tr("The window buttons sit in Helikodu's own header."),
@@ -226,7 +225,7 @@ fn window_style(context: &Rc<Context>) -> gtk::Box {
         Some(&integrated_check),
     );
     for (card, classic_style, default_note) in [
-        (&integrated, false, tr("Default on GNOME")),
+        (&integrated, false, tr("Default on GNOME and KDE Plasma")),
         (&classic, true, tr("Default on other desktops")),
     ] {
         card.prepend(&thumbnail(classic_style));
@@ -269,10 +268,7 @@ fn menu_bar(context: &Rc<Context>) -> gtk::Box {
     let classic = match settings.appearance.window_style {
         WindowStyle::Classic => true,
         WindowStyle::Integrated => false,
-        WindowStyle::Auto => !std::env::var("XDG_CURRENT_DESKTOP")
-            .unwrap_or_default()
-            .split(':')
-            .any(|d| d.eq_ignore_ascii_case("GNOME")),
+        WindowStyle::Auto => !crate::window::integrated_by_default(),
     };
     let explanation = if classic {
         tr("Ctrl+M shows or hides it at any time.")
