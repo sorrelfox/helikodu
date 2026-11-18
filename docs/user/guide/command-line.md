@@ -15,6 +15,7 @@ Files given on the command line are played. If Helikodu is already running, they
 | `--style integrated\|classic` | The window style |
 | `--demo` | Shows invented sample albums and plays nothing, to look around without a library |
 | `--help` | Shows a short help |
+| `--version` | Shows the version |
 
 ## helikodu-cli
 

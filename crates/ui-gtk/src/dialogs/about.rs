@@ -63,6 +63,10 @@ fn installed_as() -> String {
     if std::env::var_os("FLATPAK_ID").is_some() || std::path::Path::new("/.flatpak-info").exists() {
         return "Flatpak".into();
     }
+    // The AppImage runtime names the image file it started from.
+    if std::env::var_os("APPIMAGE").is_some() {
+        return "AppImage".into();
+    }
     match std::env::current_exe() {
         Ok(path) if path.starts_with("/usr") || path.starts_with("/app") => tr("system package"),
         Ok(_) => tr("built from source"),

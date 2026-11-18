@@ -8,7 +8,10 @@
 # runner, ubuntu-24.04-arm), in the Debian 13 container of ci/containers: the
 # oldest supported base (glibc 2.41, GTK 4.18, FFmpeg 7.1), so the binary runs
 # on that and newer systems that still ship the FFmpeg 7 libraries. Both build
-# from the same source tarball. See docs/dev/releasing.md.
+# from the same source tarball. An AppImage for each architecture is built
+# from it as well, in the container of build-aux/appimage (also Debian 13),
+# with its own minimal FFmpeg. See docs/dev/releasing.md and
+# docs/dev/appimage.md.
 name: Release
 
 on:
@@ -186,9 +189,65 @@ jobs:
           path: target/release-assets/
           if-no-files-found: error
 
+  appimage:
+    name: AppImage (${{ matrix.arch }})
+    needs: source
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-source
+          path: target/release-source
+      # Builds from the source tarball, offline, in the Debian 13 container of
+      # build-aux/appimage, with a minimal FFmpeg and vgmstream built in it;
+      # the pinned tools and sources are checked against their SHA-256. See
+      # docs/dev/appimage.md.
+      - name: Build the AppImage
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+          case "$(uname -m)" in
+            "$ARCH") ;;
+            *) echo "runs on $(uname -m), expected $ARCH" >&2; exit 1 ;;
+          esac
+          version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          HELIKODU_CONTAINER_ENGINE=docker build-aux/appimage/build.sh \
+            --source "target/release-source/helikodu-$version.tar.xz" \
+            --offline --out target/appimage --cache "$RUNNER_TEMP/appimage-cache"
+          mkdir -p target/release-appimage
+          cp "target/appimage/Helikodu-$version-$ARCH.AppImage" target/release-appimage/
+          # The FFmpeg and vgmstream source archives the images were built
+          # from are published with them (once, from the x86_64 job), checked
+          # against the pinned checksums.
+          if [ "$ARCH" = x86_64 ]; then
+            . build-aux/appimage/pins.sh
+            cd target/appimage
+            echo "$FFMPEG_SHA256  ffmpeg-$FFMPEG_VERSION.tar.xz" | sha256sum --check
+            echo "$VGMSTREAM_SHA256  vgmstream-$VGMSTREAM_VERSION.tar.gz" | sha256sum --check
+            cp "ffmpeg-$FFMPEG_VERSION.tar.xz" "vgmstream-$VGMSTREAM_VERSION.tar.gz" ../release-appimage/
+            cd ../..
+          fi
+          ls -l target/release-appimage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-appimage-${{ matrix.arch }}
+          path: target/release-appimage/
+          if-no-files-found: error
+
   assemble:
     name: Collect the release files and their checksums
-    needs: [source, build]
+    needs: [source, build, appimage]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -201,7 +260,7 @@ jobs:
           set -eux
           cd release-assets
           ls -l
-          sha256sum ./*.tar.xz | sed "s| \./| |" > SHA256SUMS
+          sha256sum ./*.tar.xz ./*.tar.gz ./*.AppImage | sed "s| \./| |" > SHA256SUMS
           cat SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
@@ -244,4 +303,7 @@ jobs:
             "helikodu-$version.tar.xz" \
             "helikodu-$version-x86_64-linux.tar.xz" \
             "helikodu-$version-aarch64-linux.tar.xz" \
+            "Helikodu-$version-x86_64.AppImage" \
+            "Helikodu-$version-aarch64.AppImage" \
+            ffmpeg-*.tar.xz vgmstream-*.tar.gz \
             SHA256SUMS

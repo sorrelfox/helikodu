@@ -23,9 +23,9 @@ const GUIDE_DIR: &str = match option_env!("HELIKODU_GUIDEDIR") {
     None => "/usr/share/helikodu/guide",
 };
 
-/// The installed guide: the folder the build named, or `share/helikodu/guide`
-/// beside the program's own `bin/` folder (an installation moved to another
-/// prefix).
+/// The installed guide: `share/helikodu/guide` beside the program's own `bin/`
+/// folder (the guide of this very installation, also when it was moved to
+/// another prefix or runs from an AppImage), or else the folder the build named.
 pub(crate) fn installed_page() -> Option<PathBuf> {
     let beside = std::env::current_exe().ok().and_then(|exe| {
         exe.parent()
@@ -39,12 +39,10 @@ pub(crate) fn installed_page() -> Option<PathBuf> {
 
 /// The pages to try, in order.
 fn candidates(built: &Path, beside: Option<&Path>) -> Vec<PathBuf> {
-    let mut pages = vec![built.join(PAGE)];
-    if let Some(dir) = beside {
-        let page = dir.join(PAGE);
-        if !pages.contains(&page) {
-            pages.push(page);
-        }
+    let mut pages: Vec<PathBuf> = beside.map(|dir| dir.join(PAGE)).into_iter().collect();
+    let page = built.join(PAGE);
+    if !pages.contains(&page) {
+        pages.push(page);
     }
     pages
 }
@@ -74,13 +72,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_built_folder_comes_first_and_is_not_repeated() {
+    fn the_folder_beside_the_program_comes_first_and_is_not_repeated() {
         let built = Path::new("/usr/share/helikodu/guide");
         assert_eq!(
             candidates(built, Some(Path::new("/opt/helikodu/share/helikodu/guide"))),
             vec![
-                PathBuf::from("/usr/share/helikodu/guide/index.html"),
                 PathBuf::from("/opt/helikodu/share/helikodu/guide/index.html"),
+                PathBuf::from("/usr/share/helikodu/guide/index.html"),
             ]
         );
         assert_eq!(candidates(built, Some(built)).len(), 1);

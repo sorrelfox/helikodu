@@ -32,6 +32,7 @@ usage: helikodu [options] [file...]
   --style S           integrated or classic (default: from the settings)
   --demo              show invented sample content and play nothing
   --help              print this message
+  --version           print the version
 
 Files are played; the output device and everything else come from
 $XDG_CONFIG_HOME/helikodu/settings.toml.
@@ -60,6 +61,8 @@ struct Arguments {
     accent: Option<AccentChoice>,
     style: Option<WindowStyle>,
     demo: bool,
+    /// Print the version and end.
+    version: bool,
     /// A program that started this one to replace it, and must end first.
     after: Option<u32>,
     /// Passed on to GApplication: files and its own options.
@@ -106,6 +109,7 @@ fn arguments() -> Result<Option<Arguments>, String> {
                 );
             }
             "--help" | "-h" => return Ok(None),
+            "--version" => parsed.version = true,
             other if other.starts_with("--gapplication") || !other.starts_with('-') => {
                 parsed.pass_on.push(arg.clone());
             }
@@ -195,8 +199,14 @@ fn wait_for(pid: u32) {
 /// Starts the program again, with the options it was started with but not
 /// its files, once this one has ended.
 fn restart(arguments: &Arguments) {
-    let Ok(program) = std::env::current_exe() else {
-        return;
+    // Inside an AppImage the program lives in the image's mount, which goes
+    // away when this process ends: start the image file again instead.
+    let program = match std::env::var_os("APPIMAGE") {
+        Some(image) if std::path::Path::new(&image).is_file() => std::path::PathBuf::from(image),
+        _ => match std::env::current_exe() {
+            Ok(program) => program,
+            Err(_) => return,
+        },
     };
     let files: Vec<&String> = arguments
         .pass_on
@@ -239,6 +249,10 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    if arguments.version {
+        println!("helikodu {}", env!("CARGO_PKG_VERSION"));
+        return ExitCode::SUCCESS;
+    }
     if let Some(pid) = arguments.after {
         wait_for(pid);
     }

@@ -7,7 +7,9 @@ Helikodu is published as GitHub Releases. Pushing a version tag (`v0.1.0`) start
 | `helikodu-<version>.tar.xz` | The source tarball, made by `cargo xtask dist`: the files of the tagged commit (without the website, `docs/site`, which no build uses), every crate of `Cargo.lock` vendored into `vendor/`, and a `.cargo/config.toml` that builds from them, so it builds without network access |
 | `helikodu-<version>-x86_64-linux.tar.xz` | The programs for x86_64, built from that source tarball and installed by Meson for the prefix `/usr/local`: `bin/`, `libexec/helikodu/`, the desktop entry and the AppStream metainfo (both with their translations), the D-Bus service file, the icons, the compiled translations (`share/locale/<code>/LC_MESSAGES/helikodu.mo`, found beside the programs wherever the archive is unpacked; the workflow checks that every language of `po/LINGUAS` is there), the manual pages and the user guide (`share/helikodu/guide/index.html`, opened by Help › User Guide), with an `INSTALL.txt` note |
 | `helikodu-<version>-aarch64-linux.tar.xz` | The same for 64-bit ARM (aarch64), built on GitHub's native arm64 runner |
-| `SHA256SUMS` | The SHA-256 checksums of the three tarballs, for `sha256sum --check` |
+| `Helikodu-<version>-x86_64.AppImage`, `Helikodu-<version>-aarch64.AppImage` | The AppImages, built from the source tarball with their own minimal FFmpeg, GTK and long-tail decoders; see [appimage.md](appimage.md) |
+| `ffmpeg-<version>.tar.xz`, `vgmstream-<version>.tar.gz` | The exact sources of the FFmpeg and vgmstream in the AppImages (the pinned tarballs of `build-aux/appimage/pins.sh`) |
+| `SHA256SUMS` | The SHA-256 checksums of all the files above, for `sha256sum --check` |
 
 The release notes are the version's section of `CHANGELOG.md`. Every 0.x version, and every version with a suffix such as `-rc1`, is marked as a pre-release.
 
@@ -40,7 +42,7 @@ The version is set in one place: `version` under `[workspace.package]` in the ro
 4. **Version bump** in `Cargo.toml` and `Cargo.lock` (see above).
 5. **Checks.** `cargo xtask ci` passes on a clean checkout (a fresh `git clone`, not the working copy). The extended checks (the "Extended checks" workflow, started by hand in the Actions tab) and the CI workflow (also started by hand) are green for the commit to be tagged.
 6. **Manual QA** sign-off on the commit to be tagged.
-7. **Dry run.** Start the Release workflow by hand on the branch (Actions → Release → Run workflow). It builds everything and keeps the files as a workflow artifact, `release-assets`, without publishing. Download it, then unpack the binary tarball and start the programs on a desktop. Locally, `cargo xtask dist` makes the source tarball in `target/dist/`; check that it builds offline:
+7. **Dry run.** Start the Release workflow by hand on the branch (Actions → Release → Run workflow). It builds everything and keeps the files as a workflow artifact, `release-assets`, without publishing. Download it, then unpack the binary tarball and start the programs on a desktop, and start the AppImage. Locally, `cargo xtask dist` makes the source tarball in `target/dist/`; check that it builds offline:
 
    ```sh
    mkdir /tmp/helikodu-dist && tar -xJf target/dist/helikodu-0.1.0.tar.xz -C /tmp/helikodu-dist
@@ -56,14 +58,15 @@ The version is set in one place: `version` under `[workspace.package]` in the ro
    ```
 
    The push starts the Release workflow (and the CI workflow). It makes the source tarball, then on an x86_64 and an aarch64 runner runs the build and tests (`cargo xtask ci --tests-only`) and builds the programs from the tarball offline, and creates the GitHub Release once both builds have passed. Each build runs with at most four Cargo jobs inside a container capped at 12 GB of memory, the runner's limit; see [ci/README.md](../../ci/README.md#memory-limit).
-9. **Check the release page**: the notes, the pre-release mark and the four files. Download the files and run `sha256sum --check SHA256SUMS`.
+9. **Check the release page**: the notes, the pre-release mark and the eight files. Download the files and run `sha256sum --check SHA256SUMS`.
 
 If the workflow fails, fix the cause on `main`, delete the tag (`git push --delete origin v0.1.0`, `git tag -d v0.1.0`) and tag again. A published release is never replaced: a mistake in it is fixed by a new patch version.
 
 ## How the files are built
 
-- **Architectures.** The workflow has four jobs: `source` makes the source tarball and the release notes; `build` runs once per architecture, x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm` (GitHub's arm64 runner, free for public repositories), each natively, without emulation, so the tests also run on ARM; `assemble` collects the files and writes `SHA256SUMS`; `publish` creates the release. A failure in either architecture stops the release. The build step checks that the container runs on the architecture its archive is named for.
+- **Architectures.** The workflow has five jobs: `source` makes the source tarball and the release notes; `build` and `appimage` run once per architecture, x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm` (GitHub's arm64 runner, free for public repositories), each natively, without emulation, so the tests also run on ARM (`build` makes the tarball, `appimage` the AppImage); `assemble` collects the files and writes `SHA256SUMS`; `publish` creates the release. A failure in either architecture stops the release. The build step checks that the container runs on the architecture its archive is named for.
 - **Container.** Everything is built in `ci/containers/debian.Containerfile` (Debian 13), the oldest supported base: glibc 2.41, GTK 4.18, FFmpeg 7.1, PipeWire 1.4. A binary built there runs on these and newer versions of the libraries with the same library names. It also links libopenmpt, libgme and libsidplayfp (`libopenmpt.so.0`, `libgme.so.0`, `libsidplayfp.so.6`), which the system has to provide. The FFmpeg libraries are the exception: a new FFmpeg major version renames them (`libavformat.so.61` is FFmpeg 7), so on a system with only newer FFmpeg libraries the binary tarball does not start, and Helikodu is built from the source tarball instead. SQLite is built in (`-Dbundled_sqlite=true`), so the system's SQLite version does not matter.
+- **AppImages.** The `appimage` job runs `build-aux/appimage/build.sh` on the same two runners, from the source tarball with `--offline`, in a Debian 13 container of its own (see [appimage.md](appimage.md)). It needs only the `source` job; `assemble` waits for it as well.
 - **From the source tarball.** The binaries are built from the unpacked source tarball with `-Doffline=true`, as a distribution would build them. This also proves on every release that the tarball builds without network access.
 - **Reproducibility.** The toolchain is pinned in `rust-toolchain.toml`, `Cargo.lock` is committed and every Cargo command uses `--locked`. Both tarballs list their files sorted by name, with owner and group 0, the modification time of the tagged commit (or `SOURCE_DATE_EPOCH` if set) and single-threaded xz, so the same commit gives the same source tarball. The release build uses no caches.
 - **Permissions.** The workflow has read-only access to the repository; only its last job, which creates the release from the built files, may write (`contents: write`).

@@ -1,0 +1,56 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Starts a program of the Helikodu AppImage.
+#
+#   Helikodu-<version>-<arch>.AppImage [options] [file...]   the desktop application
+#   Helikodu-<version>-<arch>.AppImage --cli [arguments]     helikodu-cli
+#
+# helikodu-cli also starts when the image is run through a link whose name
+# begins with "helikodu-cli" (ln -s Helikodu-....AppImage ~/.local/bin/helikodu-cli).
+#
+# The programs find everything of their own beside themselves: the shared
+# libraries through their run paths, the scan worker in ../libexec/helikodu,
+# the translations in ../share/locale and the user guide in
+# ../share/helikodu/guide. The variables below are for the GTK, GLib and
+# gdk-pixbuf copies in the image. GTK_THEME and the other settings of the
+# desktop are left as they are.
+set -e
+
+here=$(dirname "$(readlink -f "$0")")
+APPDIR=${APPDIR:-$here}
+export APPDIR
+
+# The desktop's own data folders come first, so that its GTK theme, icon
+# theme and settings schemas are used; the image's follow with GTK's settings
+# schemas and the Adwaita symbolic icons, used where the desktop has none.
+export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:$APPDIR/usr/share"
+
+# The image's image loaders (SVG for the icons); the cache names them by file
+# name, found next to the image's other libraries.
+export GDK_PIXBUF_MODULE_FILE="$APPDIR/usr/lib/gdk-pixbuf-2.0/loaders.cache"
+
+# Only the image's GIO modules (the dconf settings backend), never the
+# system's: those are built for the system's GLib, which may be newer than
+# the image's.
+export GIO_MODULE_DIR="$APPDIR/usr/lib/gio/modules"
+
+# The same for GTK's modules (input methods, print backends, media): looked
+# up under $APPDIR/usr/lib/gtk-4.0 instead of the system's GTK folder.
+export GTK_EXE_PREFIX="$APPDIR/usr"
+
+# File choosers and opened links go through the desktop portal when one runs:
+# the dialogs are the desktop's own, and programs such as the web browser
+# that shows the user guide start from the desktop, not with the variables
+# above.
+export GDK_DEBUG="${GDK_DEBUG:+$GDK_DEBUG,}portals"
+
+case "$(basename "${ARGV0:-$0}")" in
+  helikodu-cli*) exec "$APPDIR/usr/bin/helikodu-cli" "$@" ;;
+esac
+if [ "${1:-}" = "--cli" ]; then
+  shift
+  exec "$APPDIR/usr/bin/helikodu-cli" "$@"
+fi
+exec "$APPDIR/usr/bin/helikodu" "$@"

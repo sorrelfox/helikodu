@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- An AppImage for x86_64 and aarch64 on the Releases page: one file that runs without installing, with its own minimal FFmpeg, GTK and the decoders for tracker modules, game music, SID tunes and game audio streams (vgmstream). `--cli` starts the command-line tool. It never looks for updates.
+
 ## [0.9.0] - 2026-11-18
 
 The release candidate. This version brings everything planned for 1.0: smart playlists and a query language, play modes, lyrics and a play history, tools that convert, organize, sync and repair files, the interface in eleven more languages, and the work of making Helikodu robust, fast with large libraries and accessible. With it the features are frozen for 1.0; until then only fixes, translations and documentation follow.

@@ -4,18 +4,50 @@ Helikodu is published on the project's [GitHub Releases](https://github.com/sorr
 
 | File | What it is |
 |---|---|
+| `Helikodu-<version>-x86_64.AppImage` | The AppImage for 64-bit PCs (x86_64): one file that runs without installing |
+| `Helikodu-<version>-aarch64.AppImage` | The AppImage for 64-bit ARM computers (aarch64) |
 | `helikodu-<version>-x86_64-linux.tar.xz` | The ready-built programs for 64-bit PCs (x86_64) |
 | `helikodu-<version>-aarch64-linux.tar.xz` | The ready-built programs for 64-bit ARM computers (aarch64) |
 | `helikodu-<version>.tar.xz` | The source code, with everything needed to build it offline |
 | `SHA256SUMS` | Checksums of the files |
 
-`uname -m` in a terminal tells which of the two ready-built archives your computer needs. The steps below use the x86_64 one; for ARM, write `aarch64` in its place.
+`uname -m` in a terminal tells which of the two architectures your computer needs. The steps below use the x86_64 one; for ARM, write `aarch64` in its place.
 
 Check the download before you unpack it:
 
 ```sh
 sha256sum --check --ignore-missing SHA256SUMS
 ```
+
+## The AppImage
+
+The AppImage is the easiest way to run Helikodu: a single file that brings its own copies of GTK, FFmpeg and the decoders for tracker modules, game music, SID tunes and game audio streams. It runs on Debian 13, Ubuntu 24.10, Fedora 41 and newer systems (it needs glibc 2.39 and PipeWire 1.2 or newer) and uses the system's sound libraries (PipeWire, PulseAudio, ALSA or JACK), fonts and graphics drivers.
+
+Make the file executable and start it:
+
+```sh
+chmod +x Helikodu-<version>-x86_64.AppImage
+./Helikodu-<version>-x86_64.AppImage
+```
+
+Some file managers start it with a double-click once it is executable (in its properties, "Allow executing file as program"). If it does not start and says FUSE is missing, run it as `./Helikodu-<version>-x86_64.AppImage --appimage-extract-and-run` or install your distribution's `fuse3` package.
+
+The command-line tool is in the same file:
+
+```sh
+./Helikodu-<version>-x86_64.AppImage --cli --help
+```
+
+or, through a link named `helikodu-cli` (in a folder on your `PATH`):
+
+```sh
+ln -s "$PWD/Helikodu-<version>-x86_64.AppImage" ~/.local/bin/helikodu-cli
+helikodu-cli status
+```
+
+The AppImage does not add itself to the application list, and it never looks for updates: download a new version from the Releases page and replace the file. Tools such as Gear Lever or AppImageLauncher can add it to the application list. Your library, playlists and settings are kept in the same folders as with any other installation, so moving between the AppImage and another installation keeps them.
+
+Helikodu follows the desktop's GTK theme, icon theme and dark style as far as the theme supports the GTK version in the AppImage. File choosers are the desktop's own where a desktop portal runs.
 
 ## The ready-built programs
 

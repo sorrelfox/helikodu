@@ -12,3 +12,4 @@ Guides for contributors: the architecture overview, the testing and test-corpus 
 | [bug-severity.md](bug-severity.md) | The four severity levels and how each is handled |
 | [flatpak.md](flatpak.md) | The Flatpak: building it, updating its crates and libraries, its permissions and the way to Flathub |
 | [releasing.md](releasing.md) | How a release is made: the version, the checklist, and what the Release workflow builds and publishes |
+| [appimage.md](appimage.md) | The AppImage: how it is built, what it carries and from where, its licences and limits |

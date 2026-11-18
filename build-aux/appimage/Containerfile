@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Build environment of the AppImage: Debian 13, the oldest supported base
+# (glibc 2.41, GTK 4.18), as for the ready-built tarballs. The system FFmpeg
+# is not installed: the AppImage carries a minimal FFmpeg built by
+# build-in-container.sh.
+FROM docker.io/library/debian:13
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    build-essential ca-certificates clang cmake curl file git libclang-dev meson nasm \
+    ninja-build patchelf pkg-config python3 xz-utils \
+    appstream desktop-file-utils gettext \
+    libasound2-dev libgtk-4-dev libjack-jackd2-dev libpipewire-0.3-dev \
+    libgme-dev libopenmpt-dev libsidplayfp-dev \
+    libmp3lame-dev libopus-dev libvorbis-dev zlib1g-dev \
+    libmpg123-dev libspeex-dev \
+    adwaita-icon-theme dconf-gsettings-backend librsvg2-common libglib2.0-bin \
+    && rm -rf /var/lib/apt/lists/*
+
+# Rust comes from rustup without a default toolchain: the toolchain pinned in
+# rust-toolchain.toml is installed when the sources are mounted.
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+RUN curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs \
+      | sh -s -- -y --no-modify-path --profile minimal --default-toolchain none \
+    && chmod -R a+rwX /usr/local/rustup /usr/local/cargo
+
+RUN git config --system --add safe.directory "*"
