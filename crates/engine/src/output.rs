@@ -29,18 +29,32 @@
 //! |---|---|---|
 //! | PipeWire | [`PipeWireBackend`] | `pipewire` |
 //! | ALSA | [`AlsaBackend`] | `alsa` |
+//! | PulseAudio, through cpal | [`PulseBackend`] | `pulseaudio` |
+//! | JACK, through cpal | [`JackBackend`] | `jack` |
 //! | Null (discards audio) | [`NullBackend`] | always built |
 //! | WAV file | [`WavBackend`] | always built |
+//!
+//! A program can bring backends of its own, in place of the built-in ones, through a
+//! [`BackendConnector`].
 
 #[cfg(feature = "alsa")]
 mod alsa;
+mod connector;
 mod convert;
+#[cfg(any(feature = "pulseaudio", feature = "jack"))]
+mod cpal_stream;
 mod device_stage;
+#[cfg(any(feature = "pulseaudio", feature = "jack"))]
+mod device_watch;
 mod error;
 mod event;
+#[cfg(feature = "jack")]
+mod jack;
 mod null;
 #[cfg(feature = "pipewire")]
 mod pipewire;
+#[cfg(feature = "pulseaudio")]
+mod pulse;
 mod reservation;
 mod ring;
 mod software_sink;
@@ -56,12 +70,17 @@ use helikodu_model::audio::{
 
 #[cfg(feature = "alsa")]
 pub use self::alsa::AlsaBackend;
+pub use self::connector::{BackendConnector, SharedConnector};
 pub use self::device_stage::DeviceAction;
 pub use self::error::OutputError;
 pub use self::event::{EventSender, OutputEvent};
+#[cfg(feature = "jack")]
+pub use self::jack::JackBackend;
 pub use self::null::NullBackend;
 #[cfg(feature = "pipewire")]
 pub use self::pipewire::PipeWireBackend;
+#[cfg(feature = "pulseaudio")]
+pub use self::pulse::PulseBackend;
 pub use self::reservation::{
     DeviceReservation, NoReservation, ReservationError, ReservationGuard, ReservedCard,
     SharedReservation,
@@ -191,13 +210,17 @@ pub struct OpenedStream {
 }
 
 /// The backend to use when the settings say "automatic": PipeWire if its socket
-/// is there, otherwise ALSA.
+/// is there, otherwise PulseAudio if its socket is there, otherwise ALSA.
 ///
-/// PulseAudio and JACK are not implemented yet and are never chosen.
+/// JACK is never chosen automatically.
 pub fn automatic_backend() -> OutputBackendKind {
     #[cfg(feature = "pipewire")]
     if self::pipewire::socket_exists() {
         return OutputBackendKind::PipeWire;
+    }
+    #[cfg(feature = "pulseaudio")]
+    if self::pulse::server_exists() {
+        return OutputBackendKind::PulseAudio;
     }
     if cfg!(feature = "alsa") {
         OutputBackendKind::Alsa
@@ -238,11 +261,12 @@ pub fn connect_backend_with(
         OutputBackendKind::Alsa => Ok(Box::new(
             AlsaBackend::new(events.clone()).with_reservation(reservation.clone()),
         )),
+        #[cfg(feature = "pulseaudio")]
+        OutputBackendKind::PulseAudio => Ok(Box::new(PulseBackend::connect(events.clone())?)),
+        #[cfg(feature = "jack")]
+        OutputBackendKind::Jack => Ok(Box::new(JackBackend::connect(events.clone())?)),
         OutputBackendKind::Null => Ok(Box::new(NullBackend::new())),
         OutputBackendKind::Wav => Err(unavailable("needs a file name; use WavBackend::new")),
-        OutputBackendKind::PulseAudio | OutputBackendKind::Jack => {
-            Err(unavailable("not implemented yet"))
-        }
         #[allow(unreachable_patterns)]
         _ => Err(unavailable("not built into this program")),
     }

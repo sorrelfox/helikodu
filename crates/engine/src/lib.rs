@@ -8,7 +8,9 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod analysis;
 pub mod decode;
+pub mod dsp;
 pub mod output;
 pub mod pipeline;
 pub mod transport;

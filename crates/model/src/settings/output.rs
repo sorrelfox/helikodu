@@ -36,6 +36,7 @@ const BUFFER_MS: RangeInclusive<u32> = 50..=2000;
 /// buffer_ms = 200
 /// volume = "system"           # system | software | hardware:<mixer element> | fixed
 /// on_device_lost = "pause"    # pause | fallback-default | stop
+/// pause_on_unplug = true
 /// preroll_ms = 0
 /// exclusive_release_s = 30
 ///
@@ -43,7 +44,12 @@ const BUFFER_MS: RangeInclusive<u32> = 50..=2000;
 /// mode = "exclusive"
 /// volume = "fixed"
 /// fixed_volume_confirmed = true
+/// exclusive_release_s = 0
 /// ```
+///
+/// A profile applies while its device is in use: [`for_device`](Self::for_device)
+/// gives the settings with it applied. "System default" has a profile of its own, keyed
+/// `<backend>:default`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct OutputSettings {
@@ -63,6 +69,10 @@ pub struct OutputSettings {
     pub volume: VolumeControl,
     /// What happens when the chosen device disappears.
     pub on_device_lost: DeviceLostPolicy,
+    /// Whether playback pauses when the device it plays to while following "System
+    /// default" is unplugged (headphones or a USB or Bluetooth device removed), instead
+    /// of going on through the next default device.
+    pub pause_on_unplug: bool,
     /// Silence sent after the device is opened or reconfigured, in milliseconds, for
     /// converters that take a moment to lock on to a new signal.
     pub preroll_ms: u32,
@@ -84,6 +94,7 @@ impl Default for OutputSettings {
             buffer_ms: 200,
             volume: VolumeControl::default(),
             on_device_lost: DeviceLostPolicy::default(),
+            pause_on_unplug: true,
             preroll_ms: 0,
             exclusive_release_s: 30,
             profiles: BTreeMap::new(),
@@ -99,6 +110,41 @@ impl OutputSettings {
             device: self.device.clone(),
             mode: self.mode,
         }
+    }
+
+    /// The settings with the profile of `key` applied: each value the profile sets
+    /// replaces the general one. Without a profile they are these settings.
+    ///
+    /// A fixed volume needs the user's confirmation for the device
+    /// ([`DeviceProfile::fixed_volume_confirmed`]); until then the volume is applied in
+    /// software instead, so that nothing plays louder than the volume control says.
+    pub fn for_device(&self, key: &DeviceKey) -> OutputSettings {
+        let mut settings = self.clone();
+        let profile = self.profiles.get(key);
+        if let Some(profile) = profile {
+            let DeviceProfile {
+                mode,
+                sample_rate,
+                format,
+                buffer_ms,
+                volume,
+                preroll_ms,
+                exclusive_release_s,
+                fixed_volume_confirmed: _,
+            } = profile;
+            settings.mode = mode.unwrap_or(self.mode);
+            settings.sample_rate = sample_rate.unwrap_or(self.sample_rate);
+            settings.format = format.unwrap_or(self.format);
+            settings.buffer_ms = buffer_ms.unwrap_or(self.buffer_ms);
+            settings.volume = volume.clone().unwrap_or_else(|| self.volume.clone());
+            settings.preroll_ms = preroll_ms.unwrap_or(self.preroll_ms);
+            settings.exclusive_release_s = exclusive_release_s.unwrap_or(self.exclusive_release_s);
+        }
+        let confirmed = profile.is_some_and(|p| p.fixed_volume_confirmed);
+        if settings.volume == VolumeControl::Fixed && !confirmed && !key.backend.is_for_testing() {
+            settings.volume = VolumeControl::Software;
+        }
+        settings
     }
 
     /// Checks the values that the types alone do not constrain.
@@ -140,6 +186,9 @@ pub struct DeviceProfile {
     /// Replaces [`OutputSettings::preroll_ms`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preroll_ms: Option<u32>,
+    /// Replaces [`OutputSettings::exclusive_release_s`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exclusive_release_s: Option<u32>,
     /// Whether the user has accepted full, fixed output volume on this device. A fixed
     /// volume is not applied to a device until this is set.
     #[serde(skip_serializing_if = "is_false")]
@@ -216,6 +265,7 @@ fixed_volume_confirmed = true
             buffer_ms: 500,
             volume: VolumeControl::Hardware("PCM".into()),
             on_device_lost: DeviceLostPolicy::FallbackDefault,
+            pause_on_unplug: false,
             preroll_ms: 250,
             exclusive_release_s: 0,
             profiles: BTreeMap::new(),
@@ -227,6 +277,7 @@ fixed_volume_confirmed = true
                 format: Some(OutputFormat::S32),
                 buffer_ms: Some(100),
                 preroll_ms: Some(1000),
+                exclusive_release_s: Some(5),
                 ..DeviceProfile::default()
             },
         );
@@ -243,6 +294,7 @@ fixed_volume_confirmed = true
         );
         assert!(text.contains(r#"format = "s24_3""#), "{text}");
         assert!(!text.contains("fixed_volume_confirmed"), "{text}");
+        assert!(text.contains("pause_on_unplug = false"), "{text}");
         assert_eq!(toml::from_str::<Settings>(&text).unwrap(), settings);
     }
 
@@ -269,6 +321,73 @@ fixed_volume_confirmed = true
         ] {
             assert!(toml::from_str::<Settings>(text).is_err(), "{text}");
         }
+    }
+
+    #[test]
+    fn a_profile_replaces_what_it_sets() {
+        let mut output = OutputSettings::default();
+        output.profiles.insert(
+            d10s(),
+            DeviceProfile {
+                mode: Some(OutputMode::Exclusive),
+                sample_rate: Some(SampleRatePolicy::Fixed(SampleRate::HZ_48000)),
+                format: Some(OutputFormat::S24Packed),
+                buffer_ms: Some(500),
+                volume: Some(VolumeControl::Hardware("PCM".into())),
+                preroll_ms: Some(250),
+                exclusive_release_s: Some(0),
+                fixed_volume_confirmed: false,
+            },
+        );
+        let applied = output.for_device(&d10s());
+        assert_eq!(applied.mode, OutputMode::Exclusive);
+        assert_eq!(
+            applied.sample_rate,
+            SampleRatePolicy::Fixed(SampleRate::HZ_48000)
+        );
+        assert_eq!(applied.format, OutputFormat::S24Packed);
+        assert_eq!(applied.buffer_ms, 500);
+        assert_eq!(applied.volume, VolumeControl::Hardware("PCM".into()));
+        assert_eq!(applied.preroll_ms, 250);
+        assert_eq!(applied.exclusive_release_s, 0);
+        assert_eq!(applied.profiles, output.profiles);
+
+        // Another device, or "System default", keeps the general settings.
+        let other =
+            DeviceKey::of_selection(OutputBackendKind::Alsa, &DeviceSelection::SystemDefault);
+        assert_eq!(output.for_device(&other), output);
+
+        // Only what the profile sets is replaced.
+        output.profiles.insert(
+            other.clone(),
+            DeviceProfile {
+                buffer_ms: Some(1000),
+                ..DeviceProfile::default()
+            },
+        );
+        let applied = output.for_device(&other);
+        assert_eq!(applied.buffer_ms, 1000);
+        assert_eq!(applied.mode, output.mode);
+        assert_eq!(applied.exclusive_release_s, 30);
+    }
+
+    #[test]
+    fn fixed_volume_needs_the_confirmation_of_the_device() {
+        let mut output = OutputSettings {
+            volume: VolumeControl::Fixed,
+            ..OutputSettings::default()
+        };
+        assert_eq!(output.for_device(&d10s()).volume, VolumeControl::Software);
+        let null = DeviceKey::new(OutputBackendKind::Null, DeviceId::new("null").unwrap());
+        assert_eq!(output.for_device(&null).volume, VolumeControl::Fixed);
+        output.profiles.insert(
+            d10s(),
+            DeviceProfile {
+                fixed_volume_confirmed: true,
+                ..DeviceProfile::default()
+            },
+        );
+        assert_eq!(output.for_device(&d10s()).volume, VolumeControl::Fixed);
     }
 
     #[test]

@@ -178,3 +178,41 @@ fn the_window_state_is_kept_in_range() {
     fs::write(&path, "not toml at all [").unwrap();
     assert_eq!(store.load(), UiState::default());
 }
+
+#[test]
+fn the_dsp_table_is_saved_and_a_bad_one_reset() {
+    use helikodu_model::settings::{EqMode, ParametricFilter};
+
+    let path = folder("dsp").join("settings.toml");
+    let store = SettingsStore::open(&path, EventBus::new());
+    let groups = store
+        .update(|s| {
+            s.dsp.equalizer.enabled = true;
+            s.dsp.equalizer.mode = EqMode::Graphic10;
+            s.dsp.equalizer.graphic_10[4] = -3.5;
+            s.dsp.equalizer.parametric = vec![ParametricFilter::default(); 3];
+            s.dsp.limiter.enabled = true;
+        })
+        .unwrap();
+    assert_eq!(groups, vec![SettingsGroup::Dsp]);
+    let again = SettingsStore::open(&path, EventBus::new());
+    assert_eq!(again.get(), store.get());
+    let error = store
+        .update(|s| s.dsp.limiter.lookahead_ms = 9.0)
+        .unwrap_err();
+    assert!(
+        matches!(error, SettingsStoreError::Invalid(ref e) if e.key == "dsp.limiter.lookahead_ms")
+    );
+
+    // A value out of range in the file resets the `[dsp]` table only.
+    let text = fs::read_to_string(&path)
+        .unwrap()
+        .replace("lookahead_ms = 2.0", "lookahead_ms = 9.0");
+    fs::write(&path, text).unwrap();
+    let reread = SettingsStore::open(&path, EventBus::new());
+    assert!(matches!(
+        reread.load_notice(),
+        Some(LoadNotice::Reset { .. })
+    ));
+    assert_eq!(reread.get().dsp, Settings::default().dsp);
+}

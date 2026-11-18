@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The loudness values of the files in the queue, read from their tags when they are
-//! about to play.
+//! about to play; the library's measurements, where it has current ones, win over
+//! the tags.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use helikodu_library::read_file_details;
+use helikodu_library::{MeasuredLoudness, read_file_details};
 use helikodu_model::player::{Loudness, PlaybackItem};
 
 /// What the tags of one file say about its loudness and its album.
@@ -38,11 +39,15 @@ impl LoudnessTags {
     /// it plays as part of its album: whether the file before or after it in the
     /// queue (`neighbours`) has the same album. The engine looks at the album only in
     /// the automatic mode.
+    ///
+    /// `measured` is the library's current measurement of the track, if it has
+    /// one: its values win over those of the tags, which fill what it lacks.
     pub(super) fn complete(
         &mut self,
         path: &Path,
         neighbours: &[Option<PathBuf>; 2],
         item: PlaybackItem,
+        measured: Option<&MeasuredLoudness>,
     ) -> PlaybackItem {
         let tagged = self.tags(path);
         let album_context = tagged.album.is_some()
@@ -50,7 +55,11 @@ impl LoudnessTags {
                 .iter()
                 .flatten()
                 .any(|neighbour| self.tags(neighbour).album == tagged.album);
-        item.with_loudness(tagged.loudness, album_context)
+        let loudness = match measured {
+            Some(measured) => measured.over_tags(tagged.loudness),
+            None => tagged.loudness,
+        };
+        item.with_loudness(loudness, album_context)
     }
 
     /// The tags of the file at `path`; nothing for a file whose tags cannot be read
@@ -72,5 +81,63 @@ impl LoudnessTags {
                 },
             })
             .clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use helikodu_library::AlbumMeasurement;
+    use helikodu_model::library::{MediaSource, TrackId};
+    use helikodu_model::player::ItemId;
+
+    use super::*;
+
+    #[test]
+    fn playback_prefers_measured_values_over_tags() {
+        let path = PathBuf::from("/nonexistent/track.flac");
+        let mut loudness = LoudnessTags::default();
+        let tagged = Loudness {
+            track_gain_db: Some(-2.0),
+            track_peak: Some(0.5),
+            album_gain_db: Some(-3.0),
+            album_peak: Some(0.6),
+        };
+        loudness.read.insert(
+            path.clone(),
+            Tagged {
+                loudness: tagged,
+                album: None,
+            },
+        );
+        let item = || PlaybackItem::new(ItemId::new(1), MediaSource::file(&path));
+        let neighbours = [None, None];
+
+        let from_tags = loudness.complete(&path, &neighbours, item(), None);
+        assert_eq!(from_tags.loudness, tagged);
+
+        let measured = MeasuredLoudness {
+            track: TrackId::new(7),
+            version: 1,
+            integrated_lufs: Some(-9.5),
+            range_lu: 4.0,
+            sample_peak: 0.97,
+            true_peak: 1.04,
+            album: Some(AlbumMeasurement {
+                integrated_lufs: Some(-10.0),
+                range_lu: 5.0,
+                sample_peak: 0.98,
+                true_peak: 1.08,
+            }),
+        };
+        let played = loudness.complete(&path, &neighbours, item(), Some(&measured));
+        assert_eq!(
+            played.loudness,
+            Loudness {
+                track_gain_db: Some(-8.5),
+                track_peak: Some(1.04),
+                album_gain_db: Some(-8.0),
+                album_peak: Some(1.08),
+            }
+        );
     }
 }

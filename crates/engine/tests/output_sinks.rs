@@ -456,14 +456,19 @@ fn backends_by_kind() {
     let (events, _received) = mpsc::channel();
     let null = connect_backend(OutputBackendKind::Null, &events).unwrap();
     assert_eq!(null.kind(), OutputBackendKind::Null);
-    for kind in [
-        OutputBackendKind::Wav,
-        OutputBackendKind::PulseAudio,
-        OutputBackendKind::Jack,
-    ] {
-        assert!(matches!(
-            connect_backend(kind, &events),
-            Err(OutputError::BackendUnavailable { .. })
-        ));
+    assert!(matches!(
+        connect_backend(OutputBackendKind::Wav, &events),
+        Err(OutputError::BackendUnavailable { .. })
+    ));
+    // Without a server (or without the feature) the sound servers' backends are
+    // unavailable; with one they connect.
+    for kind in [OutputBackendKind::PulseAudio, OutputBackendKind::Jack] {
+        match connect_backend(kind, &events) {
+            Ok(backend) => assert_eq!(backend.kind(), kind),
+            Err(error) => assert!(
+                matches!(error, OutputError::BackendUnavailable { .. }),
+                "{kind}: {error}"
+            ),
+        }
     }
 }

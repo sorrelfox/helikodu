@@ -158,3 +158,47 @@ fn processing_does_not_allocate() {
         assert_eq!(count, 0, "{from} -> {to}: {count} allocations");
     }
 }
+
+#[test]
+fn the_dsp_chain_does_not_allocate() {
+    use helikodu_engine::dsp::DspChain;
+    use helikodu_model::settings::{ChannelMode, DspSettings, EqMode, ParametricFilter};
+
+    let mut settings = DspSettings::default();
+    settings.equalizer.enabled = true;
+    settings.equalizer.mode = EqMode::Graphic31;
+    settings.equalizer.graphic_31[10] = 6.0;
+    settings.equalizer.parametric = vec![ParametricFilter::default(); 64];
+    settings.crossfeed.enabled = true;
+    settings.channel_mix.enabled = true;
+    settings.channel_mix.channels = ChannelMode::Mono;
+    settings.channel_mix.balance_db = 3.0;
+    settings.limiter.enabled = true;
+    let mut chain = DspChain::new(&settings, 48_000, 2);
+    let input: Vec<f32> = (0..4800).map(|i| (i as f32 * 0.05).sin() * 1.8).collect();
+    let mut block = input.clone();
+    let mut tail = vec![0.0f32; 4096];
+    for round in 0..4 {
+        // Building the new stages allocates; processing, crossfades included, not.
+        match round {
+            1 => settings.equalizer.graphic_31[10] = -6.0,
+            2 => {
+                settings.equalizer.mode = EqMode::Parametric;
+                settings.equalizer.parametric[3].gain_db = 4.0;
+                settings.limiter.lookahead_ms = 4.0;
+            }
+            3 => settings.channel_mix.channels = ChannelMode::Swap,
+            _ => {}
+        }
+        chain.set_settings(&settings);
+        let count = allocations(|| {
+            for _ in 0..10 {
+                block.copy_from_slice(&input);
+                chain.process(&mut block);
+            }
+            let _ = chain.flush(&mut tail);
+            chain.reset();
+        });
+        assert_eq!(count, 0, "round {round}: {count} allocations");
+    }
+}

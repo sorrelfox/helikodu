@@ -9,7 +9,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     build-essential ca-certificates clang curl git libclang-dev meson ninja-build pkg-config \
     libasound2-dev libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev \
-    libgtk-4-dev libpipewire-0.3-dev libsqlite3-dev \
+    libgtk-4-dev libjack-jackd2-dev libpipewire-0.3-dev libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Rust comes from rustup without a default toolchain: the toolchain pinned in

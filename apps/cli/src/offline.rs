@@ -5,6 +5,7 @@
 
 pub(crate) mod info;
 pub(crate) mod list_outputs;
+pub(crate) mod loudness;
 pub(crate) mod play;
 pub(crate) mod scan;
 pub(crate) mod search;

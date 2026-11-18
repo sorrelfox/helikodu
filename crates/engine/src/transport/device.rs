@@ -4,11 +4,11 @@
 //! The output the engine plays to: the connected backend and the open stream.
 
 use helikodu_model::audio::{
-    AudioSpec, BackendSelection, DeviceInfo, DeviceSelection, OutputBackendKind, OutputMode,
-    OutputSelection,
+    AudioSpec, BackendSelection, DeviceId, DeviceInfo, DeviceKey, DeviceSelection,
+    OutputBackendKind, OutputMode, OutputSelection,
 };
 use helikodu_model::player::Volume;
-use helikodu_model::settings::VolumeControl;
+use helikodu_model::settings::{OutputSettings, VolumeControl};
 
 use helikodu_model::player::{EngineError, EngineEvent, Loudness};
 use helikodu_model::settings::DeviceLostPolicy;
@@ -16,9 +16,11 @@ use helikodu_model::settings::DeviceLostPolicy;
 use super::source::Source;
 use super::stats::{EngineStats, Reported};
 use super::worker::Worker;
+use crate::dsp::DspChain;
 use crate::output::{
     EventSender, NullBackend, OutputBackend, OutputError, OutputStream, Pacing, SampleWriter,
-    SharedReservation, StreamConfig, WavBackend, automatic_backend, connect_backend_with,
+    SharedConnector, SharedReservation, StreamConfig, WavBackend, automatic_backend,
+    connect_backend_with,
 };
 use crate::pipeline::{
     LoudnessInfo, PathPlan, PathRequest, ProcessingSettings, VolumePlan, stream_config,
@@ -32,16 +34,44 @@ pub(super) struct Backends {
     events: EventSender,
     pacing: Pacing,
     reservation: SharedReservation,
+    connector: SharedConnector,
+    /// The default device of the connected backend, as last reported.
+    pub(super) default_device: Option<DeviceId>,
 }
 
 impl Backends {
-    pub(super) fn new(events: EventSender, pacing: Pacing, reservation: SharedReservation) -> Self {
+    pub(super) fn new(
+        events: EventSender,
+        pacing: Pacing,
+        reservation: SharedReservation,
+        connector: SharedConnector,
+    ) -> Self {
         Self {
             connected: None,
             events,
             pacing,
             reservation,
+            connector,
+            default_device: None,
         }
+    }
+
+    /// The backend `selection` stands for: the connected one for "automatic" once
+    /// there is one.
+    pub(super) fn kind_of(&self, selection: BackendSelection) -> OutputBackendKind {
+        match (selection, &self.connected) {
+            (BackendSelection::Backend(kind), _) => kind,
+            (BackendSelection::Automatic, Some((kind, _))) => *kind,
+            (BackendSelection::Automatic, None) => automatic_backend(),
+        }
+    }
+
+    /// Notes the default device in a device list of the connected backend.
+    pub(super) fn note_devices(&mut self, devices: &[DeviceInfo]) {
+        self.default_device = devices
+            .iter()
+            .find(|device| device.is_default)
+            .map(|device| device.id.clone());
     }
 
     /// The backend `selection` names, connected if it is not yet. The second value
@@ -59,9 +89,12 @@ impl Backends {
             matches!(&self.connected, Some((k, _)) if *k == kind && kind != OutputBackendKind::Wav);
         if !reuse {
             self.connected = None;
-            let backend: Box<dyn OutputBackend> = match kind {
-                OutputBackendKind::Null => Box::new(NullBackend::with_pacing(self.pacing)),
-                OutputBackendKind::Wav => {
+            self.default_device = None;
+            let custom = self.connector.connect(kind, &self.events).transpose()?;
+            let backend: Box<dyn OutputBackend> = match (custom, kind) {
+                (Some(custom), _) => custom,
+                (None, OutputBackendKind::Null) => Box::new(NullBackend::with_pacing(self.pacing)),
+                (None, OutputBackendKind::Wav) => {
                     let DeviceSelection::Device(path) = &selection.device else {
                         return Err(OutputError::BackendUnavailable {
                             backend: kind,
@@ -70,9 +103,11 @@ impl Backends {
                     };
                     Box::new(WavBackend::new(path.as_str()).with_pacing(self.pacing))
                 }
-                _ => connect_backend_with(kind, &self.events, &self.reservation)?,
+                (None, _) => connect_backend_with(kind, &self.events, &self.reservation)?,
             };
-            fresh = Some(backend.devices().unwrap_or_default());
+            let devices = backend.devices().unwrap_or_default();
+            self.note_devices(&devices);
+            fresh = Some(devices);
             self.connected = Some((kind, backend));
         }
         let Some((_, backend)) = &self.connected else {
@@ -101,6 +136,8 @@ pub(super) struct Output {
     /// The device and mode the stream plays to.
     pub(super) device: DeviceSelection,
     pub(super) mode: OutputMode,
+    /// The output settings with the device's profile applied.
+    pub(super) settings: OutputSettings,
     /// Where the volume is applied.
     pub(super) volume: VolumePlan,
     /// The sink takes samples as fast as they come.
@@ -117,11 +154,12 @@ impl Output {
     pub(super) fn open(
         backend: &dyn OutputBackend,
         mut config: StreamConfig,
-        control: &VolumeControl,
+        settings: OutputSettings,
         volume: Volume,
         freewheel: bool,
         stats: EngineStats,
     ) -> Result<Self, OutputError> {
+        let control = &settings.volume;
         if *control == VolumeControl::System {
             config.volume = Some(volume.amplitude());
         }
@@ -138,6 +176,7 @@ impl Output {
             requested: config.spec,
             device: config.device,
             mode: config.mode,
+            settings,
             volume: plan,
             freewheel,
             running: false,
@@ -203,8 +242,17 @@ impl Worker {
             return Err(EngineError::NothingLoaded);
         };
         let device = output.spec();
-        source.attach(plan_for(&self.config.processing, output, source))?;
         let channels = usize::from(device.channel_count());
+        // The chain lives as long as the stream format: a gapless join keeps it.
+        if !self
+            .dsp
+            .as_ref()
+            .is_some_and(|dsp| dsp.fits(device.rate.hz(), channels))
+        {
+            self.dsp = Some(DspChain::new(&self.config.dsp, device.rate.hz(), channels));
+        }
+        let dsp = self.dsp.as_ref().map(DspChain::plan).unwrap_or_default();
+        source.attach(plan_for(&self.config.processing, output, source).with_dsp(dsp))?;
         let needed = source.max_output_frames().max(4096) * channels;
         if self.staging.len() < needed {
             self.staging.resize(needed, 0.0);
@@ -212,11 +260,23 @@ impl Worker {
         Ok(())
     }
 
+    /// The output settings for playing to `device` of the chosen backend, in the
+    /// chosen mode: the general ones with the device's profile applied.
+    pub(super) fn output_settings_for(&self, device: &DeviceSelection) -> OutputSettings {
+        let kind = self.backends.kind_of(self.selection.backend);
+        let mut general = self.config.output.clone();
+        general.backend = self.selection.backend;
+        general.device = device.clone();
+        general.mode = self.selection.mode;
+        general.for_device(&DeviceKey::of_selection(kind, device))
+    }
+
     /// The stream an item would ask for.
     pub(super) fn stream_config(&self, source: &Source) -> StreamConfig {
-        let mut config = stream_config(&self.config.output, &source.format());
+        let settings = self.output_settings_for(&self.selection.device);
+        let mut config = stream_config(&settings, &source.format());
         config.device = self.selection.device.clone();
-        config.mode = self.selection.mode;
+        config.mode = settings.mode;
         config
     }
 
@@ -229,8 +289,13 @@ impl Worker {
                 if self.config.output.on_device_lost == DeviceLostPolicy::FallbackDefault
                     && config.device != DeviceSelection::SystemDefault =>
             {
+                // The default device's profile chooses the mode and the buffer; the
+                // format stays as the item asked for it.
+                let settings = self.output_settings_for(&DeviceSelection::SystemDefault);
                 let config = StreamConfig {
                     device: DeviceSelection::SystemDefault,
+                    mode: settings.mode,
+                    buffer: std::time::Duration::from_millis(u64::from(settings.buffer_ms)),
                     ..config
                 };
                 self.try_open(&config)
@@ -247,13 +312,14 @@ impl Worker {
             mode: config.mode,
         };
         let pacing = self.config.sink_pacing;
+        let settings = self.output_settings_for(&config.device);
         let (backend, fresh) = self.backends.get(&selection)?;
         let kind = backend.kind();
         let freewheel = pacing == crate::output::Pacing::Freewheel && kind.is_for_testing();
         let output = Output::open(
             backend,
             config.clone(),
-            &self.config.output.volume,
+            settings,
             self.volume,
             freewheel,
             self.stats.clone(),

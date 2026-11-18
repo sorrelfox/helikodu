@@ -77,7 +77,7 @@ fn track_source(c: &Connection, track: TrackId) -> rusqlite::Result<Option<Track
 }
 
 /// The span a track of `section` with the stored `span` plays.
-fn span_of(section: TrackSection, span: StoredSpan) -> Option<SourceSection> {
+pub(crate) fn span_of(section: TrackSection, span: StoredSpan) -> Option<SourceSection> {
     if section == TrackSection::Whole {
         return None;
     }

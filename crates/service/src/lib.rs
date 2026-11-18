@@ -14,6 +14,7 @@ pub mod clock;
 mod event;
 pub mod files;
 pub mod formats;
+pub mod jobs;
 pub mod library;
 pub mod player;
 mod service;

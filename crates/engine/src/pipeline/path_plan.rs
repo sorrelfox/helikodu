@@ -27,6 +27,7 @@ use super::{
     FadeDurations, GainDecision, LoudnessInfo, LoudnessSettings, MixKind, MixMatrix, MixOptions,
     ResampleMethod, ResamplerQuality, TpdfDither, resolve_gain,
 };
+use crate::dsp::{CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan};
 use crate::output::StreamConfig;
 
 /// The format of a source, as the decoder delivers it.
@@ -191,8 +192,16 @@ pub enum PlannedStage {
     Resample(ResamplePlan),
     /// The crossfade with the neighbouring track.
     Crossfade,
-    /// The DSP chain.
+    /// The DSP chain, when its stages are not known.
     Dsp,
+    /// The equalizer of the DSP chain, with its preamp.
+    Equalizer(EqualizerPlan),
+    /// Crossfeed.
+    Crossfeed(CrossfeedPlan),
+    /// Mono, left/right swap and balance.
+    Mixer(MixerPlan),
+    /// The true-peak limiter.
+    Limiter(LimiterPlan),
     /// Software volume.
     Volume(Volume),
     /// TPDF dither to an integer width.
@@ -210,6 +219,10 @@ impl fmt::Display for PlannedStage {
             Self::Resample(resample) => resample.fmt(f),
             Self::Crossfade => f.write_str("crossfade"),
             Self::Dsp => f.write_str("DSP"),
+            Self::Equalizer(stage) => stage.fmt(f),
+            Self::Crossfeed(stage) => stage.fmt(f),
+            Self::Mixer(stage) => stage.fmt(f),
+            Self::Limiter(stage) => stage.fmt(f),
             Self::Volume(volume) => write!(f, "volume {:.0} %", volume.position() * 100.0),
             Self::Dither { bits } => write!(f, "TPDF dither {bits}-bit"),
         }
@@ -233,6 +246,8 @@ pub struct PathPlan {
     pub crossfade: bool,
     /// Whether the DSP chain is active.
     pub dsp: bool,
+    /// The DSP chain's active stages, when known (see [`with_dsp`](Self::with_dsp)).
+    pub dsp_stages: DspPlan,
     /// Where the volume is applied.
     pub volume: VolumePlan,
     /// The width the output is dithered to while the samples are processed, if the
@@ -280,10 +295,23 @@ impl PathPlan {
             resample,
             crossfade: request.crossfade,
             dsp: request.dsp,
+            dsp_stages: DspPlan::default(),
             volume: request.volume,
             dither,
             always_dither: processed || !exact,
         }
+    }
+
+    /// The same plan with the DSP chain's active stages: a chain with any active
+    /// stage makes the samples processed, and its stages appear in
+    /// [`stages`](Self::stages) instead of a plain "DSP".
+    pub fn with_dsp(mut self, dsp: DspPlan) -> Self {
+        if !dsp.is_empty() {
+            self.dsp = true;
+            self.always_dither = true;
+        }
+        self.dsp_stages = dsp;
+        self
     }
 
     /// Whether the device receives the decoded samples unchanged.
@@ -309,9 +337,14 @@ impl PathPlan {
         if self.crossfade {
             stages.push(PlannedStage::Crossfade);
         }
-        if self.dsp {
+        if self.dsp && self.dsp_stages.is_empty() {
             stages.push(PlannedStage::Dsp);
         }
+        let dsp = &self.dsp_stages;
+        stages.extend(dsp.equalizer.map(PlannedStage::Equalizer));
+        stages.extend(dsp.crossfeed.map(PlannedStage::Crossfeed));
+        stages.extend(dsp.mixer.map(PlannedStage::Mixer));
+        stages.extend(dsp.limiter.map(PlannedStage::Limiter));
         if let Some(volume) = self.software_volume().filter(|v| *v != Volume::FULL) {
             stages.push(PlannedStage::Volume(volume));
         }
@@ -608,5 +641,29 @@ mod tests {
             "22.05 kHz"
         );
         assert_eq!(KiloHertz(SampleRate::HZ_48000).to_string(), "48 kHz");
+    }
+
+    #[test]
+    fn dsp_stages_join_the_signal_path() {
+        use crate::dsp::DspChain;
+        use helikodu_model::settings::DspSettings;
+
+        let mut dsp = DspSettings::default();
+        let plan = PathPlan::new(&request(cd(), cd()), &ProcessingSettings::default());
+        // Stages that are switched on but change nothing keep the path bit-perfect.
+        dsp.equalizer.enabled = true;
+        let chain = DspChain::new(&dsp, 44_100, 2);
+        assert!(plan.clone().with_dsp(chain.plan()).is_bit_perfect());
+        dsp.equalizer.mode = helikodu_model::settings::EqMode::Graphic10;
+        dsp.equalizer.graphic_10[0] = 3.0;
+        dsp.limiter.enabled = true;
+        let chain = DspChain::new(&dsp, 44_100, 2);
+        let plan = plan.with_dsp(chain.plan());
+        assert!(!plan.is_bit_perfect());
+        assert_eq!(
+            plan.to_string(),
+            "44.1 kHz/16-bit stereo → EQ 10-band · preamp -3.0 dB → \
+             limiter -1.0 dBTP · lookahead 2 ms → TPDF dither 16-bit → s16le 44.1 kHz stereo"
+        );
     }
 }

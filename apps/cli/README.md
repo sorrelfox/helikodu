@@ -1,6 +1,6 @@
 # helikodu-cli
 
-Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
+Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
 
 - **May depend on:** `model`, `service`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
@@ -19,6 +19,8 @@ helikodu-cli scan [FOLDER...] [--exclude PATTERN]... [--workers N] [--worker PAT
 helikodu-cli search TEXT... [--limit N] [--offset N] [--json] [--database PATH]
 helikodu-cli info FILE|TRACK-ID [--json] [--database PATH]
 helikodu-cli stats [--top N] [--json] [--database PATH]
+helikodu-cli loudness [--album|--library] [--write-tags] [--threads N] [--worker PATH]
+                      [--json] [--database PATH] [FILE|TRACK-ID...]
 helikodu-cli --version
 ```
 
@@ -155,12 +157,33 @@ Shows the library folders, the totals and the most played tracks (`--top`, 0 to 
 
 `files` counts media files with tracks (not CUE sheets); `artists` counts track and album artists.
 
+#### loudness
+
+Measures library tracks, given as files or track numbers, with the EBU R128 / ReplayGain 2.0 scanner and stores the results in the library; playback prefers them over the tags. `--album` measures the whole albums of the tracks with the album gain (the album as one programme); a track given alone gets track values only. `--library` measures every track without a current measurement, with the rest of its album. `--write-tags` also writes `REPLAYGAIN_*` tags into the files (not for CUE sheet tracks); `--threads` sets the number of measuring threads (default half the processors). With `--json`:
+
+```json
+{
+  "total": 2, "measured": 2, "failed": 0, "tags_written": 0, "cancelled": false,
+  "tracks": [
+    {"track_id": 7, "path": "/music/Dawn/01.flac", "album_id": 3,
+     "loudness": {"integrated_lufs": -11.7, "loudness_range_lu": 5.2,
+                  "sample_peak": 0.97, "true_peak": 1.02, "track_gain_db": -6.3,
+                  "version": 1,
+                  "album": {"integrated_lufs": -12.1, "loudness_range_lu": 6.0,
+                            "sample_peak": 0.99, "true_peak": 1.04, "gain_db": -5.9}},
+     "error": null, "tags": "not_asked", "tags_reason": null}
+  ]
+}
+```
+
+`integrated_lufs` and the gains are `null` for silence; peaks are linear. `album` is `null` when the track was measured without its whole album. `tags` is `not_asked`, `written`, `skipped` or `failed`, with `tags_reason`. A track that cannot be measured has `loudness` `null` and `error`.
+
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
 | 0 | Success. For `play`, at least one file played; skipped files are reported but do not change the code. For `scan`, files that could not be read are reported but do not change the code. `search` with no match is a success |
-| 1 | A runtime error: the output could not be opened or failed, no backend could be listed, there is no library yet, the library or a file could not be read, a scan could not start or a folder given to it could not be read, or `info` found no such track |
+| 1 | A runtime error: the output could not be opened or failed, no backend could be listed, there is no library yet, the library or a file could not be read, a scan could not start or a folder given to it could not be read, or `info` found no such track; for `loudness`, also a track that could not be measured or whose tags could not be written |
 | 2 | A usage error: an unknown option or value, or options that do not go together |
 | 3 | `play` could not play any of the files |
 
@@ -172,6 +195,7 @@ cargo test -p helikodu-cli
 
 - `tests/cli.rs` runs the built program against generated WAV files with the `null` and `wav` backends; they make no sound.
 - `tests/replaygain.rs` plays FLAC files with ReplayGain tags and an Opus file with R128 tags, made by the `ffmpeg` tool, to the `wav` backend and checks the level of the output in every mode: the track and album gains, the preamp, the automatic choice by album neighbours, clipping prevention by the peak, and untagged files.
+- `tests/loudness.rs` scans two FLAC files made by `ffmpeg` as one album and parses the JSON of `loudness`: one track measured without album values and the file untouched, the rest of the library with the album gain, nothing left after that, the album of a track number with `--write-tags` (the tags read back by `info`), and the usage errors.
 - `tests/library.rs` makes a small library with `ffmpeg` (including a file name that is not UTF-8 and an excluded folder), scans it with real worker processes into a temporary database, and parses the JSON of `scan`, `search`, `info` and `stats`, and checks the errors and exit codes. It builds `helikodu-scan-worker` into the same target folder, beside `helikodu-cli`. It gives one track play counts with the `sqlite3` tool when that is installed.
 
 Tests whose tool or encoder is missing print `SKIPPED:` and pass.

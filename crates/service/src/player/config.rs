@@ -7,6 +7,7 @@ use std::ops::RangeInclusive;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use helikodu_engine::dsp::processing_settings;
 use helikodu_engine::output::{Pacing, SharedReservation};
 use helikodu_engine::pipeline::{
     ClippingPrevention, LoudnessMode, LoudnessSettings, ProcessingSettings,
@@ -18,8 +19,9 @@ use helikodu_model::audio::{
 };
 use helikodu_model::player::Volume;
 use helikodu_model::settings::{
-    ClippingPrevention as ClippingSetting, ContextAction, LoudnessMode as LoudnessSetting,
-    LoudnessSettings as LoudnessTable, OutputSettings, PlaybackSettings,
+    ClippingPrevention as ClippingSetting, ContextAction, DspSettings,
+    LoudnessMode as LoudnessSetting, LoudnessSettings as LoudnessTable, OutputSettings,
+    PlaybackSettings,
 };
 
 use super::PlayerError;
@@ -201,6 +203,8 @@ pub struct PlayerConfig {
     /// exclusive output. The desktop integration supplies one; the default takes
     /// nothing.
     pub reservation: SharedReservation,
+    /// The `[dsp]` settings: the DSP chain and the resampler quality.
+    pub dsp: DspSettings,
 }
 
 impl PlayerConfig {
@@ -229,6 +233,7 @@ impl PlayerConfig {
             bus: None,
             shuffle_seed: None,
             reservation: SharedReservation::default(),
+            dsp: DspSettings::default(),
         }
     }
 
@@ -272,10 +277,14 @@ impl PlayerConfig {
                 SinkPacing::RealTime => Pacing::RealTime,
                 SinkPacing::Freewheel => Pacing::Freewheel,
             },
-            processing: ProcessingSettings {
-                loudness: self.loudness_settings(),
-                ..ProcessingSettings::default()
-            },
+            processing: processing_settings(
+                ProcessingSettings {
+                    loudness: self.loudness_settings(),
+                    ..ProcessingSettings::default()
+                },
+                &self.dsp,
+            ),
+            dsp: self.dsp.clone(),
             device_reservation: self.reservation.clone(),
             ..EngineConfig::default()
         }
@@ -333,6 +342,38 @@ mod tests {
         ));
         selection.device = "out.wav".parse().unwrap();
         assert_eq!(PlayerConfig::new(selection).validate(), Ok(()));
+    }
+
+    #[test]
+    fn device_profiles_reach_the_engine() {
+        use helikodu_model::audio::{DeviceId, DeviceKey};
+        use helikodu_model::settings::DeviceProfile;
+
+        let mut config = PlayerConfig::new(OutputSelection::default());
+        let key = DeviceKey::new(
+            OutputBackendKind::PulseAudio,
+            DeviceId::new("alsa_output.usb-dac").unwrap(),
+        );
+        config.output.profiles.insert(
+            key.clone(),
+            DeviceProfile {
+                buffer_ms: Some(500),
+                exclusive_release_s: Some(0),
+                ..DeviceProfile::default()
+            },
+        );
+        config.output.pause_on_unplug = false;
+        let selection = OutputSelection {
+            backend: BackendSelection::Backend(OutputBackendKind::PulseAudio),
+            device: DeviceSelection::Device(key.device.clone()),
+            ..OutputSelection::default()
+        };
+        let engine = config.engine_config(&selection).output;
+        assert_eq!(engine.profiles, config.output.profiles);
+        assert!(!engine.pause_on_unplug);
+        let applied = engine.for_device(&key);
+        assert_eq!(applied.buffer_ms, 500);
+        assert_eq!(applied.exclusive_release_s, 0);
     }
 
     #[test]

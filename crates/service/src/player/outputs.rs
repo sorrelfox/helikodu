@@ -20,14 +20,21 @@ pub fn sound_backends() -> Vec<OutputBackendKind> {
     if cfg!(feature = "pipewire") {
         backends.push(OutputBackendKind::PipeWire);
     }
+    if cfg!(feature = "pulseaudio") {
+        backends.push(OutputBackendKind::PulseAudio);
+    }
     if cfg!(feature = "alsa") {
         backends.push(OutputBackendKind::Alsa);
+    }
+    // Never chosen automatically, but listed for the quick switcher.
+    if cfg!(feature = "jack") {
+        backends.push(OutputBackendKind::Jack);
     }
     backends
 }
 
 /// The backend `selection` stands for: for [`BackendSelection::Automatic`], PipeWire
-/// if its daemon is reachable, otherwise ALSA.
+/// if its daemon is reachable, otherwise PulseAudio if its server is, otherwise ALSA.
 pub fn resolve_backend(selection: BackendSelection) -> OutputBackendKind {
     match selection {
         BackendSelection::Automatic => automatic_backend(),
@@ -54,15 +61,26 @@ pub fn list_outputs(backend: OutputBackendKind) -> Result<Vec<DeviceInfo>, Playe
         .map_err(|e| PlayerError::Output(e.to_engine_error()))
 }
 
-/// The devices to move between from `current`: those of every sound backend when
-/// it plays sound, otherwise only those of its own test backend. Backends that are
-/// not available are left out.
+/// The devices to move between from `current`: those of the native sound backends
+/// (PipeWire and ALSA) and of the current one when it plays sound, otherwise only
+/// those of its own test backend. PulseAudio and JACK are left out unless current:
+/// on a PipeWire system they list the same sinks again. Backends that are not
+/// available are left out.
 pub(super) fn output_choices(current: &OutputSelection) -> Vec<DeviceInfo> {
     let kind = resolve_backend(current.backend);
     let backends = if kind.is_for_testing() {
         vec![kind]
     } else {
         sound_backends()
+            .into_iter()
+            .filter(|backend| {
+                *backend == kind
+                    || matches!(
+                        backend,
+                        OutputBackendKind::PipeWire | OutputBackendKind::Alsa
+                    )
+            })
+            .collect()
     };
     backends
         .into_iter()

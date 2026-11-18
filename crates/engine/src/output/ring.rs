@@ -95,19 +95,33 @@ impl StreamShared {
     }
 
     /// Records the device delay. Real-time safe.
-    #[cfg_attr(not(any(feature = "pipewire", feature = "alsa")), allow(dead_code))]
+    #[cfg_attr(
+        not(any(
+            feature = "pipewire",
+            feature = "alsa",
+            feature = "pulseaudio",
+            feature = "jack"
+        )),
+        allow(dead_code)
+    )]
     pub(crate) fn set_delay_frames(&self, frames: u64) {
         self.delay_frames.store(frames, Ordering::Relaxed);
     }
 
     /// Records the rate the device runs at. Real-time safe.
-    #[cfg_attr(not(feature = "pipewire"), allow(dead_code))]
+    #[cfg_attr(
+        not(any(feature = "pipewire", feature = "pulseaudio", feature = "jack")),
+        allow(dead_code)
+    )]
     pub(crate) fn set_device_rate(&self, hz: u32) {
         self.device_rate.store(hz, Ordering::Relaxed);
     }
 
     /// Counts an underrun the device itself reported. Real-time safe.
-    #[cfg_attr(not(feature = "alsa"), allow(dead_code))]
+    #[cfg_attr(
+        not(any(feature = "alsa", feature = "pulseaudio", feature = "jack")),
+        allow(dead_code)
+    )]
     pub(crate) fn note_device_underrun(&self) {
         self.underruns.fetch_add(1, Ordering::Relaxed);
     }

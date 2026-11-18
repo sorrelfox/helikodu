@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{PlaybackItem, Volume};
 use crate::audio::{MediaTime, OutputSelection};
-use crate::settings::{LoudnessSettings, OutputSettings};
+use crate::settings::{DspSettings, LoudnessSettings, OutputSettings};
 
 /// A command to the engine. The engine answers with [`EngineEvent`](super::EngineEvent)s.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -44,11 +44,17 @@ pub enum EngineCommand {
     /// chooses them. A change of the sample rate policy, sample format, buffer length or
     /// volume control reopens the stream at the heard position, as `SetOutput` does; the
     /// other output settings apply from then on. A loudness change applies to the audio
-    /// rendered from then on, with a short gain ramp, without reopening the stream.
+    /// rendered from then on, with a short gain ramp, without reopening the stream. A
+    /// change of the DSP chain crossfades to the new chain within a few tens of
+    /// milliseconds of the audio rendered from then on; the resampler quality applies
+    /// to the next track, or after a seek.
     UpdateSettings {
         /// The `[output]` settings.
         output: OutputSettings,
         /// The `[loudness]` settings.
         loudness: LoudnessSettings,
+        /// The `[dsp]` settings (boxed: they are large).
+        #[serde(default)]
+        dsp: Box<DspSettings>,
     },
 }

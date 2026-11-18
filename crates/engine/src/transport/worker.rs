@@ -28,6 +28,7 @@ use super::source::Source;
 use super::stats::EngineStats;
 use super::timeline::{Segment, Timeline};
 use crate::decode::DecoderRegistry;
+use crate::dsp::DspChain;
 use crate::output::{EventSender, OutputEvent};
 
 /// What reaches the engine thread.
@@ -76,6 +77,8 @@ pub(super) struct Worker {
     /// nothing, since `current` started).
     pub(super) next_answered: bool,
     pub(super) timeline: Timeline,
+    /// The DSP chain, for the open stream's rate and channels.
+    pub(super) dsp: Option<DspChain>,
     /// Rendered frames on their way into the ring buffer.
     pub(super) staging: Vec<f32>,
     pub(super) staged: std::ops::Range<usize>,
@@ -107,6 +110,7 @@ impl Worker {
             output_events,
             config.sink_pacing,
             config.device_reservation.clone(),
+            config.backend_connector.clone(),
         );
         Self {
             config,
@@ -122,6 +126,7 @@ impl Worker {
             next: None,
             next_answered: false,
             timeline: Timeline::default(),
+            dsp: None,
             staging: Vec::new(),
             staged: 0..0,
             resume: None,
@@ -175,7 +180,13 @@ impl Worker {
             | TransportState::Seeking
             | TransportState::Reconfiguring
             | TransportState::Loading => {
-                let buffer = Duration::from_millis(u64::from(self.config.output.buffer_ms));
+                let buffer_ms = self
+                    .output
+                    .as_ref()
+                    .map_or(self.config.output.buffer_ms, |output| {
+                        output.settings.buffer_ms
+                    });
+                let buffer = Duration::from_millis(u64::from(buffer_ms));
                 Some((buffer / 16).clamp(Duration::from_millis(2), Duration::from_millis(10)))
             }
             TransportState::Paused => self
@@ -188,7 +199,8 @@ impl Worker {
     /// When a paused exclusive stream is to be closed.
     fn release_deadline(&self) -> Option<Instant> {
         let output = self.output.as_ref()?;
-        let seconds = self.config.output.exclusive_release_s;
+        // The device's profile may give it its own release time.
+        let seconds = output.settings.exclusive_release_s;
         (output.mode == OutputMode::Exclusive && seconds > 0)
             .then(|| {
                 self.paused_since
@@ -226,8 +238,12 @@ impl Worker {
                 }
             }
             EngineCommand::SetOutput(selection) => self.set_output(selection),
-            EngineCommand::UpdateSettings { output, loudness } => {
-                self.update_settings(output, loudness.into());
+            EngineCommand::UpdateSettings {
+                output,
+                loudness,
+                dsp,
+            } => {
+                self.update_settings(output, loudness.into(), *dsp);
             }
         }
     }
@@ -243,9 +259,19 @@ impl Worker {
                 return;
             }
         };
+        match &event {
+            OutputEvent::DeviceRemoved { backend, id } => self.device_removed(*backend, id),
+            OutputEvent::DefaultDeviceChanged { backend, id }
+                if self.backends.connected(*backend).is_some() =>
+            {
+                self.backends.default_device.clone_from(id);
+            }
+            _ => {}
+        }
         if let Some(connected) = self.backends.connected(backend)
             && let Ok(devices) = connected.devices()
         {
+            self.backends.note_devices(&devices);
             self.emit(EngineEvent::DevicesChanged { backend, devices });
         }
     }

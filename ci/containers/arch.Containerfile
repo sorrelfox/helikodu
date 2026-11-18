@@ -6,7 +6,7 @@ FROM docker.io/library/archlinux:latest
 
 RUN pacman -Syu --noconfirm --needed \
       alsa-lib base-devel ca-certificates clang curl ffmpeg git gtk4 libpipewire meson ninja \
-      pkgconf sqlite \
+      pipewire-jack pkgconf sqlite \
     && pacman -Scc --noconfirm
 
 # Rust comes from rustup without a default toolchain: the toolchain pinned in

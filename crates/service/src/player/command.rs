@@ -11,7 +11,7 @@ use helikodu_model::library::TrackRef;
 use helikodu_model::player::{
     EnqueueAt, EntryId, QueueContext, RepeatMode, ShuffleMode, StopAfter, Volume,
 };
-use helikodu_model::settings::{LoudnessSettings, OutputSettings};
+use helikodu_model::settings::{DspSettings, LoudnessSettings, OutputSettings};
 
 use super::config::PlayerPrefs;
 use crate::library::{AlbumId, GenreId, PersonId};
@@ -133,5 +133,8 @@ pub enum PlayerCommand {
         output: OutputSettings,
         /// The `[loudness]` settings.
         loudness: LoudnessSettings,
+        /// The `[dsp]` settings: chain changes crossfade in, the resampler quality
+        /// applies from the next track. Boxed: they are large.
+        dsp: Box<DspSettings>,
     },
 }

@@ -17,6 +17,7 @@ use super::{SettingsError, check_range};
 /// preamp_db = 0.0              # files with loudness values
 /// untagged_preamp_db = -6.0    # files without them
 /// clipping = "lower-gain"      # lower-gain | limiter
+/// write_measured_to_tags = false  # measured values also go into the files' tags
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -30,6 +31,9 @@ pub struct LoudnessSettings {
     pub untagged_preamp_db: f64,
     /// How clipping is prevented when a gain raises the level.
     pub clipping: ClippingPrevention,
+    /// Whether the loudness scanner also writes what it measures into the files'
+    /// tags (ReplayGain 2.0). Off: the values are kept in the library only.
+    pub write_measured_to_tags: bool,
 }
 
 impl LoudnessSettings {
@@ -67,6 +71,7 @@ impl Default for LoudnessSettings {
             preamp_db: 0.0,
             untagged_preamp_db: -6.0,
             clipping: ClippingPrevention::LowerGain,
+            write_measured_to_tags: false,
         }
     }
 }
@@ -106,6 +111,7 @@ mod tests {
         let loudness = LoudnessSettings::default();
         assert_eq!(loudness.mode, LoudnessMode::Auto);
         assert_eq!(loudness.untagged_preamp_db, -6.0);
+        assert!(!loudness.write_measured_to_tags);
         assert_eq!(loudness.validate(), Ok(()));
     }
 

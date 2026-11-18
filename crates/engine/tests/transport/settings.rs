@@ -29,6 +29,7 @@ fn update(output: &OutputSettings, loudness: LoudnessSettings) -> EngineCommand 
     EngineCommand::UpdateSettings {
         output: output.clone(),
         loudness,
+        dsp: Default::default(),
     }
 }
 

@@ -10,6 +10,7 @@
 
 mod advanced;
 mod appearance;
+mod dsp;
 mod library;
 mod loudness;
 mod output;
@@ -24,6 +25,11 @@ use thiserror::Error;
 
 pub use advanced::{AdvancedSettings, Id3Version, LogDetail};
 pub use appearance::{Accent, AppearanceSettings, ColorScheme, WindowStyle};
+pub use dsp::{
+    BuiltInPreset, ChannelMixSettings, ChannelMode, CrossfeedPreset, CrossfeedSettings,
+    DspSettings, EqMode, EqualizerSettings, FilterKind, GRAPHIC_10_BANDS_HZ, GRAPHIC_31_BANDS_HZ,
+    GraphicPreset, LimiterSettings, ParametricFilter, ResamplerQuality,
+};
 pub use library::{LibrarySettings, StorageLimits};
 pub use loudness::{ClippingPrevention, LoudnessMode, LoudnessSettings};
 pub use output::{
@@ -48,6 +54,8 @@ pub struct Settings {
     pub output: OutputSettings,
     /// The `[loudness]` table: loudness normalization.
     pub loudness: LoudnessSettings,
+    /// The `[dsp]` table: the processing chain and the resampler quality.
+    pub dsp: DspSettings,
     /// The `[appearance]` table.
     pub appearance: AppearanceSettings,
     /// The `[advanced]` table.
@@ -64,6 +72,7 @@ impl Settings {
         self.playback.validate()?;
         self.output.validate()?;
         self.loudness.validate()?;
+        self.dsp.validate()?;
         self.advanced.validate()
     }
 
@@ -81,6 +90,9 @@ impl Settings {
         }
         if self.loudness != other.loudness {
             groups.push(SettingsGroup::Loudness);
+        }
+        if self.dsp != other.dsp {
+            groups.push(SettingsGroup::Dsp);
         }
         if self.appearance != other.appearance {
             groups.push(SettingsGroup::Appearance);
@@ -100,6 +112,7 @@ impl Default for Settings {
             playback: PlaybackSettings::default(),
             output: OutputSettings::default(),
             loudness: LoudnessSettings::default(),
+            dsp: DspSettings::default(),
             appearance: AppearanceSettings::default(),
             advanced: AdvancedSettings::default(),
         }
@@ -118,6 +131,8 @@ pub enum SettingsGroup {
     Output,
     /// `[loudness]`.
     Loudness,
+    /// `[dsp]`.
+    Dsp,
     /// `[appearance]`.
     Appearance,
     /// `[advanced]`.

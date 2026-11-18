@@ -2,9 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Leaving a transition: settling in a state, and what happens when the output
-//! fails or its device goes away.
+//! fails, its device goes away, or the device it follows is unplugged.
+//!
+//! - A stream on a chosen device whose device goes away (every backend reports it
+//!   as lost) applies `on_device_lost`: pause, continue on the default device, or
+//!   stop.
+//! - A stream that follows "System default" is not lost when its device goes: the
+//!   sound server moves it to the next default device. When the device it played to
+//!   is removed (headphones, a USB or Bluetooth device unplugged), playback pauses if
+//!   `pause_on_unplug` is set, so that it does not go on through the loudspeakers.
 
-use helikodu_model::audio::DeviceSelection;
+use helikodu_model::audio::{DeviceId, DeviceSelection, OutputBackendKind};
 use helikodu_model::player::{EngineError, EngineEvent, TrackEndReason, TransportState};
 use helikodu_model::settings::DeviceLostPolicy;
 
@@ -57,6 +65,17 @@ impl Worker {
             self.set_state(TransportState::Stopped);
         } else {
             self.pause_at(resume);
+        }
+    }
+
+    /// A device of `backend` went away. When it is the default device a stream that
+    /// follows "System default" plays to, playback pauses if the settings say so.
+    pub(super) fn device_removed(&mut self, backend: OutputBackendKind, id: &DeviceId) {
+        let follows_it = self.output.as_ref().is_some_and(|output| {
+            output.stream.backend() == backend && output.device == DeviceSelection::SystemDefault
+        }) && self.backends.default_device.as_ref() == Some(id);
+        if follows_it && self.config.output.pause_on_unplug {
+            self.pause();
         }
     }
 

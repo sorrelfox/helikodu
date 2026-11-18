@@ -15,7 +15,7 @@ The workflows in `.github/` only start `cargo xtask ci` inside these containers,
 | `fedora.Containerfile` | `fedora:latest` | Full FFmpeg from RPM Fusion; also runs the lint job |
 | `arch.Containerfile` | `archlinux:latest` | Latest FFmpeg |
 
-Each image contains a C toolchain, pkg-config, clang and libclang (for bindgen), Meson and Ninja, and the development packages for GTK 4, FFmpeg, PipeWire, ALSA and SQLite. Rust is installed with rustup but without a toolchain; `rustup toolchain install` in the mounted repository installs the version pinned in `rust-toolchain.toml`.
+Each image contains a C toolchain, pkg-config, clang and libclang (for bindgen), Meson and Ninja, and the development packages for GTK 4, FFmpeg, PipeWire, ALSA, JACK (`jack.pc`, needed to build the JACK output backend although `libjack` is loaded at run time) and SQLite. Rust is installed with rustup but without a toolchain; `rustup toolchain install` in the mounted repository installs the version pinned in `rust-toolchain.toml`.
 
 To run the checks locally in a container:
 

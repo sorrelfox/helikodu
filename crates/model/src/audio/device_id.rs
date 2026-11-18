@@ -19,7 +19,8 @@ use crate::text_form::{ParseError, serde_as_text};
 /// - ALSA: a PCM name with the card's ID string, never its index, for example
 ///   `hw:CARD=D10s,DEV=0`, or a PCM defined in the ALSA configuration.
 /// - PulseAudio: the sink name.
-/// - JACK: the client and port names.
+/// - JACK: the name of the client whose input ports receive the audio, for example
+///   `system`; the stream's ports are connected to that client's ports in order.
 ///
 /// Never empty.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -110,7 +111,20 @@ impl DeviceKey {
     pub const fn new(backend: OutputBackendKind, device: DeviceId) -> Self {
         Self { backend, device }
     }
+
+    /// The key of `selection` on `backend`. "System default" has its own key, with
+    /// the device name `default`.
+    pub fn of_selection(backend: OutputBackendKind, selection: &DeviceSelection) -> Self {
+        let device = match selection {
+            DeviceSelection::SystemDefault => DeviceId(SYSTEM_DEFAULT.to_owned()),
+            DeviceSelection::Device(id) => id.clone(),
+        };
+        Self { backend, device }
+    }
 }
+
+/// The device name of "System default" in a [`DeviceKey`].
+const SYSTEM_DEFAULT: &str = "default";
 
 impl fmt::Display for DeviceKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -143,6 +157,15 @@ mod tests {
         assert_eq!(key.backend, OutputBackendKind::Alsa);
         assert_eq!(key.device.as_str(), "hw:CARD=D10s,DEV=0");
         assert_eq!(key.to_string(), "alsa:hw:CARD=D10s,DEV=0");
+    }
+
+    #[test]
+    fn key_of_a_selection() {
+        let key = DeviceKey::of_selection(OutputBackendKind::Jack, &DeviceSelection::SystemDefault);
+        assert_eq!(key.to_string(), "jack:default");
+        let device = DeviceSelection::Device(DeviceId::new("system").unwrap());
+        let key = DeviceKey::of_selection(OutputBackendKind::Jack, &device);
+        assert_eq!(key.to_string(), "jack:system");
     }
 
     #[test]

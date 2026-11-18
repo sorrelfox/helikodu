@@ -273,9 +273,13 @@ impl SettingsStore {
 /// Every setting applies at once. The output device, backend and mode switch without
 /// stopping; a new sample rate policy, sample format, buffer length or volume control
 /// reopens the stream at the same position; loudness normalization ramps the gain of
-/// the audio that plays.
-pub fn applies(_key: &str) -> Applies {
-    Applies::Live
+/// the audio that plays; a change of the DSP chain crossfades in. The resampler
+/// quality and the LFE option of surround downmixes apply from the next track.
+pub fn applies(key: &str) -> Applies {
+    match key {
+        "dsp.resampler" | "dsp.channel_mix.include_lfe" => Applies::NextTrack,
+        _ => Applies::Live,
+    }
 }
 
 /// Reads the settings at `path`, and what was wrong with them.
@@ -330,6 +334,7 @@ fn reset_group(settings: &mut Settings, key: &str) -> bool {
         Some("playback") => settings.playback = defaults.playback,
         Some("output") => settings.output = defaults.output,
         Some("loudness") => settings.loudness = defaults.loudness,
+        Some("dsp") => settings.dsp = defaults.dsp,
         Some("advanced") => settings.advanced = defaults.advanced,
         _ => return false,
     }
@@ -399,6 +404,8 @@ mod tests {
         assert_eq!(applies("output.buffer_ms"), Applies::Live);
         assert_eq!(applies("output.format"), Applies::Live);
         assert_eq!(applies("loudness.mode"), Applies::Live);
+        assert_eq!(applies("dsp.equalizer.graphic_10"), Applies::Live);
+        assert_eq!(applies("dsp.resampler"), Applies::NextTrack);
         assert_eq!(applies("playback.seek_step_s"), Applies::Live);
         assert_eq!(applies("appearance"), Applies::Live);
     }

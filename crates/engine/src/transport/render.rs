@@ -55,6 +55,9 @@ impl Worker {
             match &mut self.current {
                 Some(source) if !source.is_finished() => {
                     let frames = source.render(&mut self.staging);
+                    if let Some(dsp) = &mut self.dsp {
+                        dsp.process(&mut self.staging[..frames * channels]);
+                    }
                     self.staged = 0..frames * channels;
                     if frames == 0 && !source.is_finished() {
                         break;
@@ -85,6 +88,14 @@ impl Worker {
         }
         if self.next.is_none() && self.waits_for_next() {
             return false;
+        }
+        // What the DSP chain still holds (the limiter's lookahead) plays out too.
+        if let (Some(dsp), Some(output)) = (&mut self.dsp, &self.output) {
+            let frames = dsp.flush(&mut self.staging);
+            if frames > 0 {
+                self.staged = 0..frames * output.writer.channels();
+                return true;
+            }
         }
         self.start_drain(self.next.is_some());
         false
@@ -339,6 +350,10 @@ impl Worker {
             self.output = Some(self.open_output(config)?);
         }
         self.attach_current()?;
+        // A new start: nothing of the audio before it stays in the filters.
+        if let Some(dsp) = &mut self.dsp {
+            dsp.reset();
+        }
         self.drain = None;
         self.waiting_since = None;
         self.staged = 0..0;

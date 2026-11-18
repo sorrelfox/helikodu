@@ -13,6 +13,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+helikodu-engine = { path = "../crates/engine", default-features = false }
 helikodu-ffmpeg-bridge = { path = "../crates/ffmpeg-bridge" }
 helikodu-meta = { path = "../crates/meta" }
 helikodu-model = { path = "../crates/model" }
@@ -55,6 +56,13 @@ bench = false
 [[bin]]
 name = "playlist_xspf"
 path = "fuzz_targets/playlist_xspf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "autoeq_parse"
+path = "fuzz_targets/autoeq_parse.rs"
 test = false
 doc = false
 bench = false

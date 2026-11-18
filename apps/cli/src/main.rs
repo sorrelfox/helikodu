@@ -16,6 +16,7 @@ use clap::{Parser, Subcommand};
 
 use self::offline::info::InfoArgs;
 use self::offline::list_outputs::ListOutputsArgs;
+use self::offline::loudness::LoudnessArgs;
 use self::offline::play::PlayArgs;
 use self::offline::scan::ScanArgs;
 use self::offline::search::SearchArgs;
@@ -26,7 +27,8 @@ const EXIT_FAILURE: u8 = 1;
 /// The exit code when none of the files given to `play` could be played.
 const EXIT_NOTHING_PLAYABLE: u8 = 3;
 
-/// Plays audio files, lists output devices, and scans and searches the music library.
+/// Plays audio files, lists output devices, and scans, searches and measures the music
+/// library.
 #[derive(Debug, Parser)]
 #[command(name = "helikodu-cli", version, max_term_width = 100)]
 struct Cli {
@@ -49,6 +51,9 @@ enum Command {
     Info(InfoArgs),
     /// Show the totals of the music library and its most played tracks.
     Stats(StatsArgs),
+    /// Measure the loudness of library tracks (EBU R128, ReplayGain 2.0) and store
+    /// it in the library, optionally also in the files' tags.
+    Loudness(LoudnessArgs),
 }
 
 /// How a command ended, when it did not fail outright.
@@ -68,6 +73,7 @@ fn main() -> ExitCode {
         Command::Search(args) => offline::search::run(&args),
         Command::Info(args) => offline::info::run(&args),
         Command::Stats(args) => offline::stats::run(&args),
+        Command::Loudness(args) => offline::loudness::run(args),
     };
     match result {
         Ok(Outcome::Success) => ExitCode::SUCCESS,

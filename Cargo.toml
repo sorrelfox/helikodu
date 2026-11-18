@@ -29,8 +29,14 @@ async-channel = "2.5"
 chardetng = "1"
 # Argument parsing of the command-line tool.
 clap = { version = "4.6", features = ["derive"] }
+# The PulseAudio and JACK output backends go through cpal's hosts. No default
+# features; the engine enables the `pulseaudio` and `jack` hosts. cpal depends on `alsa`
+# (above) unconditionally, so the two are upgraded together.
+cpal = { version = "0.18.2", default-features = false }
 # Raw terminal mode and key events for the command-line tool's interactive keys.
 crossterm = { version = "0.29", default-features = false, features = ["events"] }
+# EBU R128 / ITU-R BS.1770-4 loudness, loudness range and true peak for the loudness scanner.
+ebur128 = "0.1.11"
 # Decodes legacy charsets (cp1251, Shift-JIS, GBK, …) in tags and CUE sheets.
 encoding_rs = "0.8"
 # Raw FFmpeg bindings; the safe layer is `ffmpeg-bridge`. Only libavformat (with
@@ -64,6 +70,10 @@ icu_normalizer = "2.4"
 # Cover decoding and thumbnails: JPEG, PNG and WebP only. No default features, so
 # no other format, no AVIF (it would need dav1d) and no thread pool.
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
+# Connects the JACK backend's ports to the chosen device and lists the JACK clients;
+# the version cpal's JACK host uses. Building it needs `jack.pc` (libjack is loaded at
+# run time).
+jack = "0.13.5"
 libc = "0.2"
 # Tag reading and writing in pure Rust; FFmpeg is the read-only fallback for the
 # formats it lacks (Matroska, ASF/WMA, DSF, DFF, TAK, TTA).
@@ -90,6 +100,9 @@ rubato = "=5.1.0"
 # SQLite for the library database. Needs SQLite 3.43 or newer with FTS5; the library
 # crate's `bundled-sqlite` feature builds the bundled copy instead of linking the system one.
 rusqlite = { version = "0.43", default-features = false, features = ["cache", "collation", "functions"] }
+# Lowers the scheduling priority of the loudness scanner's threads (setpriority on
+# the thread id). No default features beyond `std`: no networking, no file-system API.
+rustix = { version = "1.1", default-features = false, features = ["std", "process", "thread"] }
 seccompiler = "0.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

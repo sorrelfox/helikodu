@@ -48,6 +48,18 @@ helikodu\-cli \- play audio files and query the Helikodu library from the termin
 .RB [ \-\-database
 .IR path ]
 .br
+.B helikodu\-cli loudness
+.RB [ \-\-album | \-\-library ]
+.RB [ \-\-write\-tags ]
+.RB [ \-\-threads
+.IR n ]
+.RB [ \-\-worker
+.IR path ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.RI [ file | track-id ...]
+.br
 .B helikodu\-cli \-\-version
 .SH DESCRIPTION
 .B helikodu\-cli
@@ -218,6 +230,37 @@ Shows the library folders, the totals and the most played tracks.
 .TP
 .BI \-\-top " n"
 How many of the most played tracks to show, 0 to 1000 (default 10).
+.SS loudness
+Measures the loudness of library tracks (EBU R128, ITU-R BS.1770-4):
+integrated loudness, loudness range, sample peak and true peak, and the
+ReplayGain 2.0 gain relative to \-18 LUFS.
+The tracks are given as files in the library or as track numbers.
+The results are stored in the library, where playback prefers them over the
+values in the tags.
+Progress goes to standard error, the results to standard output.
+.TP
+.B \-\-album
+Measures the whole albums of the tracks given, with the album gain: the
+album measured as one programme.
+A track given without this option gets track values only.
+.TP
+.B \-\-library
+Measures every library track that has no current measurement (never
+measured, or its file changed since), with the other tracks of its album.
+Takes no tracks.
+.TP
+.B \-\-write\-tags
+Also writes the values into the files' tags (REPLAYGAIN_TRACK_GAIN,
+REPLAYGAIN_TRACK_PEAK and the album pair).
+Tracks of CUE sheets are not written.
+.TP
+.BI \-\-threads " n"
+The number of measuring threads, 1 to 64.
+The default is half the processors.
+.TP
+.BI \-\-worker " path"
+The scan worker program that reads written files again, as for
+.BR scan .
 .SH COMMON OPTIONS
 .TP
 .B \-\-json
@@ -255,7 +298,9 @@ A runtime error: the output could not be opened or failed, no backend could
 be listed, there is no library yet, the library or a file could not be read,
 a scan could not start, or
 .B info
-found no such track.
+found no such track; for
+.BR loudness ,
+also a track that could not be measured or whose tags could not be written.
 .TP
 .B 2
 A usage error: an unknown option or value, or options that do not go together.

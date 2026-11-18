@@ -67,12 +67,23 @@ Not done yet in the decoding layer:
 |---|---|---|
 | PipeWire | `pipewire` (default) | Node name, for example `alsa_output.usb-Topping_D10s-00.analog-stereo` |
 | ALSA | `alsa` (default) | `hw:CARD=<card ID>,DEV=<n>`, and PCMs of the ALSA configuration such as `pipewire` |
+| PulseAudio, through cpal | `pulseaudio` (default) | Sink name, for example `alsa_output.usb-Topping_D10s-00.analog-stereo` |
+| JACK, through cpal | `jack` (default) | Name of the client whose input ports receive the audio, for example `system` |
 | Null | always built | `null` |
 | WAV file | always built | The file name |
 
 **The default device.** Each backend marks the device "System default" plays to with `DeviceInfo::is_default`. PipeWire follows `default.audio.sink` in the session manager's `default` metadata; the backend reports itself connected only after a second round trip to the daemon, so the mark is there in the first device list. ALSA opens the `default` PCM without starting it: when it leads to a card (directly or through `plug`/`dmix`), that card's `hw:` device is the default; when it is a sound server's plugin, the server's PCM (`pipewire`, `pulse`) is; when it is busy, the first card's first device.
 
-Building the native backends needs the PipeWire and ALSA development files (`pkg-config` names `libpipewire-0.3` and `alsa`) and `libclang` for the PipeWire bindings. `--no-default-features` builds the crate without them.
+Building the native backends needs the PipeWire and ALSA development files (`pkg-config` names `libpipewire-0.3` and `alsa`) and `libclang` for the PipeWire bindings; the JACK backend needs `jack.pc` (Fedora: `pipewire-jack-audio-connection-kit-devel`, Debian and Ubuntu: `libjack-jackd2-dev`, Arch: `pipewire-jack`), although `libjack` is only loaded at run time. Without the package, a `jack.pc` of your own pointing at the installed `libjack.so` (through `PKG_CONFIG_PATH`) is enough to build. The PulseAudio backend speaks the protocol itself and needs no library. `--no-default-features` builds the crate without any of them.
+
+**PulseAudio and JACK** (`src/output/pulse.rs`, `src/output/jack.rs`) go through cpal 0.18; `src/output/cpal_stream.rs` holds their common stream (the callback copies through the device-side stage, converts, and records the delay cpal predicts until the first frame is heard). cpal has no stream volume, no exclusive mode and no device notifications: the engine applies software volume, exclusive mode opens the device as in shared mode, and a `DeviceWatcher` (`src/output/device_watch.rs`) lists the devices every two seconds (every 250 ms while a stream plays to a chosen device), sends `DeviceAdded`, `DeviceRemoved` and `DefaultDeviceChanged`, and marks a stream lost when its device is no longer listed; from then on the stream writes silence.
+
+- *PulseAudio:* the server converts rate, channels and format, so the request is opened as it is (formats cpal cannot pass become the nearest one it can). Every stream has a fixed buffer of about 20 ms: with the server's default, its first requests are almost two seconds long and empty the ring buffer. "System default" opens the default sink as it is when the stream opens. A sink that goes away is noticed within 250 ms; the server may have moved the stream to another sink by then, which then gets silence.
+- *JACK:* devices are the clients with audio input ports; "System default" is `system`, or the first client with physical ports. Streams run at the server's rate with float samples (the engine resamples), with as many channels as the request and the device both have. cpal connects a new stream to `system:playback_*` when it builds it, and its option against that does not work; the backend removes those links before the stream starts (it plays only silence until then) and connects the ports to the chosen client with a JACK client of its own (`helikodu-ports`). On PipeWire, `PIPEWIRE_PROPS='{ jack.self-connect-mode = ignore-all }'` in the program's environment makes the server ignore cpal's links, so not even silence reaches the default device; the backend's own links are not affected. A client that goes away loses the stream; JACK has removed its links, so it is silent.
+
+**Automatic backend:** PipeWire when its socket is there, otherwise PulseAudio when its socket is there, otherwise ALSA. JACK is only used when chosen.
+
+**Backends of the program's own.** `EngineConfig::backend_connector` takes a `BackendConnector` that connects backends in place of the built-in ones of the same kind; the device tests use it to script devices that go away.
 
 The `alsa` crate is pinned to the version cpal uses (0.11 with cpal 0.18): two versions of `alsa-sys` cannot be linked into one program, so both are upgraded together.
 
@@ -82,8 +93,9 @@ Not done yet in the output layer:
 
 - **Real-time priority for the ALSA writer thread** (rtkit or the Realtime portal). PipeWire's process callback already runs on PipeWire's real-time thread.
 - **ALSA hot-plug through udev.** The ALSA backend polls `/proc/asound/cards` every two seconds instead.
-- **Device capabilities on PipeWire.** The device list carries none yet; ALSA probes them from the hardware parameters.
-- **PulseAudio and JACK** backends.
+- **Device capabilities on PipeWire.** The device list carries none yet; ALSA probes them from the hardware parameters, PulseAudio and JACK report what their servers take.
+- **A headphone jack on a card that stays.** Unplugging headphones from a sound card whose device stays (only its port changes) is not noticed; pausing on unplug covers devices that go away (USB, Bluetooth).
+- **Following the default sink on PulseAudio.** A stream on "System default" stays on the sink that was the default when it opened, until it is opened again.
 
 ## Processing
 
@@ -106,10 +118,27 @@ Not done yet in the output layer:
 
 Not done yet in the processing path:
 
-- **Crossfades and the DSP chain** (the plan already has their switches).
+- **Crossfades** (the plan already has their switch).
 - **`OutputChain` is not used by the transport**: its stages run on the device side of the ring buffer instead (see Output).
 - **Bit-perfect 32-bit integer sources.** The ring buffer holds floats, which carry 24 bits exactly; such sources always go the processed way.
 - **True peaks from a scan.** The loudness values come with the `PlaybackItem` (its `Loudness`, filled by the service from the file's tags); tags carry sample peaks, so `true_peak` is always off until the loudness scanner exists.
+
+## DSP chain
+
+`src/dsp.rs` and `src/dsp/` hold the DSP chain, which runs on the render thread on the joined stream, at the device's rate and channels, before the ring buffer. The order is fixed: equalizer, crossfeed, channel mixer, limiter; dither stays on the device side (above) and runs whenever the chain changes the samples.
+
+| Stage | Type | Notes |
+|---|---|---|
+| Equalizer | `Equalizer` | Preamp (automatic: the largest boost as a cut), then biquads with the RBJ cookbook coefficients (`Coefficients`, `Cascade`; 64-bit state, transposed direct form II). Graphic: 10 octave or 31 third-octave bands at the ISO centres, constant Q, gains corrected for the overlap of neighbouring bands (`graphic::corrected_gains`, Newton's method on the exact responses) so that the response meets each slider within 0.05 dB. Parametric: up to 64 peaking, shelving and pass filters. Filters above 0.475 of the rate are left out |
+| Crossfeed | `Crossfeed` | Bauer stereophonic-to-binaural (as in bs2b): low pass of the opposite channel, matching high boost of the direct one; presets Default (700 Hz, 4.5 dB), Chu Moy (700 Hz, 6 dB), Jan Meier (650 Hz, 9.5 dB) or custom. Stereo only |
+| Channel mixer | `ChannelMixer` | Mono, left/right swap and balance on the front pair |
+| Limiter | `Limiter` | True-peak lookahead limiter, linked channels: peaks between samples from an 8× Kaiser-windowed-sinc interpolator, sliding minimum, exponential release (60 ms) and a moving average as long as the lookahead (1 to 5 ms), with the audio delayed so that the gain has settled before a peak and holds around it. Aims 0.2 dB under the ceiling. `LimiterActivity` gives the reduction now, the largest and how often it limited |
+
+`DspChain` builds the stages from the model's `DspSettings` for one rate and channel count. A stage that is off, or that changes nothing (a flat equalizer, centred stereo), is not built, and with no stage left `process` does not touch the samples, so the path stays bit-perfect. `set_settings` builds new stages, runs them over the last 100 ms of the chain's input so that their filters and delay line are settled, and crossfades to them over 20 ms (raised cosine); changes that arrive during a crossfade wait for it, the latest one winning. A guard at the end of the chain turns NaN, infinities and subnormals into zero. Building allocates; processing never does. `DspChain::plan()` gives a `DspPlan`, which `PathPlan::with_dsp` puts into the plan, so the stages appear in the signal path (`EQ 5 filters · preamp -4.5 dB → crossfeed 700 Hz · 4.5 dB → limiter -1.0 dBTP · lookahead 2 ms`).
+
+`dsp::autoeq` reads the EqualizerAPO `ParametricEQ.txt` syntax AutoEQ publishes (`PK`/`PEQ`, `LS`/`LSC`, `HS`/`HSC`, `LP`/`LPQ`, `HP`/`HPQ`, `BW Oct`, several `Preamp` lines) into the settings' filters, clamping values into range and skipping other lines with warnings, and writes filters back in the same syntax. `fuzz/` has a target for it. `dsp::processing_settings` takes the resampler quality (`[dsp] resampler`) and the LFE option of downmixes from the settings into the `ProcessingSettings`.
+
+In the transport the chain lives as long as the stream format (a gapless join keeps it, a new rate builds a new one), is reset on every new start (seek, resume, load), and plays out the limiter's lookahead at the end of the audio, so nothing is lost.
 
 ## Transport
 
@@ -144,11 +173,15 @@ for event in events.iter() {
 
 **Transitions.** Pause, seek, stop, a device switch and a `Load` that replaces playing audio fade out on the device side (10 ms, 5 ms for a seek), wait until the device side reports silence, and take the ring position where it began as the point heard last. Pause continues from exactly that point; seek, resume and a device switch drop the buffer (`Discard` with `hold`), seek the decoder, refill about 50 ms and fade in at the first new frame. A track that starts at its beginning is not faded in. Resuming after a pause re-decodes from the paused position instead of playing the stale buffer.
 
-**Settings while running.** `UpdateSettings { output, loudness }` replaces the `[output]` and `[loudness]` settings (the backend, device and mode in `output` are ignored; `SetOutput` chooses them). A new sample rate policy, sample format, buffer length or volume control needs another stream: while playing, the engine reopens it at the heard position the way a device switch does (`Reconfiguring`, fade out, fade in); while paused it closes the stream and `Play` opens the new one. A loudness change (mode, preamps, clipping prevention) keeps the stream and takes effect at once: the current item's gain ramps over 20 ms to its new value from the next frame rendered (a chain without a gain stage gets one, starting at unity), so it is heard after the audio already buffered, at most the buffer length; the resampler's state is kept. Later items, and the current one after a seek or resume, are planned with the new settings. The device-lost policy and the release time of a paused exclusive device apply from then on.
+**Settings while running.** `UpdateSettings { output, loudness }` replaces the `[output]` and `[loudness]` settings (the backend, device and mode in `output` are ignored; `SetOutput` chooses them). A new sample rate policy, sample format, buffer length or volume control needs another stream: while playing, the engine reopens it at the heard position the way a device switch does (`Reconfiguring`, fade out, fade in); while paused it closes the stream and `Play` opens the new one. A loudness change (mode, preamps, clipping prevention) keeps the stream and takes effect at once: the current item's gain ramps over 20 ms to its new value from the next frame rendered (a chain without a gain stage gets one, starting at unity), so it is heard after the audio already buffered, at most the buffer length; the resampler's state is kept. Later items, and the current one after a seek or resume, are planned with the new settings. The device-lost policy and the release time of a paused exclusive device apply from then on. `UpdateSettings` also carries the `[dsp]` settings: the chain crossfades to its new stages on the audio rendered from then on, and the current item's plan follows (its signal path, and dither on the device side); the resampler quality and the LFE option apply to items planned later.
 
 **Gapless joins.** `SetNext` opens the next item at once (errors are reported then). When the current item ends, the next one continues in the same render iteration if the settings would open the same stream for it (`stream_config` gives the same rate, format and channels); the samples join exactly. Otherwise the buffer plays out and the device is reopened (`Reconfiguring`). The timeline records where each item starts in the ring buffer, so `TrackEnded` and `TrackStarted` are sent when the join is heard. A `SetNext` that replaces an item already written after the heard one drops that part of the buffer with a `Discard` at its start.
 
 **Position.** The heard ring position is the frames the device side has taken (played or dropped) minus the delay the backend reports; the timeline turns it into the item and its position, at the source rate.
+
+**Device profiles.** Each device can have a profile in `[output.profiles."<backend>:<device>"]` (and "System default" one under `<backend>:default`); `OutputSettings::for_device` applies it. The engine opens each stream with the profile of its device: mode, sample rate policy, sample format, buffer length, volume control and the release time of a paused exclusive device. Switching to another device, falling back to the default one, and a changed profile (through `UpdateSettings`) apply the other profile; the stream is reopened when it changes the stream. A fixed volume is only applied to a device whose profile records the user's confirmation; otherwise the volume is applied in software.
+
+**Unplugged devices.** A stream that follows "System default" is moved by the sound server when its device goes away. When the device it plays to is removed (headphones, a USB or Bluetooth device unplugged), playback pauses if `pause_on_unplug` is set (the default), instead of going on through the next default device. A stream on a chosen device that goes away is lost instead, and `on_device_lost` applies; every backend reports it (PipeWire through the stream state, ALSA through its errors, PulseAudio and JACK through the device watcher).
 
 **Errors.** An item that does not open (on `Load` or `SetNext`) sends `Error` and `TrackEnded` (`Failed`) at once; for `SetNext`, `NearEnd` follows again so the service can name the next item. A decoding error midway ends the item there; its `Error` and `TrackEnded` (`Failed`) come when that point is heard, and playback continues with the next item. A lost or failed stream applies `on_device_lost`: pause (the default), continue on the default device, or stop. A device missing at start-up falls back to the default one under `fallback-default`; otherwise the engine reports the error and pauses (or stops).
 
@@ -166,9 +199,33 @@ Not done yet in the transport:
 - **Opening the next item happens on the engine thread.** It takes milliseconds from local storage; slow storage would delay the buffer by as much.
 - **The engine thread's priority** is not raised yet (it needs the same rtkit or portal route as the ALSA writer).
 - **A hardware mixer** (`volume = "hardware:…"`) is not driven; the engine applies software volume instead.
-- **DAC warm-up** (`preroll_ms`) is not applied. The resampler quality, channel mixing and fade lengths cannot be changed while the engine runs (they are not settings yet).
+- **DAC warm-up** (`preroll_ms`) is not applied. The fade lengths cannot be changed while the engine runs (they are not settings yet).
+- **DSP details not done yet:** the limiter's activity is not reported as events (`DspChain::limiter_activity()` holds it); the user's graphic presets are stored but not imported or exported as files; per-device DSP presets; the positions reported do not subtract the limiter's few milliseconds of delay.
 - **`NearEnd` for items of unknown length** comes only when the item has been decoded to its end, about one buffer length before it ends.
 - **Underruns and the signal path** are not reported as events; the model has no events for them yet. `Engine::stats()` gives the output counters (streams opened, frames delivered, underruns, silent frames) summed over every stream, lock-free, for diagnostics and tests.
+
+## Analysis
+
+`src/analysis.rs` and `src/analysis/` measure whole sources away from playback. The loudness scanner (`analysis::loudness`) follows EBU R128 and ITU-R BS.1770-4 with the `ebur128` crate: K-weighting, 400 ms gating blocks with an absolute gate at −70 LUFS and a relative gate at −10 LU, loudness range from 3 s blocks (EBU Tech 3342), channel weights of 1.0 for the fronts and 1.41 for the surrounds, the LFE left out, mono counted as dual mono, and true peak by 4× oversampling.
+
+```rust
+use helikodu_engine::analysis::{album_loudness, measure_source};
+
+let registry = DecoderRegistry::with_default_backends();
+let track = measure_source(&registry, &source, &|| cancelled())?;  // a file or a CUE span
+track.loudness.integrated_lufs;   // LUFS, None for silence
+track.loudness.gain_db();         // ReplayGain 2.0: −18 LUFS − integrated
+let album = album_loudness(&tracks);   // the tracks as one programme
+```
+
+| Type | What it is |
+|---|---|
+| `LoudnessMeter` | Takes interleaved `f32` or decoded `PcmBlock`s (following changes of rate or channels) and `finish`es into a `TrackMeasurement` |
+| `TrackLoudness` | Integrated loudness, loudness range, sample and true peak, frames and rate; `gain_db()` |
+| `AlbumLoudness` | The same for an album measured as one programme: the gating blocks of all its tracks gated together, not the mean of the track gains |
+| `MEASUREMENT_VERSION` | Changes when the results change, so stored results of an older version are measured again |
+
+A finished `TrackMeasurement` keeps only the meter's histograms (its audio buffer is shrunk), so the tracks of a large album can wait for the album measurement without holding their audio.
 
 ## Tests
 
@@ -181,6 +238,12 @@ The null and WAV sinks are tested end to end, including bit-exact WAV output.
 The processing tests (`tests/pipeline.rs` and the unit tests in `src/pipeline/`) check the gain arithmetic including the R128 conversion, the mixing matrices, that volume changes and fades never step more than the signal itself, that a resampled sine keeps its frequency, level, timing and length, the statistics of the dither noise, and that a bit-perfect plan passes samples through bit for bit.
 
 The transport tests in `tests/transport/` play generated media through the engine to the WAV and null sinks, freewheeling, with the test acting as the service (answering `NearEnd` from a queue and skipping failed items). They check gapless joins of a signal cut into three files (WAV and FLAC bit-exact, MP3 and Opus with the exact total length), the reopening of the device for a change of rate, pause and resume continuing at exactly the reported position, seeks landing on the exact frame (the shape of the fade in shows a landing that is off by one), seeking while paused, stop, a start position, a device switch continuing at the same frame on the second WAV file, settings changed while playing (a new sample format reopening the stream at the same frame, also while paused; a loudness change ramping the gain on the open stream without a click; policies applied without a new stream), software volume, the order of the events and rising positions, a broken file in the queue being skipped with an exact join around it, and outputs that cannot be opened. Every transition is checked for clicks: no step between samples above 1.5 times the largest step of the test sine.
+
+`tests/transport/devices.rs` plays in real time through a scripted backend (a `BackendConnector` over the null sink) that stands for PipeWire, ALSA, PulseAudio and JACK in turn: a lost device under each of the three policies on every backend, pausing when the followed default device is unplugged (and not when the setting is off or another device goes), and a device profile applied when its device opens (mode, rate, format, buffer, the release of a paused exclusive device), the general settings on a device without one, and a changed profile reopening the stream.
+
+The DSP tests (`tests/dsp.rs` and the unit tests in `src/dsp/`) check the biquads' magnitudes against the cookbook's analog prototypes through the bilinear transform, that the overlap-corrected graphic equalizer meets random, preset, all-raised and zig-zag slider settings at 44.1, 48 and 96 kHz, the gains of sines through the equalizers, the crossfeed's low-frequency separation (equal to its level) and high-frequency separation, the limiter's ceiling between the samples (measured by 16× interpolation with a long sinc, on sines near Nyquist, a quarter-rate sine, band-limited noise, a square wave and bursts, in blocks of uneven size), that a chain that is off is bit-identical, that settings changed every 256 frames never step more than the signal itself, and AutoEQ and EqualizerAPO files. `tests/transport/dsp.rs` plays through the engine: neutral stages stay bit-exact, a change while playing crossfades without a click, and the limiter delays without losing audio. `tests/pipeline_allocations.rs` also runs the chain, crossfades included, under the counting allocator.
+
+The loudness tests (`tests/loudness.rs`) generate their signals: cases 1 to 5 of EBU Tech 3341 (stereo 1 kHz sines, with both gates) and cases 1 to 4 of Tech 3342 (loudness range) within ±0.1 LU, the true peak of a sine at a quarter of the sample rate whose samples miss its peak by 3 dB, the album values of a 3-track album, and a WAV file and its two sections measured through the decoder registry.
 
 The decoding tests in `tests/decoding/` generate their media at test time: a reference signal written as WAV by the tests, encoded with the `ffmpeg` tool into Cargo's temporary directory, and DSF/DFF files of a sigma-delta modulated sine. A test whose tool or encoder is missing prints `SKIPPED:` and passes. They check the backend choice (by content, also for misnamed files), exact lengths for WAV, FLAC, MP3, Opus, Vorbis and AAC, bit-exact sections and joins of consecutive sections, exact seeks in files and sections, DSD level and length, and the mapping of failures to `EngineError`.
 
@@ -210,6 +273,12 @@ Tests against real sound servers and hardware are ignored by default. They never
 # PipeWire: needs a running PipeWire session with pipewire-pulse (`pactl`). Each test
 # loads a temporary null sink, plays digital silence into it by name, and unloads it.
 cargo test -p helikodu-engine --test pipewire_output -- --ignored
+
+# PulseAudio and JACK: needs PipeWire with pipewire-pulse and pipewire-jack. Lists the
+# devices, plays silence into a temporary null sink through each, checks where the
+# JACK ports are connected, unloads the sink while playing (the stream is lost).
+PIPEWIRE_PROPS='{ jack.self-connect-mode = ignore-all }' \
+    cargo test -p helikodu-engine --test cpal_output -- --ignored --test-threads 1
 
 # ALSA: needs sound cards. Lists devices and the default one, opens each free hw:
 # device, negotiates a format and closes it again, without starting a stream or

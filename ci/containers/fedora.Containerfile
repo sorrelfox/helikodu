@@ -9,7 +9,8 @@ RUN dnf install -y \
       "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
     && dnf install -y --allowerasing \
       alsa-lib-devel ca-certificates clang clang-devel curl gcc git gtk4-devel meson ninja-build \
-      pipewire-devel pkgconf-pkg-config sqlite-devel ffmpeg-devel \
+      pipewire-devel pipewire-jack-audio-connection-kit-devel pkgconf-pkg-config sqlite-devel \
+      ffmpeg-devel \
     && dnf clean all
 
 # Rust comes from rustup without a default toolchain: the toolchain pinned in

@@ -29,6 +29,7 @@ use super::{
 };
 use crate::Event;
 use crate::bus::EventBus;
+use crate::jobs::loudness::{LoudnessEvent, LoudnessJob, LoudnessRequest};
 
 /// What the library service announces.
 #[derive(Debug, Clone, PartialEq)]
@@ -60,6 +61,9 @@ pub enum LibraryEvent {
     /// The contents of the library changed (a scan or rescan wrote to it): lists
     /// should be fetched again.
     Changed,
+    /// Progress of a loudness measurement started with
+    /// [`LibraryService::measure_loudness`].
+    Loudness(LoudnessEvent),
 }
 
 /// How the library service starts.
@@ -150,6 +154,7 @@ pub struct LibraryService {
     artwork: Option<ArtworkPool>,
     scan: Mutex<Option<RunningScan>>,
     watcher: Mutex<Option<RunningWatcher>>,
+    loudness: Mutex<Option<LoudnessJob>>,
     bus: EventBus<Event>,
     worker_program: Option<PathBuf>,
 }
@@ -214,6 +219,7 @@ impl LibraryService {
             artwork,
             scan: Mutex::new(None),
             watcher: Mutex::new(None),
+            loudness: Mutex::new(None),
             bus,
             worker_program: options.worker_program,
         })
@@ -409,6 +415,42 @@ impl LibraryService {
         Ok(())
     }
 
+    /// Starts measuring loudness in the background (stopping an earlier
+    /// measurement first). Its progress is announced as [`LibraryEvent::Loudness`],
+    /// and [`LibraryEvent::Changed`] follows its end.
+    pub fn measure_loudness(&self, mut request: LoudnessRequest) -> Result<(), LibraryError> {
+        self.stop_loudness();
+        if request.worker_program.is_none() {
+            request.worker_program = self.worker_program.clone();
+        }
+        let bus = self.bus.clone();
+        let job = LoudnessJob::start(&self.library, request, move |event| {
+            let finished = matches!(event, LoudnessEvent::Finished(_));
+            bus.publish(&Event::Library(LibraryEvent::Loudness(event)));
+            if finished {
+                bus.publish(&Event::Library(LibraryEvent::Changed));
+            }
+        })?;
+        *lock(&self.loudness) = Some(job);
+        Ok(())
+    }
+
+    /// Whether a loudness measurement is running.
+    pub fn is_measuring_loudness(&self) -> bool {
+        lock(&self.loudness)
+            .as_ref()
+            .is_some_and(|job| !job.is_finished())
+    }
+
+    /// Stops the running loudness measurement, if any, and waits until it has
+    /// stopped. What it finished stays stored.
+    pub fn stop_loudness(&self) {
+        if let Some(job) = lock(&self.loudness).take() {
+            job.cancel();
+            let _ = job.join();
+        }
+    }
+
     /// Cancels the running scan, if any, and waits until it has stopped.
     pub fn cancel_scan(&self) {
         if let Some(running) = lock(&self.scan).take() {
@@ -472,6 +514,7 @@ impl LibraryService {
 
 impl Drop for LibraryService {
     fn drop(&mut self) {
+        self.stop_loudness();
         self.cancel_scan();
         self.stop_watching();
         self.jobs = None;

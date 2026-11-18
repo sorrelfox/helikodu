@@ -6,9 +6,9 @@
 use std::time::Duration;
 
 use helikodu_model::player::Volume;
-use helikodu_model::settings::OutputSettings;
+use helikodu_model::settings::{DspSettings, OutputSettings};
 
-use crate::output::{Pacing, SharedReservation};
+use crate::output::{Pacing, SharedConnector, SharedReservation};
 use crate::pipeline::ProcessingSettings;
 
 /// What the engine starts with.
@@ -24,6 +24,11 @@ pub struct EngineConfig {
     /// Loudness (until `UpdateSettings` replaces it), resampler quality, channel
     /// mixing and fade lengths.
     pub processing: ProcessingSettings,
+    /// The `[dsp]` settings: the DSP chain (until `UpdateSettings` replaces them).
+    /// The resampler quality and the LFE option in them take effect through
+    /// `processing`, which [`dsp::processing_settings`](crate::dsp::processing_settings)
+    /// fills from them; `UpdateSettings` does that itself.
+    pub dsp: DspSettings,
     /// The volume to start with.
     pub volume: Volume,
     /// How the null and WAV backends take samples. With [`Pacing::Freewheel`] they
@@ -42,6 +47,9 @@ pub struct EngineConfig {
     /// sound server) holds. The default, [`NoReservation`](crate::output::NoReservation),
     /// takes nothing: such a device is then reported busy.
     pub device_reservation: SharedReservation,
+    /// Backends the program brings itself, in place of the built-in ones of the same
+    /// kind. The default has none.
+    pub backend_connector: SharedConnector,
 }
 
 impl Default for EngineConfig {
@@ -49,12 +57,14 @@ impl Default for EngineConfig {
         Self {
             output: OutputSettings::default(),
             processing: ProcessingSettings::default(),
+            dsp: DspSettings::default(),
             volume: Volume::FULL,
             sink_pacing: Pacing::RealTime,
             near_end: Duration::from_secs(5),
             position_interval: Duration::from_millis(100),
             next_wait: Duration::from_secs(5),
             device_reservation: SharedReservation::default(),
+            backend_connector: SharedConnector::default(),
         }
     }
 }

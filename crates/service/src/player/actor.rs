@@ -11,7 +11,7 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
 
 use helikodu_engine::transport::Engine;
-use helikodu_library::ListenEnd;
+use helikodu_library::{ListenEnd, MeasuredLoudness};
 use helikodu_model::audio::{AudioSpec, MediaTime, OutputSelection};
 use helikodu_model::library::{MediaSource, TrackId, TrackRef};
 use helikodu_model::player::{
@@ -523,8 +523,16 @@ impl Actor {
                 }
             }
             PlayerCommand::Configure(prefs) => self.prefs = prefs,
-            PlayerCommand::ConfigureAudio { output, loudness } => {
-                self.send(EngineCommand::UpdateSettings { output, loudness });
+            PlayerCommand::ConfigureAudio {
+                output,
+                loudness,
+                dsp,
+            } => {
+                self.send(EngineCommand::UpdateSettings {
+                    output,
+                    loudness,
+                    dsp,
+                });
             }
         }
     }
@@ -823,7 +831,10 @@ impl Actor {
         let id = ItemId::new(self.last_id);
         let path = source.path.clone();
         let item = PlaybackItem::new(id, source);
-        let item = self.loudness.complete(&path, &neighbours, item);
+        let measured = self.measured_loudness(library_track);
+        let item = self
+            .loudness
+            .complete(&path, &neighbours, item, measured.as_ref());
         Ok((
             item,
             Slot {
@@ -835,6 +846,12 @@ impl Actor {
                 length: None,
             },
         ))
+    }
+
+    /// The library's current loudness measurement of `track`, if it has one.
+    fn measured_loudness(&self, track: Option<TrackId>) -> Option<MeasuredLoudness> {
+        let stored = self.library.as_ref()?.measured_loudness(track?).ok()??;
+        stored.current.then_some(stored.measured)
     }
 
     /// The file of `track` without asking the library for more than its path.

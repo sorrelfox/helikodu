@@ -36,8 +36,8 @@ use std::time::Duration;
 
 use helikodu_library::tag_editing::{BatchItem, BatchProgress};
 use helikodu_library::{
-    CancelToken, DatabaseConfig, DbError, Library, ScanError, ScanOptions, SearchRequest,
-    SymlinkPolicy, TagWriteSettings,
+    DatabaseConfig, DbError, Library, ScanError, ScanOptions, SearchRequest, SymlinkPolicy,
+    TagWriteSettings,
 };
 use helikodu_model::library::TrackId;
 use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
@@ -66,6 +66,10 @@ pub use helikodu_library::{
     AlbumFormat, AlbumQuality, DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions,
     ImportReport, ItemContent, PlaylistError, PlaylistId, PlaylistItem, PlaylistItemId,
     PlaylistKind, PlaylistSummary, TagWriteReport, TrackDetails,
+};
+pub use helikodu_library::{
+    AlbumMeasurement, CancelToken, LoudnessCoverage, LoudnessSelection, LoudnessTarget,
+    MeasuredLoudness, StoredLoudness,
 };
 
 /// Why a library operation failed.
@@ -580,6 +584,28 @@ impl MusicLibrary {
             totals: self.library.totals()?,
             most_played: self.library.most_played(top)?,
         })
+    }
+
+    /// The loudness measurement of `track`, current or not; `None` if it was never
+    /// measured.
+    pub fn measured_loudness(
+        &self,
+        track: TrackId,
+    ) -> Result<Option<StoredLoudness>, LibraryError> {
+        Ok(self.library.measured_loudness(track)?)
+    }
+
+    /// How many tracks have loudness values from their tags or measured.
+    pub fn loudness_coverage(&self) -> Result<LoudnessCoverage, LibraryError> {
+        Ok(self.library.loudness_coverage()?)
+    }
+
+    /// The tracks a loudness measurement of `selection` would measure.
+    pub fn loudness_targets(
+        &self,
+        selection: &LoudnessSelection,
+    ) -> Result<Vec<LoudnessTarget>, LibraryError> {
+        Ok(self.library.loudness_targets(selection)?)
     }
 }
 

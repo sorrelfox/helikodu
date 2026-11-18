@@ -8,7 +8,7 @@
 //!   the session when the settings ask for it.
 //! - A changed `[playback]` table reconfigures the player at once; a changed output
 //!   device, backend or mode moves playback there; the other `[output]` settings and
-//!   the `[loudness]` table reach the engine while it plays.
+//!   the `[loudness]` and `[dsp]` tables reach the engine while it plays.
 //! - A device chosen in the player (the quick switcher sends
 //!   [`SetOutput`](crate::player::PlayerCommand::SetOutput)) is written back to the
 //!   `[output]` settings, so the settings page and the next start agree.
@@ -165,6 +165,7 @@ impl Service {
             bus: Some(bus.clone()),
             shuffle_seed: config.shuffle_seed,
             reservation: config.reservation,
+            dsp: current.dsp.clone(),
         };
         let (player, _) = Player::spawn(player_config)?;
         // A restored session may have played on another device than the settings
@@ -291,11 +292,13 @@ fn keep_in_step(
                 }
                 if groups.contains(&SettingsGroup::Output)
                     || groups.contains(&SettingsGroup::Loudness)
+                    || groups.contains(&SettingsGroup::Dsp)
                 {
                     // The engine compares: only a change of the stream reopens it.
                     let _ = player.send(PlayerCommand::ConfigureAudio {
                         output: now.output.clone(),
                         loudness: now.loudness,
+                        dsp: Box::new(now.dsp.clone()),
                     });
                 }
             }
