@@ -65,6 +65,15 @@ Drag the left border of the **Details** column to make it wider or narrower. The
 - **Releases**: the artist's **Albums**, **EPs and singles**, the albums they appear on (**Appears on**), and their **Most played** tracks.
 - **All tracks**: all their tracks in a track table, as in the Tracks view.
 
+### Artist photos
+
+An artist is shown with their photo, round, in the list, at the top of their page and in search results; without a photo, their initials. The photo is, in this order:
+
+1. a picture you chose: right-click the artist in the list or the round picture at the top of their page, or open **More**, and choose **Set artist photo…** (a JPEG, PNG or WebP image). You can also drop an image file onto the round picture. Helikodu keeps a copy in `artist-photos` beside the library database (`~/.local/share/helikodu/artist-photos`); your file is left as it is;
+2. an `artist.jpg` (or `.jpeg`, `.png`, `.webp`) in the artist's folder: the folder that holds all of their album folders. For an artist with one album folder, that folder and the one above it are looked in. A new or changed file shows the next time the artist list is loaded, for example after a scan.
+
+**Remove photo** forgets the picture you chose, and the photo from the artist's folder, or the initials, shows again. Photos are never downloaded.
+
 ## Genres
 
 **Genres** lists the genres on the left, sorted by **Name** or **Number of albums**. Choose a genre to see its albums as a grid, with **Play all** and **Shuffle**. The albums can be sorted by **Album artist**, **Title**, **Year** or **Date added**.

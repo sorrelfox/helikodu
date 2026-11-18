@@ -9,6 +9,7 @@
 
 #![forbid(unsafe_code)]
 
+mod artist_photos;
 mod catalog;
 mod copies;
 mod cover_facts;
@@ -34,6 +35,7 @@ mod tag_writes;
 mod track_source;
 mod watch;
 
+pub use artist_photos::{ArtistPhoto, ArtistPhotoError};
 pub use catalog::{
     AlbumDetail, AlbumFilter, AlbumFormat, AlbumId, AlbumQuality, AlbumQuery, AlbumSort,
     AlbumSummary, ArtistQuery, ArtistRef, ArtistRole, ArtistSummary, CatalogTags, Credit, Disc,

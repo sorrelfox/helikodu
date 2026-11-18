@@ -15,6 +15,7 @@ mod files;
 mod history;
 mod insights;
 mod lyrics;
+mod photos;
 mod playlists;
 mod query;
 mod services;
@@ -164,6 +165,8 @@ pub struct SampleLibrary {
     searches: Mutex<Vec<query::SampleSearch>>,
     /// The media kinds chosen for albums.
     kinds: Mutex<HashMap<AlbumKey, super::MediaKind>>,
+    /// The artist photos chosen.
+    photos: photos::Photos,
 }
 
 fn format(r: &mut Random) -> AudioFormat {
@@ -358,6 +361,7 @@ impl SampleLibrary {
             copies: Mutex::new(copies::CopyState::default()),
             searches: Mutex::new(query::sample_searches()),
             kinds: Mutex::new(HashMap::new()),
+            photos: photos::Photos::default(),
         };
         library.add_sample_playlists(&mut r);
         library
@@ -407,13 +411,16 @@ impl SampleLibrary {
 
     fn artist_row(&self, index: usize) -> ArtistRow {
         let albums: Vec<&SampleAlbum> = self.albums.iter().filter(|a| a.artist == index).collect();
-        ArtistRow {
+        let mut row = ArtistRow {
             key: ArtistKey(index as u64 + 1),
             name: self.artists[index].clone(),
             sort_name: sort_name(&self.artists[index]),
             album_count: albums.len(),
             track_count: albums.iter().map(|a| a.tracks.len()).sum(),
-        }
+            ..ArtistRow::default()
+        };
+        self.photos.show(&mut row);
+        row
     }
 
     fn artist_index(key: ArtistKey) -> Option<usize> {
@@ -545,7 +552,10 @@ impl SampleLibrary {
 
 impl LibrarySource for SampleLibrary {
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {
-        let _ = (cover, size);
+        let _ = size;
+        if let Some(photo) = self.photos.file(cover) {
+            return ThumbnailState::Ready(photo);
+        }
         match &self.cover_file {
             Some(path) => ThumbnailState::Ready(path.clone()),
             None => ThumbnailState::Unavailable,
@@ -637,6 +647,25 @@ impl LibrarySource for SampleLibrary {
             most_played: tracks,
             duration,
         }))
+    }
+
+    fn set_artist_photo(&self, key: ArtistKey, file: &Path) -> Result<ArtistRow, BackendError> {
+        let index = Self::artist_index(key)
+            .filter(|i| *i < self.artists.len())
+            .ok_or_else(|| BackendError("no such artist".into()))?;
+        if !file.is_file() {
+            return Err(BackendError(format!("cannot read {}", file.display())));
+        }
+        self.photos.set(key, file);
+        Ok(self.artist_row(index))
+    }
+
+    fn remove_artist_photo(&self, key: ArtistKey) -> Result<ArtistRow, BackendError> {
+        let index = Self::artist_index(key)
+            .filter(|i| *i < self.artists.len())
+            .ok_or_else(|| BackendError("no such artist".into()))?;
+        self.photos.remove(key);
+        Ok(self.artist_row(index))
     }
 
     fn find_artist(&self, name: &str) -> Result<Option<ArtistKey>, BackendError> {

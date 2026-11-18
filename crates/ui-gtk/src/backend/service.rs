@@ -12,6 +12,7 @@
 //! playback come back to the window as [`Update::Request`], so they pass the
 //! full-output gate.
 
+mod artist_photos;
 mod browse;
 mod export;
 mod history;
@@ -193,6 +194,8 @@ fn artist_row(artist: &ArtistSummary) -> ArtistRow {
             .unwrap_or_else(|| artist.name.clone()),
         album_count: artist.album_count,
         track_count: artist.track_count,
+        photo: None,
+        own_photo: false,
     }
 }
 
@@ -657,6 +660,9 @@ impl LibrarySource for ServiceLibrary {
                 break;
             }
         }
+        if let Ok(photos) = music.artist_photos(true) {
+            artist_photos::show_all(&mut rows, &photos);
+        }
         lock(&self.artist_rows).clone_from(&rows);
         Ok(rows)
     }
@@ -746,6 +752,14 @@ impl LibrarySource for ServiceLibrary {
             return Ok(Some(key));
         }
         Ok(find(&self.artists()?))
+    }
+
+    fn set_artist_photo(&self, key: ArtistKey, file: &Path) -> Result<ArtistRow, BackendError> {
+        self.set_photo(key, file)
+    }
+
+    fn remove_artist_photo(&self, key: ArtistKey) -> Result<ArtistRow, BackendError> {
+        self.remove_photo(key)
     }
 
     fn genres(&self) -> Result<Vec<GenreRow>, BackendError> {

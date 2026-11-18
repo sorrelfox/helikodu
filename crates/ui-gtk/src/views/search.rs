@@ -536,6 +536,7 @@ impl SearchView {
             for artist in &results.artists {
                 let lead = Avatar::new(28);
                 lead.set_name(&artist.name);
+                lead.set_photo(&self.covers, artist.photo);
                 let albums = fill(
                     &crate::i18n::ntr("{} album", "{} albums", artist.album_count),
                     &[&crate::format::count(artist.album_count)],

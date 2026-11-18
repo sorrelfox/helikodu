@@ -282,13 +282,21 @@ impl Library {
     /// Where the bytes of the cover with `hash` can be read, best first; empty when
     /// the library has no such cover.
     pub fn cover_locations(&self, hash: &CoverHash) -> Result<Vec<CoverLocation>, DbError> {
-        self.db.read(|c| catalog::covers::cover_locations(c, hash))
+        self.db.read(|c| {
+            let mut out = catalog::covers::cover_locations(c, hash)?;
+            crate::artist_photos::locations(c, hash, &mut out)?;
+            Ok(out)
+        })
     }
 
-    /// The hashes of every cover in the library, for removing the thumbnails of the
-    /// others ([`ThumbnailCache::remove_unreferenced`](crate::ThumbnailCache::remove_unreferenced)).
+    /// The hashes of every cover and artist photo in the library, for removing the
+    /// thumbnails of the others ([`ThumbnailCache::remove_unreferenced`](crate::ThumbnailCache::remove_unreferenced)).
     pub fn cover_hashes(&self) -> Result<HashSet<CoverHash>, DbError> {
-        self.db.read(catalog::covers::cover_hashes)
+        self.db.read(|c| {
+            let mut out = catalog::covers::cover_hashes(c)?;
+            crate::artist_photos::hashes(c, &mut out)?;
+            Ok(out)
+        })
     }
 
     // --- Library folders -------------------------------------------------------------

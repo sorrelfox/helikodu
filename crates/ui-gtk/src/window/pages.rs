@@ -1532,6 +1532,29 @@ impl MainWindow {
         })
     }
 
+    /// Makes the picture at `path` the photo of the artist shown in Artists, or
+    /// removes their photo (for tests). Returns whether an artist is shown.
+    #[doc(hidden)]
+    pub fn set_shown_artist_photo(&self, path: Option<std::path::PathBuf>) -> bool {
+        let Some(pages) = self.pages() else {
+            return false;
+        };
+        let Some(artist) = pages.artists.current() else {
+            return false;
+        };
+        pages.artists.change_photo(artist, path);
+        true
+    }
+
+    /// For the artist shown in Artists: whether the hero's avatar and their
+    /// list row's avatar each have a photo, and whether it is drawn (for tests).
+    #[doc(hidden)]
+    pub fn shown_artist_photo(&self) -> [(bool, bool); 2] {
+        self.pages()
+            .and_then(|p| p.artists.current().map(|a| p.artists.photo_state(a)))
+            .unwrap_or_default()
+    }
+
     /// The rows of the Composers and the Years lists (for tests).
     #[doc(hidden)]
     pub fn browse_counts(&self) -> (usize, usize) {

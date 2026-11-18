@@ -23,6 +23,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+mod artist_photos;
 mod duplicates;
 mod files;
 mod history_export;
@@ -51,6 +52,7 @@ use helikodu_model::player::TrackFlags;
 use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
 use std::collections::HashMap;
 
+pub use self::artist_photos::ARTIST_PHOTO_FOLDER;
 pub use self::history_export::{ExportedListen, HistoryFormat, write_history};
 pub use self::info::{LibraryEntry, TagOrigin, TrackInfo, read_file_info};
 pub use self::location::{DATA_FOLDER, DATABASE_FILE, default_database_path};
@@ -90,6 +92,8 @@ pub use helikodu_library::{
     AlbumMeasurement, CancelToken, LoudnessCoverage, LoudnessSelection, LoudnessTarget,
     MeasuredLoudness, StoredLoudness,
 };
+/// Artist photos chosen in the app or found in the artists' folders.
+pub use helikodu_library::{ArtistPhoto, ArtistPhotoError};
 pub use helikodu_library::{
     Change, CharacterSet, Destination, FileRunId, FileRunSummary, FoundFile, MissingFile,
     MoveOutcome, MoveProblem, MoveRequest, NamingPattern, OrganizeError, OrganizeOptions,
@@ -148,6 +152,9 @@ pub enum LibraryError {
     /// A scan was asked for without folders, and the library has none.
     #[error("the library has no folders yet; name the folders to scan")]
     NoFolders,
+    /// An artist photo could not be set or removed.
+    #[error(transparent)]
+    ArtistPhoto(#[from] helikodu_library::ArtistPhotoError),
     /// A file's tags could not be read.
     #[error("cannot read {}: {reason}", .path.display())]
     ReadFile {

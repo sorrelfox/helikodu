@@ -1,15 +1,23 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Avatar: a round tile with an artist's initials on a colour of the cover
-//! placeholder palettes, picked by a stable hash of the name.
+//! Avatar: a round tile with the artist's photo, or else their initials on a
+//! colour of the cover placeholder palettes, picked by a stable hash of the
+//! name.
+//!
+//! The photo's thumbnail is loaded through the window's cover cache; until it
+//! arrives the initials show, at the same size, so nothing moves.
 
 use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, graphene, gsk, pango};
+use gtk::{gdk, glib, graphene, gsk, pango};
 
+use crate::backend::CoverKey;
+use crate::models::CoverCache;
+use crate::models::covers::thumbnail_size;
 use crate::style::tokens::cover_placeholder;
 
 /// The initials of `name`: the first letters of its first two words, without
@@ -45,6 +53,10 @@ mod imp {
     pub(crate) struct Avatar {
         pub(super) side: Cell<i32>,
         pub(super) name: RefCell<String>,
+        /// The photo asked for.
+        pub(super) photo: Cell<Option<CoverKey>>,
+        /// Its thumbnail, once loaded.
+        pub(super) texture: RefCell<Option<gdk::Texture>>,
     }
 
     #[glib::object_subclass]
@@ -75,6 +87,16 @@ mod imp {
             let round = gsk::RoundedRect::from_rect(rect, side / 2.0);
             snapshot.push_rounded_clip(&round);
             snapshot.append_color(&ground.to_gdk(), &rect);
+            if let Some(texture) = self.texture.borrow().as_ref() {
+                // Fills the circle, cut to the middle of the picture.
+                let (w, h) = (texture.width() as f32, texture.height() as f32);
+                let scale = side / w.min(h).max(1.0);
+                let (w, h) = (w * scale, h * scale);
+                let area = graphene::Rect::new((side - w) / 2.0, (side - h) / 2.0, w, h);
+                snapshot.append_scaled_texture(texture, gsk::ScalingFilter::Trilinear, &area);
+                snapshot.pop();
+                return;
+            }
             snapshot.pop();
             let obj = self.obj();
             let layout = obj.create_pango_layout(Some(&initials(&name)));
@@ -114,6 +136,49 @@ impl Avatar {
     pub(crate) fn set_name(&self, name: &str) {
         self.imp().name.replace(name.to_owned());
         self.queue_draw();
+    }
+
+    /// Shows `photo` from `covers`, or the initials when there is none; the
+    /// initials stay until the thumbnail is loaded.
+    pub(crate) fn set_photo(&self, covers: &Rc<CoverCache>, photo: Option<CoverKey>) {
+        let imp = self.imp();
+        if imp.photo.get() == photo && (photo.is_none() || imp.texture.borrow().is_some()) {
+            return;
+        }
+        imp.photo.set(photo);
+        imp.texture.replace(None);
+        self.queue_draw();
+        let Some(photo) = photo else { return };
+        let size = thumbnail_size(imp.side.get(), self.scale_factor());
+        let weak = self.downgrade();
+        let ready = Box::new(move |texture: &gdk::Texture| {
+            if let Some(avatar) = weak.upgrade()
+                && avatar.imp().photo.get() == Some(photo)
+            {
+                avatar.imp().texture.replace(Some(texture.clone()));
+                avatar.queue_draw();
+            }
+        });
+        if let Some(texture) = covers.get(photo, size, ready) {
+            imp.texture.replace(Some(texture));
+        }
+    }
+
+    /// The photo still waited for, with its thumbnail size.
+    pub(crate) fn waiting(&self) -> Option<(CoverKey, u32)> {
+        let imp = self.imp();
+        let photo = imp.photo.get().filter(|_| imp.texture.borrow().is_none())?;
+        Some((photo, thumbnail_size(imp.side.get(), self.scale_factor())))
+    }
+
+    /// The photo shown or asked for (for tests).
+    pub(crate) fn photo(&self) -> Option<CoverKey> {
+        self.imp().photo.get()
+    }
+
+    /// Whether the photo's thumbnail is drawn (for tests).
+    pub(crate) fn shows_photo(&self) -> bool {
+        self.imp().texture.borrow().is_some()
     }
 }
 

@@ -7,6 +7,7 @@ pub(crate) mod actions;
 pub(crate) mod album;
 pub(crate) mod album_tile;
 pub(crate) mod albums;
+pub(crate) mod artist_photo;
 pub(crate) mod artists;
 pub(crate) mod category;
 pub(crate) mod drag;

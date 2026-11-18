@@ -68,6 +68,7 @@ impl SampleLibrary {
                     sort_name: sort_name(name),
                     album_count: albums.len(),
                     track_count: albums.iter().map(|a| a.tracks.len()).sum(),
+                    ..ArtistRow::default()
                 }
             })
             .filter(|c| c.album_count > 0)

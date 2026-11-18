@@ -312,6 +312,10 @@ pub struct ArtistRow {
     pub album_count: usize,
     /// The number of tracks.
     pub track_count: usize,
+    /// Their photo, if they have one: chosen in the app or found in their folder.
+    pub photo: Option<CoverKey>,
+    /// Whether the photo was chosen in the app (and can be removed).
+    pub own_photo: bool,
 }
 
 /// Everything the artist page shows.
@@ -637,6 +641,18 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     fn artist(&self, key: ArtistKey) -> Result<Option<ArtistDetail>, BackendError>;
     /// The artist named `name`, ignoring case.
     fn find_artist(&self, name: &str) -> Result<Option<ArtistKey>, BackendError>;
+    /// Makes the picture at `file` the artist's photo (the file itself is left
+    /// as it is) and returns their row with it.
+    fn set_artist_photo(&self, key: ArtistKey, file: &Path) -> Result<ArtistRow, BackendError> {
+        let _ = (key, file);
+        Err(BackendError("artist photos are not supported".into()))
+    }
+    /// Forgets the photo chosen for the artist and returns their row with the
+    /// photo shown now: the one in their folder, or none.
+    fn remove_artist_photo(&self, key: ArtistKey) -> Result<ArtistRow, BackendError> {
+        let _ = key;
+        Err(BackendError("artist photos are not supported".into()))
+    }
     /// The genres, by name.
     fn genres(&self) -> Result<Vec<GenreRow>, BackendError>;
     /// The tracks matching `query`, in its order.

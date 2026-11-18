@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Composers, Years, the audiobook page and folders outside the library, against
-//! the sample backend.
+//! Composers, Years, the audiobook page, folders outside the library and artist
+//! photos, against the sample backend.
 //!
 //! Like `views.rs`, this program has its own main function and runs only under
 //! the headless compositor script:
@@ -176,6 +176,33 @@ fn a_year_plays(app: &gtk::Application) {
     window.destroy();
 }
 
+fn an_artist_photo_shows_in_the_hero_and_the_list(app: &gtk::Application) {
+    let (window, _) = window(app);
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("artist-photo");
+    std::fs::create_dir_all(&dir).unwrap();
+    let photo = dir.join("singer.png");
+    let pixels = glib::Bytes::from_owned([200_u8, 40, 40, 255].repeat(64 * 64));
+    gtk::gdk::MemoryTexture::new(64, 64, gtk::gdk::MemoryFormat::R8g8b8a8, &pixels, 64 * 4)
+        .save_to_png(&photo)
+        .unwrap();
+    window.open_page("artists");
+    wait_for("the artists", 2, || window.list_counts().0 > 0);
+    wait_for("an artist page", 2, || {
+        shown_texts(&window).iter().any(|t| t == "Album artist")
+    });
+    assert_eq!(window.shown_artist_photo(), [(false, false); 2]);
+    assert!(window.set_shown_artist_photo(Some(photo)));
+    wait_for("the photo", 3, || {
+        window.shown_artist_photo() == [(true, true); 2]
+    });
+    // Removing it brings the initials back.
+    assert!(window.set_shown_artist_photo(None));
+    wait_for("the initials", 3, || {
+        window.shown_artist_photo() == [(false, false); 2]
+    });
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
@@ -189,6 +216,10 @@ const TESTS: &[Test] = &[
     ),
     ("folders_outside_the_library", folders_outside_the_library),
     ("a_year_plays", a_year_plays),
+    (
+        "an_artist_photo_shows_in_the_hero_and_the_list",
+        an_artist_photo_shows_in_the_hero_and_the_list,
+    ),
 ];
 
 fn main() -> ExitCode {

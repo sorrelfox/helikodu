@@ -43,6 +43,7 @@ crates/ui-gtk/src/popovers/output_switcher.rs
 crates/ui-gtk/src/widgets/bipolar_scale.rs
 crates/ui-gtk/src/views/actions.rs
 crates/ui-gtk/src/views/artists.rs
+crates/ui-gtk/src/views/artist_photo.rs
 crates/ui-gtk/src/views/folders.rs
 crates/ui-gtk/src/views/genres.rs
 crates/ui-gtk/src/views/playlist.rs

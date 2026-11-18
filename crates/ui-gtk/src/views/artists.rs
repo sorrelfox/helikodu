@@ -7,6 +7,8 @@
 //! appears on, and the most played tracks) and All tracks (the track table).
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use gtk::prelude::*;
@@ -22,6 +24,7 @@ use crate::models::{AlbumItem, CoverCache};
 use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::album_tile::AlbumTile;
+use crate::views::artist_photo;
 use crate::views::drag::DraggedTracks;
 use crate::views::genres::list_pane;
 use crate::views::tracks::TracksView;
@@ -94,6 +97,12 @@ pub(crate) struct ArtistsView {
     playing_track: Cell<Option<TrackKey>>,
     tiles: RefCell<Vec<AlbumTile>>,
     letters: Rc<RefCell<std::collections::HashMap<String, String>>>,
+    /// The avatar of each list row, by artist.
+    row_avatars: RefCell<HashMap<ArtistKey, Avatar>>,
+    /// The photo items of the hero's more menu, for the artist shown.
+    photo_menu: gio::Menu,
+    /// Whether a pass over the visible rows' photos is scheduled.
+    photo_pass: Cell<bool>,
     open: RefCell<Option<Open>>,
     open_album: OpenAlbum,
 }
@@ -160,6 +169,8 @@ impl ArtistsView {
         let more_menu = gio::Menu::new();
         more_menu.append(Some(&tr("Play next")), Some("artists.play-next"));
         more_menu.append(Some(&tr("Add to queue")), Some("artists.enqueue"));
+        let photo_menu = gio::Menu::new();
+        more_menu.append_section(None, &photo_menu);
         more.set_menu_model(Some(&more_menu));
         let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         buttons.set_valign(gtk::Align::Center);
@@ -280,6 +291,9 @@ impl ArtistsView {
             playing_track: Cell::new(None),
             tiles: RefCell::new(Vec::new()),
             letters: Rc::default(),
+            row_avatars: RefCell::default(),
+            photo_menu,
+            photo_pass: Cell::new(false),
             open: RefCell::new(None),
             open_album: Rc::new(open_album),
         });
@@ -390,7 +404,36 @@ impl ArtistsView {
             });
             group.add_action(&action);
         }
+        for (name, set) in [("set-photo", true), ("remove-photo", false)] {
+            let action = gio::SimpleAction::new(name, Some(glib::VariantTy::UINT64));
+            let weak = Rc::downgrade(self);
+            action.connect_activate(move |_, target| {
+                let (Some(view), Some(key)) = (weak.upgrade(), target.and_then(|t| t.get::<u64>()))
+                else {
+                    return;
+                };
+                if set {
+                    view.choose_photo(ArtistKey(key));
+                } else {
+                    view.change_photo(ArtistKey(key), None);
+                }
+            });
+            group.add_action(&action);
+        }
         self.root.insert_action_group("artists", Some(&group));
+        self.connect_avatar();
+        if let Some(scroller) = self
+            .list
+            .ancestor(gtk::ScrolledWindow::static_type())
+            .and_downcast::<gtk::ScrolledWindow>()
+        {
+            let weak = Rc::downgrade(self);
+            scroller.vadjustment().connect_value_changed(move |_| {
+                if let Some(view) = weak.upgrade() {
+                    view.schedule_photo_pass();
+                }
+            });
+        }
         let click = gtk::GestureClick::new();
         click.set_button(gdk::BUTTON_SECONDARY);
         let weak = Rc::downgrade(self);
@@ -400,7 +443,16 @@ impl ArtistsView {
                 && let Ok(key) = row.widget_name().parse::<u64>()
             {
                 gesture.set_state(gtk::EventSequenceState::Claimed);
-                actions::popup(&view.list, Target::Artist(ArtistKey(key)), Some((x, y)));
+                let key = ArtistKey(key);
+                if let Some(menu) = actions::popup(&view.list, Target::Artist(key), Some((x, y)))
+                    .and_then(|p| p.menu_model())
+                    .and_downcast::<gio::Menu>()
+                {
+                    menu.append_section(
+                        None,
+                        &artist_photo::menu_section(key, view.own_photo(key)),
+                    );
+                }
             }
         });
         self.list.add_controller(click);
@@ -469,6 +521,7 @@ impl ArtistsView {
     fn fill(self: &Rc<Self>, letters: bool) {
         self.quiet.set(true);
         crate::widgets::remove_rows(&self.list);
+        self.row_avatars.borrow_mut().clear();
         let rows = self.rows.borrow().clone();
         self.count.set_text(&crate::format::count(rows.len()));
         {
@@ -484,6 +537,10 @@ impl ArtistsView {
             let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
             let avatar = Avatar::new(26);
             avatar.set_name(&artist.name);
+            avatar.set_photo(&self.covers, artist.photo);
+            self.row_avatars
+                .borrow_mut()
+                .insert(artist.key, avatar.clone());
             line.append(&avatar);
             let name = label(&artist.name, &[]);
             name.set_hexpand(true);
@@ -500,6 +557,7 @@ impl ArtistsView {
             self.list.append(&row);
         }
         self.list.invalidate_headers();
+        self.schedule_photo_pass();
         self.quiet.set(false);
         let wanted = self.wanted.get().or_else(|| rows.first().map(|r| r.key));
         self.select(wanted);
@@ -556,6 +614,8 @@ impl ArtistsView {
         };
         self.detail.set_visible_child_name("artist");
         self.avatar.set_name(&detail.row.name);
+        self.avatar.set_photo(&self.covers, detail.row.photo);
+        self.show_photo_menu(&detail.row);
         self.name.set_text(&detail.row.name);
         self.name.set_tooltip_text(Some(&detail.row.name));
         let mut parts = Vec::new();
@@ -737,6 +797,195 @@ impl ArtistsView {
             let name = self.name.text();
             self.tracks.set_scope(TrackScope::Artist(artist), &name);
         }
+    }
+
+    /// The hero avatar: its menu on a right click, and a picture dropped on it
+    /// becomes the photo.
+    fn connect_avatar(self: &Rc<Self>) {
+        let click = gtk::GestureClick::new();
+        click.set_button(gdk::BUTTON_SECONDARY);
+        let weak = Rc::downgrade(self);
+        click.connect_pressed(move |gesture, _, x, y| {
+            let Some(view) = weak.upgrade() else { return };
+            let (Some(key), Some(hero)) = (view.current.get(), view.avatar.parent()) else {
+                return;
+            };
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            let menu = artist_photo::menu_section(key, view.own_photo(key));
+            let popover = gtk::PopoverMenu::from_model(Some(&menu));
+            popover.add_css_class("hk-context-menu");
+            popover.set_parent(&hero);
+            popover.set_has_arrow(false);
+            popover.set_halign(gtk::Align::Start);
+            let at = view
+                .avatar
+                .compute_point(&hero, &gtk::graphene::Point::new(x as f32, y as f32))
+                .unwrap_or_else(|| gtk::graphene::Point::new(0.0, 0.0));
+            popover.set_pointing_to(Some(&gdk::Rectangle::new(
+                at.x() as i32,
+                at.y() as i32,
+                1,
+                1,
+            )));
+            popover.connect_closed(|p| {
+                let p = p.clone();
+                glib::idle_add_local_once(move || p.unparent());
+            });
+            actions::popup_when_built(&popover);
+        });
+        self.avatar.add_controller(click);
+        let weak = Rc::downgrade(self);
+        self.avatar
+            .add_controller(artist_photo::drop_target(move |path| {
+                if let Some(view) = weak.upgrade()
+                    && let Some(key) = view.current.get()
+                {
+                    view.change_photo(key, Some(path));
+                }
+            }));
+    }
+
+    /// Asks again, once on the next frame, for the photos of the rows in view
+    /// that are still waiting, so that they are made first: the library makes
+    /// a bounded number of the latest requests, and a long list asks for more.
+    fn schedule_photo_pass(self: &Rc<Self>) {
+        if self.photo_pass.replace(true) {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        self.list.add_tick_callback(move |_, _| {
+            if let Some(view) = weak.upgrade() {
+                view.photo_pass.set(false);
+                view.photos_in_view();
+            }
+            glib::ControlFlow::Break
+        });
+    }
+
+    fn photos_in_view(&self) {
+        let Some(scroller) = self.list.ancestor(gtk::ScrolledWindow::static_type()) else {
+            return;
+        };
+        let height = scroller.height() as f32;
+        let visible: Vec<_> = self
+            .row_avatars
+            .borrow()
+            .values()
+            .filter_map(|avatar| {
+                let wanted = avatar.waiting()?;
+                let bounds = avatar.compute_bounds(&scroller)?;
+                (bounds.y() + bounds.height() >= 0.0 && bounds.y() <= height).then_some(wanted)
+            })
+            .collect();
+        if !visible.is_empty() {
+            self.covers.prioritise(&visible);
+        }
+    }
+
+    /// Whether `artist` has a photo chosen in the app.
+    fn own_photo(&self, artist: ArtistKey) -> bool {
+        self.rows
+            .borrow()
+            .iter()
+            .any(|r| r.key == artist && r.own_photo)
+    }
+
+    /// The photo items of the more menu, for `row`.
+    fn show_photo_menu(&self, row: &ArtistRow) {
+        self.photo_menu.remove_all();
+        let items = artist_photo::menu_section(row.key, row.own_photo);
+        for i in 0..items.n_items() {
+            self.photo_menu
+                .append_item(&gio::MenuItem::from_model(&items, i));
+        }
+    }
+
+    /// Asks for a picture to become the photo of `artist`.
+    fn choose_photo(self: &Rc<Self>, artist: ArtistKey) {
+        let name = self
+            .rows
+            .borrow()
+            .iter()
+            .find(|r| r.key == artist)
+            .map(|r| r.name.clone())
+            .unwrap_or_default();
+        let weak = Rc::downgrade(self);
+        artist_photo::choose(self.root.upcast_ref(), &name, move |path| {
+            if let Some(view) = weak.upgrade() {
+                view.change_photo(artist, Some(path));
+            }
+        });
+    }
+
+    /// Makes the picture at `path` the photo of `artist`, or forgets the photo
+    /// chosen for them; then shows the photo they have now.
+    pub(crate) fn change_photo(self: &Rc<Self>, artist: ArtistKey, path: Option<PathBuf>) {
+        let weak = Rc::downgrade(self);
+        let backend = self.backend.clone();
+        glib::spawn_future_local(async move {
+            let result = backend
+                .query(move |l| match path {
+                    Some(path) => l.set_artist_photo(artist, &path),
+                    None => l.remove_artist_photo(artist),
+                })
+                .await;
+            let Some(view) = weak.upgrade() else { return };
+            match result {
+                Ok(row) => view.photo_changed(&row),
+                Err(e) => {
+                    if let Some(window) =
+                        view.root.root().and_downcast::<crate::window::MainWindow>()
+                    {
+                        window.toast(&fill(&tr("Cannot set the artist photo: {}"), &[&e.0]), true);
+                    }
+                }
+            }
+        });
+    }
+
+    /// Shows the new photo of `row` in the list and, if it is shown, the hero.
+    fn photo_changed(&self, row: &ArtistRow) {
+        for known in self
+            .rows
+            .borrow_mut()
+            .iter_mut()
+            .filter(|r| r.key == row.key)
+        {
+            known.photo = row.photo;
+            known.own_photo = row.own_photo;
+        }
+        if let Some(avatar) = self.row_avatars.borrow().get(&row.key) {
+            avatar.set_photo(&self.covers, row.photo);
+        }
+        if self.current.get() == Some(row.key) {
+            if let Some(detail) = self.detail_data.borrow_mut().as_mut() {
+                detail.row.photo = row.photo;
+                detail.row.own_photo = row.own_photo;
+            }
+            self.avatar.set_photo(&self.covers, row.photo);
+            self.show_photo_menu(row);
+        }
+    }
+
+    /// The photo of the hero and of the list row of `artist`: what each asked
+    /// for and whether it is drawn (for tests).
+    pub(crate) fn photo_state(&self, artist: ArtistKey) -> [(bool, bool); 2] {
+        let row = self
+            .row_avatars
+            .borrow()
+            .get(&artist)
+            .map_or((false, false), |a| (a.photo().is_some(), a.shows_photo()));
+        let hero = if self.current.get() == Some(artist) {
+            (self.avatar.photo().is_some(), self.avatar.shows_photo())
+        } else {
+            (false, false)
+        };
+        [hero, row]
+    }
+
+    /// The artist shown (for tests).
+    pub(crate) fn current(&self) -> Option<ArtistKey> {
+        self.current.get()
     }
 
     /// Reloads after the library changed.
