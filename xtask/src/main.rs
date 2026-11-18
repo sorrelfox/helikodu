@@ -16,6 +16,7 @@ mod dist;
 mod offline_audit;
 mod stress;
 mod synth_library;
+mod ui_checks;
 
 use std::env;
 use std::path::PathBuf;
@@ -38,6 +39,9 @@ commands:
                   Internet socket (--self-test)
   stress          play in real time under full CPU load and fail on any underrun
                   (--secs N, --backend null|pipewire, --load THREADS)
+  ui-checks       start-up, memory, frame-time, idle, accessibility and visual
+                  checks of the desktop UI in a headless compositor
+                  (--tracks N, --design DIR, --only perf|a11y|visual)
   help            print this message
 ";
 
@@ -52,6 +56,7 @@ fn main() -> ExitCode {
         Some("offline-audit") => offline_audit::run(&args[1..]),
         Some("stress") => stress::run(&args[1..]),
         Some("synth-library") => synth_library::run(&args[1..]),
+        Some("ui-checks") => ui_checks::run(&args[1..]),
         Some("help" | "--help" | "-h") | None => {
             print!("{USAGE}");
             return ExitCode::SUCCESS;
