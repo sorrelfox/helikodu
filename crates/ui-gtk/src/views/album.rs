@@ -23,7 +23,7 @@ use crate::backend::{
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
-use crate::playback::{Change, Playback};
+use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
 use crate::widgets::side_column::SideColumn;
@@ -106,7 +106,7 @@ mod imp {
         pub(super) backend: RefCell<Option<Backend>>,
         pub(super) album: Cell<Option<AlbumKey>>,
         pub(super) detail: RefCell<Option<AlbumDetail>>,
-        pub(super) playing: Cell<Option<TrackKey>>,
+        pub(super) playing: Cell<PlayingKeys>,
         /// A track to select once the album is shown.
         pub(super) select: Cell<Option<TrackKey>>,
         pub(super) generation: Cell<u64>,
@@ -212,6 +212,7 @@ fn track_row(index: usize, track: &TrackRow, playing: bool) -> gtk::ListBoxRow {
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 14);
     if playing {
         row.add_css_class("playing");
+        row.add_css_class("hk-playing");
         let indicator = PlayingIndicator::default();
         indicator.set_size_request(24, -1);
         indicator.set_halign(gtk::Align::End);
@@ -286,12 +287,10 @@ impl AlbumPage {
         let weak = self.downgrade();
         playback.connect(move |view, change| {
             if let Some(page) = weak.upgrade()
-                && change == Change::Track
+                && change == Change::Playing
+                && page.imp().playing.replace(view.playing) != view.playing
             {
-                let key = view.now.as_ref().map(|n| n.track.key);
-                if page.imp().playing.replace(key) != key {
-                    page.show_tracks();
-                }
+                page.show_tracks();
             }
         });
     }
@@ -660,7 +659,7 @@ impl AlbumPage {
                     track,
                     progress.starts.get(index).copied().unwrap_or_default(),
                     progress.heard.get(index).copied().unwrap_or(false),
-                    Some(track.key) == playing,
+                    playing.contains(track.key),
                 ));
             }
             return;
@@ -684,7 +683,7 @@ impl AlbumPage {
             }
             for track in &disc.tracks {
                 imp.tracks
-                    .append(&track_row(index, track, Some(track.key) == playing));
+                    .append(&track_row(index, track, playing.contains(track.key)));
                 index += 1;
             }
         }

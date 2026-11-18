@@ -64,6 +64,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- The playing track is marked the same way in every track list, wherever playback was started: the artist page's Most played, the album and audiobook pages, search results, playlists, smart playlists, the play history, folders (outside files too) and the queue panel show its row in the accent with the moving playing indicator. With one track shown for identical copies, a playing copy marks its main track's row.
+- The copies badge after a title stays right after the text when the table scrolls, instead of keeping the place where an earlier title ended.
+- Invisible padding around tag values (spaces, no-break spaces, tabs, zero-width characters) is trimmed when files are scanned and when titles are shown.
 - With a colour scheme chosen in Helikodu that differs from the desktop's, text no longer takes the desktop theme's colours: sidebar entries, titles and other labels were light on light (or dark on dark) under themes such as Breeze, mostly while the window did not have the focus.
 - Tags without a field of their own (`MOOD`, `BPM`, `GROUPING`, `LABEL`, `COMMENT` and others) are stored when files are scanned, so `tag:NAME` queries find them, and shuffling by grouping uses the `GROUPING` tag.
 - The album page's **Details** column no longer grows wider than its 260 px when a sentence in it is long: its text wraps. Its width can be dragged at its left border, and is kept for all album and audiobook pages between runs.

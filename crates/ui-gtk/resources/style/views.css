@@ -80,7 +80,9 @@ list.hk-files > row { min-height: 34px; padding: 0 28px 0 24px; border-radius: 0
 list.hk-files > row.hk-alt { background-color: var(--hk-zebra); }
 list.hk-files > row:hover { background-color: var(--hk-hover); }
 list.hk-files > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
-list.hk-files > row.hk-playing label { color: var(--hk-accent-text); font-weight: 600; }
+/* The playing row of every hand-built list: accent text, weight 600. */
+list > row.hk-playing label { color: var(--hk-accent-text); font-weight: 600; }
+list > row.hk-playing label.hk-mono-meta { font-weight: 500; }
 .hk-file-name { font-size: 12px; }
 .hk-table-header.hk-file-row { padding-left: 24px; }
 

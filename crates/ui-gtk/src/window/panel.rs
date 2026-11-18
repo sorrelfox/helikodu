@@ -22,7 +22,7 @@ use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
 use crate::playback::{Change, Playback, PlayerView};
 use crate::widgets::now_links::NowLinks;
-use crate::widgets::{CoverArt, RatingStars, TitleLine, label};
+use crate::widgets::{CoverArt, PlayingIndicator, RatingStars, TitleLine, label};
 
 mod imp {
     use super::*;
@@ -151,12 +151,20 @@ fn track_row(track: &TrackRow, classes: &[&str]) -> gtk::ListBoxRow {
         row.add_css_class(class);
     }
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    let lead = gtk::Label::new(Some(
-        &track.number.map(|n| n.to_string()).unwrap_or_default(),
-    ));
-    lead.add_css_class("hk-queue-lead");
-    lead.set_xalign(0.5);
-    line.append(&lead);
+    if classes.contains(&"current") {
+        // The playing row: the indicator in the lead box, accent text.
+        row.add_css_class("hk-playing");
+        let lead = PlayingIndicator::default();
+        lead.add_css_class("hk-queue-lead");
+        line.append(&lead);
+    } else {
+        let lead = gtk::Label::new(Some(
+            &track.number.map(|n| n.to_string()).unwrap_or_default(),
+        ));
+        lead.add_css_class("hk-queue-lead");
+        lead.set_xalign(0.5);
+        line.append(&lead);
+    }
     let text = if track.from_context || track.artist.is_empty() {
         track.title.clone()
     } else {

@@ -8,6 +8,15 @@ use std::time::Duration;
 use crate::backend::AudioFormat;
 use crate::i18n::{fill, ntr, tr};
 
+/// `text` without invisible padding before and after it (white space, control
+/// characters, zero-width spaces and joiners, the byte order mark), as the
+/// scan stores tag values; libraries scanned before it may hold padded ones.
+pub(crate) fn trimmed(text: &str) -> &str {
+    text.trim_matches(|c: char| {
+        c.is_whitespace() || c.is_control() || matches!(c, '\u{200B}'..='\u{200D}' | '\u{FEFF}')
+    })
+}
+
 /// `m:ss`, or `h:mm:ss` from an hour.
 pub(crate) fn duration(d: Duration) -> String {
     let s = d.as_secs();
@@ -129,6 +138,16 @@ pub(crate) fn size(bytes: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn padding_is_trimmed_for_display() {
+        assert_eq!(trimmed("Riser    "), "Riser");
+        assert_eq!(
+            trimmed("\u{A0}\u{FEFF}They're Here (Intro)\u{200B}\r\t"),
+            "They're Here (Intro)"
+        );
+        assert_eq!(trimmed("A \u{200D} B"), "A \u{200D} B");
+    }
 
     #[test]
     fn times() {

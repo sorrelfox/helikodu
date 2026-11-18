@@ -26,7 +26,7 @@ use crate::backend::{
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
-use crate::playback::Playback;
+use crate::playback::{Change, Playback, PlayingKeys};
 use crate::query_text;
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
@@ -94,6 +94,8 @@ pub(crate) struct SearchView {
     covers: Rc<CoverCache>,
     results: RefCell<SearchResults>,
     entries: RefCell<Vec<Entry>>,
+    /// The tracks whose result rows show as playing.
+    playing: Cell<PlayingKeys>,
     text: RefCell<String>,
     generation: Cell<u64>,
     open: RefCell<Option<OpenPage>>,
@@ -321,6 +323,7 @@ impl SearchView {
             covers: covers.clone(),
             results: RefCell::new(SearchResults::default()),
             entries: RefCell::new(Vec::new()),
+            playing: Cell::new(PlayingKeys::default()),
             text: RefCell::new(String::new()),
             generation: Cell::new(0),
             open: RefCell::new(None),
@@ -365,6 +368,15 @@ impl SearchView {
             }
         });
         view.connect();
+        let weak = Rc::downgrade(&view);
+        playback.connect(move |player, change| {
+            if let Some(view) = weak.upgrade()
+                && change == Change::Playing
+                && view.playing.replace(player.playing) != player.playing
+            {
+                view.mark_playing();
+            }
+        });
         // The matched text takes the accent of the scheme shown.
         let weak = Rc::downgrade(&view);
         crate::style::connect_changed(move |_| {
@@ -631,6 +643,7 @@ impl SearchView {
         }
         self.entries.replace(entries);
         self.results.replace(results);
+        self.mark_playing();
         if let Some(first) = self.first_row() {
             self.list.select_row(Some(&first));
         }
@@ -670,6 +683,8 @@ impl SearchView {
         right: &str,
         words: &[String],
     ) {
+        // The highlight's offsets are into the text shown.
+        let title = crate::format::trimmed(title);
         let row = gtk::ListBoxRow::new();
         row.set_widget_name(&index.to_string());
         let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
@@ -698,6 +713,40 @@ impl SearchView {
             &[title, description],
         ))]);
         self.list.append(&row);
+    }
+
+    /// Marks the result rows of the playing track: the playing-row look,
+    /// with the indicator before the title as the rows have no number.
+    fn mark_playing(&self) {
+        let playing = self.playing.get();
+        let mut child = self.list.first_child();
+        while let Some(widget) = child {
+            child = widget.next_sibling();
+            let Some(row) = widget.downcast_ref::<gtk::ListBoxRow>() else {
+                continue;
+            };
+            let on = match self.entry(row) {
+                Some(Entry::Track(i)) => self
+                    .results
+                    .borrow()
+                    .tracks
+                    .get(i)
+                    .is_some_and(|t| playing.contains(t.key)),
+                _ => false,
+            };
+            if on {
+                row.add_css_class("hk-playing");
+            } else {
+                row.remove_css_class("hk-playing");
+            }
+            if let Some(title) = row
+                .child()
+                .and_then(|line| line.first_child()?.next_sibling())
+                .and_downcast::<TitleLine>()
+            {
+                title.set_playing(on, true);
+            }
+        }
     }
 
     fn entry(&self, row: &gtk::ListBoxRow) -> Option<Entry> {

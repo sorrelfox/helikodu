@@ -25,6 +25,7 @@ mod reading;
 mod record;
 pub mod writing;
 
+pub(crate) use builder::trim_text;
 pub use rating::Rating;
 pub use reading::{
     FfmpegReader, LoftyReader, ReadOptions, TagError, TagReader, read_tags, read_tags_from_file,

@@ -156,7 +156,7 @@ fn extra(tags: &mut TrackTags, key: &str, value: String) {
 
 /// Trimmed, non-empty, bounded text.
 fn text(value: Option<&str>) -> Option<String> {
-    let value = value?.trim();
+    let value = crate::tags::trim_text(value?);
     if value.is_empty() {
         return None;
     }

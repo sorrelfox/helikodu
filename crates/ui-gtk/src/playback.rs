@@ -12,8 +12,54 @@ use gtk::glib;
 
 use crate::backend::{
     AlbumKey, Backend, LoopPoints, NowPlaying, OutputInfo, PlayModes, PlaybackState, PlaybackStats,
-    QueueSnapshot, Repeat, RepeatMode, ShuffleMode, SignalPath, SleepTimer, StopAfter, Update,
+    QueueSnapshot, Repeat, RepeatMode, ShuffleMode, SignalPath, SleepTimer, StopAfter, TrackKey,
+    Update,
 };
+
+/// The tracks whose rows show as playing: the playing track and, when the
+/// library shows one track for identical copies and a copy plays, the main
+/// copy's track, which stands for it in the lists. Every list asks this, so
+/// a row is marked the same wherever playback started.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct PlayingKeys {
+    track: Option<TrackKey>,
+    main: Option<TrackKey>,
+}
+
+impl PlayingKeys {
+    /// The keys for the playing `track`; a key of 0 is a file outside the
+    /// library, which no library row shows.
+    pub(crate) fn of(track: Option<TrackKey>) -> Self {
+        Self {
+            track: track.filter(|k| k.0 != 0),
+            main: None,
+        }
+    }
+
+    /// The same, with `main` standing for the playing track too.
+    #[must_use]
+    pub(crate) fn with_main(self, main: Option<TrackKey>) -> Self {
+        Self {
+            main: main.filter(|k| k.0 != 0 && Some(*k) != self.track),
+            ..self
+        }
+    }
+
+    /// Whether a row of `key` shows as playing.
+    pub(crate) fn contains(self, key: TrackKey) -> bool {
+        key.0 != 0 && (self.track == Some(key) || self.main == Some(key))
+    }
+
+    /// Whether a row of `key`, if any, shows as playing.
+    pub(crate) fn contains_opt(self, key: Option<TrackKey>) -> bool {
+        key.is_some_and(|k| self.contains(k))
+    }
+
+    /// The playing track itself.
+    pub(crate) fn track(self) -> Option<TrackKey> {
+        self.track
+    }
+}
 
 /// What the player does now.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -44,6 +90,8 @@ pub(crate) struct PlayerView {
     pub(crate) cursor: Option<u64>,
     /// The waveform peaks of the playing track, while it has them.
     pub(crate) waveform: Option<std::sync::Arc<[u8]>>,
+    /// The tracks whose rows show as playing.
+    pub(crate) playing: PlayingKeys,
 }
 
 impl PlayerView {
@@ -81,6 +129,9 @@ pub(crate) enum Change {
     Cursor,
     /// The waveform peaks of the playing track.
     Waveform,
+    /// Which rows show as playing ([`PlayerView::playing`]); follows each
+    /// track change, and again when the main copy of a playing copy is known.
+    Playing,
 }
 
 type Listener = Box<dyn Fn(&PlayerView, Change)>;
@@ -90,6 +141,10 @@ type EventListener = Box<dyn Fn(&Update)>;
 #[derive(Default)]
 pub(crate) struct Playback {
     view: RefCell<PlayerView>,
+    /// The backend, for the main copy of a playing copy.
+    backend: RefCell<Option<Backend>>,
+    /// Counts the track changes, so a late answer about copies is dropped.
+    generation: std::cell::Cell<u64>,
     listeners: RefCell<Vec<Listener>>,
     events: RefCell<Vec<EventListener>>,
 }
@@ -106,6 +161,7 @@ impl Playback {
     /// Follows the updates of `backend` for as long as the result lives.
     pub(crate) fn follow(backend: &Backend) -> Rc<Self> {
         let playback = Rc::new(Self::default());
+        playback.backend.replace(Some(backend.clone()));
         if let Some(updates) = backend.take_updates() {
             let weak = Rc::downgrade(&playback);
             glib::spawn_future_local(async move {
@@ -113,7 +169,12 @@ impl Playback {
                     let Some(playback) = weak.upgrade() else {
                         break;
                     };
+                    let copies =
+                        matches!(update, Update::NowPlaying(_) | Update::DuplicatesApplied(_));
                     playback.apply(update);
+                    if copies {
+                        playback.find_main_copy();
+                    }
                 }
             });
         }
@@ -141,6 +202,7 @@ impl Playback {
             Change::Sleep,
             Change::Cursor,
             Change::Waveform,
+            Change::Playing,
         ] {
             listener(&view, change);
         }
@@ -166,8 +228,10 @@ impl Playback {
                 Update::NowPlaying(now) => {
                     view.length = now.as_ref().and_then(|n| n.track.duration);
                     view.elapsed = Duration::ZERO;
+                    view.playing = PlayingKeys::of(now.as_ref().map(|n| n.track.key));
                     view.now = now;
-                    &[Change::Track]
+                    self.generation.set(self.generation.get() + 1);
+                    &[Change::Track, Change::Playing]
                 }
                 Update::Position { elapsed, length } => {
                     view.elapsed = elapsed;
@@ -285,6 +349,53 @@ impl Playback {
                 listener(&view, *change);
             }
         }
+    }
+}
+
+impl Playback {
+    /// With one track shown for identical copies, finds the main copy of the
+    /// playing track, so the row that stands for it is marked too.
+    fn find_main_copy(self: &Rc<Self>) {
+        let Some(backend) = self.backend.borrow().clone() else {
+            return;
+        };
+        let Some(track) = self.view.borrow().playing.track() else {
+            return;
+        };
+        let generation = self.generation.get();
+        let services = backend.services();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let main = backend
+                .work(move || {
+                    if !services.settings().library.duplicates.show_one {
+                        return None;
+                    }
+                    let group = services.copies_of(track).ok().flatten()?;
+                    let main = group.files.iter().find(|f| f.is_main)?.track?;
+                    Some(TrackKey(main.get()))
+                })
+                .await
+                .flatten();
+            let Some(playback) = weak.upgrade() else {
+                return;
+            };
+            if playback.generation.get() != generation {
+                return;
+            }
+            {
+                let mut view = playback.view.borrow_mut();
+                let keys = PlayingKeys::of(Some(track)).with_main(main);
+                if view.playing == keys {
+                    return;
+                }
+                view.playing = keys;
+            }
+            let view = playback.view();
+            for listener in playback.listeners.borrow().iter() {
+                listener(&view, Change::Playing);
+            }
+        });
     }
 }
 

@@ -143,6 +143,11 @@ impl Default for PlayingIndicator {
 }
 
 impl PlayingIndicator {
+    /// Whether the bars move: a frame clock ticks for them.
+    pub(crate) fn is_moving(&self) -> bool {
+        self.imp().tick.borrow().is_some()
+    }
+
     /// Starts or stops the tick callback to match playback, reduced motion
     /// and whether the indicator is on screen.
     fn refresh(&self) {

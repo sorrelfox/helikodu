@@ -23,7 +23,7 @@ use crate::backend::{
 };
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
-use crate::playback::{Change, Playback};
+use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
 use crate::views::artists::button;
 use crate::widgets::empty_state::empty_state;
@@ -146,7 +146,9 @@ pub(crate) struct FoldersView {
     folder: RefCell<Option<PathBuf>>,
     loaded: Cell<bool>,
     generation: Cell<u64>,
-    playing: Cell<Option<TrackKey>>,
+    playing: Cell<PlayingKeys>,
+    /// The playing file outside the library, which has no track key.
+    playing_file: RefCell<Option<PathBuf>>,
 }
 
 impl std::fmt::Debug for FoldersView {
@@ -335,7 +337,8 @@ impl FoldersView {
             folder: RefCell::new(None),
             loaded: Cell::new(false),
             generation: Cell::new(0),
-            playing: Cell::new(None),
+            playing: Cell::new(PlayingKeys::default()),
+            playing_file: RefCell::new(None),
         });
         view.connect(playback, &play, &enqueue, &open);
         let weak = Rc::downgrade(&view);
@@ -511,10 +514,15 @@ impl FoldersView {
         let weak = Rc::downgrade(self);
         playback.connect(move |player, change| {
             if let Some(view) = weak.upgrade()
-                && change == Change::Track
+                && change == Change::Playing
             {
-                let key = player.now.as_ref().map(|n| n.track.key);
-                if view.playing.replace(key) != key {
+                let file = player
+                    .now
+                    .as_ref()
+                    .filter(|n| n.track.key.0 == 0)
+                    .and_then(|n| n.track.path.clone());
+                let moved = view.playing.replace(player.playing) != player.playing;
+                if view.playing_file.replace(file.clone()) != file || moved {
                     view.show_files();
                 }
             }
@@ -682,6 +690,7 @@ impl FoldersView {
     fn show_files(&self) {
         crate::widgets::remove_rows(&self.files);
         let playing = self.playing.get();
+        let playing_file = self.playing_file.borrow().clone();
         for (i, file) in self.listing.borrow().files.iter().enumerate() {
             let row = gtk::ListBoxRow::new();
             if i % 2 == 1 {
@@ -689,7 +698,10 @@ impl FoldersView {
             }
             let line = gtk::Box::new(gtk::Orientation::Horizontal, 16);
             line.add_css_class("hk-file-row");
-            let on = file.track.as_ref().is_some_and(|t| Some(t.key) == playing);
+            let on = match &file.track {
+                Some(track) => playing.contains(track.key),
+                None => playing_file.as_ref() == Some(&file.path),
+            };
             if on {
                 row.add_css_class("hk-playing");
                 let indicator = PlayingIndicator::default();

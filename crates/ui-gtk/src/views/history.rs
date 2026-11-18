@@ -25,9 +25,9 @@ use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
 use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
-use crate::views::table::{TableCell, cell_at, selected_positions};
+use crate::views::table::{PlayingRows, TableCell, cell_at, selected_positions};
 use crate::widgets::empty_state::empty_state;
-use crate::widgets::{CoverArt, label};
+use crate::widgets::{CoverArt, PlayingIndicator, label};
 
 /// One column: a fixed width, or a share of what is left.
 #[derive(Debug, Clone, Copy)]
@@ -323,6 +323,8 @@ pub(crate) struct HistoryView {
     rows: RefCell<Vec<Rc<HistoryRow>>>,
     totals: Cell<Option<HistoryTotals>>,
     generation: Cell<u64>,
+    /// The cells, marked where the listen is of the playing track.
+    playing: PlayingRows,
 }
 
 impl std::fmt::Debug for HistoryView {
@@ -446,6 +448,7 @@ impl HistoryView {
             rows: RefCell::new(Vec::new()),
             totals: Cell::new(None),
             generation: Cell::new(0),
+            playing: PlayingRows::default(),
         });
         view.list.set_factory(Some(&view.factory()));
         let weak = Rc::downgrade(&view);
@@ -461,7 +464,8 @@ impl HistoryView {
 
     fn factory(self: &Rc<Self>) -> gtk::SignalListItemFactory {
         let factory = gtk::SignalListItemFactory::new();
-        factory.connect_setup(|_, item| {
+        let weak = Rc::downgrade(self);
+        factory.connect_setup(move |_, item| {
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
                 return;
             };
@@ -484,6 +488,11 @@ impl HistoryView {
             let cover = CoverArt::new(24, 4.0);
             cover.add_css_class("small");
             title_box.append(&cover);
+            // The table has no number column: the playing row's indicator
+            // leads the title.
+            let indicator = PlayingIndicator::default();
+            indicator.set_visible(false);
+            title_box.append(&indicator);
             let title = label("", &["hk-medium"]);
             title.set_ellipsize(gtk::pango::EllipsizeMode::End);
             title.set_hexpand(true);
@@ -498,7 +507,11 @@ impl HistoryView {
             listened.set_xalign(1.0);
             line.append(&listened);
             both.append(&line);
-            item.set_child(Some(&TableCell::new(&both)));
+            let cell = TableCell::new(&both);
+            if let Some(view) = weak.upgrade() {
+                view.playing.add(&cell);
+            }
+            item.set_child(Some(&cell));
         });
         let weak = Rc::downgrade(self);
         factory.connect_bind(move |_, item| {
@@ -525,9 +538,24 @@ impl HistoryView {
                 .and_then(|i| i.child().and_downcast::<TableCell>())
             {
                 cell.set_position(None);
+                cell.set_track(None);
             }
         });
         factory
+    }
+
+    /// Marks `cell` as a listen of the playing track, or not.
+    fn mark(cell: &TableCell, playing: bool) {
+        cell.set_playing(playing);
+        let indicator = cell
+            .child()
+            .and_then(|both| both.last_child())
+            .and_then(|line| line.first_child()?.next_sibling())
+            .and_then(|title_box| title_box.first_child()?.next_sibling())
+            .and_downcast::<PlayingIndicator>();
+        if let Some(indicator) = indicator {
+            indicator.set_visible(playing);
+        }
     }
 
     fn show_line(&self, cell: &TableCell, line: &Line) {
@@ -541,6 +569,8 @@ impl HistoryView {
         cell.remove_css_class("hk-missing");
         match line {
             Line::Day { title, summary } => {
+                cell.set_track(None);
+                Self::mark(cell, false);
                 cell.add_css_class("hk-day-cell");
                 if let (Some(t), Some(s)) = (
                     day.first_child().and_downcast::<gtk::Label>(),
@@ -552,6 +582,9 @@ impl HistoryView {
             }
             Line::Listen(row) => {
                 cell.remove_css_class("hk-day-cell");
+                let key = (!row.track.missing).then_some(row.track.key);
+                cell.set_track(key);
+                Self::mark(cell, self.playing.contains(key));
                 let parts = children(&row_box);
                 let [time, title_box, artist, album, from, listened] = parts.as_slice() else {
                     return;
@@ -620,12 +653,17 @@ impl HistoryView {
         });
         // A listen ends when another track starts: read the history again.
         let weak = Rc::downgrade(self);
-        playback.connect(move |_, change| {
-            if let Some(view) = weak.upgrade()
-                && change == Change::Track
-                && view.root.is_mapped()
-            {
-                view.reload();
+        playback.connect(move |player, change| {
+            let Some(view) = weak.upgrade() else { return };
+            match change {
+                Change::Track if view.root.is_mapped() => view.reload(),
+                Change::Playing => {
+                    let playing = player.playing;
+                    view.playing.update(playing, |cell| {
+                        Self::mark(cell, playing.contains_opt(cell.track()))
+                    });
+                }
+                _ => {}
             }
         });
         let click = gtk::GestureClick::new();

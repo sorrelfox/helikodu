@@ -273,3 +273,33 @@ fn discs_in_folders_and_credits_from_real_tags() {
         assert_eq!(people.items[0].track_count, 3);
     }
 }
+
+#[test]
+fn padded_tag_values_are_stored_trimmed() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let root = folder("catalog-padded");
+    flac(
+        root.join("Padded/1.flac"),
+        440,
+        1,
+        &[
+            ("title", "\u{FEFF} Riser \u{A0}\u{200B}"),
+            ("artist", "\u{A0}Dance with the Dead\t"),
+            ("album", "  Near Dark  "),
+        ],
+    );
+    let library = Library::open(&DatabaseConfig::in_memory()).unwrap();
+    scan(&library, &root);
+    let albums = library.albums(&AlbumQuery::default()).unwrap();
+    assert_eq!(albums.total, 1, "{albums:?}");
+    assert_eq!(albums.items[0].title.as_deref(), Some("Near Dark"));
+    let detail = library.album(albums.items[0].id).unwrap().unwrap();
+    let track = &detail.discs[0].tracks[0];
+    assert_eq!(track.title.as_deref(), Some("Riser"));
+    assert_eq!(
+        albums.items[0].artist.as_deref(),
+        Some("Dance with the Dead")
+    );
+}

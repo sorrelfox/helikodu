@@ -21,7 +21,7 @@ use crate::backend::{
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::{AlbumItem, CoverCache};
-use crate::playback::{Change, Playback};
+use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
 use crate::views::album_tile::AlbumTile;
 use crate::views::artist_photo;
@@ -94,7 +94,7 @@ pub(crate) struct ArtistsView {
     quiet: Cell<bool>,
     generation: Cell<u64>,
     playing_album: Cell<Option<AlbumKey>>,
-    playing_track: Cell<Option<TrackKey>>,
+    playing_tracks: Cell<PlayingKeys>,
     tiles: RefCell<Vec<AlbumTile>>,
     letters: Rc<RefCell<std::collections::HashMap<String, String>>>,
     /// The avatar of each list row, by artist.
@@ -288,7 +288,7 @@ impl ArtistsView {
             quiet: Cell::new(false),
             generation: Cell::new(0),
             playing_album: Cell::new(None),
-            playing_track: Cell::new(None),
+            playing_tracks: Cell::new(PlayingKeys::default()),
             tiles: RefCell::new(Vec::new()),
             letters: Rc::default(),
             row_avatars: RefCell::default(),
@@ -473,17 +473,21 @@ impl ArtistsView {
         });
         let weak = Rc::downgrade(self);
         playback.connect(move |player, change| {
-            if let Some(view) = weak.upgrade()
-                && change == Change::Track
-            {
-                view.playing_album.set(player.album());
-                view.playing_track
-                    .set(player.now.as_ref().map(|n| n.track.key));
-                for tile in view.tiles.borrow().iter() {
-                    tile.cover()
-                        .set_playing(tile.key().is_some() && tile.key() == player.album());
+            let Some(view) = weak.upgrade() else { return };
+            match change {
+                Change::Track => {
+                    view.playing_album.set(player.album());
+                    for tile in view.tiles.borrow().iter() {
+                        tile.cover()
+                            .set_playing(tile.key().is_some() && tile.key() == player.album());
+                    }
                 }
-                view.show_most_played();
+                Change::Playing
+                    if view.playing_tracks.replace(player.playing) != player.playing =>
+                {
+                    view.mark_most_played();
+                }
+                _ => {}
             }
         });
     }
@@ -761,12 +765,11 @@ impl ArtistsView {
         let detail = self.detail_data.borrow();
         let tracks: &[TrackRow] = detail.as_ref().map_or(&[], |d| &d.most_played);
         self.most_played_box.set_visible(!tracks.is_empty());
-        let playing = self.playing_track.get();
         for track in tracks {
             let row = gtk::ListBoxRow::new();
+            row.set_widget_name(&track.key.0.to_string());
             let line = gtk::Box::new(gtk::Orientation::Horizontal, 16);
-            let on = Some(track.key) == playing;
-            let title = TitleLine::new(&track.title, if on { &["hk-playing"] } else { &[] });
+            let title = TitleLine::new(&track.title, &[]);
             title.set_copies(track.key, track.copies);
             line.append(&title);
             let album = label(&track.album_title, &["hk-t2"]);
@@ -789,6 +792,39 @@ impl ArtistsView {
                 &[&track.title, &track.album_title],
             ))]);
             self.most_played.append(&row);
+        }
+        self.mark_most_played();
+    }
+
+    /// Marks the row of the playing track in Most played: the playing-row
+    /// look, with the indicator before the title as the table has no number
+    /// column.
+    fn mark_most_played(&self) {
+        let playing = self.playing_tracks.get();
+        let mut child = self.most_played.first_child();
+        while let Some(widget) = child {
+            child = widget.next_sibling();
+            let Some(row) = widget.downcast_ref::<gtk::ListBoxRow>() else {
+                continue;
+            };
+            let on = row
+                .widget_name()
+                .parse::<u64>()
+                .is_ok_and(|key| playing.contains(TrackKey(key)));
+            for class in ["playing", "hk-playing"] {
+                if on {
+                    row.add_css_class(class);
+                } else {
+                    row.remove_css_class(class);
+                }
+            }
+            if let Some(title) = row
+                .child()
+                .and_then(|line| line.first_child())
+                .and_downcast::<TitleLine>()
+            {
+                title.set_playing(on, true);
+            }
         }
     }
 

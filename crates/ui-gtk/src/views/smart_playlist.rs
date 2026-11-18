@@ -30,10 +30,11 @@ use crate::dialogs::common::dropdown;
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::{CoverCache, TrackItem};
+use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::artists::button;
-use crate::views::table::{TableCell, cell_at, selected_positions};
-use crate::widgets::{CoverArt, label};
+use crate::views::table::{PlayingRows, TableCell, cell_at, selected_positions};
+use crate::widgets::{CoverArt, PlayingIndicator, label};
 
 /// The columns of a table: label, width (0 shares the rest), right-aligned.
 fn columns(editing: bool) -> Vec<(String, i32, bool)> {
@@ -121,6 +122,8 @@ pub(crate) struct SmartPlaylistView {
     /// Set while the controls are filled in, so their signals change nothing.
     filling: Cell<bool>,
     generation: Cell<u64>,
+    /// The cells of both tables, marked where the playing track is.
+    playing: PlayingRows,
 }
 
 impl std::fmt::Debug for SmartPlaylistView {
@@ -183,7 +186,11 @@ fn live() -> gtk::Box {
 
 impl SmartPlaylistView {
     /// The page over `backend`.
-    pub(crate) fn new(backend: &Backend, covers: &Rc<CoverCache>) -> Rc<Self> {
+    pub(crate) fn new(
+        backend: &Backend,
+        covers: &Rc<CoverCache>,
+        playback: &Rc<Playback>,
+    ) -> Rc<Self> {
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
         root.add_css_class("hk-smart-playlist");
         let hero = gtk::Box::new(gtk::Orientation::Horizontal, 20);
@@ -389,12 +396,26 @@ impl SmartPlaylistView {
             editing: Cell::new(false),
             filling: Cell::new(false),
             generation: Cell::new(0),
+            playing: PlayingRows::default(),
         });
         view.fill_header(false);
         view.fill_header(true);
         view.view.list.set_factory(Some(&view.factory(false)));
         view.results.list.set_factory(Some(&view.factory(true)));
         view.connect(&play, &shuffle, &more);
+        let weak = Rc::downgrade(&view);
+        playback.connect(move |player, change| {
+            if let Some(view) = weak.upgrade()
+                && change == Change::Playing
+            {
+                view.playing.update(player.playing, |cell| {
+                    // The cell's own `follow` callback shows it again.
+                    if let Some(item) = cell.item() {
+                        item.emit_by_name::<()>("loaded", &[]);
+                    }
+                });
+            }
+        });
         view
     }
 
@@ -468,6 +489,7 @@ impl SmartPlaylistView {
 
     fn factory(self: &Rc<Self>, editing: bool) -> gtk::SignalListItemFactory {
         let factory = gtk::SignalListItemFactory::new();
+        let weak = Rc::downgrade(self);
         factory.connect_setup(move |_, item| {
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
                 return;
@@ -495,7 +517,16 @@ impl SmartPlaylistView {
                     l.set_hexpand(true);
                     l.set_max_width_chars(1);
                 }
-                if i == 1 && !editing {
+                if i == 0 {
+                    // The number, or the indicator in the playing row.
+                    let lead = gtk::Stack::new();
+                    lead.set_size_request(width, -1);
+                    lead.add_named(&l, Some("number"));
+                    let indicator = PlayingIndicator::default();
+                    indicator.set_halign(gtk::Align::End);
+                    lead.add_named(&indicator, Some("playing"));
+                    line.append(&lead);
+                } else if i == 1 && !editing {
                     let cell = gtk::Box::new(gtk::Orientation::Horizontal, 10);
                     cell.set_hexpand(true);
                     let cover = CoverArt::new(24, 4.0);
@@ -507,7 +538,11 @@ impl SmartPlaylistView {
                     line.append(&l);
                 }
             }
-            item.set_child(Some(&TableCell::new(&line)));
+            let cell = TableCell::new(&line);
+            if let Some(view) = weak.upgrade() {
+                view.playing.add(&cell);
+            }
+            item.set_child(Some(&cell));
         });
         let weak = Rc::downgrade(self);
         factory.connect_bind(move |_, item| {
@@ -522,7 +557,20 @@ impl SmartPlaylistView {
                 return;
             };
             cell.set_position(Some(track.position()));
-            view.show_row(&cell, &track, editing);
+            let w = Rc::downgrade(&view);
+            cell.follow(&track, move |cell, track| {
+                if let Some(view) = w.upgrade() {
+                    view.show_row(cell, track, editing);
+                }
+            });
+        });
+        factory.connect_unbind(|_, item| {
+            if let Some(cell) = item
+                .downcast_ref::<gtk::ListItem>()
+                .and_then(|i| i.child().and_downcast::<TableCell>())
+            {
+                cell.forget();
+            }
         });
         factory
     }
@@ -550,6 +598,8 @@ impl SmartPlaylistView {
         if !editing {
             texts.push(row.duration.map(format::duration).unwrap_or_default());
         }
+        let playing = !row.missing && self.playing.contains(Some(row.key));
+        cell.set_playing(playing);
         let mut child = line.first_child();
         let mut i = 0;
         while let Some(widget) = child {
@@ -557,6 +607,11 @@ impl SmartPlaylistView {
             let text = texts.get(i).cloned().unwrap_or_default();
             if let Some(l) = widget.downcast_ref::<gtk::Label>() {
                 l.set_text(&text);
+            } else if let Some(lead) = widget.downcast_ref::<gtk::Stack>() {
+                lead.set_visible_child_name(if playing { "playing" } else { "number" });
+                if let Some(l) = lead.child_by_name("number").and_downcast::<gtk::Label>() {
+                    l.set_text(&text);
+                }
             } else if let Some(cell_box) = widget.downcast_ref::<gtk::Box>() {
                 if let Some(cover) = cell_box.first_child().and_downcast::<CoverArt>() {
                     self.covers.show(&cover, row.cover, row.cover_seed, 24);

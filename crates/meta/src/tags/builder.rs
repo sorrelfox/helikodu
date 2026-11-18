@@ -92,14 +92,14 @@ impl TagBuilder {
 
     /// Adds a credited person. `field` is the role's field.
     pub(crate) fn add_credit(&mut self, field: Field, name: &str, instrument: Option<&str>) {
-        let name = name.trim();
+        let name = trim_text(name);
         let Some(role) = credit_role(field) else {
             return;
         };
         if name.is_empty() || !self.owns(List::Field(field)) {
             return;
         }
-        let instrument = instrument.map(str::trim).filter(|i| !i.is_empty());
+        let instrument = instrument.map(trim_text).filter(|i| !i.is_empty());
         self.tags.credits.push(Credit {
             role,
             name: name.to_owned(),
@@ -109,8 +109,8 @@ impl TagBuilder {
 
     /// Adds one value of a field the tag does not map: kept in `extra` under `key`.
     pub(crate) fn apply_unknown(&mut self, key: &str, value: &str) {
-        let key = key.trim().to_lowercase();
-        let value = value.trim();
+        let key = trim_text(key).to_lowercase();
+        let value = trim_text(value);
         if key.is_empty() || value.is_empty() {
             return;
         }
@@ -138,7 +138,7 @@ impl TagBuilder {
 
     /// Adds one value of `field`. The value is trimmed; an empty value is ignored.
     pub(crate) fn apply(&mut self, field: Field, value: &str) {
-        let value = value.trim_matches(|c: char| c.is_whitespace() || c == '\0');
+        let value = trim_text(value);
         if value.is_empty() {
             return;
         }
@@ -308,6 +308,20 @@ impl TagBuilder {
     }
 }
 
+/// Whether `c` is invisible padding at either end of a tag value: Unicode
+/// white space (no-break spaces included), control characters such as a
+/// carriage return, tab or NUL, and the zero-width space, joiners and byte
+/// order mark.
+fn is_padding(c: char) -> bool {
+    c.is_whitespace() || c.is_control() || matches!(c, '\u{200B}'..='\u{200D}' | '\u{FEFF}')
+}
+
+/// `text` without invisible padding before and after it; the characters
+/// inside are kept.
+pub(crate) fn trim_text(text: &str) -> &str {
+    text.trim_matches(is_padding)
+}
+
 fn join(values: &[String]) -> Option<String> {
     (!values.is_empty()).then(|| values.join("; "))
 }
@@ -447,6 +461,33 @@ fn genre_reference(reference: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn padding_is_trimmed() {
+        assert_eq!(trim_text("  Riser   "), "Riser");
+        assert_eq!(trim_text("\u{A0}Riser\u{A0}"), "Riser");
+        assert_eq!(trim_text("Riser\r\n\t\0"), "Riser");
+        assert_eq!(trim_text("\u{FEFF}\u{200B}Riser\u{200C}\u{200D}"), "Riser");
+        assert_eq!(
+            trim_text("\u{2003}They're Here (Intro)\u{3000}"),
+            "They're Here (Intro)"
+        );
+        assert_eq!(
+            trim_text("A  B\u{200B}C"),
+            "A  B\u{200B}C",
+            "the inside is kept"
+        );
+        assert_eq!(trim_text(" \u{200B} "), "");
+        let mut b = TagBuilder::new();
+        b.begin_tag();
+        b.apply(Field::Title, "\u{FEFF} Riser \u{A0}\r");
+        b.apply(Field::Artist, "\tDance with the Dead\u{200B}");
+        b.apply(Field::Composer, " Someone\u{A0}");
+        let t = b.finish();
+        assert_eq!(t.title.as_deref(), Some("Riser"));
+        assert_eq!(t.artist.as_deref(), Some("Dance with the Dead"));
+        assert_eq!(t.credits[0].name, "Someone");
+    }
 
     #[test]
     fn numbers() {

@@ -115,7 +115,7 @@ impl MainWindow {
         );
         let folders = FoldersView::new(backend, playback);
         let playlist = PlaylistView::new(backend, playback, covers);
-        let smart = SmartPlaylistView::new(backend, covers);
+        let smart = SmartPlaylistView::new(backend, covers, playback);
         smart.install_actions();
         let search = SearchView::new(backend, covers, playback);
         imp.views.add_named(&tracks.root, Some("tracks"));
@@ -1490,6 +1490,73 @@ impl MainWindow {
     pub fn demo_rate_track_row(&self, position: u32, stars: Option<u8>) -> bool {
         self.pages()
             .is_some_and(|p| p.tracks.demo_rate(position, stars))
+    }
+
+    /// The rows marked as playing and whether each playing indicator moves,
+    /// in the visible view, or with `whole` in the whole window (for tests).
+    /// A table row counts once, however many of its cells are marked.
+    #[doc(hidden)]
+    pub fn playing_marks(&self, whole: bool) -> (usize, Vec<bool>) {
+        let root: gtk::Widget = if whole {
+            self.clone().upcast()
+        } else {
+            match self.imp().views.visible_child() {
+                Some(view) => view,
+                None => return (0, Vec::new()),
+            }
+        };
+        let mut rows = 0;
+        let mut positions = std::collections::HashSet::new();
+        let mut moving = Vec::new();
+        let mut stack = vec![root];
+        while let Some(widget) = stack.pop() {
+            if !widget.is_mapped() {
+                continue;
+            }
+            if let Some(indicator) = widget.downcast_ref::<crate::widgets::PlayingIndicator>() {
+                moving.push(indicator.is_moving());
+            }
+            if widget.has_css_class("hk-playing") {
+                if let Some(cell) = widget.downcast_ref::<crate::views::table::TableCell>() {
+                    positions.insert(cell.position());
+                } else if widget.is::<gtk::ListBoxRow>() {
+                    rows += 1;
+                }
+            }
+            let mut child = widget.first_child();
+            while let Some(c) = child {
+                child = c.next_sibling();
+                stack.push(c);
+            }
+        }
+        (rows + positions.len(), moving)
+    }
+
+    /// For each table cell of the visible view that shows a copies badge: the
+    /// badge's left edge and the right edge of the text drawn (for tests).
+    #[doc(hidden)]
+    pub fn copies_badge_edges(&self) -> Vec<(f32, i32)> {
+        let Some(root) = self.imp().views.visible_child() else {
+            return Vec::new();
+        };
+        let mut edges = Vec::new();
+        let mut stack = vec![root];
+        while let Some(widget) = stack.pop() {
+            if !widget.is_mapped() {
+                continue;
+            }
+            if let Some(cell) = widget.downcast_ref::<crate::views::table::TableCell>()
+                && let Some((badge, text)) = cell.badge_and_text()
+            {
+                edges.push((badge.x(), text));
+            }
+            let mut child = widget.first_child();
+            while let Some(c) = child {
+                child = c.next_sibling();
+                stack.push(c);
+            }
+        }
+        edges
     }
 
     /// The rating the track table's row at `position` shows, if it is shown

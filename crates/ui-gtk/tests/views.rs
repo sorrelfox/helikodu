@@ -905,6 +905,92 @@ fn rating_from_the_context_menu_updates_the_rows(app: &gtk::Application) {
     window.destroy();
 }
 
+/// The rows marked as playing in the visible view, once the marks settle.
+fn wait_for_marks(window: &MainWindow, what: &str, rows: usize, moving: bool) {
+    wait_for(what, 3, || {
+        let (marked, indicators) = window.playing_marks(false);
+        marked == rows && indicators.len() == rows && indicators.iter().all(|m| *m == moving)
+    });
+}
+
+/// A track started from Tracks is marked wherever it is listed: on its
+/// artist page (Most played), its album page and in the search results,
+/// and in the queue panel. The indicator moves while it plays and stands
+/// still when paused.
+fn the_playing_track_is_marked_in_every_list(app: &gtk::Application) {
+    let (window, backend) = window(app);
+    window.open_page("tracks");
+    wait_for("the first rows", 2, || window.track_table_stats().1 > 0);
+    let library = backend.library();
+    let (artist, track) = window
+        .track_keys(50)
+        .into_iter()
+        .find_map(|key| {
+            let row = library.track_rows(&[key]).ok()?.pop()?;
+            let album = library.album(row.album).ok()??;
+            let artist = library.find_artist(&album.row.artist).ok()??;
+            let detail = library.artist(artist).ok()??;
+            Some((artist, detail.most_played.first()?.clone()))
+        })
+        .expect("an artist with most played tracks");
+    backend.send(PlayerRequest::PlayTracks {
+        tracks: vec![track.key],
+        start: 0,
+        title: String::new(),
+        shuffle: false,
+    });
+    wait_for("playback", 2, || window.is_playing());
+
+    window.demo_open_artist(artist);
+    wait_for_marks(&window, "the artist page's mark", 1, true);
+    backend.send(PlayerRequest::PlayPause);
+    wait_for("the pause", 2, || !window.is_playing());
+    wait_for_marks(&window, "the paused mark", 1, false);
+    backend.send(PlayerRequest::PlayPause);
+    wait_for_marks(&window, "the mark playing again", 1, true);
+
+    window.open_album(track.album);
+    wait_for_marks(&window, "the album page's mark", 1, true);
+
+    window.search_text(&track.title);
+    wait_for("the search results", 3, || {
+        window.visible_view().as_deref() == Some("search") && window.playing_marks(false).0 >= 1
+    });
+    let (_, indicators) = window.playing_marks(false);
+    assert!(indicators.iter().all(|m| *m), "the search result moves");
+
+    let (_, everywhere) = window.playing_marks(true);
+    assert!(
+        everywhere.len() > indicators.len(),
+        "the queue panel marks the playing row too"
+    );
+    window.destroy();
+}
+
+/// The copies badge follows the end of the title in recycled cells: after
+/// scrolling, it sits right after the text, never over it nor far after it.
+fn the_copies_badge_follows_the_title(app: &gtk::Application) {
+    let (window, _) = window(app);
+    window.open_page("tracks");
+    wait_for("the first rows", 2, || window.track_table_stats().1 > 0);
+    let adjustment = window.track_table_adjustment().unwrap();
+    // Steps of a few rows, so cells are recycled for other titles while
+    // their badge stays shown.
+    for step in 0..60 {
+        adjustment.set_value(adjustment.value() + 30.0 * f64::from(step % 7 + 1));
+        spin(40);
+        let edges = window.copies_badge_edges();
+        for (badge, text) in edges {
+            let gap = badge - text as f32;
+            assert!(
+                (5.0..=7.0).contains(&gap),
+                "the badge sits 6 px after the text: {badge} after {text}"
+            );
+        }
+    }
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 fn history_lists_listens_by_day(app: &gtk::Application) {
@@ -922,6 +1008,14 @@ fn history_lists_listens_by_day(app: &gtk::Application) {
 }
 
 const TESTS: &[Test] = &[
+    (
+        "the_playing_track_is_marked_in_every_list",
+        the_playing_track_is_marked_in_every_list,
+    ),
+    (
+        "the_copies_badge_follows_the_title",
+        the_copies_badge_follows_the_title,
+    ),
     ("tracks_load_lazily_and_sort", tracks_load_lazily_and_sort),
     (
         "artists_genres_and_folders_list",

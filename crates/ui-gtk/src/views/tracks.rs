@@ -31,7 +31,7 @@ use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
 use crate::views::facet_browser::FacetBrowser;
-use crate::views::table::{TableCell, cell_at, selected_positions};
+use crate::views::table::{PlayingRows, TableCell, cell_at, selected_positions};
 use crate::widgets::{PlayingIndicator, RatingStars, label};
 
 /// How many tracks from the activated one a play request takes along.
@@ -149,7 +149,7 @@ pub(crate) struct TracksView {
     generation: Cell<u64>,
     filter_generation: Cell<u64>,
     syncing: Cell<bool>,
-    playing: Cell<Option<TrackKey>>,
+    playing: PlayingRows,
     cells: RefCell<Vec<glib::WeakRef<TableCell>>>,
     title: RefCell<String>,
     loaded: Cell<bool>,
@@ -291,7 +291,7 @@ impl TracksView {
                 generation: Cell::new(0),
                 filter_generation: Cell::new(0),
                 syncing: Cell::new(false),
-                playing: Cell::new(None),
+                playing: PlayingRows::default(),
                 cells: RefCell::new(Vec::new()),
                 title: RefCell::new(tr("Tracks")),
                 loaded: Cell::new(false),
@@ -406,6 +406,7 @@ impl TracksView {
             cell.set_widget_name(column_id(column));
             if let Some(view) = weak.upgrade() {
                 view.cells.borrow_mut().push(cell.downgrade());
+                view.playing.add(&cell);
                 if let Some(stars) = cell.child().and_downcast::<RatingStars>() {
                     let weak_view = Rc::downgrade(&view);
                     let weak_cell = cell.downgrade();
@@ -461,12 +462,8 @@ impl TracksView {
 
     fn show_cell(&self, cell: &TableCell, track: &TrackItem, column: TrackColumn) {
         let row = track.row();
-        let playing = self.playing.get() == Some(track.key());
-        if playing {
-            cell.add_css_class("hk-playing");
-        } else {
-            cell.remove_css_class("hk-playing");
-        }
+        let playing = self.playing.contains(Some(track.key()));
+        cell.set_playing(playing);
         let text =
             |row: Option<&Rc<TrackRow>>| row.map(|r| cell_text(r, column)).unwrap_or_default();
         match column {
@@ -508,12 +505,14 @@ impl TracksView {
         let weak = Rc::downgrade(self);
         playback.connect(move |view, change| {
             if let Some(this) = weak.upgrade()
-                && change == Change::Track
+                && change == Change::Playing
             {
-                let key = view.now.as_ref().map(|n| n.track.key);
-                if this.playing.replace(key) != key {
-                    this.refresh_cells();
-                }
+                this.playing.update(view.playing, |cell| {
+                    // The cell's own `follow` callback redraws it.
+                    if let Some(item) = cell.item() {
+                        item.emit_by_name::<()>("loaded", &[]);
+                    }
+                });
             }
         });
         let weak = Rc::downgrade(self);
@@ -755,23 +754,6 @@ impl TracksView {
         );
         self.status_selection
             .set_text(&fill(&tr("{} · {}"), &[&count, &format::duration(length)]));
-    }
-
-    fn refresh_cells(&self) {
-        let playing = self.playing.get();
-        self.cells.borrow_mut().retain(|weak| {
-            let Some(cell) = weak.upgrade() else {
-                return false;
-            };
-            if let Some(item) = cell.item() {
-                let on = Some(item.key()) == playing;
-                if on != cell.has_css_class("hk-playing") {
-                    // The cell's own `follow` callback redraws it.
-                    item.emit_by_name::<()>("loaded", &[]);
-                }
-            }
-            true
-        });
     }
 
     /// Shows the tracks of `scope`, as titled.

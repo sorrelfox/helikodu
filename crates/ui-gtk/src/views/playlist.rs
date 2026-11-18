@@ -28,7 +28,7 @@ use crate::backend::{Backend, PlayerRequest, PlaylistKey, PlaylistRow, TrackKey,
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::{CoverCache, TrackItem};
-use crate::playback::{Change, Playback};
+use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Origin, Target};
 use crate::views::artists::button;
 use crate::views::drag::DraggedTracks;
@@ -133,7 +133,7 @@ pub(crate) struct PlaylistView {
     rows: RefCell<Vec<TrackRow>>,
     info: RefCell<Option<PlaylistRow>>,
     generation: Cell<u64>,
-    playing: Cell<Option<TrackKey>>,
+    playing: Cell<PlayingKeys>,
     cells: RefCell<Vec<glib::WeakRef<TableCell>>>,
     drop_line: RefCell<Option<TableCell>>,
     header: gtk::Box,
@@ -261,7 +261,7 @@ impl PlaylistView {
             rows: RefCell::new(Vec::new()),
             info: RefCell::new(None),
             generation: Cell::new(0),
-            playing: Cell::new(None),
+            playing: Cell::new(PlayingKeys::default()),
             cells: RefCell::new(Vec::new()),
             drop_line: RefCell::new(None),
             header,
@@ -493,7 +493,7 @@ impl PlaylistView {
             return;
         };
         handle.set_opacity(if self.locked() { 0.0 } else { 1.0 });
-        let playing = !row.missing && self.playing.get() == Some(row.key);
+        let playing = !row.missing && self.playing.get().contains(row.key);
         if let Some(lead) = lead.downcast_ref::<gtk::Stack>() {
             lead.set_visible_child_name(if playing { "playing" } else { "number" });
             if let Some(number) = lead.child_by_name("number").and_downcast::<gtk::Label>() {
@@ -628,12 +628,10 @@ impl PlaylistView {
         let weak = Rc::downgrade(self);
         playback.connect(move |player, change| {
             if let Some(view) = weak.upgrade()
-                && change == Change::Track
+                && change == Change::Playing
+                && view.playing.replace(player.playing) != player.playing
             {
-                let key = player.now.as_ref().map(|n| n.track.key);
-                if view.playing.replace(key) != key {
-                    view.redraw();
-                }
+                view.redraw();
             }
         });
         let weak = Rc::downgrade(self);

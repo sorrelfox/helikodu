@@ -9,6 +9,10 @@
 //! rating stars, the playing indicator, a playlist line). A table keeps cells
 //! for a couple of hundred rows, so a label in a box per cell would double the
 //! widgets of the table.
+//!
+//! [`PlayingRows`] keeps a table's cells marked as the playing row's: every
+//! table asks the same [`PlayingKeys`], and shows again only the cells whose
+//! mark changes.
 
 use std::cell::{Cell, RefCell};
 
@@ -17,7 +21,9 @@ use gtk::pango;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
+use crate::backend::TrackKey;
 use crate::models::TrackItem;
+use crate::playback::PlayingKeys;
 
 /// The gap between the text and the copies badge.
 const BADGE_GAP: i32 = 6;
@@ -37,6 +43,8 @@ mod imp {
         pub(super) features: Cell<Option<&'static str>>,
         /// The copies badge after the text, once a row with copies was shown.
         pub(super) badge: RefCell<Option<gtk::Button>>,
+        /// The track of the row shown, for a cell that follows no item.
+        pub(super) track: Cell<Option<TrackKey>>,
     }
 
     #[glib::object_subclass]
@@ -182,7 +190,7 @@ mod imp {
 
         /// A layout of the text in the cell's font; made when needed, not
         /// kept, as the cell's render node keeps the glyphs.
-        fn layout(&self) -> pango::Layout {
+        pub(super) fn layout(&self) -> pango::Layout {
             let layout = self.obj().create_pango_layout(Some(&self.text.borrow()));
             layout.set_single_paragraph_mode(true);
             if let Some(features) = self.features.get() {
@@ -233,8 +241,9 @@ impl TableCell {
         cell
     }
 
-    /// Shows `text`.
+    /// Shows `text`, without padding before and after it.
     pub(crate) fn set_text(&self, text: &str) {
+        let text = crate::format::trimmed(text);
         let imp = self.imp();
         if *imp.text.borrow() == text {
             return;
@@ -244,9 +253,24 @@ impl TableCell {
         self.update_property(&[gtk::accessible::Property::Label(text)]);
         if was_empty != text.is_empty() {
             self.queue_resize();
+        } else if imp.shown_badge().is_some() {
+            // The badge follows the end of the text: place it again, or a
+            // recycled cell keeps it where the last title ended.
+            self.queue_allocate();
         } else {
             self.queue_draw();
         }
+    }
+
+    /// Where the copies badge is and how wide the text is drawn, in the
+    /// cell's coordinates (for tests).
+    pub(crate) fn badge_and_text(&self) -> Option<(gtk::graphene::Rect, i32)> {
+        let imp = self.imp();
+        let badge = imp.shown_badge()?;
+        let bounds = badge.compute_bounds(self)?;
+        let room = (self.width() - badge.width() - BADGE_GAP).max(0);
+        let layout = imp.layout();
+        Some((bounds, layout.pixel_size().0.min(room)))
     }
 
     /// The text shown.
@@ -320,6 +344,33 @@ impl TableCell {
         self.imp().loaded.replace(Some(id));
     }
 
+    /// Sets the track of the row shown, for a cell that follows no item.
+    pub(crate) fn set_track(&self, track: Option<TrackKey>) {
+        self.imp().track.set(track);
+    }
+
+    /// The track of the row shown: the one set, or the followed item's.
+    pub(crate) fn track(&self) -> Option<TrackKey> {
+        self.imp()
+            .track
+            .get()
+            .or_else(|| self.imp().item.borrow().as_ref().map(TrackItem::key))
+    }
+
+    /// Whether the cell is marked as the playing row's.
+    pub(crate) fn is_playing(&self) -> bool {
+        self.has_css_class("hk-playing")
+    }
+
+    /// Marks the cell as the playing row's (accent text, weight 600) or not.
+    pub(crate) fn set_playing(&self, playing: bool) {
+        if playing {
+            self.add_css_class("hk-playing");
+        } else {
+            self.remove_css_class("hk-playing");
+        }
+    }
+
     /// The item shown.
     pub(crate) fn item(&self) -> Option<TrackItem> {
         self.imp().item.borrow().clone()
@@ -330,6 +381,44 @@ impl TableCell {
         let imp = self.imp();
         if let (Some(item), Some(id)) = (imp.item.take(), imp.loaded.take()) {
             item.disconnect(id);
+        }
+    }
+}
+
+/// The cells of a table and the tracks whose rows show as playing.
+#[derive(Debug, Default)]
+pub(crate) struct PlayingRows {
+    keys: Cell<PlayingKeys>,
+    cells: RefCell<Vec<glib::WeakRef<TableCell>>>,
+}
+
+impl PlayingRows {
+    /// Keeps `cell`, made by the table's factory.
+    pub(crate) fn add(&self, cell: &TableCell) {
+        self.cells.borrow_mut().push(cell.downgrade());
+    }
+
+    /// Whether the row of `track` shows as playing.
+    pub(crate) fn contains(&self, track: Option<TrackKey>) -> bool {
+        track.is_some_and(|t| self.keys.get().contains(t))
+    }
+
+    /// Takes the playing `keys`; `show` shows again each cell whose row
+    /// gains or loses the mark.
+    pub(crate) fn update(&self, keys: PlayingKeys, show: impl Fn(&TableCell)) {
+        if self.keys.replace(keys) == keys {
+            return;
+        }
+        let cells: Vec<TableCell> = {
+            let mut cells = self.cells.borrow_mut();
+            cells.retain(|w| w.upgrade().is_some());
+            cells.iter().filter_map(glib::WeakRef::upgrade).collect()
+        };
+        for cell in cells {
+            let Some(track) = cell.track() else { continue };
+            if keys.contains(track) != cell.is_playing() {
+                show(&cell);
+            }
         }
     }
 }

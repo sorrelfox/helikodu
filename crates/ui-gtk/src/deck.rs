@@ -528,7 +528,7 @@ impl Deck {
             Change::Loop => self.show_loop(view),
             Change::Sleep => self.show_sleep(view),
             Change::Waveform => imp.seek_bar.set_peaks(view.waveform.as_deref()),
-            Change::Queue | Change::Stats | Change::Cursor => {}
+            Change::Queue | Change::Stats | Change::Cursor | Change::Playing => {}
         }
     }
 

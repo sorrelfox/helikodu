@@ -134,6 +134,7 @@ pub(super) fn chapter_row(
     let number = index + 1;
     if playing {
         row.add_css_class("playing");
+        row.add_css_class("hk-playing");
         let indicator = PlayingIndicator::default();
         indicator.set_size_request(24, -1);
         indicator.set_halign(gtk::Align::End);
