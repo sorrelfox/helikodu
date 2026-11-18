@@ -14,10 +14,11 @@ This guide describes the current version. Helikodu is young: some menu entries a
 8. [Playlists and ratings](playlists-and-ratings.md)
 9. [Editing tags](tags.md)
 9. [Converting, syncing and covers](converting-and-sync.md)
-10. [Settings](settings.md)
-11. [Keyboard shortcuts](keyboard-shortcuts.md)
-12. [The command line](command-line.md)
-13. [Where Helikodu keeps its files](files.md)
-14. [Troubleshooting](troubleshooting.md)
+10. [Organizing, checking and finding files](file-tools.md)
+11. [Settings](settings.md)
+12. [Keyboard shortcuts](keyboard-shortcuts.md)
+13. [The command line](command-line.md)
+14. [Where Helikodu keeps its files](files.md)
+15. [Troubleshooting](troubleshooting.md)
 
 See also the [FAQ](../faq.md) and the manual pages `helikodu(1)` and `helikodu-cli(1)`.

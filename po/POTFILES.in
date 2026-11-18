@@ -24,6 +24,7 @@ crates/ui-gtk/src/window.rs
 crates/ui-gtk/src/window/sidebar.rs
 crates/ui-gtk/src/window/toast_overlay.rs
 crates/ui-gtk/src/backend/service/services.rs
+crates/ui-gtk/src/backend/services.rs
 crates/ui-gtk/src/dialogs/about.rs
 crates/ui-gtk/src/dialogs/common.rs
 crates/ui-gtk/src/dialogs/first_run.rs
@@ -76,6 +77,11 @@ crates/ui-gtk/src/tools/tag_tools.rs
 crates/ui-gtk/src/tools/tag_preview.rs
 crates/ui-gtk/src/views/tracks/edit.rs
 crates/ui-gtk/src/window/tag_undo.rs
+crates/ui-gtk/src/tools/file_tools.rs
+crates/ui-gtk/src/tools/organizer.rs
+crates/ui-gtk/src/tools/missing_files.rs
+crates/ui-gtk/src/tools/verify_files.rs
+crates/ui-gtk/src/tools/rename.rs
 crates/ui-gtk/src/widgets/copies_badge.rs
 crates/ui-gtk/src/backend.rs
 crates/ui-gtk/src/query_text.rs

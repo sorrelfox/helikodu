@@ -200,4 +200,8 @@ impl Decoder for FfmpegDecoder {
     fn seek(&mut self, to: MediaTime) -> Result<(), DecodeError> {
         self.decoder.seek(to).map_err(|e| decode_error(&e))
     }
+
+    fn skipped_errors(&self) -> (u64, Option<u64>) {
+        self.decoder.errors_skipped()
+    }
 }

@@ -20,11 +20,17 @@ use super::super::services::{
     StorageUsage, TagEdit, TagField, TagStepResult, Versions, WriteResult,
 };
 use super::super::services::{
+    CancelToken, FileProgress, FileRunId, FileRunSummary, FoundFile, MissingFile, MoveRequest,
+    OrganizeOptions, PlannedMove, RelinkOutcome, RunReport, SavedPattern, VerifyReport,
+    VerifyScope,
+};
+use super::super::services::{
     CopyGroup, DuplicateCounts, DuplicateGroup, FileId, KeepRule, MatchBy, TrashResult,
 };
 use super::super::services::{LimiterReading, LoudnessCoverage, LoudnessScope, LoudnessStatus};
 use super::super::{BackendError, OutputInfo, SignalState, TrackKey, Update};
 use super::SampleLibrary;
+use super::files::SampleFiles;
 
 /// The tag edits of the sample tracks, field by field.
 type Edits = HashMap<TrackKey, BTreeMap<TagField, Vec<String>>>;
@@ -49,6 +55,7 @@ pub struct MemoryServices {
     library: Option<Arc<SampleLibrary>>,
     updates: Option<async_channel::Sender<Update>>,
     state: Mutex<MemoryState>,
+    files: SampleFiles,
 }
 
 impl Default for MemoryServices {
@@ -73,6 +80,7 @@ impl MemoryServices {
         Self {
             library,
             updates,
+            files: SampleFiles::new(music_folder()),
             state: Mutex::new(MemoryState {
                 settings: Arc::new(settings),
                 output: OutputSelection::default(),
@@ -677,6 +685,137 @@ impl Services for MemoryServices {
             .as_ref()
             .map(|l| l.sample_duplicate_counts())
             .unwrap_or_default())
+    }
+
+    fn plan_organize(
+        &self,
+        tracks: Option<&[TrackKey]>,
+        options: &OrganizeOptions,
+    ) -> Result<Vec<PlannedMove>, BackendError> {
+        let _ = tracks;
+        self.files.plan(options)
+    }
+
+    fn organize(
+        &self,
+        moves: &[MoveRequest],
+        pattern: Option<&str>,
+        companions: bool,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<RunReport, BackendError> {
+        let _ = (companions, cancel);
+        let report = self.files.organize(moves, pattern);
+        progress(moves.len(), moves.len());
+        self.emit(Update::LibraryChanged);
+        Ok(report)
+    }
+
+    fn last_file_run(&self) -> Result<Option<FileRunSummary>, BackendError> {
+        Ok(self.files.last_run())
+    }
+
+    fn step_file_run(
+        &self,
+        run: FileRunId,
+        redo: bool,
+        progress: FileProgress<'_>,
+    ) -> Result<RunReport, BackendError> {
+        let report = self.files.step(run, redo)?;
+        progress(report.outcomes.len(), report.outcomes.len());
+        self.emit(Update::LibraryChanged);
+        Ok(report)
+    }
+
+    fn rename_track_file(&self, track: TrackKey, name: &str) -> Result<RunReport, BackendError> {
+        let report = self.files.rename(track, name)?;
+        self.emit(Update::LibraryChanged);
+        Ok(report)
+    }
+
+    fn trash_tracks(&self, tracks: &[TrackKey]) -> Result<Vec<TrashResult>, BackendError> {
+        self.emit(Update::LibraryChanged);
+        Ok(tracks
+            .iter()
+            .map(|t| TrashResult {
+                file: FileId::from_raw(i64::try_from(t.0).unwrap_or(0)),
+                path: self
+                    .library
+                    .as_ref()
+                    .and_then(|l| l.track(*t))
+                    .and_then(|r| r.path.clone()),
+                problem: None,
+            })
+            .collect())
+    }
+
+    fn naming_patterns(&self) -> Result<Vec<SavedPattern>, BackendError> {
+        Ok(self.files.patterns())
+    }
+
+    fn save_naming_pattern(
+        &self,
+        id: Option<i64>,
+        name: &str,
+        pattern: &str,
+    ) -> Result<i64, BackendError> {
+        Ok(self.files.save_pattern(id, name, pattern))
+    }
+
+    fn delete_naming_pattern(&self, id: i64) -> Result<(), BackendError> {
+        self.files.delete_pattern(id);
+        Ok(())
+    }
+
+    fn missing_files(&self) -> Result<Vec<MissingFile>, BackendError> {
+        Ok(self.files.missing())
+    }
+
+    fn find_missing(
+        &self,
+        files: &[FileId],
+        folder: Option<&std::path::Path>,
+        cancel: &CancelToken,
+    ) -> Result<Vec<FoundFile>, BackendError> {
+        let _ = cancel;
+        Ok(self.files.find(files, folder))
+    }
+
+    fn relink_missing(&self, found: &[FoundFile]) -> Result<Vec<RelinkOutcome>, BackendError> {
+        let outcomes = self.files.relink(found);
+        self.emit(Update::LibraryChanged);
+        Ok(outcomes)
+    }
+
+    fn remove_missing(&self, files: &[FileId]) -> Result<usize, BackendError> {
+        let removed = self.files.remove(files);
+        self.emit(Update::LibraryChanged);
+        Ok(removed)
+    }
+
+    fn verify_targets(&self, scope: &VerifyScope) -> Result<Vec<PathBuf>, BackendError> {
+        let all = self.files.verify_targets();
+        Ok(match scope {
+            VerifyScope::Folder(folder) => {
+                all.into_iter().filter(|p| p.starts_with(folder)).collect()
+            }
+            VerifyScope::Tracks(keys) => all.into_iter().take(keys.len()).collect(),
+            VerifyScope::Library => all,
+        })
+    }
+
+    fn verify_files(
+        &self,
+        paths: &[PathBuf],
+        cancelled: &(dyn Fn() -> bool + Sync),
+        found: &(dyn Fn(usize, VerifyReport) + Sync),
+    ) {
+        for (i, path) in paths.iter().enumerate() {
+            if cancelled() {
+                return;
+            }
+            found(i, SampleFiles::verify(path));
+        }
     }
 
     fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {

@@ -14,6 +14,7 @@ chardetng.workspace = true
 encoding_rs.workspace = true
 helikodu-ffmpeg-bridge.workspace = true
 helikodu-model.workspace = true
+icu_normalizer.workspace = true
 image.workspace = true
 lofty.workspace = true
 quick-xml.workspace = true

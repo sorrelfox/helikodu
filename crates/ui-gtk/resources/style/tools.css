@@ -77,3 +77,13 @@ list.hk-sync-sources > row:last-child { border-bottom: none; }
 .hk-sync-figures { padding: 14px 24px 12px; border-top: 1px solid var(--hk-line); }
 .hk-sync-figure { font-size: 20px; font-weight: 600; }
 .hk-sync-caption { font-size: 12px; }
+/* ---- File tools (Organize files, Missing files, Verify files) ----------- */
+
+.hk-organize-options { padding: 16px 24px 14px; }
+.hk-organize-options entry.hk-pattern-entry { font-size: 12.5px; }
+.hk-side-mono { font-size: 11px; }
+listview.hk-organize-list > row > .hk-organize-row { min-height: 46px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+listview.hk-verify-list > row > .hk-verify-row { min-height: 50px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-verify-last { margin-top: 14px; }
+progressbar.hk-tool-meter > trough { min-height: 4px; border: none; border-radius: 2px; background-color: var(--hk-line2); background-image: none; box-shadow: none; }
+progressbar.hk-tool-meter > trough > progress { min-height: 4px; border: none; border-radius: 2px; background-color: var(--hk-accent-fill); background-image: none; box-shadow: none; }

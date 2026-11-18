@@ -40,6 +40,11 @@ use super::super::services::{
     Settings, StorageUsage, TagEdit, TagField, TagStepResult, Versions, WriteResult,
 };
 use super::super::services::{
+    CancelToken, FileProgress, FileRunId, FileRunSummary, FoundFile, MissingFile, MoveRequest,
+    OrganizeOptions, PlannedMove, RelinkOutcome, RunReport, SavedPattern, VerifyReport,
+    VerifyScope,
+};
+use super::super::services::{
     CopyGroup, DuplicateCounts, DuplicateGroup, FileId, KeepRule, MatchBy, TrashProblem,
     TrashResult,
 };
@@ -531,6 +536,13 @@ impl ServiceServices {
             .map_err(|_| BackendError(tr("The library has stopped.")))
     }
 
+    /// Tells every list that files moved or left the library.
+    fn announce_files_changed(&self) {
+        if let Some(library) = self.service.library() {
+            library.announce_change();
+        }
+    }
+
     fn music(&self) -> Result<&helikodu_service::library::MusicLibrary, BackendError> {
         self.service
             .library()
@@ -1003,6 +1015,149 @@ impl Services for ServiceServices {
 
     fn duplicate_counts(&self) -> Result<DuplicateCounts, BackendError> {
         self.music()?.duplicate_counts().map_err(error)
+    }
+
+    fn plan_organize(
+        &self,
+        tracks: Option<&[TrackKey]>,
+        options: &OrganizeOptions,
+    ) -> Result<Vec<PlannedMove>, BackendError> {
+        let ids: Option<Vec<TrackId>> =
+            tracks.map(|t| t.iter().map(|k| TrackId::new(k.0)).collect());
+        self.music()?
+            .plan_organize(ids.as_deref(), options)
+            .map_err(error)
+    }
+
+    fn organize(
+        &self,
+        moves: &[MoveRequest],
+        pattern: Option<&str>,
+        companions: bool,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<RunReport, BackendError> {
+        let music = self.music()?;
+        let _ = music.prune_file_runs(self.service.settings().get().library.storage.undo_days);
+        let report = music.organize(moves, pattern, companions, progress, cancel);
+        self.announce_files_changed();
+        report.map_err(error)
+    }
+
+    fn last_file_run(&self) -> Result<Option<FileRunSummary>, BackendError> {
+        self.music()?.last_file_run().map_err(error)
+    }
+
+    fn step_file_run(
+        &self,
+        run: FileRunId,
+        redo: bool,
+        progress: FileProgress<'_>,
+    ) -> Result<RunReport, BackendError> {
+        let music = self.music()?;
+        let report = if redo {
+            music.redo_file_run(run, progress)
+        } else {
+            music.undo_file_run(run, progress)
+        };
+        self.announce_files_changed();
+        report.map_err(error)
+    }
+
+    fn rename_track_file(&self, track: TrackKey, name: &str) -> Result<RunReport, BackendError> {
+        let report = self
+            .music()?
+            .rename_track_file(TrackId::new(track.0), std::ffi::OsStr::new(name));
+        self.announce_files_changed();
+        report.map_err(error)
+    }
+
+    fn trash_tracks(&self, tracks: &[TrackKey]) -> Result<Vec<TrashResult>, BackendError> {
+        let music = self.music()?;
+        let mut files = Vec::new();
+        for key in tracks {
+            let Some(details) = music.track_file_path(TrackId::new(key.0)).map_err(error)? else {
+                continue;
+            };
+            if let Some(file) = music.file_of_path(&details).map_err(error)?
+                && !files.contains(&file)
+            {
+                files.push(file);
+            }
+        }
+        self.trash_files(&files, false)
+    }
+
+    fn naming_patterns(&self) -> Result<Vec<SavedPattern>, BackendError> {
+        self.music()?.naming_patterns().map_err(error)
+    }
+
+    fn save_naming_pattern(
+        &self,
+        id: Option<i64>,
+        name: &str,
+        pattern: &str,
+    ) -> Result<i64, BackendError> {
+        self.music()?
+            .save_naming_pattern(id, name, pattern)
+            .map_err(error)
+    }
+
+    fn delete_naming_pattern(&self, id: i64) -> Result<(), BackendError> {
+        self.music()?.delete_naming_pattern(id).map_err(error)
+    }
+
+    fn missing_files(&self) -> Result<Vec<MissingFile>, BackendError> {
+        self.music()?.missing_files().map_err(error)
+    }
+
+    fn find_missing(
+        &self,
+        files: &[FileId],
+        folder: Option<&Path>,
+        cancel: &CancelToken,
+    ) -> Result<Vec<FoundFile>, BackendError> {
+        self.music()?
+            .find_missing(files, folder, cancel)
+            .map_err(error)
+    }
+
+    fn relink_missing(&self, found: &[FoundFile]) -> Result<Vec<RelinkOutcome>, BackendError> {
+        let outcomes = self.music()?.relink_missing(found);
+        self.announce_files_changed();
+        outcomes.map_err(error)
+    }
+
+    fn remove_missing(&self, files: &[FileId]) -> Result<usize, BackendError> {
+        let removed = self.music()?.remove_missing(files);
+        self.announce_files_changed();
+        removed.map_err(error)
+    }
+
+    fn verify_targets(&self, scope: &VerifyScope) -> Result<Vec<PathBuf>, BackendError> {
+        let music = self.music()?;
+        match scope {
+            VerifyScope::Library => music.present_files(None).map_err(error),
+            VerifyScope::Tracks(keys) => {
+                let ids: Vec<TrackId> = keys.iter().map(|k| TrackId::new(k.0)).collect();
+                music.present_files(Some(&ids)).map_err(error)
+            }
+            VerifyScope::Folder(folder) => Ok(music
+                .present_files(None)
+                .map_err(error)?
+                .into_iter()
+                .filter(|p| p.starts_with(folder))
+                .collect()),
+        }
+    }
+
+    fn verify_files(
+        &self,
+        paths: &[PathBuf],
+        cancelled: &(dyn Fn() -> bool + Sync),
+        found: &(dyn Fn(usize, VerifyReport) + Sync),
+    ) {
+        helikodu_service::jobs::verify::verify_files(paths, 0, cancelled, found);
     }
 
     fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {

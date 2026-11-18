@@ -19,6 +19,8 @@ mod library;
 mod loudness;
 mod maintenance;
 mod media_kinds;
+mod missing;
+mod organize;
 mod play_keys;
 mod playlists;
 mod query;
@@ -73,6 +75,12 @@ pub use loudness::{
 };
 pub use maintenance::{Trash, TrashError, Trashed};
 pub use media_kinds::FileSection;
+pub use missing::{FoundFile, MissingFile, RelinkOutcome, RelinkProblem};
+pub use organize::{
+    Change, CharacterSet, Destination, FileRunId, FileRunSummary, MoveOutcome, MoveProblem,
+    MoveRequest, NamingPattern, OrganizeError, OrganizeOptions, PatternError, PatternProblem,
+    PlannedMove, Progress, RunKind, RunReport, SavedPattern,
+};
 pub use play_keys::PlayKeys;
 pub use playlists::{CleanupCounts, FoundReport, Pin, PinTarget, PlaylistNode, PlaylistType};
 pub use playlists::{

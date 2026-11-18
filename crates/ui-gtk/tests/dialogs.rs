@@ -889,6 +889,114 @@ fn copies_windows_idle(app: &gtk::Application) {
     window.destroy();
 }
 
+fn label_texts(root: &impl IsA<gtk::Widget>) -> String {
+    descendants(root.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Label>().ok())
+        .filter(|l| l.is_mapped())
+        .map(|l| l.text().to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Organize files: the preview follows the pattern, a pattern that cannot be
+/// read is reported, a run moves the ticked files, and undo and redo follow.
+fn organizer_moves_and_undoes(app: &gtk::Application) {
+    let (window, _backend) = window(app);
+    let organizer = window.open_organizer().unwrap();
+    let view: gtk::ListView = named(&organizer, "organize-table");
+    let rows = || view.model().map_or(0, |m| m.n_items());
+    wait_for("the preview", || rows() == 9);
+    let pattern: gtk::Entry = named(&organizer, "organize-pattern");
+    let run: gtk::Button = named(&organizer, "organize-run");
+    pattern.set_text("{albumartist}/{year} {album}/[{disc}-]{track} {title}");
+    wait_for("six files to move", || {
+        run.label().as_deref() == Some("Move 6 files") && run.is_sensitive()
+    });
+    assert!(label_texts(&organizer).contains("Name taken"));
+    assert!(label_texts(&organizer).contains("Already in place"));
+    // A pattern that cannot be read.
+    pattern.set_text("{album}/{nope}");
+    let note: gtk::Label = named(&organizer, "organize-pattern-note");
+    wait_for("the problem", || note.text().contains("nope"));
+    assert!(!run.is_sensitive());
+    pattern.set_text("{albumartist}/{year} {album}/[{disc}-]{track} {title}");
+    wait_for("the preview again", || run.is_sensitive());
+    run.emit_clicked();
+    let undo: gtk::Button = named(&organizer, "organize-undo");
+    wait_for("the run", || {
+        window
+            .toast_text()
+            .is_some_and(|t| t.contains("6 files moved"))
+    });
+    wait_for("undo offered", || {
+        undo.is_sensitive() && undo.label().as_deref() == Some("Undo the last run")
+    });
+    wait_for("nothing left to move", || {
+        run.label().as_deref() == Some("Move 0 files")
+    });
+    undo.emit_clicked();
+    wait_for("the undo", || {
+        window
+            .toast_text()
+            .is_some_and(|t| t.contains("moved back"))
+    });
+    wait_for("redo offered", || {
+        undo.label().as_deref() == Some("Redo the last run")
+    });
+    wait_for("six to move again", || {
+        run.label().as_deref() == Some("Move 6 files")
+    });
+    organizer.close();
+    window.destroy();
+}
+
+/// Missing files: found files are ticked and relinked; the others can be
+/// removed, with Undo.
+fn missing_files_relink(app: &gtk::Application) {
+    let (window, _backend) = window(app);
+    let missing = window.open_missing_files().unwrap();
+    let view: gtk::ListView = named(&missing, "missing-table");
+    let rows = || view.model().map_or(0, |m| m.n_items());
+    wait_for("the missing tracks", || rows() == 11);
+    let relink: gtk::Button = named(&missing, "missing-relink");
+    wait_for("the found files", || {
+        relink.label().as_deref() == Some("Relink 7 tracks")
+    });
+    let remove: gtk::Button = named(&missing, "missing-remove");
+    assert_eq!(remove.label().as_deref(), Some("Remove 4 from the library"));
+    relink.emit_clicked();
+    wait_for("the relinked tracks gone", || rows() == 4);
+    remove.emit_clicked();
+    wait_for("the removed tracks gone", || rows() == 0);
+    assert!(window.toast_text().is_some_and(|t| t.contains("removed")));
+    gio::prelude::ActionGroupExt::activate_action(&window, "undo", None);
+    wait_for("the undo", || rows() == 4);
+    missing.close();
+    window.destroy();
+}
+
+/// Verify files: a check of the whole library counts the results and lists
+/// the problems with a sentence each.
+fn verify_files_reports(app: &gtk::Application) {
+    let (window, _backend) = window(app);
+    let verify = window.open_verify_files().unwrap();
+    let view: gtk::ListView = named(&verify, "verify-table");
+    wait_for("the problems", || {
+        view.model().is_some_and(|m| m.n_items() == 6)
+    });
+    wait_for("the end of the check", || {
+        label_texts(&verify).contains("1,112 are fine")
+    });
+    let text = label_texts(&verify);
+    assert!(text.contains("checksum"), "{text}");
+    assert!(text.contains("Today at"), "{text}");
+    let copy: gtk::Button = named(&verify, "verify-copy");
+    assert!(copy.is_sensitive());
+    verify.close();
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
@@ -920,6 +1028,9 @@ const TESTS: &[Test] = &[
     ),
     ("copies_finder_marks", copies_finder_marks),
     ("copies_windows_idle", copies_windows_idle),
+    ("organizer_moves_and_undoes", organizer_moves_and_undoes),
+    ("missing_files_relink", missing_files_relink),
+    ("verify_files_reports", verify_files_reports),
 ];
 
 fn main() -> ExitCode {

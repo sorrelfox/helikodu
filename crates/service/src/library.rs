@@ -24,6 +24,7 @@
 //! ```
 
 mod duplicates;
+mod files;
 mod history_export;
 mod info;
 mod insights;
@@ -90,6 +91,12 @@ pub use helikodu_library::{
     MeasuredLoudness, StoredLoudness,
 };
 pub use helikodu_library::{
+    Change, CharacterSet, Destination, FileRunId, FileRunSummary, FoundFile, MissingFile,
+    MoveOutcome, MoveProblem, MoveRequest, NamingPattern, OrganizeError, OrganizeOptions,
+    PatternError, PatternProblem, PlannedMove, Progress, RelinkOutcome, RelinkProblem, RunKind,
+    RunReport, SavedPattern,
+};
+pub use helikodu_library::{
     CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId, KeepRule,
     MainCopyError, MatchBy, Trash, TrashError, TrashOutcome, TrashRefusal, Trashed, backup_path,
 };
@@ -135,6 +142,9 @@ pub enum LibraryError {
     /// The main copy of a group of copies could not be changed.
     #[error(transparent)]
     MainCopy(#[from] MainCopyError),
+    /// Files could not be organized, or a run could not be undone or redone.
+    #[error(transparent)]
+    Organize(#[from] OrganizeError),
     /// A scan was asked for without folders, and the library has none.
     #[error("the library has no folders yet; name the folders to scan")]
     NoFolders,

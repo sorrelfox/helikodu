@@ -420,11 +420,43 @@ fn shoot_tools(application: &gtk::Application, dir: &Path, suffix: &str) {
     main.close();
 }
 
+fn shoot_file_tools(application: &gtk::Application, dir: &Path, suffix: &str) {
+    let backend = sample::backend(&sample::SampleOptions {
+        albums: 40,
+        playing: None,
+    });
+    let main = window(application, &backend);
+    if let Some(organizer) = main.open_organizer() {
+        spin(300);
+        if let Some(row) = named::<gtk::ListBoxRow>(&organizer, "pattern-2") {
+            row.activate();
+            if let Some(list) = row.parent().and_downcast::<gtk::ListBox>() {
+                list.select_row(Some(&row));
+            }
+        }
+        spin(500);
+        save(&organizer, dir, &format!("organize-files{suffix}"));
+        organizer.close();
+    }
+    if let Some(missing) = main.open_missing_files() {
+        spin(500);
+        save(&missing, dir, &format!("missing-files{suffix}"));
+        missing.close();
+    }
+    if let Some(verify) = main.open_verify_files() {
+        spin(800);
+        save(&verify, dir, &format!("verify-files{suffix}"));
+        verify.close();
+    }
+    main.close();
+}
+
 fn main() -> ExitCode {
     let mut out = PathBuf::from("target/screenshots");
     let dsp_only = std::env::args().any(|a| a == "--dsp");
     let copies_only = std::env::args().any(|a| a == "--copies");
     let tools_only = std::env::args().any(|a| a == "--tools");
+    let files_only = std::env::args().any(|a| a == "--files");
     BACKDROP.store(
         std::env::args().any(|a| a == "--backdrop"),
         Ordering::Relaxed,
@@ -458,6 +490,14 @@ fn main() -> ExitCode {
             set_choice(SchemeChoice::Light, AccentChoice::Amber);
             spin(200);
             shoot_tools(application, &out, ".light");
+            application.quit();
+            return;
+        }
+        if files_only {
+            shoot_file_tools(application, &out, "");
+            set_choice(SchemeChoice::Light, AccentChoice::Amber);
+            spin(200);
+            shoot_file_tools(application, &out, ".light");
             application.quit();
             return;
         }

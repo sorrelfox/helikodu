@@ -1291,6 +1291,7 @@ dependencies = [
  "encoding_rs",
  "helikodu-ffmpeg-bridge",
  "helikodu-model",
+ "icu_normalizer",
  "image",
  "lofty",
  "quick-xml",

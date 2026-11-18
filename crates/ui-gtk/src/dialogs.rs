@@ -101,6 +101,15 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
     add(application, "cover-manager", |main| {
         crate::tools::cover_manager::open(main);
     });
+    add(application, "organize-files", |main| {
+        crate::tools::organizer::open(main, None);
+    });
+    add(application, "missing-files", |main| {
+        crate::tools::missing_files::open(main);
+    });
+    add(application, "verify-files", |main| {
+        crate::tools::verify_files::open(main, None, false);
+    });
     add(application, "rescan", |main| {
         if let Some(backend) = main.backend()
             && let Err(error) = backend.services().scan(&[])

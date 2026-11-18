@@ -93,6 +93,25 @@ impl MainWindow {
         Some(window)
     }
 
+    /// Opens Organize files for the whole library, for tests and screenshots.
+    #[doc(hidden)]
+    pub fn open_organizer(&self) -> Option<gtk::Window> {
+        crate::tools::organizer::open(self, None)
+    }
+
+    /// Opens Missing files, for tests and screenshots.
+    #[doc(hidden)]
+    pub fn open_missing_files(&self) -> Option<gtk::Window> {
+        crate::tools::missing_files::open(self)
+    }
+
+    /// Opens Verify files and checks the whole library, for tests and
+    /// screenshots.
+    #[doc(hidden)]
+    pub fn open_verify_files(&self) -> Option<gtk::Window> {
+        crate::tools::verify_files::open(self, None, true)
+    }
+
     /// The deck's output button.
     fn output_button(&self) -> Option<gtk::Button> {
         let deck = self.imp().deck.get().upcast::<gtk::Widget>();

@@ -25,6 +25,13 @@ pub use helikodu_model::settings::Settings;
 pub use helikodu_service::formats::{
     Availability, Decoder, DecoderStatus, FamilyStatus, FormatFamily, FormatReport,
 };
+pub use helikodu_service::jobs::verify::{VerifiedFormat, VerifyProblem, VerifyReport};
+pub use helikodu_service::library::{
+    CancelToken, Change, CharacterSet, Destination, FileRunId, FileRunSummary, FoundFile,
+    MissingFile, MoveOutcome, MoveProblem, MoveRequest, NamingPattern, OrganizeOptions,
+    PatternError, PatternProblem, PlannedMove, RelinkOutcome, RelinkProblem, RunKind, RunReport,
+    SavedPattern,
+};
 pub use helikodu_service::library::{
     CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId, KeepRule, MatchBy,
 };
@@ -415,6 +422,20 @@ pub struct TrashResult {
     pub problem: Option<TrashProblem>,
 }
 
+/// The files a check of files reads.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum VerifyScope {
+    /// Every file of the library.
+    Library,
+    /// The library files in this folder and below.
+    Folder(PathBuf),
+    /// The files of these tracks.
+    Tracks(Vec<TrackKey>),
+}
+
+/// How a long file operation reports its progress: done and total.
+pub type FileProgress<'a> = &'a (dyn Fn(usize, usize) + Sync);
+
 /// The dialogs' access to the core. See the module documentation.
 pub trait Services: fmt::Debug + Send + Sync {
     /// The settings as they are now.
@@ -502,6 +523,118 @@ pub trait Services: fmt::Debug + Send + Sync {
 
     /// The converter, folder sync and the cover manager.
     fn export(&self) -> Arc<dyn super::export::ExportServices>;
+    /// The organizer's preview of the files of `tracks` (the whole library when
+    /// `None`). Blocking.
+    fn plan_organize(
+        &self,
+        tracks: Option<&[TrackKey]>,
+        options: &OrganizeOptions,
+    ) -> Result<Vec<PlannedMove>, BackendError> {
+        let _ = (tracks, options);
+        Err(no_files())
+    }
+    /// Moves `moves` as one run of the undo journal; with `companions`, covers
+    /// and booklets go along. Announces the change. Blocking, for a thread of
+    /// its own.
+    fn organize(
+        &self,
+        moves: &[MoveRequest],
+        pattern: Option<&str>,
+        companions: bool,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<RunReport, BackendError> {
+        let _ = (moves, pattern, companions, progress, cancel);
+        Err(no_files())
+    }
+    /// The newest run of the undo journal. Blocking.
+    fn last_file_run(&self) -> Result<Option<FileRunSummary>, BackendError> {
+        Ok(None)
+    }
+    /// Undoes (or with `redo` does again) the newest run. Announces the change.
+    /// Blocking, for a thread of its own.
+    fn step_file_run(
+        &self,
+        run: FileRunId,
+        redo: bool,
+        progress: FileProgress<'_>,
+    ) -> Result<RunReport, BackendError> {
+        let _ = (run, redo, progress);
+        Err(no_files())
+    }
+    /// Renames the file of `track` within its folder, as a run that can be
+    /// undone. Announces the change. Blocking.
+    fn rename_track_file(&self, track: TrackKey, name: &str) -> Result<RunReport, BackendError> {
+        let _ = (track, name);
+        Err(no_files())
+    }
+    /// Moves the files of `tracks`, which the owner confirmed, to the desktop
+    /// trash, each after checking that it is unchanged and not the same file as
+    /// another library path. Blocking.
+    fn trash_tracks(&self, tracks: &[TrackKey]) -> Result<Vec<TrashResult>, BackendError> {
+        let _ = tracks;
+        Err(no_files())
+    }
+    /// The organizer's saved patterns. Blocking.
+    fn naming_patterns(&self) -> Result<Vec<SavedPattern>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// Saves a pattern (a new one without `id`); returns its id. Blocking.
+    fn save_naming_pattern(
+        &self,
+        id: Option<i64>,
+        name: &str,
+        pattern: &str,
+    ) -> Result<i64, BackendError> {
+        let _ = (id, name, pattern);
+        Err(no_files())
+    }
+    /// Removes a saved pattern. Blocking.
+    fn delete_naming_pattern(&self, id: i64) -> Result<(), BackendError> {
+        let _ = id;
+        Err(no_files())
+    }
+    /// The missing files, oldest first. Blocking.
+    fn missing_files(&self) -> Result<Vec<MissingFile>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// Looks for the missing `files` in `folder` (every library folder when
+    /// `None`). Blocking, for a thread of its own.
+    fn find_missing(
+        &self,
+        files: &[FileId],
+        folder: Option<&std::path::Path>,
+        cancel: &CancelToken,
+    ) -> Result<Vec<FoundFile>, BackendError> {
+        let _ = (files, folder, cancel);
+        Ok(Vec::new())
+    }
+    /// Relinks the missing files that were found. Announces the change.
+    /// Blocking.
+    fn relink_missing(&self, found: &[FoundFile]) -> Result<Vec<RelinkOutcome>, BackendError> {
+        let _ = found;
+        Err(no_files())
+    }
+    /// Removes missing files from the library. Announces the change. Blocking.
+    fn remove_missing(&self, files: &[FileId]) -> Result<usize, BackendError> {
+        let _ = files;
+        Err(no_files())
+    }
+    /// The files a check of `scope` reads. Blocking.
+    fn verify_targets(&self, scope: &VerifyScope) -> Result<Vec<PathBuf>, BackendError> {
+        let _ = scope;
+        Ok(Vec::new())
+    }
+    /// Decodes `paths` from start to end, handing each report to `found` as it
+    /// is ready. Blocking, for a thread of its own.
+    fn verify_files(
+        &self,
+        paths: &[PathBuf],
+        cancelled: &(dyn Fn() -> bool + Sync),
+        found: &(dyn Fn(usize, VerifyReport) + Sync),
+    ) {
+        let _ = (paths, cancelled, found);
+    }
 
     /// The playback flags of a library track (the tag editor's Playback
     /// group); `None` when the track is not in the library. Blocking.
@@ -509,4 +642,9 @@ pub trait Services: fmt::Debug + Send + Sync {
         let _ = track;
         None
     }
+}
+
+/// The error of a file operation without a library.
+fn no_files() -> BackendError {
+    BackendError(crate::i18n::tr("Helikodu runs without a library."))
 }

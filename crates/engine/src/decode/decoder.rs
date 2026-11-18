@@ -47,6 +47,13 @@ pub trait Decoder: Send + fmt::Debug {
     fn pcm_fallback(&self) -> Option<Result<Box<dyn Decoder>, DecodeError>> {
         None
     }
+
+    /// The damaged parts skipped so far: how many packets or frames could not be
+    /// read or decoded, and the position of the first, in frames. Backends that do
+    /// not skip damage report none.
+    fn skipped_errors(&self) -> (u64, Option<u64>) {
+        (0, None)
+    }
 }
 
 /// What a decoder decodes: for the signal-path view and diagnostics.

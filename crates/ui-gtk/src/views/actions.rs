@@ -269,6 +269,11 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         menu.append_section(None, &edit);
         let folder = gio::Menu::new();
         folder.append_item(&item(&tr("Open containing folder"), "win.sel-open-folder"));
+        if target.rows().len() == 1 {
+            folder.append_item(&item(&tr("Rename file…"), "win.sel-rename-file"));
+        }
+        folder.append_item(&item(&tr("Organize files…"), "win.sel-organize"));
+        folder.append_item(&item(&tr("Verify files"), "win.sel-verify"));
         if let Some(track) = with_copies(target) {
             let copies = gio::MenuItem::new(Some(&tr("Copies…")), None);
             copies.set_action_and_target_value(
@@ -291,11 +296,17 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         } => Some(tr("Remove from queue")),
         _ => None,
     };
-    if let Some(label) = remove_label {
+    let trash = matches!(target, Target::Tracks { origin, .. } if *origin != Origin::Playing);
+    if remove_label.is_some() || trash {
         let remove = gio::Menu::new();
-        let entry = item(&label, "win.sel-remove");
-        entry.set_attribute_value("accel", Some(&"Delete".to_variant()));
-        remove.append_item(&entry);
+        if let Some(label) = remove_label {
+            let entry = item(&label, "win.sel-remove");
+            entry.set_attribute_value("accel", Some(&"Delete".to_variant()));
+            remove.append_item(&entry);
+        }
+        if trash {
+            remove.append_item(&item(&tr("Move to trash…"), "win.sel-trash"));
+        }
         menu.append_section(None, &remove);
     }
     menu
@@ -380,6 +391,51 @@ pub(crate) fn popup_when_built(popover: &gtk::PopoverMenu) {
 /// Whether a key press asks for the context menu: the Menu key or Shift+F10.
 pub(crate) fn is_menu_key(key: gdk::Key, state: gdk::ModifierType) -> bool {
     key == gdk::Key::Menu || (key == gdk::Key::F10 && state.contains(gdk::ModifierType::SHIFT_MASK))
+}
+
+/// Moves the files of the chosen tracks to the desktop trash, after the
+/// confirmation that lists them.
+fn trash_tracks(window: &MainWindow, backend: Backend, target: Target) {
+    let rows = target.rows();
+    let keys: Vec<TrackKey> = rows.iter().map(|r| r.key).collect();
+    let paths: Vec<String> = rows
+        .iter()
+        .filter_map(|r| r.path.as_deref())
+        .map(crate::dialogs::common::tilde)
+        .collect();
+    if keys.is_empty() || paths.is_empty() {
+        window.toast(
+            &tr("These tracks have no files to move to the trash."),
+            true,
+        );
+        return;
+    }
+    let size: u64 = rows
+        .iter()
+        .filter_map(|r| r.path.as_deref())
+        .filter_map(|p| std::fs::metadata(p).ok())
+        .map(|m| m.len())
+        .sum();
+    let weak = window.downgrade();
+    crate::tools::trash::confirm(window.upcast_ref(), &paths, size, move |yes| {
+        if !yes {
+            return;
+        }
+        let services = backend.services();
+        let weak = weak.clone();
+        glib::spawn_future_local(async move {
+            let result = backend.work(move || services.trash_tracks(&keys)).await;
+            let Some(window) = weak.upgrade() else { return };
+            match result {
+                Some(Ok(results)) => {
+                    let failed = results.iter().any(|r| r.problem.is_some());
+                    window.toast(&crate::tools::trash::summary(&results), failed);
+                }
+                Some(Err(error)) => window.toast(&error.0, true),
+                None => {}
+            }
+        });
+    });
 }
 
 /// Runs `f` with the window's backend and target, then forgets the target.
@@ -699,6 +755,39 @@ pub(crate) fn install(window: &MainWindow) {
         open_folder(w, path);
     });
     let remove_entries = simple("sel-remove", remove);
+    let rename_file = simple("sel-rename-file", |w, _, t| {
+        if let [row] = t.rows().as_slice() {
+            match row.path.clone() {
+                Some(path) => {
+                    crate::tools::rename::open(w, row.key, path);
+                }
+                None => w.toast(&tr("This track has no file to rename."), true),
+            }
+        }
+    });
+    let organize = simple("sel-organize", |w, b, t| {
+        let w2 = w.downgrade();
+        glib::spawn_future_local(async move {
+            let keys = t.keys(&b).await;
+            if let Some(window) = w2.upgrade()
+                && !keys.is_empty()
+            {
+                crate::tools::organizer::open(&window, Some(keys));
+            }
+        });
+    });
+    let verify = simple("sel-verify", |w, b, t| {
+        let w2 = w.downgrade();
+        glib::spawn_future_local(async move {
+            let keys = t.keys(&b).await;
+            if let Some(window) = w2.upgrade()
+                && !keys.is_empty()
+            {
+                crate::tools::verify_files::open(&window, Some(keys), true);
+            }
+        });
+    });
+    let trash = simple("sel-trash", trash_tracks);
     let copies = gio::ActionEntry::builder("show-copies")
         .parameter_type(Some(glib::VariantTy::UINT64))
         .activate(|window: &MainWindow, _, target| {
@@ -740,5 +829,9 @@ pub(crate) fn install(window: &MainWindow) {
         add,
         rating,
         copies,
+        rename_file,
+        organize,
+        verify,
+        trash,
     ]);
 }

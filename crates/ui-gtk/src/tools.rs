@@ -11,12 +11,17 @@ pub(crate) mod converter;
 pub(crate) mod copies;
 pub(crate) mod cover_manager;
 pub(crate) mod duplicates;
+pub(crate) mod file_tools;
 pub(crate) mod jobs;
+pub(crate) mod missing_files;
+pub(crate) mod organizer;
+pub(crate) mod rename;
 pub(crate) mod sync_export;
 pub(crate) mod tag_preview;
 pub(crate) mod tag_tools;
 pub(crate) mod tool_window;
 pub(crate) mod trash;
+pub(crate) mod verify_files;
 
 use crate::backend::export::{PatternError, PatternErrorKind};
 use crate::i18n::{fill, tr};

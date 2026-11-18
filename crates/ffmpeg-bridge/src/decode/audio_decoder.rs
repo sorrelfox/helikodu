@@ -88,6 +88,10 @@ pub struct AudioDecoder {
     draining: bool,
     finished: bool,
     errors_in_a_row: u32,
+    /// Every read or decode error skipped since the decoder was opened, and the
+    /// position of the first, for a check of the whole file.
+    errors_skipped: u64,
+    first_error_at: Option<u64>,
     buffer: PcmBuffer,
 }
 
@@ -182,6 +186,8 @@ impl AudioDecoder {
             draining: false,
             finished: false,
             errors_in_a_row: 0,
+            errors_skipped: 0,
+            first_error_at: None,
             buffer: PcmBuffer::new(PLACEHOLDER_SPEC),
         };
         decoder.anchor = anchor;
@@ -266,6 +272,12 @@ impl AudioDecoder {
             (None, Some(p)) if self.frame_ready => u64::try_from(p).unwrap_or(0),
             _ => u64::try_from(self.next_position).unwrap_or(0),
         }
+    }
+
+    /// The read and decode errors skipped so far (single bad packets are skipped
+    /// rather than ending the stream), and the position of the first in frames.
+    pub fn errors_skipped(&self) -> (u64, Option<u64>) {
+        (self.errors_skipped, self.first_error_at)
     }
 
     /// Decodes the next block of audio. `None` at the end of the stream.
@@ -629,6 +641,10 @@ impl AudioDecoder {
             return Err(Error::Ffmpeg { operation, error });
         }
         self.errors_in_a_row += 1;
+        self.errors_skipped += 1;
+        if self.first_error_at.is_none() {
+            self.first_error_at = Some(u64::try_from(self.next_position).unwrap_or(0));
+        }
         if self.errors_in_a_row > MAX_ERRORS_IN_A_ROW {
             return Err(Error::Damaged { last: error });
         }
