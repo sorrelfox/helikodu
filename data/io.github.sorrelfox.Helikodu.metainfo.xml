@@ -70,6 +70,17 @@ SPDX-License-Identifier: CC0-1.0
   <translation type="gettext">helikodu</translation>
 
   <releases>
+    <release version="0.9.0" date="2026-11-18" type="development">
+      <description>
+        <p>
+          The release candidate for 1.0: smart playlists and a query language
+          for search, lyrics, a play history, Home and a mini player, tag tools
+          with undo, file organizing, converting and folder sync, a cover
+          manager, a waveform seek bar, library backups, an offline user guide
+          and better screen reader and keyboard access.
+        </p>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-11-18" type="development">
       <description>
         <p>

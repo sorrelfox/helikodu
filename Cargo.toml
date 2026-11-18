@@ -5,7 +5,7 @@ members = ["apps/*", "crates/*", "tests/system/offline-launcher", "xtask"]
 exclude = ["fuzz", "spikes"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.9.0"
 edition = "2024"
 # Minimum supported Rust version: the latest stable release minus two.
 rust-version = "1.98"

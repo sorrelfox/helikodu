@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 12:00+0000\n"
+"POT-Creation-Date: 2026-11-18 13:25-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,9 +20,10 @@ msgstr ""
 
 #: data/io.github.sorrelfox.Helikodu.desktop:5
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:11
-#: crates/ui-gtk/src/application.rs:169 crates/ui-gtk/src/mini_player.rs:112
-#: crates/ui-gtk/src/window/desktop.rs:300
-#: crates/ui-gtk/src/window/desktop.rs:347
+#: crates/ui-gtk/src/application.rs:184 crates/ui-gtk/src/mini_player.rs:112
+#: crates/ui-gtk/src/window/desktop.rs:324
+#: crates/ui-gtk/src/window/desktop.rs:366
+#: crates/ui-gtk/src/window/desktop.rs:415
 msgid "Helikodu"
 msgstr ""
 
@@ -118,13 +119,22 @@ msgstr ""
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:75
 msgid ""
+"The release candidate for 1.0: smart playlists and a query language for "
+"search, lyrics, a play history, Home and a mini player, tag tools with undo, "
+"file organizing, converting and folder sync, a cover manager, a waveform "
+"seek bar, library backups, an offline user guide and better screen reader "
+"and keyboard access."
+msgstr ""
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:86
+msgid ""
 "The first beta: graphic and parametric equalizers, crossfeed, channel mixing "
 "and a limiter, crossfades and fades, loudness measurement, a signal path "
 "view, PulseAudio and JACK output, and tracker modules, game music, SID tunes "
 "and MIDI files."
 msgstr ""
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:85
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:96
 msgid ""
 "The first alpha: a music library with albums, artists, genres, folders, "
 "tracks, search and playlists, gapless and bit-perfect playback with "
@@ -139,13 +149,13 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/albums.ui:93
 #: crates/ui-gtk/src/views/albums.rs:142
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:45
-#: crates/ui-gtk/src/views/artists.rs:149 crates/ui-gtk/src/views/genres.rs:143
-#: crates/ui-gtk/src/views/genres.rs:150 crates/ui-gtk/src/views/genres.rs:259
+#: crates/ui-gtk/src/views/artists.rs:148 crates/ui-gtk/src/views/genres.rs:141
+#: crates/ui-gtk/src/views/genres.rs:148 crates/ui-gtk/src/views/genres.rs:257
 #: crates/ui-gtk/src/tools/tag_preview.rs:158
 #: crates/ui-gtk/src/tools/organizer.rs:71
 #: crates/ui-gtk/src/popovers/query_completion.rs:42
-#: crates/ui-gtk/src/views/category.rs:245
-#: crates/ui-gtk/src/views/category.rs:567
+#: crates/ui-gtk/src/views/category.rs:244
+#: crates/ui-gtk/src/views/category.rs:566
 #: crates/ui-gtk/src/views/smart_rules.rs:156
 #: crates/ui-gtk/src/views/facet_browser.rs:50
 msgid "Album artist"
@@ -155,14 +165,14 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/album.ui:231 crates/ui-gtk/src/views/album.rs:753
 #: crates/ui-gtk/src/views/albums.rs:139
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:43
-#: crates/ui-gtk/src/views/folders.rs:276 crates/ui-gtk/src/views/genres.rs:144
-#: crates/ui-gtk/src/views/genres.rs:256 crates/ui-gtk/src/views/playlist.rs:71
+#: crates/ui-gtk/src/views/folders.rs:276 crates/ui-gtk/src/views/genres.rs:142
+#: crates/ui-gtk/src/views/genres.rs:254 crates/ui-gtk/src/views/playlist.rs:71
 #: crates/ui-gtk/src/views/tracks.rs:59
 #: crates/ui-gtk/src/tools/tag_preview.rs:156
 #: crates/ui-gtk/src/tools/organizer.rs:74
 #: crates/ui-gtk/src/views/history.rs:382
-#: crates/ui-gtk/src/views/category.rs:246
-#: crates/ui-gtk/src/views/category.rs:564
+#: crates/ui-gtk/src/views/category.rs:245
+#: crates/ui-gtk/src/views/category.rs:563
 #: crates/ui-gtk/src/views/smart_playlist.rs:44
 #: crates/ui-gtk/src/views/smart_playlist.rs:52
 #: crates/ui-gtk/src/views/smart_playlist.rs:1394
@@ -174,23 +184,23 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/albums.ui:22
 #: crates/ui-gtk/src/views/albums.rs:140
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:49
-#: crates/ui-gtk/src/views/genres.rs:145 crates/ui-gtk/src/views/genres.rs:257
+#: crates/ui-gtk/src/views/genres.rs:143 crates/ui-gtk/src/views/genres.rs:255
 #: crates/ui-gtk/src/views/tracks.rs:62
 #: crates/ui-gtk/src/tools/tag_preview.rs:164
 #: crates/ui-gtk/src/tools/organizer.rs:77
 #: crates/ui-gtk/src/views/category.rs:178
-#: crates/ui-gtk/src/views/category.rs:247
-#: crates/ui-gtk/src/views/category.rs:565
+#: crates/ui-gtk/src/views/category.rs:246
+#: crates/ui-gtk/src/views/category.rs:564
 #: crates/ui-gtk/src/views/smart_rules.rs:173
 #: crates/ui-gtk/src/views/facet_browser.rs:54
 msgid "Year"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/albums.ui:27
-#: crates/ui-gtk/src/views/albums.rs:141 crates/ui-gtk/src/views/genres.rs:146
-#: crates/ui-gtk/src/views/genres.rs:258
-#: crates/ui-gtk/src/views/category.rs:248
-#: crates/ui-gtk/src/views/category.rs:566
+#: crates/ui-gtk/src/views/albums.rs:141 crates/ui-gtk/src/views/genres.rs:144
+#: crates/ui-gtk/src/views/genres.rs:256
+#: crates/ui-gtk/src/views/category.rs:247
+#: crates/ui-gtk/src/views/category.rs:565
 #: crates/ui-gtk/src/views/smart_rules.rs:190
 msgid "Date added"
 msgstr ""
@@ -198,7 +208,7 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/albums.ui:44
 #: crates/ui-gtk/resources/ui/albums.ui:115
 #: crates/ui-gtk/src/window/sidebar.rs:50
-#: crates/ui-gtk/src/views/artists.rs:655 crates/ui-gtk/src/views/search.rs:575
+#: crates/ui-gtk/src/views/artists.rs:653 crates/ui-gtk/src/views/search.rs:575
 #: crates/ui-gtk/src/play_modes.rs:69 crates/ui-gtk/src/views/statistics.rs:597
 #: crates/ui-gtk/src/tools/cover_manager.rs:727
 msgid "Albums"
@@ -229,9 +239,9 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/album.ui:31 crates/ui-gtk/src/views/album.rs:743
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:51
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:46
-#: crates/ui-gtk/src/views/artists.rs:219
+#: crates/ui-gtk/src/views/artists.rs:217
 #: crates/ui-gtk/src/views/playlist.rs:78 crates/ui-gtk/src/views/tracks.rs:61
-#: crates/ui-gtk/src/views/tracks.rs:734
+#: crates/ui-gtk/src/views/tracks.rs:787
 #: crates/ui-gtk/src/tools/tag_preview.rs:159
 #: crates/ui-gtk/src/tools/organizer.rs:73
 #: crates/ui-gtk/src/views/history.rs:250
@@ -250,22 +260,22 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/deck.ui:149
 #: crates/ui-gtk/src/views/actions.rs:190
 #: crates/ui-gtk/src/views/folders.rs:260
-#: crates/ui-gtk/src/views/playlist.rs:189 crates/ui-gtk/src/deck/modes.rs:225
+#: crates/ui-gtk/src/views/playlist.rs:191 crates/ui-gtk/src/deck/modes.rs:225
 #: crates/ui-gtk/src/play_modes.rs:261
 #: crates/ui-gtk/src/views/smart_playlist.rs:223
-#: crates/ui-gtk/src/window/playlists.rs:221
-#: crates/ui-gtk/src/window/playlists.rs:225
+#: crates/ui-gtk/src/window/playlists.rs:228
+#: crates/ui-gtk/src/window/playlists.rs:232
 #: crates/ui-gtk/src/mini_player.rs:181 crates/ui-gtk/src/mini_player.rs:504
-#: crates/ui-gtk/src/window/desktop.rs:361
+#: crates/ui-gtk/src/window/desktop.rs:429
 msgid "Play"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/album.ui:113
 #: crates/ui-gtk/resources/ui/deck.ui:120
 #: crates/ui-gtk/resources/ui/deck.ui:122
-#: crates/ui-gtk/src/views/artists.rs:161 crates/ui-gtk/src/views/genres.rs:137
-#: crates/ui-gtk/src/views/playlist.rs:191
-#: crates/ui-gtk/src/views/category.rs:239
+#: crates/ui-gtk/src/views/artists.rs:160 crates/ui-gtk/src/views/genres.rs:135
+#: crates/ui-gtk/src/views/playlist.rs:193
+#: crates/ui-gtk/src/views/category.rs:238
 #: crates/ui-gtk/src/views/smart_playlist.rs:225
 #: crates/ui-gtk/src/shortcuts.rs:102 crates/ui-gtk/src/deck/compact.rs:68
 msgid "Shuffle"
@@ -277,17 +287,17 @@ msgstr ""
 
 #: crates/ui-gtk/resources/ui/album.ui:156
 #: crates/ui-gtk/src/views/actions.rs:193
-#: crates/ui-gtk/src/views/artists.rs:172
+#: crates/ui-gtk/src/views/artists.rs:171
 #: crates/ui-gtk/src/views/folders.rs:261
 msgid "Add to queue"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/album.ui:167
 #: crates/ui-gtk/resources/ui/album.ui:169
+#: crates/ui-gtk/src/views/artists.rs:167
 #: crates/ui-gtk/src/views/artists.rs:168
-#: crates/ui-gtk/src/views/artists.rs:169
-#: crates/ui-gtk/src/views/playlist.rs:207
-#: crates/ui-gtk/src/views/playlist.rs:208
+#: crates/ui-gtk/src/views/playlist.rs:209
+#: crates/ui-gtk/src/views/playlist.rs:210
 #: crates/ui-gtk/src/window/panel/lyrics.rs:179
 #: crates/ui-gtk/src/window/panel/lyrics.rs:180
 #: crates/ui-gtk/src/views/smart_playlist.rs:233
@@ -298,7 +308,7 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/album.ui:239 crates/ui-gtk/src/views/album.rs:757
 #: crates/ui-gtk/src/views/album.rs:918
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1526
-#: crates/ui-gtk/src/views/artists.rs:220 crates/ui-gtk/src/views/tracks.rs:65
+#: crates/ui-gtk/src/views/artists.rs:218 crates/ui-gtk/src/views/tracks.rs:65
 #: crates/ui-gtk/src/tools/duplicates.rs:717
 #: crates/ui-gtk/src/views/smart_rules.rs:184
 #: crates/ui-gtk/src/views/home.rs:365
@@ -316,7 +326,7 @@ msgstr ""
 
 #: crates/ui-gtk/resources/ui/album.ui:255 crates/ui-gtk/src/views/album.rs:902
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1465
-#: crates/ui-gtk/src/views/artists.rs:221
+#: crates/ui-gtk/src/views/artists.rs:219
 #: crates/ui-gtk/src/views/folders.rs:277
 #: crates/ui-gtk/src/views/playlist.rs:76
 #: crates/ui-gtk/src/views/playlist.rs:79 crates/ui-gtk/src/views/tracks.rs:66
@@ -330,12 +340,13 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/album.ui:269
 #: crates/ui-gtk/src/window/sidebar.rs:52 crates/ui-gtk/src/views/search.rs:595
 #: crates/ui-gtk/src/views/tracks.rs:189 crates/ui-gtk/src/views/tracks.rs:245
-#: crates/ui-gtk/src/views/tracks.rs:299 crates/ui-gtk/src/window/pages.rs:357
+#: crates/ui-gtk/src/views/tracks.rs:299 crates/ui-gtk/src/window/pages.rs:442
 #: crates/ui-gtk/src/play_modes.rs:68 crates/ui-gtk/src/views/statistics.rs:585
 msgid "Tracks"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/album.ui:283 crates/ui-gtk/src/window.rs:450
+#: crates/ui-gtk/resources/ui/album.ui:283 crates/ui-gtk/src/window.rs:467
+#: crates/ui-gtk/src/dialogs/maintenance.rs:285
 msgid "Details"
 msgstr ""
 
@@ -351,46 +362,48 @@ msgid "Edit tags"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/album.ui:344
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:115
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:124
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1402
-#: crates/ui-gtk/src/window/pages.rs:886
+#: crates/ui-gtk/src/window/pages.rs:1005
 #: crates/ui-gtk/src/tools/converter.rs:1023
+#: crates/ui-gtk/src/dialogs/maintenance.rs:222
 msgid "Open folder"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/deck.ui:38 crates/ui-gtk/src/deck.rs:433
+#: crates/ui-gtk/resources/ui/deck.ui:38 crates/ui-gtk/src/deck.rs:440
 msgid "Show the total length"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/deck.ui:77 crates/ui-gtk/src/deck.rs:267
+#: crates/ui-gtk/resources/ui/deck.ui:77 crates/ui-gtk/src/deck.rs:274
 #: crates/ui-gtk/src/views/now_playing.rs:553
-#: crates/ui-gtk/src/window/panel/lyrics.rs:243
+#: crates/ui-gtk/src/window/panel/lyrics.rs:242
 #: crates/ui-gtk/src/mini_player.rs:143 crates/ui-gtk/src/mini_player.rs:520
-#: crates/ui-gtk/src/window/desktop.rs:346
+#: crates/ui-gtk/src/window/desktop.rs:414
 msgid "Nothing playing"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/deck.ui:89 crates/ui-gtk/src/deck.rs:269
+#: crates/ui-gtk/resources/ui/deck.ui:89 crates/ui-gtk/src/deck.rs:276
 msgid "Pick an album, or drop files on the window"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/deck.ui:103
 #: crates/ui-gtk/resources/ui/deck.ui:105
+#: crates/ui-gtk/src/deck/favourite.rs:83
 msgid "Add to Favourites"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/deck.ui:132
 #: crates/ui-gtk/resources/ui/deck.ui:134
 #: crates/ui-gtk/resources/ui/main_window.ui:81
-#: crates/ui-gtk/src/play_modes.rs:268 crates/ui-gtk/src/window/desktop.rs:365
+#: crates/ui-gtk/src/play_modes.rs:268 crates/ui-gtk/src/window/desktop.rs:433
 msgid "Previous"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/deck.ui:178
 #: crates/ui-gtk/resources/ui/deck.ui:180
-#: crates/ui-gtk/resources/ui/main_window.ui:85 crates/ui-gtk/src/deck.rs:591
-#: crates/ui-gtk/src/window.rs:755 crates/ui-gtk/src/play_modes.rs:269
-#: crates/ui-gtk/src/window/desktop.rs:364
+#: crates/ui-gtk/resources/ui/main_window.ui:85 crates/ui-gtk/src/deck.rs:599
+#: crates/ui-gtk/src/window.rs:806 crates/ui-gtk/src/play_modes.rs:269
+#: crates/ui-gtk/src/window/desktop.rs:432
 msgid "Next"
 msgstr ""
 
@@ -439,7 +452,7 @@ msgid "Edit"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/main_window.ui:35
-#: crates/ui-gtk/src/window/pages.rs:552 crates/ui-gtk/src/shortcuts.rs:153
+#: crates/ui-gtk/src/window/pages.rs:655 crates/ui-gtk/src/shortcuts.rs:153
 msgid "Undo"
 msgstr ""
 
@@ -482,9 +495,9 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/settings.rs:89
 #: crates/ui-gtk/src/window/panel/signal_path.rs:105
 #: crates/ui-gtk/src/dialogs/track_flags.rs:29
-#: crates/ui-gtk/src/window/play_modes.rs:151
-#: crates/ui-gtk/src/window/play_modes.rs:268
-#: crates/ui-gtk/src/window/play_modes.rs:281 crates/ui-gtk/src/shortcuts.rs:36
+#: crates/ui-gtk/src/window/play_modes.rs:150
+#: crates/ui-gtk/src/window/play_modes.rs:276
+#: crates/ui-gtk/src/window/play_modes.rs:285 crates/ui-gtk/src/shortcuts.rs:36
 msgid "Playback"
 msgstr ""
 
@@ -492,13 +505,13 @@ msgstr ""
 msgid "Play/Pause"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/main_window.ui:77 crates/ui-gtk/src/deck.rs:357
+#: crates/ui-gtk/resources/ui/main_window.ui:77 crates/ui-gtk/src/deck.rs:364
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:226
 #: crates/ui-gtk/src/dialogs/settings/output.rs:341
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:426
 #: crates/ui-gtk/src/play_modes.rs:264 crates/ui-gtk/src/tools/file_tools.rs:75
 #: crates/ui-gtk/src/shortcuts.rs:75 crates/ui-gtk/src/tools/converter.rs:1027
-#: crates/ui-gtk/src/tools/sync_export.rs:682
+#: crates/ui-gtk/src/tools/sync_export.rs:725
 msgid "Stop"
 msgstr ""
 
@@ -592,7 +605,7 @@ msgid "Supported Formats"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/main_window.ui:166
-#: crates/ui-gtk/src/dialogs/about.rs:208
+#: crates/ui-gtk/src/dialogs/about.rs:256
 msgid "About Helikodu"
 msgstr ""
 
@@ -601,7 +614,7 @@ msgid "Preferences"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/main_window.ui:183
-#: crates/ui-gtk/src/shortcuts.rs:185 crates/ui-gtk/src/window/desktop.rs:385
+#: crates/ui-gtk/src/shortcuts.rs:185 crates/ui-gtk/src/window/desktop.rs:453
 msgid "Quit"
 msgstr ""
 
@@ -626,13 +639,13 @@ msgstr ""
 msgid "Search comes in a later version"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/main_window.ui:279
-#: crates/ui-gtk/resources/ui/main_window.ui:281
+#: crates/ui-gtk/resources/ui/main_window.ui:278
+#: crates/ui-gtk/resources/ui/main_window.ui:280
 msgid "Main menu"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/main_window.ui:292
-#: crates/ui-gtk/resources/ui/main_window.ui:294
+#: crates/ui-gtk/resources/ui/main_window.ui:291
+#: crates/ui-gtk/resources/ui/main_window.ui:293
 msgid "Show the queue"
 msgstr ""
 
@@ -680,7 +693,7 @@ msgid "Save as playlist"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/panel.ui:212
-#: crates/ui-gtk/src/dialogs/settings/library.rs:602
+#: crates/ui-gtk/src/dialogs/settings/library.rs:600
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:499
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1319
 #: crates/ui-gtk/src/play_modes.rs:249
@@ -691,51 +704,56 @@ msgstr ""
 msgid "Remove everything but the playing track"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:337
-#: crates/ui-gtk/src/backend/service.rs:974
+#: crates/ui-gtk/src/backend/service.rs:334
+#: crates/ui-gtk/src/backend/service.rs:1010
 #: crates/ui-gtk/src/backend/service/browse.rs:139
 msgid "Unknown title"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:452
+#: crates/ui-gtk/src/backend/service.rs:442
 msgid "The playlist is gone."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:467
-#: crates/ui-gtk/src/backend/service.rs:915
+#: crates/ui-gtk/src/backend/service.rs:457
+#: crates/ui-gtk/src/backend/service.rs:932
 msgid "There is no library."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:481
-#: crates/ui-gtk/src/backend/service/insights.rs:129
+#: crates/ui-gtk/src/backend/service.rs:471
+#: crates/ui-gtk/src/backend/service/insights.rs:114
 msgid "Unknown album"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:485
-#: crates/ui-gtk/src/backend/service/insights.rs:130
+#: crates/ui-gtk/src/backend/service.rs:475
+#: crates/ui-gtk/src/backend/service/insights.rs:115
 msgid "Various artists"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:931
-#: crates/ui-gtk/src/backend/service/services.rs:536
-#: crates/ui-gtk/src/backend/service/services.rs:859
+#: crates/ui-gtk/src/backend/service.rs:948
+#: crates/ui-gtk/src/backend/service/services.rs:539
+#: crates/ui-gtk/src/backend/service/services.rs:864
 msgid "The library has stopped."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:1522
+#: crates/ui-gtk/src/backend/service.rs:966
+#: crates/ui-gtk/src/backend/service/mpris.rs:63
+msgid "Favourites"
+msgstr ""
+
+#: crates/ui-gtk/src/backend/service.rs:1560
 msgid "The player has stopped. Restart Helikodu to play again."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:1857
+#: crates/ui-gtk/src/backend/service.rs:1895
 msgid "No sound (null output)"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:1858
+#: crates/ui-gtk/src/backend/service.rs:1896
 #: crates/ui-gtk/src/popovers/output_switcher.rs:37
 msgid "WAV file"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:1860
+#: crates/ui-gtk/src/backend/service.rs:1898
 #: crates/ui-gtk/src/dialogs/first_run.rs:231
 #: crates/ui-gtk/src/dialogs/settings/output.rs:127
 #: crates/ui-gtk/src/dialogs/settings/output.rs:158
@@ -743,109 +761,109 @@ msgstr ""
 msgid "System default"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:1862
+#: crates/ui-gtk/src/backend/service.rs:1900
 #, rust-format
 msgid "Default device ({})"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:2218
+#: crates/ui-gtk/src/backend/service.rs:2268
 #, rust-format
 msgid "Cannot play {}: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:2228
+#: crates/ui-gtk/src/backend/service.rs:2278
 msgid ""
 "Helikodu did not end normally last time. The queue was restored, paused."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:2231
+#: crates/ui-gtk/src/backend/service.rs:2281
 #, rust-format
 msgid "Cannot play this: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:2234
+#: crates/ui-gtk/src/backend/service.rs:2284
 #, rust-format
 msgid "The queue could not be saved: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:2237
+#: crates/ui-gtk/src/backend/service.rs:2287
 #, rust-format
 msgid "The playback settings of the track could not be saved: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service.rs:2456
+#: crates/ui-gtk/src/backend/service.rs:2509
 msgid "Playing music"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:126
+#: crates/ui-gtk/src/deck.rs:132
 msgid "Player"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:243 crates/ui-gtk/src/views/album_tile.rs:261
+#: crates/ui-gtk/src/deck.rs:250 crates/ui-gtk/src/views/album_tile.rs:261
 #: crates/ui-gtk/src/window/panel.rs:171 crates/ui-gtk/src/window/panel.rs:306
-#: crates/ui-gtk/src/window.rs:751 crates/ui-gtk/src/views/artists.rs:793
-#: crates/ui-gtk/src/views/genres.rs:373
-#: crates/ui-gtk/src/views/playlist.rs:479
-#: crates/ui-gtk/src/views/playlist.rs:1055
-#: crates/ui-gtk/src/views/playlist.rs:1059
+#: crates/ui-gtk/src/window.rs:802 crates/ui-gtk/src/views/artists.rs:791
+#: crates/ui-gtk/src/views/genres.rs:371
+#: crates/ui-gtk/src/views/playlist.rs:482
+#: crates/ui-gtk/src/views/playlist.rs:1073
+#: crates/ui-gtk/src/views/playlist.rs:1077
 #: crates/ui-gtk/src/views/search.rs:567 crates/ui-gtk/src/views/search.rs:580
-#: crates/ui-gtk/src/views/search.rs:602 crates/ui-gtk/src/views/tracks.rs:760
+#: crates/ui-gtk/src/views/search.rs:602 crates/ui-gtk/src/views/tracks.rs:813
 #: crates/ui-gtk/src/views/now_playing.rs:190
 #: crates/ui-gtk/src/views/now_playing.rs:742
 #: crates/ui-gtk/src/tools/duplicates.rs:202
 #: crates/ui-gtk/src/tools/trash.rs:190
 #: crates/ui-gtk/src/window/tag_undo.rs:176
-#: crates/ui-gtk/src/tools/file_tools.rs:188
+#: crates/ui-gtk/src/tools/file_tools.rs:182
 #: crates/ui-gtk/src/tools/organizer.rs:528
-#: crates/ui-gtk/src/views/category.rs:483
-#: crates/ui-gtk/src/views/category.rs:509
+#: crates/ui-gtk/src/views/category.rs:482
+#: crates/ui-gtk/src/views/category.rs:508
 #: crates/ui-gtk/src/views/smart_playlist.rs:1462
 #: crates/ui-gtk/src/mini_player.rs:694 crates/ui-gtk/src/views/home.rs:650
-#: crates/ui-gtk/src/views/home.rs:738 crates/ui-gtk/src/window/desktop.rs:336
-#: crates/ui-gtk/src/window/desktop.rs:342
+#: crates/ui-gtk/src/views/home.rs:738 crates/ui-gtk/src/window/desktop.rs:404
+#: crates/ui-gtk/src/window/desktop.rs:410
 #: crates/ui-gtk/src/tools/converter.rs:545
 #: crates/ui-gtk/src/tools/converter.rs:588
 #: crates/ui-gtk/src/tools/converter.rs:602
 #: crates/ui-gtk/src/tools/converter.rs:605
 #: crates/ui-gtk/src/tools/converter.rs:636
-#: crates/ui-gtk/src/tools/sync_export.rs:432
+#: crates/ui-gtk/src/tools/sync_export.rs:436
 #: crates/ui-gtk/src/tools/cover_manager.rs:237
 #: crates/ui-gtk/src/tools/cover_manager.rs:474
 #, rust-format
 msgid "{} · {}"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:251
+#: crates/ui-gtk/src/deck.rs:258
 #, rust-format
 msgid "Show {} in its album"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:359 crates/ui-gtk/src/popovers/sleep_timer.rs:97
+#: crates/ui-gtk/src/deck.rs:366 crates/ui-gtk/src/popovers/sleep_timer.rs:97
 msgid "Stop after"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:362 crates/ui-gtk/src/play_modes.rs:306
+#: crates/ui-gtk/src/deck.rs:369 crates/ui-gtk/src/play_modes.rs:306
 msgid "Sleep timer…"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:366 crates/ui-gtk/src/shortcuts.rs:131
+#: crates/ui-gtk/src/deck.rs:373 crates/ui-gtk/src/shortcuts.rs:131
 msgid "Jump to the playing track"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:431
+#: crates/ui-gtk/src/deck.rs:438
 msgid "Show the time left"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:524
+#: crates/ui-gtk/src/deck.rs:532
 #, rust-format
 msgid "Output: {}, {}"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:570 crates/ui-gtk/src/window/panel/lyrics.rs:104
+#: crates/ui-gtk/src/deck.rs:578 crates/ui-gtk/src/window/panel/lyrics.rs:104
 msgid "Show Now Playing"
 msgstr ""
 
-#: crates/ui-gtk/src/deck.rs:618
+#: crates/ui-gtk/src/deck.rs:626
 #, rust-format
 msgid "Next: {}"
 msgstr ""
@@ -940,17 +958,17 @@ msgstr[1] ""
 
 #: crates/ui-gtk/src/views/album.rs:453
 #: crates/ui-gtk/src/views/album_tile.rs:256
-#: crates/ui-gtk/src/dialogs/settings/library.rs:62
+#: crates/ui-gtk/src/dialogs/settings/library.rs:60
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1699
-#: crates/ui-gtk/src/views/artists.rs:645 crates/ui-gtk/src/views/genres.rs:369
-#: crates/ui-gtk/src/views/playlist.rs:481
-#: crates/ui-gtk/src/views/playlist.rs:717
-#: crates/ui-gtk/src/views/playlist.rs:924
-#: crates/ui-gtk/src/views/playlist.rs:1046
+#: crates/ui-gtk/src/views/artists.rs:643 crates/ui-gtk/src/views/genres.rs:367
+#: crates/ui-gtk/src/views/playlist.rs:484
+#: crates/ui-gtk/src/views/playlist.rs:721
+#: crates/ui-gtk/src/views/playlist.rs:928
+#: crates/ui-gtk/src/views/playlist.rs:1064
 #: crates/ui-gtk/src/views/search.rs:560 crates/ui-gtk/src/views/search.rs:942
-#: crates/ui-gtk/src/views/search.rs:1248 crates/ui-gtk/src/views/tracks.rs:623
+#: crates/ui-gtk/src/views/search.rs:1248 crates/ui-gtk/src/views/tracks.rs:676
 #: crates/ui-gtk/src/tools/missing_files.rs:233
-#: crates/ui-gtk/src/views/category.rs:480
+#: crates/ui-gtk/src/views/category.rs:479
 #: crates/ui-gtk/src/views/smart_playlist.rs:1371
 #: crates/ui-gtk/src/views/smart_playlist.rs:1452
 #: crates/ui-gtk/src/tools/converter.rs:540
@@ -975,7 +993,7 @@ msgstr ""
 
 #: crates/ui-gtk/src/views/album.rs:490
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:50
-#: crates/ui-gtk/src/views/genres.rs:124 crates/ui-gtk/src/views/tracks.rs:67
+#: crates/ui-gtk/src/views/genres.rs:122 crates/ui-gtk/src/views/tracks.rs:67
 #: crates/ui-gtk/src/tools/tag_preview.rs:165
 #: crates/ui-gtk/src/tools/organizer.rs:79
 #: crates/ui-gtk/src/popovers/query_completion.rs:48
@@ -1006,7 +1024,7 @@ msgstr ""
 #: crates/ui-gtk/src/views/folders.rs:278 crates/ui-gtk/src/tools/copies.rs:533
 #: crates/ui-gtk/src/tools/duplicates.rs:716
 #: crates/ui-gtk/src/views/statistics.rs:622
-#: crates/ui-gtk/src/tools/sync_export.rs:658
+#: crates/ui-gtk/src/tools/sync_export.rs:701
 msgid "Size"
 msgstr ""
 
@@ -1020,8 +1038,8 @@ msgstr ""
 #: crates/ui-gtk/src/views/album.rs:513
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1393
 #: crates/ui-gtk/src/views/smart_rules.rs:170
-#: crates/ui-gtk/src/window/playlists.rs:410
-#: crates/ui-gtk/src/tools/sync_export.rs:700
+#: crates/ui-gtk/src/window/playlists.rs:423
+#: crates/ui-gtk/src/tools/sync_export.rs:743
 #: crates/ui-gtk/src/tools/cover_manager.rs:714
 msgid "Folder"
 msgstr ""
@@ -1033,7 +1051,7 @@ msgstr ""
 
 #: crates/ui-gtk/src/views/album.rs:674
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:48
-#: crates/ui-gtk/src/views/tracks.rs:734
+#: crates/ui-gtk/src/views/tracks.rs:787
 #: crates/ui-gtk/src/tools/tag_preview.rs:162
 msgid "Disc"
 msgstr ""
@@ -1058,7 +1076,7 @@ msgstr ""
 #: crates/ui-gtk/src/views/album.rs:885
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:44
 #: crates/ui-gtk/src/views/playlist.rs:72 crates/ui-gtk/src/views/tracks.rs:60
-#: crates/ui-gtk/src/views/tracks.rs:734
+#: crates/ui-gtk/src/views/tracks.rs:787
 #: crates/ui-gtk/src/tools/tag_preview.rs:157
 #: crates/ui-gtk/src/tools/organizer.rs:72
 #: crates/ui-gtk/src/views/history.rs:251
@@ -1114,7 +1132,7 @@ msgstr ""
 #: crates/ui-gtk/src/views/smart_playlist.rs:1400
 #: crates/ui-gtk/src/views/facet_browser.rs:55
 #: crates/ui-gtk/src/tools/converter.rs:903
-#: crates/ui-gtk/src/tools/sync_export.rs:657
+#: crates/ui-gtk/src/tools/sync_export.rs:700
 msgid "Format"
 msgstr ""
 
@@ -1157,7 +1175,7 @@ msgid "Yes"
 msgstr ""
 
 #: crates/ui-gtk/src/views/album.rs:939
-#: crates/ui-gtk/src/dialogs/settings/library.rs:643
+#: crates/ui-gtk/src/dialogs/settings/library.rs:641
 #: crates/ui-gtk/src/tools/copies.rs:500 crates/ui-gtk/src/tools/copies.rs:539
 msgid "Copies"
 msgstr ""
@@ -1170,7 +1188,7 @@ msgstr ""
 msgid "Add music folder"
 msgstr ""
 
-#: crates/ui-gtk/src/views/albums.rs:607 crates/ui-gtk/src/window/pages.rs:888
+#: crates/ui-gtk/src/views/albums.rs:607 crates/ui-gtk/src/window/pages.rs:1007
 msgid "Open files"
 msgstr ""
 
@@ -1193,7 +1211,7 @@ msgid "No album in the library passes this filter."
 msgstr ""
 
 #: crates/ui-gtk/src/views/album_tile.rs:275
-#: crates/ui-gtk/src/views/artists.rs:697 crates/ui-gtk/src/views/home.rs:568
+#: crates/ui-gtk/src/views/artists.rs:695 crates/ui-gtk/src/views/home.rs:568
 #, rust-format
 msgid "{} by {}"
 msgstr ""
@@ -1227,7 +1245,7 @@ msgid "Seek"
 msgstr ""
 
 #: crates/ui-gtk/src/widgets/waveform_seek_bar.rs:487
-#: crates/ui-gtk/src/views/tracks.rs:821
+#: crates/ui-gtk/src/views/tracks.rs:874
 #: crates/ui-gtk/src/tools/file_tools.rs:94
 #: crates/ui-gtk/src/tools/verify_files.rs:445
 #, rust-format
@@ -1273,12 +1291,12 @@ msgid_plural "{} upcoming · {}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/window.rs:446
+#: crates/ui-gtk/src/window.rs:463
 #, rust-format
 msgid "{} was disconnected. Playback is paused."
 msgstr ""
 
-#: crates/ui-gtk/src/window.rs:727
+#: crates/ui-gtk/src/window.rs:778
 #, rust-format
 msgid "The library cannot be read: {}"
 msgstr ""
@@ -1289,12 +1307,12 @@ msgid "Home"
 msgstr ""
 
 #: crates/ui-gtk/src/window/sidebar.rs:51
-#: crates/ui-gtk/src/views/artists.rs:135 crates/ui-gtk/src/views/search.rs:550
+#: crates/ui-gtk/src/views/artists.rs:134 crates/ui-gtk/src/views/search.rs:550
 #: crates/ui-gtk/src/views/statistics.rs:609
 msgid "Artists"
 msgstr ""
 
-#: crates/ui-gtk/src/window/sidebar.rs:53 crates/ui-gtk/src/views/genres.rs:114
+#: crates/ui-gtk/src/window/sidebar.rs:53 crates/ui-gtk/src/views/genres.rs:112
 msgid "Genres"
 msgstr ""
 
@@ -1309,7 +1327,7 @@ msgid "Years"
 msgstr ""
 
 #: crates/ui-gtk/src/window/sidebar.rs:56
-#: crates/ui-gtk/src/dialogs/settings/library.rs:636
+#: crates/ui-gtk/src/dialogs/settings/library.rs:634
 #: crates/ui-gtk/src/views/folders.rs:181
 #: crates/ui-gtk/src/views/folders.rs:237 crates/ui-gtk/src/play_modes.rs:70
 msgid "Folders"
@@ -1321,13 +1339,13 @@ msgstr ""
 
 #: crates/ui-gtk/src/window/sidebar.rs:173
 #: crates/ui-gtk/src/views/actions.rs:195
-#: crates/ui-gtk/src/views/actions.rs:519 crates/ui-gtk/src/window/pages.rs:677
+#: crates/ui-gtk/src/views/actions.rs:519 crates/ui-gtk/src/window/pages.rs:790
 #: crates/ui-gtk/src/shortcuts.rs:150
 msgid "New playlist"
 msgstr ""
 
 #: crates/ui-gtk/src/window/sidebar.rs:182
-#: crates/ui-gtk/src/window/pages.rs:848
+#: crates/ui-gtk/src/window/pages.rs:967
 msgid "Playlists"
 msgstr ""
 
@@ -1339,91 +1357,133 @@ msgstr ""
 msgid "Dismiss"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:319
-#: crates/ui-gtk/src/backend/service/services.rs:335
+#: crates/ui-gtk/src/backend/service/services.rs:322
+#: crates/ui-gtk/src/backend/service/services.rs:338
 msgid "The tags of this format cannot be written."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:321
+#: crates/ui-gtk/src/backend/service/services.rs:324
 msgid "The file changed since it was opened. Open it again to edit it."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:323
+#: crates/ui-gtk/src/backend/service/services.rs:326
 msgid "Not saved: the save was cancelled."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:447
+#: crates/ui-gtk/src/backend/service/services.rs:450
 #, rust-format
 msgid "The picture {} cannot be read: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:472
+#: crates/ui-gtk/src/backend/service/services.rs:475
 #, rust-format
 msgid "{} is already in the folder; it was kept."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:482
+#: crates/ui-gtk/src/backend/service/services.rs:485
 #, rust-format
 msgid "The cover could not be saved in the folder: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:497
+#: crates/ui-gtk/src/backend/service/services.rs:500
 msgid "The file is no longer in the library."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:499
+#: crates/ui-gtk/src/backend/service/services.rs:502
 msgid "The file has no copies."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:501
+#: crates/ui-gtk/src/backend/service/services.rs:504
 msgid "The main copy cannot be read to compare."
 msgstr ""
 
 #. / The error of a file operation without a library.
 
-#: crates/ui-gtk/src/backend/service/services.rs:524
-#: crates/ui-gtk/src/backend/service/services.rs:550
-#: crates/ui-gtk/src/backend/service/services.rs:650
-#: crates/ui-gtk/src/backend/service/services.rs:733
-#: crates/ui-gtk/src/backend/service/services.rs:947
-#: crates/ui-gtk/src/backend/services.rs:669
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:143
+#: crates/ui-gtk/src/backend/service/services.rs:527
+#: crates/ui-gtk/src/backend/service/services.rs:553
+#: crates/ui-gtk/src/backend/service/services.rs:653
+#: crates/ui-gtk/src/backend/service/services.rs:738
+#: crates/ui-gtk/src/backend/service/services.rs:952
+#: crates/ui-gtk/src/backend/service/services.rs:1214
+#: crates/ui-gtk/src/backend/service/services.rs:1222
+#: crates/ui-gtk/src/backend/service/services.rs:1229
+#: crates/ui-gtk/src/backend/services.rs:737
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:141
 #: crates/ui-gtk/src/backend/service/export.rs:57
+#: crates/ui-gtk/src/backend/sample/services.rs:848
+#: crates/ui-gtk/src/backend/sample/services.rs:853
 msgid "Helikodu runs without a library."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:695
+#: crates/ui-gtk/src/backend/service/services.rs:700
 msgid "This track is part of a larger file, whose tags it shares."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:699
+#: crates/ui-gtk/src/backend/service/services.rs:704
 #, rust-format
 msgid "The file cannot be read: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:766
+#: crates/ui-gtk/src/backend/service/services.rs:771
 msgid "Open the track in the tag editor first."
 msgstr ""
 
-#: crates/ui-gtk/src/backend/service/services.rs:1205
+#: crates/ui-gtk/src/backend/service/services.rs:1217
+#, rust-format
+msgid "The backup could not be made: {}"
+msgstr ""
+
+#: crates/ui-gtk/src/backend/service/services.rs:1232
+#, rust-format
+msgid "This backup cannot be put back: {}"
+msgstr ""
+
+#: crates/ui-gtk/src/backend/service/services.rs:1253
+#, rust-format
+msgid "The library can only be read, so changes are not kept: {}"
+msgstr ""
+
+#: crates/ui-gtk/src/backend/service/services.rs:1257
+msgid ""
+"The backup was put back. The library as it was before is kept in the backups "
+"folder."
+msgstr ""
+
+#: crates/ui-gtk/src/backend/service/services.rs:1260
+#, rust-format
+msgid "The backup could not be put back, so the library is as it was: {}"
+msgstr ""
+
+#: crates/ui-gtk/src/backend/service/services.rs:1264
+#, rust-format
+msgid ""
+"The library database was damaged and was replaced with the backup from {}."
+msgstr ""
+
+#: crates/ui-gtk/src/backend/service/services.rs:1268
+#, rust-format
+msgid "The library could not be opened, so Helikodu runs without it: {}"
+msgstr ""
+
+#: crates/ui-gtk/src/backend/service/services.rs:1317
 msgid "The file was changed since."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:65
+#: crates/ui-gtk/src/dialogs/about.rs:67
 msgid "system package"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:66
+#: crates/ui-gtk/src/dialogs/about.rs:68
 msgid "built from source"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:174
-#: crates/ui-gtk/src/dialogs/about.rs:176
-#: crates/ui-gtk/src/dialogs/about.rs:319
+#: crates/ui-gtk/src/dialogs/about.rs:222
+#: crates/ui-gtk/src/dialogs/about.rs:224
+#: crates/ui-gtk/src/dialogs/about.rs:378
 msgid "Licences"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:182
+#: crates/ui-gtk/src/dialogs/about.rs:230
 msgid ""
 "Helikodu is free software: you can redistribute it and change it under the "
 "terms of the GNU General Public License as published by the Free Software "
@@ -1431,7 +1491,7 @@ msgid ""
 "version."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:185
+#: crates/ui-gtk/src/dialogs/about.rs:233
 msgid ""
 "It is distributed in the hope that it will be useful, but without any "
 "warranty; without even the implied warranty of merchantability or fitness "
@@ -1439,52 +1499,53 @@ msgid ""
 "details."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:188
+#: crates/ui-gtk/src/dialogs/about.rs:236
 msgid ""
 "The libraries Helikodu uses keep their own licences; their texts are "
 "installed with the program."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:211
+#: crates/ui-gtk/src/dialogs/about.rs:259
 msgid "About"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:240
+#: crates/ui-gtk/src/dialogs/about.rs:288
 msgid "A music player for Linux that works offline."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:262
+#: crates/ui-gtk/src/dialogs/about.rs:310
 msgid "Installed as"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:267
+#: crates/ui-gtk/src/dialogs/about.rs:315
 msgid "Supported formats and decoders"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:282
+#: crates/ui-gtk/src/dialogs/about.rs:341
 msgid "No telemetry, no update checks. Helikodu never goes online."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:291
+#: crates/ui-gtk/src/dialogs/about.rs:350
 msgid ""
 "© 2026 sorrelfox and Helikodu contributors. Free software under the GNU "
 "General Public License, version 3 or later. It comes with no warranty."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:301
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:182
+#: crates/ui-gtk/src/dialogs/about.rs:360
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:298
 #: crates/ui-gtk/src/window/panel/signal_path.rs:128
 msgid "Copy diagnostics"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:309
+#: crates/ui-gtk/src/dialogs/about.rs:368
 msgid "Copied"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/about.rs:330
+#: crates/ui-gtk/src/dialogs/about.rs:389
 #: crates/ui-gtk/src/dialogs/common.rs:85
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1706
 #: crates/ui-gtk/src/mini_player.rs:161
+#: crates/ui-gtk/src/dialogs/maintenance.rs:224
 msgid "Close"
 msgstr ""
 
@@ -1502,7 +1563,7 @@ msgid "Added by you"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/first_run.rs:124
-#: crates/ui-gtk/src/dialogs/settings/library.rs:120
+#: crates/ui-gtk/src/dialogs/settings/library.rs:118
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:315
 #, rust-format
 msgid "Remove {}"
@@ -1544,17 +1605,17 @@ msgid "Watch these folders"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/first_run.rs:314
-#: crates/ui-gtk/src/dialogs/settings/library.rs:282
+#: crates/ui-gtk/src/dialogs/settings/library.rs:280
 msgid "New and changed files appear on their own."
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/first_run.rs:319
-#: crates/ui-gtk/src/dialogs/settings/library.rs:293
+#: crates/ui-gtk/src/dialogs/settings/library.rs:291
 msgid "Include video files"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/first_run.rs:320
-#: crates/ui-gtk/src/dialogs/settings/library.rs:294
+#: crates/ui-gtk/src/dialogs/settings/library.rs:292
 msgid "Plays their sound only. No picture is ever shown."
 msgstr ""
 
@@ -1838,155 +1899,187 @@ msgstr ""
 msgid "Results for “{}”"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:45
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:50
 msgid ""
 "ID3v2.4 is the current version. Choose ID3v2.3 if an old car stereo or "
 "portable player shows no tags. Tag fields that Helikodu does not know are "
 "kept as they are."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:52
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:63
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:57
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:68
 msgid "Change tags in place for files over"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:75
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:80
 msgid ""
 "Smaller files are changed through a checked copy, which is safe even if the "
 "power fails. A change in place is faster for huge files but has no such "
 "safety net. The tag editor tells you before it happens."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:82
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:87
 msgid "Also write ratings to the tags of the files"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:84
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:89
 msgid ""
 "Other players can then read them. Off: ratings stay in the library only."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:156
-msgid "No logs"
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:168
+msgid "Backups"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:157
-msgid "Normal detail"
-msgstr ""
-
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:158
-msgid "Full detail, for a bug report"
-msgstr ""
-
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:167
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:361
-#: crates/ui-gtk/src/dialogs/settings/library.rs:537
-msgid "Logs"
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:173
+msgid "Back up now"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:190
+msgid "The backup could not be made."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:205
+msgid "A backup of the library was made."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:212
+msgid "Restore…"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:230
+msgid "The backup could not be checked."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:250
+msgid "No logs"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:251
+msgid "Normal detail"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:252
+msgid "Full detail, for a bug report"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:261
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:477
+#: crates/ui-gtk/src/dialogs/settings/library.rs:535
+msgid "Logs"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:278
+msgid "Open log folder"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:294
+msgid "There are no logs yet."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:306
 msgid "The diagnostics are on the clipboard."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:196
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:312
 msgid "Logs stay on this computer. Helikodu never sends anything anywhere."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:202
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:318
 msgid "Show tools for testing"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:203
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:319
 msgid "Adds the silent and WAV-file outputs."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:224
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:241
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:340
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:357
 msgid "Reset every setting?"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:244
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:360
 msgid ""
 "Every setting goes back to its default. This cannot be undone. The library "
 "folders, playlists, ratings and play counts are kept."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:255
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:371
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1779
 #: crates/ui-gtk/src/dialogs/volume_confirm.rs:208
-#: crates/ui-gtk/src/views/search.rs:1174 crates/ui-gtk/src/window/pages.rs:766
+#: crates/ui-gtk/src/views/search.rs:1174 crates/ui-gtk/src/window/pages.rs:885
 #: crates/ui-gtk/src/tools/trash.rs:118
 #: crates/ui-gtk/src/tools/tag_tools.rs:114
 #: crates/ui-gtk/src/tools/rename.rs:59
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:131
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:404
-#: crates/ui-gtk/src/tools.rs:157
+#: crates/ui-gtk/src/tools.rs:158 crates/ui-gtk/src/dialogs/maintenance.rs:154
 msgid "Cancel"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:257
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:373
 msgid "Reset settings"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:286
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:402
 msgid "Every setting is back to its default."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:297
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:413
 msgid "Put every setting back to its default"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:304
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:420
 #, rust-format
 msgid ""
 "The library, playlists, ratings and play counts are kept. Settings are "
 "stored in {}"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:308
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:424
 msgid "Reset settings…"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:322
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:438
 msgid "Load each track into memory before it plays"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:325
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:441
 #, rust-format
 msgid ""
 "For drives that are slow or go to sleep. Tracks over {} are read from the "
 "drive as usual."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:348
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:464
 msgid "Tags in MP3 files"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:349
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:465
 msgid "Very large files"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:350
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:466
 msgid "Ratings"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:353
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:469
 msgid "Library database"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:355
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:471
 msgid "Holds the library, playlists, ratings and play history."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:360
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:476
 msgid "Slow drives"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:362
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:478
 msgid "Developer mode"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/advanced.rs:364
+#: crates/ui-gtk/src/dialogs/settings/advanced.rs:480
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:323
 msgid "Reset"
 msgstr ""
@@ -2169,191 +2262,191 @@ msgstr ""
 msgid "Closing the window"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:30
+#: crates/ui-gtk/src/dialogs/settings/library.rs:31
 msgid "Add a music folder"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:31
+#: crates/ui-gtk/src/dialogs/settings/library.rs:32
 msgid "Add"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:47
+#: crates/ui-gtk/src/dialogs/settings/library.rs:45
 msgid "Watched for changes"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:50
+#: crates/ui-gtk/src/dialogs/settings/library.rs:48
 #, rust-format
 msgid "Cannot be watched, so it is checked every {} minute"
 msgid_plural "Cannot be watched, so it is checked every {} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:56
+#: crates/ui-gtk/src/dialogs/settings/library.rs:54
 msgid "Scanned when you ask"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:57
+#: crates/ui-gtk/src/dialogs/settings/library.rs:55
 msgid "Not connected · its tracks are hidden until it is back"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:71
+#: crates/ui-gtk/src/dialogs/settings/library.rs:69
 msgid "Watched"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:72
+#: crates/ui-gtk/src/dialogs/settings/library.rs:70
 #, rust-format
 msgid "Every {} min"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:73
+#: crates/ui-gtk/src/dialogs/settings/library.rs:71
 msgid "Manual"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:74
+#: crates/ui-gtk/src/dialogs/settings/library.rs:72
 #: crates/ui-gtk/src/dialogs/settings/output.rs:239
 #: crates/ui-gtk/src/popovers/output_switcher.rs:276
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:262
-#: crates/ui-gtk/src/tools/sync_export.rs:147
+#: crates/ui-gtk/src/tools/sync_export.rs:152
 msgid "Not connected"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:108
+#: crates/ui-gtk/src/dialogs/settings/library.rs:106
 #, rust-format
 msgid "Scan {} again"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:133
+#: crates/ui-gtk/src/dialogs/settings/library.rs:131
 #, rust-format
 msgid "{} is no longer in the library"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:167
+#: crates/ui-gtk/src/dialogs/settings/library.rs:165
 msgid "Add folder"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:195
+#: crates/ui-gtk/src/dialogs/settings/library.rs:193
 msgid "Rescan all"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:219
+#: crates/ui-gtk/src/dialogs/settings/library.rs:217
 msgid "No folders yet"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:238
-#: crates/ui-gtk/src/dialogs/settings/library.rs:640
+#: crates/ui-gtk/src/dialogs/settings/library.rs:236
+#: crates/ui-gtk/src/dialogs/settings/library.rs:638
 msgid "Skip"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:270
+#: crates/ui-gtk/src/dialogs/settings/library.rs:268
 msgid ""
 "Files and folders with these names are not scanned. Separate patterns with "
 "semicolons."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:281
+#: crates/ui-gtk/src/dialogs/settings/library.rs:279
 msgid "Watch the folders for changes"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:287
+#: crates/ui-gtk/src/dialogs/settings/library.rs:285
 msgid "Follow symbolic links"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:288
+#: crates/ui-gtk/src/dialogs/settings/library.rs:286
 msgid "Off: linked files and folders are skipped, so nothing is listed twice."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:299
+#: crates/ui-gtk/src/dialogs/settings/library.rs:297
 msgid "Hide tracks on drives that are not connected"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:300
+#: crates/ui-gtk/src/dialogs/settings/library.rs:298
 msgid "They return with their ratings and play counts when the drive is back."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:305
+#: crates/ui-gtk/src/dialogs/settings/library.rs:303
 msgid "Import playlist files found in the folders"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:306
+#: crates/ui-gtk/src/dialogs/settings/library.rs:304
 msgid "M3U, PLS and XSPF files become playlists that follow their files."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:342
-#: crates/ui-gtk/src/dialogs/settings/library.rs:352
+#: crates/ui-gtk/src/dialogs/settings/library.rs:340
+#: crates/ui-gtk/src/dialogs/settings/library.rs:350
 msgid "Copies of the same file"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:346
+#: crates/ui-gtk/src/dialogs/settings/library.rs:344
 msgid "Skipped copies get no tracks; one takes over if the main copy goes."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:349
+#: crates/ui-gtk/src/dialogs/settings/library.rs:347
 msgid "Add them"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:349
+#: crates/ui-gtk/src/dialogs/settings/library.rs:347
 msgid "Skip them"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:362
+#: crates/ui-gtk/src/dialogs/settings/library.rs:360
 msgid "Show one track for identical copies"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:364
+#: crates/ui-gtk/src/dialogs/settings/library.rs:362
 msgid ""
 "Lists, counts and search show only the main copy; a badge marks the track."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:371
+#: crates/ui-gtk/src/dialogs/settings/library.rs:369
 msgid "Not used while copies are skipped: they have no tracks to show."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:382
+#: crates/ui-gtk/src/dialogs/settings/library.rs:380
 msgid "Applying"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:419
+#: crates/ui-gtk/src/dialogs/settings/library.rs:417
 msgid "Applying to the library…"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:476
+#: crates/ui-gtk/src/dialogs/settings/library.rs:474
 #, rust-format
 msgid "Applying to the library… {}%"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:486
+#: crates/ui-gtk/src/dialogs/settings/library.rs:484
 msgid "Applied to the library."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:489
+#: crates/ui-gtk/src/dialogs/settings/library.rs:487
 #, rust-format
 msgid "Applied to the library: {} file read."
 msgid_plural "Applied to the library: {} files read."
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:495
+#: crates/ui-gtk/src/dialogs/settings/library.rs:493
 #, rust-format
 msgid "Not applied: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:523
+#: crates/ui-gtk/src/dialogs/settings/library.rs:521
 msgid "Covers"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:530
+#: crates/ui-gtk/src/dialogs/settings/library.rs:528
 msgid "Analysis data"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:544
+#: crates/ui-gtk/src/dialogs/settings/library.rs:542
 msgid "Undo history"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:558
+#: crates/ui-gtk/src/dialogs/settings/library.rs:556
 msgid "Tag edits and file moves"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:582
+#: crates/ui-gtk/src/dialogs/settings/library.rs:580
 #: crates/ui-gtk/src/tools/missing_files.rs:236
 #: crates/ui-gtk/src/tools/missing_files.rs:528
 #: crates/ui-gtk/src/views/smart_rules.rs:354
@@ -2363,28 +2456,28 @@ msgid_plural "{} days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:592
+#: crates/ui-gtk/src/dialogs/settings/library.rs:590
 #, rust-format
 msgid "Limit for {}"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:637
+#: crates/ui-gtk/src/dialogs/settings/library.rs:635
 msgid "Files are played where they are. Nothing is copied."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:641
+#: crates/ui-gtk/src/dialogs/settings/library.rs:639
 msgid "Scanning"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:644
+#: crates/ui-gtk/src/dialogs/settings/library.rs:642
 msgid "Files whose bytes are identical, tags included."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:649
+#: crates/ui-gtk/src/dialogs/settings/library.rs:647
 msgid "Storage"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/library.rs:650
+#: crates/ui-gtk/src/dialogs/settings/library.rs:648
 msgid "At a limit, the oldest items are removed first."
 msgstr ""
 
@@ -2601,7 +2694,7 @@ msgstr ""
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:339
 #: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:259
-#: crates/ui-gtk/src/mini_player.rs:504 crates/ui-gtk/src/window/desktop.rs:361
+#: crates/ui-gtk/src/mini_player.rs:504 crates/ui-gtk/src/window/desktop.rs:429
 msgid "Pause"
 msgstr ""
 
@@ -3184,7 +3277,7 @@ msgstr ""
 #: crates/ui-gtk/src/tools/duplicates.rs:713
 #: crates/ui-gtk/src/views/smart_playlist.rs:1011
 #: crates/ui-gtk/src/views/smart_playlist.rs:1012
-#: crates/ui-gtk/src/tools/sync_export.rs:512
+#: crates/ui-gtk/src/tools/sync_export.rs:523
 #: crates/ui-gtk/src/tools/cover_manager.rs:742
 msgid "Remove"
 msgstr ""
@@ -3243,7 +3336,7 @@ msgid ""
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1392
-#: crates/ui-gtk/src/views/artists.rs:129 crates/ui-gtk/src/views/genres.rs:105
+#: crates/ui-gtk/src/views/artists.rs:129 crates/ui-gtk/src/views/genres.rs:104
 #: crates/ui-gtk/src/views/search.rs:1101
 #: crates/ui-gtk/src/views/category.rs:190
 msgid "Name"
@@ -3340,8 +3433,8 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1556
 #: crates/ui-gtk/src/tools/tag_tools.rs:107
 #: crates/ui-gtk/src/views/history.rs:258
-#: crates/ui-gtk/src/tools/sync_export.rs:598
-#: crates/ui-gtk/src/tools/sync_export.rs:607
+#: crates/ui-gtk/src/tools/sync_export.rs:641
+#: crates/ui-gtk/src/tools/sync_export.rs:650
 msgid "Files"
 msgstr ""
 
@@ -3356,7 +3449,7 @@ msgid "{}, {}"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1592
-#: crates/ui-gtk/src/views/table.rs:347
+#: crates/ui-gtk/src/views/table.rs:361
 #, rust-format
 msgid "{}. {}, {}"
 msgstr ""
@@ -3393,11 +3486,11 @@ msgstr ""
 msgid "Tag tools"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1864
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1863
 msgid "These tracks are no longer in the library."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1865
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1864
 #, rust-format
 msgid "The tags cannot be read: {}"
 msgstr ""
@@ -3557,7 +3650,7 @@ msgid "Audio output settings"
 msgstr ""
 
 #: crates/ui-gtk/src/views/actions.rs:191
-#: crates/ui-gtk/src/views/artists.rs:171
+#: crates/ui-gtk/src/views/artists.rs:170
 msgid "Play next"
 msgstr ""
 
@@ -3582,7 +3675,7 @@ msgstr ""
 
 #: crates/ui-gtk/src/views/actions.rs:243
 #: crates/ui-gtk/src/views/actions.rs:355
-#: crates/ui-gtk/src/window/playlists.rs:254
+#: crates/ui-gtk/src/window/playlists.rs:265
 msgid "Pin to the sidebar"
 msgstr ""
 
@@ -3632,8 +3725,8 @@ msgid "Move to trash…"
 msgstr ""
 
 #: crates/ui-gtk/src/views/actions.rs:355
-#: crates/ui-gtk/src/window/playlists.rs:252
-#: crates/ui-gtk/src/window/playlists.rs:331
+#: crates/ui-gtk/src/window/playlists.rs:263
+#: crates/ui-gtk/src/window/playlists.rs:344
 msgid "Unpin"
 msgstr ""
 
@@ -3690,54 +3783,54 @@ msgstr ""
 msgid "This track has no file to rename."
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:130 crates/ui-gtk/src/views/genres.rs:106
+#: crates/ui-gtk/src/views/artists.rs:130 crates/ui-gtk/src/views/genres.rs:105
 #: crates/ui-gtk/src/views/category.rs:202
 msgid "Number of albums"
 msgstr ""
 
+#: crates/ui-gtk/src/views/artists.rs:132
 #: crates/ui-gtk/src/views/artists.rs:133
-#: crates/ui-gtk/src/views/artists.rs:134
 msgid "Sort the artists"
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:159 crates/ui-gtk/src/views/genres.rs:132
-#: crates/ui-gtk/src/views/category.rs:234
+#: crates/ui-gtk/src/views/artists.rs:158 crates/ui-gtk/src/views/genres.rs:130
+#: crates/ui-gtk/src/views/category.rs:233
 msgid "Play all"
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:188
+#: crates/ui-gtk/src/views/artists.rs:186
 msgid "Releases"
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:189
+#: crates/ui-gtk/src/views/artists.rs:187
 msgid "All tracks"
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:218
-#: crates/ui-gtk/src/views/artists.rs:246 crates/ui-gtk/src/views/home.rs:359
+#: crates/ui-gtk/src/views/artists.rs:216
+#: crates/ui-gtk/src/views/artists.rs:244 crates/ui-gtk/src/views/home.rs:359
 #: crates/ui-gtk/src/views/home.rs:365 crates/ui-gtk/src/views/home.rs:629
 msgid "Most played"
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:260
+#: crates/ui-gtk/src/views/artists.rs:258
 msgid "No artist chosen"
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:261
+#: crates/ui-gtk/src/views/artists.rs:259
 msgid "Choose an artist to see their releases."
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:560 crates/ui-gtk/src/views/genres.rs:333
-#: crates/ui-gtk/src/views/category.rs:434
+#: crates/ui-gtk/src/views/artists.rs:558 crates/ui-gtk/src/views/genres.rs:331
+#: crates/ui-gtk/src/views/category.rs:433
 #, rust-format
 msgid "{}, {} album"
 msgid_plural "{}, {} albums"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/artists.rs:630 crates/ui-gtk/src/views/genres.rs:365
+#: crates/ui-gtk/src/views/artists.rs:628 crates/ui-gtk/src/views/genres.rs:363
 #: crates/ui-gtk/src/views/search.rs:556
-#: crates/ui-gtk/src/views/category.rs:476
+#: crates/ui-gtk/src/views/category.rs:475
 #: crates/ui-gtk/src/tools/cover_manager.rs:198
 #, rust-format
 msgid "{} album"
@@ -3745,22 +3838,22 @@ msgid_plural "{} albums"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/artists.rs:637
+#: crates/ui-gtk/src/views/artists.rs:635
 #, rust-format
 msgid "{} EP or single"
 msgid_plural "{} EPs and singles"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/artists.rs:656
+#: crates/ui-gtk/src/views/artists.rs:654
 msgid "EPs and singles"
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:657
+#: crates/ui-gtk/src/views/artists.rs:655
 msgid "Appears on"
 msgstr ""
 
-#: crates/ui-gtk/src/views/artists.rs:978
+#: crates/ui-gtk/src/views/artists.rs:976
 #, rust-format
 msgid "Cannot set the artist photo: {}"
 msgstr ""
@@ -3799,7 +3892,7 @@ msgid "Open in file manager"
 msgstr ""
 
 #: crates/ui-gtk/src/views/folders.rs:275
-#: crates/ui-gtk/src/tools/tag_tools.rs:555
+#: crates/ui-gtk/src/tools/tag_tools.rs:554
 #: crates/ui-gtk/src/views/smart_rules.rs:171
 msgid "File name"
 msgstr ""
@@ -3878,19 +3971,19 @@ msgid_plural "{} other files not shown"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/genres.rs:91
+#: crates/ui-gtk/src/views/genres.rs:90
 msgid "Sort"
 msgstr ""
 
-#: crates/ui-gtk/src/views/genres.rs:112 crates/ui-gtk/src/views/genres.rs:113
+#: crates/ui-gtk/src/views/genres.rs:110 crates/ui-gtk/src/views/genres.rs:111
 msgid "Sort the genres"
 msgstr ""
 
-#: crates/ui-gtk/src/views/genres.rs:168
+#: crates/ui-gtk/src/views/genres.rs:166
 msgid "No genre chosen"
 msgstr ""
 
-#: crates/ui-gtk/src/views/genres.rs:169
+#: crates/ui-gtk/src/views/genres.rs:167
 msgid "Choose a genre to see its albums."
 msgstr ""
 
@@ -3914,66 +4007,66 @@ msgstr[1] ""
 msgid "edited {}"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:182
+#: crates/ui-gtk/src/views/playlist.rs:184
 #: crates/ui-gtk/src/views/history.rs:253
-#: crates/ui-gtk/src/window/playlists.rs:403
-#: crates/ui-gtk/src/tools/sync_export.rs:531
+#: crates/ui-gtk/src/window/playlists.rs:416
+#: crates/ui-gtk/src/tools/sync_export.rs:542
 msgid "Playlist"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:195
+#: crates/ui-gtk/src/views/playlist.rs:197
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:713
 msgid "Export"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:200
 #: crates/ui-gtk/src/views/playlist.rs:202
-#: crates/ui-gtk/src/views/playlist.rs:942
-#: crates/ui-gtk/src/views/playlist.rs:1138
+#: crates/ui-gtk/src/views/playlist.rs:204
+#: crates/ui-gtk/src/views/playlist.rs:960
+#: crates/ui-gtk/src/views/playlist.rs:1156
 msgid "Lock against changes"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:236
+#: crates/ui-gtk/src/views/playlist.rs:238
 msgid "Playlist entries"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:382 crates/ui-gtk/src/tools/copies.rs:69
+#: crates/ui-gtk/src/views/playlist.rs:385 crates/ui-gtk/src/tools/copies.rs:69
 #: crates/ui-gtk/src/tools/copies.rs:78
 #: crates/ui-gtk/src/tools/duplicates.rs:100
 msgid "The file is missing"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:538
+#: crates/ui-gtk/src/views/playlist.rs:541
 #: crates/ui-gtk/src/tools/organizer.rs:118
 #: crates/ui-gtk/src/tools/missing_files.rs:701
 msgid "Missing"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:592
+#: crates/ui-gtk/src/views/playlist.rs:595
 msgid "Save as a playlist file…"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:594
+#: crates/ui-gtk/src/views/playlist.rs:597
 msgid "Copy the files to a folder…"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:763
+#: crates/ui-gtk/src/views/playlist.rs:767
 #, rust-format
 msgid "Moving {} track to position {}"
 msgid_plural "Moving {} tracks to position {}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/playlist.rs:770
+#: crates/ui-gtk/src/views/playlist.rs:774
 msgid "Esc cancels · Ctrl Z undoes"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:940
+#: crates/ui-gtk/src/views/playlist.rs:958
 msgid "Unlock"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1051
-#: crates/ui-gtk/src/views/tracks.rs:756
+#: crates/ui-gtk/src/views/playlist.rs:1069
+#: crates/ui-gtk/src/views/tracks.rs:809
 #: crates/ui-gtk/src/views/smart_playlist.rs:1457
 #, rust-format
 msgid "{} selected"
@@ -3981,53 +4074,53 @@ msgid_plural "{} selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1063
+#: crates/ui-gtk/src/views/playlist.rs:1081
 #, rust-format
 msgid "{} file is missing"
 msgid_plural "{} files are missing"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1072
-#: crates/ui-gtk/src/window/playlists.rs:470
+#: crates/ui-gtk/src/views/playlist.rs:1090
+#: crates/ui-gtk/src/window/playlists.rs:489
 msgid "Grouped by album"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1075
-#: crates/ui-gtk/src/window/playlists.rs:468
+#: crates/ui-gtk/src/views/playlist.rs:1093
+#: crates/ui-gtk/src/window/playlists.rs:487
 msgid "Locked against changes"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1077
+#: crates/ui-gtk/src/views/playlist.rs:1095
 msgid "Ctrl Z undoes the last change"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1136
+#: crates/ui-gtk/src/views/playlist.rs:1154
 msgid "Group by album"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1148
+#: crates/ui-gtk/src/views/playlist.rs:1166
 msgid "Shuffle the order…"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1162
+#: crates/ui-gtk/src/views/playlist.rs:1180
 msgid "Remove duplicates"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1165
+#: crates/ui-gtk/src/views/playlist.rs:1183
 msgid "Remove missing tracks"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1280
-#: crates/ui-gtk/src/window/pages.rs:716
+#: crates/ui-gtk/src/views/playlist.rs:1298
+#: crates/ui-gtk/src/window/pages.rs:832
 msgid "Playlist name"
 msgstr ""
 
-#: crates/ui-gtk/src/views/playlist.rs:1282
+#: crates/ui-gtk/src/views/playlist.rs:1300
 #: crates/ui-gtk/src/views/search.rs:1109
 #: crates/ui-gtk/src/tools/organizer.rs:114
 #: crates/ui-gtk/src/tools/rename.rs:61
-#: crates/ui-gtk/src/window/playlists.rs:722
+#: crates/ui-gtk/src/window/playlists.rs:741
 msgid "Rename"
 msgstr ""
 
@@ -4127,17 +4220,17 @@ msgid "for example {}"
 msgstr ""
 
 #: crates/ui-gtk/src/views/search.rs:1069
-#: crates/ui-gtk/src/window/playlists.rs:328
+#: crates/ui-gtk/src/window/playlists.rs:341
 msgid "Open"
 msgstr ""
 
 #: crates/ui-gtk/src/views/search.rs:1071
-#: crates/ui-gtk/src/window/playlists.rs:230
-#: crates/ui-gtk/src/window/playlists.rs:232 crates/ui-gtk/src/tools.rs:83
+#: crates/ui-gtk/src/window/playlists.rs:237
+#: crates/ui-gtk/src/window/playlists.rs:239 crates/ui-gtk/src/tools.rs:84
 msgid "Rename…"
 msgstr ""
 
-#: crates/ui-gtk/src/views/search.rs:1072 crates/ui-gtk/src/tools.rs:84
+#: crates/ui-gtk/src/views/search.rs:1072 crates/ui-gtk/src/tools.rs:85
 msgid "Delete…"
 msgstr ""
 
@@ -4161,8 +4254,8 @@ msgstr ""
 msgid "The tracks it finds stay in the library."
 msgstr ""
 
-#: crates/ui-gtk/src/views/search.rs:1174 crates/ui-gtk/src/window/pages.rs:766
-#: crates/ui-gtk/src/tools.rs:157
+#: crates/ui-gtk/src/views/search.rs:1174 crates/ui-gtk/src/window/pages.rs:885
+#: crates/ui-gtk/src/tools.rs:158
 msgid "Delete"
 msgstr ""
 
@@ -4191,74 +4284,74 @@ msgstr ""
 msgid "Show or hide columns"
 msgstr ""
 
-#: crates/ui-gtk/src/views/tracks.rs:739
+#: crates/ui-gtk/src/views/tracks.rs:792
 #, rust-format
 msgid "Sorted by {}"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:224
+#: crates/ui-gtk/src/window/pages.rs:304
 msgid "Search the library"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:754
+#: crates/ui-gtk/src/window/pages.rs:873
 #, rust-format
 msgid "Delete the folder “{}”?"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:755
+#: crates/ui-gtk/src/window/pages.rs:874
 msgid "The playlists in it move up a level."
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:759
+#: crates/ui-gtk/src/window/pages.rs:878
 #, rust-format
 msgid "Delete the playlist “{}”?"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:760
+#: crates/ui-gtk/src/window/pages.rs:879
 msgid "Its tracks stay in the library. This cannot be undone."
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:803
+#: crates/ui-gtk/src/window/pages.rs:922
 msgid "M3U8 playlists"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:804
+#: crates/ui-gtk/src/window/pages.rs:923
 msgid "M3U playlists"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:805
+#: crates/ui-gtk/src/window/pages.rs:924
 msgid "PLS playlists"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:806
+#: crates/ui-gtk/src/window/pages.rs:925
 msgid "XSPF playlists"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:814
+#: crates/ui-gtk/src/window/pages.rs:933
 msgid "Export playlist"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:834
+#: crates/ui-gtk/src/window/pages.rs:953
 #, rust-format
 msgid "{} track exported"
 msgid_plural "{} tracks exported"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/window/pages.rs:855
+#: crates/ui-gtk/src/window/pages.rs:974
 msgid "Import playlist"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:875
+#: crates/ui-gtk/src/window/pages.rs:994
 #, rust-format
 msgid "Imported “{}”"
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:929
+#: crates/ui-gtk/src/window/pages.rs:1048
 msgid "There is nothing to play there."
 msgstr ""
 
-#: crates/ui-gtk/src/window/pages.rs:963
+#: crates/ui-gtk/src/window/pages.rs:1082
 msgid "The selected track has no copies."
 msgstr ""
 
@@ -4395,7 +4488,7 @@ msgstr ""
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:551
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:178
 #: crates/ui-gtk/src/tools/trash.rs:247
-#: crates/ui-gtk/src/tools/file_tools.rs:240
+#: crates/ui-gtk/src/tools/file_tools.rs:234
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:343
 #, rust-format
 msgid "{}: {}"
@@ -5582,7 +5675,7 @@ msgstr[1] ""
 #: crates/ui-gtk/src/tools/duplicates.rs:311
 #: crates/ui-gtk/src/tools/organizer.rs:521
 #: crates/ui-gtk/src/tools/verify_files.rs:448
-#: crates/ui-gtk/src/tools/sync_export.rs:424
+#: crates/ui-gtk/src/tools/sync_export.rs:428
 #, rust-format
 msgid "{} file"
 msgid_plural "{} files"
@@ -5767,7 +5860,7 @@ msgid "Detected: {}"
 msgstr ""
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:209
-#: crates/ui-gtk/src/tools/tag_tools.rs:487
+#: crates/ui-gtk/src/tools/tag_tools.rs:486
 msgid "Detected: none"
 msgstr ""
 
@@ -5779,123 +5872,123 @@ msgstr ""
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:287
 #: crates/ui-gtk/src/tools/organizer.rs:977
-#: crates/ui-gtk/src/tools/organizer.rs:983
+#: crates/ui-gtk/src/tools/organizer.rs:982
 msgid "Insert field"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:320
+#: crates/ui-gtk/src/tools/tag_tools.rs:319
 #, rust-format
 msgid ""
 "The pattern is compared with the file name without its extension. Use {skip} "
 "for a part you do not need."
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:325
+#: crates/ui-gtk/src/tools/tag_tools.rs:324
 msgid "Fill"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:371
+#: crates/ui-gtk/src/tools/tag_tools.rs:370
 msgid "Only where the tag is empty"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:378
+#: crates/ui-gtk/src/tools/tag_tools.rs:377
 msgid "Start at"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:382
+#: crates/ui-gtk/src/tools/tag_tools.rs:381
 msgid "The first number"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:396
+#: crates/ui-gtk/src/tools/tag_tools.rs:395
 msgid "Start again for each disc"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:400
+#: crates/ui-gtk/src/tools/tag_tools.rs:399
 msgid "Write the total"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:404
+#: crates/ui-gtk/src/tools/tag_tools.rs:403
 msgid "The files are numbered in the order of the tag editor."
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:412
+#: crates/ui-gtk/src/tools/tag_tools.rs:411
 msgid "Change to"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:415
+#: crates/ui-gtk/src/tools/tag_tools.rs:414
 msgid "Title Case"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:416
+#: crates/ui-gtk/src/tools/tag_tools.rs:415
 msgid "Sentence case"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:417
+#: crates/ui-gtk/src/tools/tag_tools.rs:416
 msgid "lower case"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:418
+#: crates/ui-gtk/src/tools/tag_tools.rs:417
 msgid "UPPER CASE"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:425
+#: crates/ui-gtk/src/tools/tag_tools.rs:424
 msgid "Capital letters"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:435
-#: crates/ui-gtk/src/tools/tag_tools.rs:481
+#: crates/ui-gtk/src/tools/tag_tools.rs:434
+#: crates/ui-gtk/src/tools/tag_tools.rs:480
 msgid "Fields"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:440
-#: crates/ui-gtk/src/tools/tag_tools.rs:449
+#: crates/ui-gtk/src/tools/tag_tools.rs:439
+#: crates/ui-gtk/src/tools/tag_tools.rs:448
 msgid "Find"
 msgstr ""
 
+#: crates/ui-gtk/src/tools/tag_tools.rs:461
 #: crates/ui-gtk/src/tools/tag_tools.rs:462
-#: crates/ui-gtk/src/tools/tag_tools.rs:463
 msgid "Replace with"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:473
+#: crates/ui-gtk/src/tools/tag_tools.rs:472
 msgid "Regular expression"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:477
+#: crates/ui-gtk/src/tools/tag_tools.rs:476
 msgid "Match capital letters"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:486
+#: crates/ui-gtk/src/tools/tag_tools.rs:485
 msgid "Text is in"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:496
+#: crates/ui-gtk/src/tools/tag_tools.rs:495
 msgid "The charset the text really has"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:512
+#: crates/ui-gtk/src/tools/tag_tools.rs:511
 msgid ""
 "Old taggers stored text in the code page of their system. Only values that "
 "change are listed."
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:520
+#: crates/ui-gtk/src/tools/tag_tools.rs:519
 msgid "Forms"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:523
+#: crates/ui-gtk/src/tools/tag_tools.rs:522
 msgid "“Beatles, The”"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:528
+#: crates/ui-gtk/src/tools/tag_tools.rs:527
 msgid "“Surname, Name”"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:532
+#: crates/ui-gtk/src/tools/tag_tools.rs:531
 msgid "For"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/tag_tools.rs:535
+#: crates/ui-gtk/src/tools/tag_tools.rs:534
 msgid "Only where the sort tag is empty."
 msgstr ""
 
@@ -6052,13 +6145,13 @@ msgstr ""
 
 #: crates/ui-gtk/src/window/tag_undo.rs:45
 #: crates/ui-gtk/src/window/tag_undo.rs:109
-#: crates/ui-gtk/src/window/playlists.rs:104
+#: crates/ui-gtk/src/window/playlists.rs:109
 msgid "There is nothing to redo."
 msgstr ""
 
 #: crates/ui-gtk/src/window/tag_undo.rs:47
 #: crates/ui-gtk/src/window/tag_undo.rs:111
-#: crates/ui-gtk/src/window/playlists.rs:106
+#: crates/ui-gtk/src/window/playlists.rs:111
 msgid "There is nothing to undo."
 msgstr ""
 
@@ -6097,7 +6190,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: crates/ui-gtk/src/window/tag_undo.rs:170
-#: crates/ui-gtk/src/tools/file_tools.rs:193
+#: crates/ui-gtk/src/tools/file_tools.rs:187
 #, rust-format
 msgid "{} file stayed where it was"
 msgid_plural "{} files stayed where they were"
@@ -6126,54 +6219,54 @@ msgid_plural "Redid moving {} files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:172
+#: crates/ui-gtk/src/tools/file_tools.rs:166
 #, rust-format
 msgid "{} file moved back"
 msgid_plural "{} files moved back"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:176
+#: crates/ui-gtk/src/tools/file_tools.rs:170
 #, rust-format
 msgid "{} file moved again"
 msgid_plural "{} files moved again"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:180
+#: crates/ui-gtk/src/tools/file_tools.rs:174
 #, rust-format
 msgid "{} file moved"
 msgid_plural "{} files moved"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:212
+#: crates/ui-gtk/src/tools/file_tools.rs:206
 msgid "Left alone: the file is not where it was"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:213
+#: crates/ui-gtk/src/tools/file_tools.rs:207
 msgid "Left alone: the library has the file elsewhere now"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:215
+#: crates/ui-gtk/src/tools/file_tools.rs:209
 msgid "Left alone: a file with that name is already there"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:218
+#: crates/ui-gtk/src/tools/file_tools.rs:212
 msgid "Left alone: the destination is not in a library folder"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:220
+#: crates/ui-gtk/src/tools/file_tools.rs:214
 msgid "Not moved: stopped before this file"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:222
+#: crates/ui-gtk/src/tools/file_tools.rs:216
 #, rust-format
 msgid "Left alone: it could not be moved ({})"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/file_tools.rs:224
-#: crates/ui-gtk/src/tools/sync_export.rs:542
+#: crates/ui-gtk/src/tools/file_tools.rs:218
+#: crates/ui-gtk/src/tools/sync_export.rs:553
 msgid "Left alone"
 msgstr ""
 
@@ -6287,7 +6380,7 @@ msgstr ""
 #. / a folder chosen before, and "Choose a folder…".
 
 #: crates/ui-gtk/src/tools/organizer.rs:200
-#: crates/ui-gtk/src/tools/organizer.rs:993
+#: crates/ui-gtk/src/tools/organizer.rs:992
 msgid "The library folder each file is in"
 msgstr ""
 
@@ -6363,7 +6456,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: crates/ui-gtk/src/tools/organizer.rs:567
-#: crates/ui-gtk/src/tools/organizer.rs:1085
+#: crates/ui-gtk/src/tools/organizer.rs:1084
 #, rust-format
 msgid "Move {} file"
 msgid_plural "Move {} files"
@@ -6372,7 +6465,7 @@ msgstr[1] ""
 
 #: crates/ui-gtk/src/tools/organizer.rs:576
 #: crates/ui-gtk/src/tools/organizer.rs:578
-#: crates/ui-gtk/src/tools/organizer.rs:1081
+#: crates/ui-gtk/src/tools/organizer.rs:1080
 msgid "Undo the last run"
 msgstr ""
 
@@ -6381,7 +6474,7 @@ msgid "Redo the last run"
 msgstr ""
 
 #: crates/ui-gtk/src/tools/organizer.rs:769
-#: crates/ui-gtk/src/tools/organizer.rs:1038
+#: crates/ui-gtk/src/tools/organizer.rs:1037
 msgid "Organize files"
 msgstr ""
 
@@ -6400,46 +6493,47 @@ msgstr ""
 msgid "New pattern"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:990
+#: crates/ui-gtk/src/tools/organizer.rs:989
 msgid "Into"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1001
+#: crates/ui-gtk/src/tools/organizer.rs:1000
 msgid "Characters in names"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1002
+#: crates/ui-gtk/src/tools/organizer.rs:1001
 msgid "Move covers and booklets too"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1038
+#: crates/ui-gtk/src/tools/organizer.rs:1037
 msgid "Patterns"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1040
+#: crates/ui-gtk/src/tools/organizer.rs:1039
 msgid ""
 "Every move is written down first, so a run can be undone later, even after a "
 "restart."
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1047
+#: crates/ui-gtk/src/tools/organizer.rs:1046
 msgid "Now, and after the move"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1048
+#: crates/ui-gtk/src/tools/organizer.rs:1047
 msgid "Change"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1063
+#: crates/ui-gtk/src/tools/organizer.rs:1062
 msgid "Files to organize"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1213
+#: crates/ui-gtk/src/tools/organizer.rs:1212
 msgid "Organize into a folder"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/organizer.rs:1214
+#: crates/ui-gtk/src/tools/organizer.rs:1213
 #: crates/ui-gtk/src/tools/verify_files.rs:794
+#: crates/ui-gtk/src/dialogs/maintenance.rs:112
 msgid "Choose"
 msgstr ""
 
@@ -6828,14 +6922,14 @@ msgid_plural "{} identical copies"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/backend.rs:840 crates/ui-gtk/src/backend.rs:847
-#: crates/ui-gtk/src/backend.rs:854
+#: crates/ui-gtk/src/backend.rs:854 crates/ui-gtk/src/backend.rs:861
+#: crates/ui-gtk/src/backend.rs:868
 msgid "Searches cannot be saved here."
 msgstr ""
 
 #. / The error of a backend that cannot do something.
 
-#: crates/ui-gtk/src/backend.rs:1048
+#: crates/ui-gtk/src/backend.rs:1062
 msgid "This is not available here."
 msgstr ""
 
@@ -7228,19 +7322,19 @@ msgid_plural "A play counts after {} % of the track or {} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/window/history.rs:66
+#: crates/ui-gtk/src/window/history.rs:63
 msgid "ListenBrainz listens (JSON Lines)"
 msgstr ""
 
-#: crates/ui-gtk/src/window/history.rs:67
+#: crates/ui-gtk/src/window/history.rs:64
 msgid "Scrobbler logs"
 msgstr ""
 
-#: crates/ui-gtk/src/window/history.rs:75
+#: crates/ui-gtk/src/window/history.rs:72
 msgid "Export the play history"
 msgstr ""
 
-#: crates/ui-gtk/src/window/history.rs:95
+#: crates/ui-gtk/src/window/history.rs:92
 #, rust-format
 msgid "{} listen exported"
 msgid_plural "{} listens exported"
@@ -7273,11 +7367,11 @@ msgstr ""
 msgid "Newest first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/category.rs:211
+#: crates/ui-gtk/src/views/category.rs:210
 msgid "Sort the composers"
 msgstr ""
 
-#: crates/ui-gtk/src/views/category.rs:212
+#: crates/ui-gtk/src/views/category.rs:211
 msgid "Sort the years"
 msgstr ""
 
@@ -7334,13 +7428,13 @@ msgid "The tracks follow the library as it changes"
 msgstr ""
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:216
-#: crates/ui-gtk/src/window/playlists.rs:404
+#: crates/ui-gtk/src/window/playlists.rs:417
 msgid "Smart playlist"
 msgstr ""
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:229
 #: crates/ui-gtk/src/views/smart_playlist.rs:808
-#: crates/ui-gtk/src/window/playlists.rs:222
+#: crates/ui-gtk/src/window/playlists.rs:229
 msgid "Edit rules"
 msgstr ""
 
@@ -7443,7 +7537,7 @@ msgid "These rules cannot run: {}"
 msgstr ""
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:1269
-#: crates/ui-gtk/src/window/playlists.rs:611
+#: crates/ui-gtk/src/window/playlists.rs:630
 #, rust-format
 msgid "The text cannot be read: {}"
 msgstr ""
@@ -7659,104 +7753,104 @@ msgstr ""
 msgid "at most {} GB"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:130
+#: crates/ui-gtk/src/window/playlists.rs:135
 msgid "New smart playlist"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:153
-#: crates/ui-gtk/src/window/playlists.rs:657
+#: crates/ui-gtk/src/window/playlists.rs:158
+#: crates/ui-gtk/src/window/playlists.rs:676
 msgid "New folder"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:180
+#: crates/ui-gtk/src/window/playlists.rs:185
 msgid "Folder name"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:212
+#: crates/ui-gtk/src/window/playlists.rs:219
 msgid "New smart playlist here"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:218
+#: crates/ui-gtk/src/window/playlists.rs:225
 msgid "New folder here"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:238
+#: crates/ui-gtk/src/window/playlists.rs:247
 msgid "Duplicate"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:242
+#: crates/ui-gtk/src/window/playlists.rs:251
 msgid "Save a copy as a playlist"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:248
+#: crates/ui-gtk/src/window/playlists.rs:258
 msgid "Move to folder"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:261
+#: crates/ui-gtk/src/window/playlists.rs:272
 msgid "Export…"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:265
+#: crates/ui-gtk/src/window/playlists.rs:277
 msgid "Delete folder…"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:267
+#: crates/ui-gtk/src/window/playlists.rs:279
 msgid "Delete playlist…"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:281
+#: crates/ui-gtk/src/window/playlists.rs:294
 msgid "Top level"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:311
+#: crates/ui-gtk/src/window/playlists.rs:324
 msgid "New folder…"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:361
+#: crates/ui-gtk/src/window/playlists.rs:374
 msgid "Pinned to the sidebar"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:363
+#: crates/ui-gtk/src/window/playlists.rs:376
 msgid "Unpinned"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:434
+#: crates/ui-gtk/src/window/playlists.rs:450
 msgid "the top level"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:436
+#: crates/ui-gtk/src/window/playlists.rs:452
 #, rust-format
 msgid "Moved to {}"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:469
+#: crates/ui-gtk/src/window/playlists.rs:488
 msgid "Unlocked"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:471
+#: crates/ui-gtk/src/window/playlists.rs:490
 msgid "Not grouped"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:535
+#: crates/ui-gtk/src/window/playlists.rs:554
 #, rust-format
 msgid "{} (copy)"
 msgstr ""
 
-#: crates/ui-gtk/src/window/playlists.rs:568
+#: crates/ui-gtk/src/window/playlists.rs:587
 #, rust-format
 msgid "{} duplicate removed"
 msgid_plural "{} duplicates removed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/window/playlists.rs:580
+#: crates/ui-gtk/src/window/playlists.rs:599
 #, rust-format
 msgid "{} missing track removed"
 msgid_plural "{} missing tracks removed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/window/playlists.rs:590
+#: crates/ui-gtk/src/window/playlists.rs:609
 msgid "The order is shuffled"
 msgstr ""
 
@@ -7806,17 +7900,17 @@ msgstr ""
 msgid "Window"
 msgstr ""
 
-#: crates/ui-gtk/src/shortcuts.rs:72 crates/ui-gtk/src/window/desktop.rs:57
+#: crates/ui-gtk/src/shortcuts.rs:72 crates/ui-gtk/src/window/desktop.rs:59
 msgid "Play or pause"
 msgstr ""
 
 #: crates/ui-gtk/src/shortcuts.rs:76 crates/ui-gtk/src/mini_player.rs:185
-#: crates/ui-gtk/src/window/desktop.rs:58
+#: crates/ui-gtk/src/window/desktop.rs:60
 msgid "Next track"
 msgstr ""
 
 #: crates/ui-gtk/src/shortcuts.rs:80 crates/ui-gtk/src/mini_player.rs:180
-#: crates/ui-gtk/src/window/desktop.rs:59
+#: crates/ui-gtk/src/window/desktop.rs:61
 msgid "Previous track"
 msgstr ""
 
@@ -7828,7 +7922,7 @@ msgstr ""
 msgid "Volume down"
 msgstr ""
 
-#: crates/ui-gtk/src/shortcuts.rs:104 crates/ui-gtk/src/window/desktop.rs:368
+#: crates/ui-gtk/src/shortcuts.rs:104 crates/ui-gtk/src/window/desktop.rs:436
 msgid "Stop after this track"
 msgstr ""
 
@@ -7856,7 +7950,7 @@ msgstr ""
 msgid "Select all"
 msgstr ""
 
-#: crates/ui-gtk/src/shortcuts.rs:166 crates/ui-gtk/src/window/desktop.rs:382
+#: crates/ui-gtk/src/shortcuts.rs:166 crates/ui-gtk/src/window/desktop.rs:450
 msgid "Mini player"
 msgstr ""
 
@@ -7900,15 +7994,20 @@ msgstr ""
 msgid "Rediscover"
 msgstr ""
 
-#: crates/ui-gtk/src/window/desktop.rs:60
+#: crates/ui-gtk/src/window/desktop.rs:62
 msgid "Show Helikodu"
 msgstr ""
 
-#: crates/ui-gtk/src/window/desktop.rs:375
+#: crates/ui-gtk/src/window/desktop.rs:368
+msgid ""
+"Helikodu keeps playing in the tray. Quit from the tray menu or with Ctrl+Q."
+msgstr ""
+
+#: crates/ui-gtk/src/window/desktop.rs:443
 msgid "Hide the window"
 msgstr ""
 
-#: crates/ui-gtk/src/window/desktop.rs:377
+#: crates/ui-gtk/src/window/desktop.rs:445
 msgid "Show the window"
 msgstr ""
 
@@ -8241,6 +8340,10 @@ msgstr ""
 msgid "Show the sidebar"
 msgstr ""
 
+#: crates/ui-gtk/src/deck/favourite.rs:80
+msgid "Remove from Favourites"
+msgstr ""
+
 #: crates/ui-gtk/src/tools.rs:33
 msgid "The pattern is empty."
 msgstr ""
@@ -8276,7 +8379,11 @@ msgstr ""
 msgid "A folder name would be empty."
 msgstr ""
 
-#: crates/ui-gtk/src/tools.rs:43
+#: crates/ui-gtk/src/tools.rs:41
+msgid "Square brackets are nested too deeply."
+msgstr ""
+
+#: crates/ui-gtk/src/tools.rs:44
 #, rust-format
 msgid "{} At character {}."
 msgstr ""
@@ -8360,7 +8467,7 @@ msgid "{} · the selection"
 msgstr ""
 
 #: crates/ui-gtk/src/tools/converter.rs:580
-#: crates/ui-gtk/src/tools/sync_export.rs:399
+#: crates/ui-gtk/src/tools/sync_export.rs:403
 #, rust-format
 msgid "{} of {} · {} written"
 msgstr ""
@@ -8373,7 +8480,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: crates/ui-gtk/src/tools/converter.rs:609
-#: crates/ui-gtk/src/tools/sync_export.rs:436
+#: crates/ui-gtk/src/tools/sync_export.rs:440
 #, rust-format
 msgid "{} failed"
 msgid_plural "{} failed"
@@ -8411,7 +8518,7 @@ msgstr[1] ""
 #: crates/ui-gtk/src/tools/converter.rs:703
 #: crates/ui-gtk/src/tools/converter.rs:867
 #: crates/ui-gtk/src/tools/converter.rs:1031
-#: crates/ui-gtk/src/tools/sync_export.rs:511
+#: crates/ui-gtk/src/tools/sync_export.rs:522
 msgid "Convert"
 msgstr ""
 
@@ -8477,7 +8584,7 @@ msgid "Save to"
 msgstr ""
 
 #: crates/ui-gtk/src/tools/converter.rs:939
-#: crates/ui-gtk/src/tools/sync_export.rs:609
+#: crates/ui-gtk/src/tools/sync_export.rs:652
 msgid "Folders and names"
 msgstr ""
 
@@ -8512,102 +8619,97 @@ msgstr ""
 msgid "Tracks to convert"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/converter.rs:1192
+#: crates/ui-gtk/src/tools/converter.rs:1195
 msgid "Save the converted files in"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:86
+#: crates/ui-gtk/src/tools/sync_export.rs:91
 #, rust-format
 msgid "Convert lossless files to {}"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:92
+#: crates/ui-gtk/src/tools/sync_export.rs:97
 msgid "Copy the files as they are"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:98
+#: crates/ui-gtk/src/tools/sync_export.rs:103
 #, rust-format
 msgid "Convert everything to {}"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:159
-#: crates/ui-gtk/src/tools/sync_export.rs:161
-msgid "New destination"
-msgstr ""
-
-#: crates/ui-gtk/src/tools/sync_export.rs:172
+#: crates/ui-gtk/src/tools/sync_export.rs:176
 msgid "No destination"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:179
+#: crates/ui-gtk/src/tools/sync_export.rs:183
 #, rust-format
 msgid "Last synced on {}"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:185
+#: crates/ui-gtk/src/tools/sync_export.rs:189
 msgid "Not synced yet"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:213
+#: crates/ui-gtk/src/tools/sync_export.rs:217
 msgid "An album"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:214
+#: crates/ui-gtk/src/tools/sync_export.rs:218
 msgid "An artist"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:215
+#: crates/ui-gtk/src/tools/sync_export.rs:219
 msgid "Gone from the library"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:233
+#: crates/ui-gtk/src/tools/sync_export.rs:237
 #, rust-format
 msgid "Copy {}"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:264
-#: crates/ui-gtk/src/tools/sync_export.rs:269
+#: crates/ui-gtk/src/tools/sync_export.rs:268
+#: crates/ui-gtk/src/tools/sync_export.rs:273
 msgid "Add an album, an artist or a search…"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:289
+#: crates/ui-gtk/src/tools/sync_export.rs:293
 msgid "An album, an artist or a search"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:292
+#: crates/ui-gtk/src/tools/sync_export.rs:296
 msgid "Type a search: album:, artist: and the other fields of the search work."
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:340
+#: crates/ui-gtk/src/tools/sync_export.rs:344
 msgid "Looking at the destination…"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:382
+#: crates/ui-gtk/src/tools/sync_export.rs:386
 #, rust-format
 msgid "needed · {} free"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:383
-#: crates/ui-gtk/src/tools/sync_export.rs:642
+#: crates/ui-gtk/src/tools/sync_export.rs:387
+#: crates/ui-gtk/src/tools/sync_export.rs:685
 msgid "needed"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:417
+#: crates/ui-gtk/src/tools/sync_export.rs:421
 msgid ""
 "Nothing changes in the library. Files on the destination that Helikodu did "
 "not put there are left alone."
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:421
+#: crates/ui-gtk/src/tools/sync_export.rs:425
 #, rust-format
 msgid "Synced: {} · {}"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:443
+#: crates/ui-gtk/src/tools/sync_export.rs:447
 msgid "The destination is not connected. Connect it to sync."
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:447
+#: crates/ui-gtk/src/tools/sync_export.rs:451
 #, rust-format
 msgid "{} file Helikodu did not put there stands in the way and is left alone."
 msgid_plural ""
@@ -8615,89 +8717,108 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:476
+#: crates/ui-gtk/src/tools/sync_export.rs:485
 msgid "Choose the folder to sync to"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:491
+#: crates/ui-gtk/src/tools/sync_export.rs:503
 msgid "Destination"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:513
+#: crates/ui-gtk/src/tools/sync_export.rs:524
+#: crates/ui-gtk/src/dialogs/maintenance.rs:223
 msgid "Copy"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:541
+#: crates/ui-gtk/src/tools/sync_export.rs:552
 msgid "Failed"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:550
+#: crates/ui-gtk/src/tools/sync_export.rs:561
 #, rust-format
 msgid "{} {}, {}, {}"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:572
+#: crates/ui-gtk/src/tools/sync_export.rs:583
 msgid "Sync and export"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:572
+#: crates/ui-gtk/src/tools/sync_export.rs:583
 msgid "Destinations"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:574
+#: crates/ui-gtk/src/tools/sync_export.rs:585
 msgid "Copies go one way: from the library to the destination."
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:583
-#: crates/ui-gtk/src/tools/sync_export.rs:588
-msgid "Copy these"
+#: crates/ui-gtk/src/tools/sync_export.rs:595
+#: crates/ui-gtk/src/tools/sync_export.rs:597
+msgid "New destination"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:623
-msgid "Write each playlist as an .m3u8 file"
+#: crates/ui-gtk/src/tools/sync_export.rs:607
+msgid "Add destination…"
+msgstr ""
+
+#: crates/ui-gtk/src/tools/sync_export.rs:611
+msgid "No destinations yet"
+msgstr ""
+
+#: crates/ui-gtk/src/tools/sync_export.rs:612
+msgid ""
+"Add a folder, a phone or a memory stick to keep in step with your playlists."
 msgstr ""
 
 #: crates/ui-gtk/src/tools/sync_export.rs:626
+#: crates/ui-gtk/src/tools/sync_export.rs:631
+msgid "Copy these"
+msgstr ""
+
+#: crates/ui-gtk/src/tools/sync_export.rs:666
+msgid "Write each playlist as an .m3u8 file"
+msgstr ""
+
+#: crates/ui-gtk/src/tools/sync_export.rs:669
 msgid "Remove files that are no longer chosen"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:638
+#: crates/ui-gtk/src/tools/sync_export.rs:681
 msgid "to copy"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:639
+#: crates/ui-gtk/src/tools/sync_export.rs:682
 msgid "to convert"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:640
+#: crates/ui-gtk/src/tools/sync_export.rs:683
 msgid "already there"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:641
+#: crates/ui-gtk/src/tools/sync_export.rs:684
 msgid "to remove"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:655
+#: crates/ui-gtk/src/tools/sync_export.rs:698
 msgid "Action"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:656
+#: crates/ui-gtk/src/tools/sync_export.rs:699
 msgid "On the destination"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:663
+#: crates/ui-gtk/src/tools/sync_export.rs:706
 msgid "What a sync does"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:679
+#: crates/ui-gtk/src/tools/sync_export.rs:722
 msgid "Check again"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:686
+#: crates/ui-gtk/src/tools/sync_export.rs:729
 msgid "Sync now"
 msgstr ""
 
-#: crates/ui-gtk/src/tools/sync_export.rs:863
+#: crates/ui-gtk/src/tools/sync_export.rs:903
 #, rust-format
 msgid "{} playlist"
 msgid_plural "{} playlists"
@@ -8893,6 +9014,107 @@ msgstr ""
 
 #: crates/ui-gtk/src/backend/service/export.rs:276
 msgid "The destination is not connected."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:106
+msgid "Library backups"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:111
+msgid "Choose a backup to put back"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:144
+msgid "Put this backup back?"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:146
+msgid ""
+"The library goes back to how it was when the backup was made: playlists, "
+"ratings and play counts changed since then are lost. The library as it is "
+"now is kept in the backups folder. Helikodu starts again to do it."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:153
+msgid "Backup"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:155
+msgid "Restore and restart"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:209
+msgid "Helikodu stopped unexpectedly"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:211
+msgid ""
+"A report was saved on this computer. Nothing was sent anywhere. To report "
+"the problem, copy the report and add it to a bug report."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:220
+msgid "Report"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:246
+msgid "The report is on the clipboard."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:283
+msgid ""
+"Helikodu stopped unexpectedly last time. A report was saved on this computer."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:316
+#, rust-format
+msgid "today at {}"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:317
+#, rust-format
+msgid "yesterday at {}"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:333
+msgid "read-only"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:337
+#, rust-format
+msgid "last checked {}, no problems found"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:341
+#, rust-format
+msgid "last checked {}, problems found: {}"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:344
+msgid "not checked yet"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:354
+#, rust-format
+msgid "One a day, the last {} are kept"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:356
+#, rust-format
+msgid "Made when you ask, the last {} are kept"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:359
+#, rust-format
+msgid "latest {}"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:360
+msgid "none yet"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/maintenance.rs:365
+msgid "one is put back at the next start"
 msgstr ""
 
 #: crates/ui-gtk/src/widgets/now_links.rs:253

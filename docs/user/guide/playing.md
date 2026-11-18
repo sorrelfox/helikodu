@@ -6,7 +6,7 @@ The bar at the bottom of the window is the player deck. It shows the cover, titl
 
 - **Previous**, **Play**/**Pause** and **Next**. "Previous" restarts the track when more than three seconds of it have played, and goes to the track before otherwise.
 - The **seek bar**: click or drag to move through the track. Click the time to switch between the total length and the time left.
-- **Shuffle** (on or off) and **Repeat** (off, all, this track).
+- **Shuffle** and **Repeat**. A click switches the mode off, or back to the one used last; right-click (or press and hold) to choose the mode. See [Play modes](#play-modes).
 - The **volume** control.
 - The **output device** switcher; see [Choosing the audio output](audio-output.md).
 - The **heart** after the title adds the playing track to **Favourites**, or takes it out; see [Playlists and ratings](playlists-and-ratings.md).
@@ -31,7 +31,24 @@ Under **Crossfade** in the **Playback** settings, tracks can blend into each oth
 
 Tracker modules, game music files and Commodore 64 SID tunes play like any other track; a file with several songs becomes one track per song. Looping tunes play their loop twice and then fade out (**Looping tunes** in the **Playback** settings). MIDI files need a SoundFont: choose one under **MIDI files**, or Helikodu uses one installed on the system, if there is one. For SID tunes, **Song lengths** can point to the `Songlengths.md5` file of the High Voltage SID Collection, so each tune plays for its real length.
 
-Right-click the play button (or press and hold it) for its menu: **Stop**, **Stop after this track** and **Jump to the playing track**. **Stop after this track** stops at the end of the current track, once. The **Playback** submenu of the main menu has **Play/Pause**, **Stop**, **Previous**, **Next**, **Seek Back**, **Seek Forward** and **Stop After This Track**.
+Right-click the play button (or press and hold it) for its menu: **Stop**, **Stop after this track** and **Jump to the playing track**. **Stop after this track** stops at the end of the current track, once.
+
+## Play modes
+
+The **Playback** menu (in the main menu) has the transport and every play mode:
+
+- **Previous album**, **Next album** and **Random album** jump between albums in the queue.
+- **Shuffle**: **Tracks**, **Albums** (the albums in a random order, each played in order), **Folders**, **Groupings** (by the `GROUPING` tag) or **Tracks within each album**. "Previous" retraces the order in which tracks actually played.
+- **Repeat**: **This track**, **This album** or **The whole queue**.
+- **Stop after**: **This track**, **This album** or **The queue**.
+- **Play only**: **This artist** or **This album** keeps playback within the artist or album of the playing track.
+- **Queue**: **Remove tracks after they play**, and **Continue from the selected track**, which makes the next track follow the entry you selected in a list.
+- **Loop a section**: **Set the start here** and **Set the end here** mark an A-B loop at the playing position; the section then repeats without a gap until you choose **Clear the loop**, here or with the cross on the loop's chip on the deck.
+- **Sleep timer…** pauses playback after a number of minutes, fading out, or at the end of the track that is playing then. A chip on the deck shows the time left; click it to add ten minutes or turn the timer off.
+
+The deck shows the active modes, the loop's marks on the seek bar, and chips for the loop and the timer.
+
+Each track in your library can also have its own settings, under **Playback** in the **File info** tab of the [tag editor](tags.md): **Leave out when shuffling**, **Play only when I start it myself** (automatic playback passes over it), and **Volume for this track**. They are kept in the library, not in the file, and apply at once.
 
 ## The queue
 

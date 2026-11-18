@@ -6,120 +6,119 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-18
+
+The release candidate. This version brings everything planned for 1.0: smart playlists and a query language, play modes, lyrics and a play history, tools that convert, organize, sync and repair files, and the work of making Helikodu robust, fast with large libraries and accessible. With it the features are frozen for 1.0; until then only fixes, translations and documentation follow.
+
 ### Added
 
-- Artist photos: choose a photo for an artist (**Set artist photo…** in the artist's menu, or drop an image onto the picture at the top of their page), or put an `artist.jpg` in the artist's folder. The photo replaces the initials in the artist list, on the artist page and in search results. Only local files are used; nothing is downloaded.
-- Lyrics: synced and plain lyrics from a `.lrc` or `.txt` file beside the track (any charset) or from its tags (`SYLT`, `USLT`, `LYRICS`, `UNSYNCEDLYRICS`, `©lyr`, APEv2 `Lyrics`), in the Lyrics tab of the right panel. The line sung now stays in the middle; a click on a line plays from there; the offset of each track can be moved in steps of 0.1 s.
-- Copies of the same file are recognised: byte-identical files (content and tags) share one set of play counts, ratings, history and playlist entries, and play from a main copy that another copy replaces when it disappears. The setting `[library.duplicates]` keeps copies out of the library (`on_scan = "skip"`) or shows only the main copy (`show_one`). Copies, and other duplicates found by recording or album track, can be moved to the desktop trash after safety checks; `helikodu-cli duplicates` lists them. Before play counts of copies are first combined, the library is backed up once to `library.db.backup-before-copies`.
-- Smart playlists: rules built with a rule builder that shows the same rules as query text (either can be edited), groups of rules, a limit by tracks, time or size, and an order; their tracks follow the library as it changes.
-- Playlist folders in the sidebar; a playlist dragged onto a folder moves into it.
-- Pins: albums, artists and playlists can be pinned to the top of the sidebar.
-- Playlists: undo and redo of every change (Ctrl+Z, Ctrl+Shift+Z), a lock against changes, removing duplicates and missing tracks, shuffling the order for good, and a display grouped by album.
-- Playlist files (M3U, M3U8, PLS, XSPF) found in the library folders can become playlists that follow their files (`[library] import_playlists`).
-- Now Playing (F11, or a click on the deck's cover): the cover, the track, the synced lyrics or the queue, and the signal path from the file to the device.
-- Search understands the query language: text with fields such as `genre:jazz -genre:fusion` or `added<30d sort:added desc` lists the tracks it selects in a table, with completion of field names and values under the search field, and a notice with an example when part of the query cannot be read. The Tracks filter takes queries too.
-- Saved searches: save a search under a name, and open, rename or delete it from the right column of the search page, which also shows example queries.
-- The Tracks table can show **Genre** and **Added** columns.
-- Play history (**Library ▸ History**): every listen by day with its time, source and listening time, skips dimmed, for today, 7 days, 30 days or all, with a filter and **Save as playlist**.
-- **Library ▸ Export History…** writes the play history to a local file as ListenBrainz listens (JSON Lines) or as a `.scrobbler.log`, for submitting later; nothing is sent.
-- MPRIS: the track list (the queue, with metadata and jumping to a track) and the playlists (listed in several orders, started from desktop controls, the one playing shown as active).
+#### Playback
+- Play modes in the **Playback** menu: shuffle by tracks, albums, folders or groupings, or within each album, with **Previous** retracing the order that played; repeat this track, this album or the whole queue; stop after this track, this album or the queue; play only this artist or this album; remove tracks from the queue after they play; continue from the selected track; previous, next and random album. The deck shows the active modes.
+- An A-B loop that repeats a section of a track without a gap, and a sleep timer that pauses after a time (fading out) or at the end of the track, each with a chip on the deck.
+- Per-track settings in the tag editor's **File info**: leave out when shuffling, play only when started by hand, and a volume of its own.
+- Lyrics: synced and plain lyrics from a `.lrc` or `.txt` file beside the track (any charset) or from its tags (`SYLT`, `USLT`, `LYRICS`, `UNSYNCEDLYRICS`, `©lyr`, APEv2 `Lyrics`, and the `TXXX` frames FFmpeg writes), in the Lyrics tab of the right panel. The line sung stays in the middle; a click on a line plays from there; each track's offset can be moved in steps of 0.1 s.
+- Now Playing (F11, or a click on the deck's cover): the cover, the track, the synced lyrics or the queue, the signal path from the file to the device, and an analyzer with a spectrum and a peak and RMS meter for each channel.
+- A waveform seek bar: its bars follow the loudness of the track. Peaks are computed in the background, never while the library is scanned, and kept within the **Analysis data** limit.
+- Chapters: while a chapter plays, the deck shows its number and title, and the seek bar has a gap at each chapter boundary.
+- Audiobooks: an audiobook's page lists its chapters with where each starts and which have been heard, shows how much is left, continues where you stopped and can start again. Audiobooks are left out of shuffle and of **Play all** in other views. The kind of an album (music, audiobook, audio from a video) can be changed on its page.
+- The limiter's editor in **Settings ▸ DSP and EQ** shows its activity while music plays.
+- Playback pauses before the computer goes to sleep (on by default) and, if you choose, when the screen locks.
+
+#### Library and browsing
+- Home: the albums added and played lately, the most played tracks, and albums to rediscover.
 - Composers and Years in the sidebar: the albums of a composer, and of a year or a decade (by the original release year where the tags give one), with **Play all** and **Shuffle**.
-- Audiobooks: the album page of an audiobook lists its chapters with where each starts and which have been heard, shows how much is left, continues where you stopped and can start again. Audiobooks are left out of shuffle and of **Play all** in other views. The kind of an album (music, audiobook, audio from a video) can be changed on its page and survives rescans.
-- Chapters: while a chapter plays, the deck shows its number and title, and the seek bar covers the whole file with a gap at each chapter boundary.
-- **Tools ▸ Convert…**: converts tracks to Opus, MP3, AAC, Vorbis, FLAC, ALAC or WAV with presets of your own, naming patterns such as `{albumartist}/{album}/[{disc}-]{track} {title}`, tags and covers copied, several files at a time in the background, with progress and Stop. Files already in the target format are copied as they are.
-- **Tools ▸ Sync and Export…**: keeps a folder (a phone, a memory stick) in step with chosen playlists, searches, albums and artists, converting lossless files on the way, writing the playlists as `.m3u8` and removing only files Helikodu put there. A playlist's **Export** button can copy its files to a folder.
-- **Tools ▸ Cover Manager…**: finds albums without a cover, with a cover only in the folder or only inside the files, small covers and covers that differ between files, and puts pictures already on the computer into the files or beside them as `cover.jpg`.
-- **Tools ▸ Organize Files…** moves and renames files by a naming pattern (`{albumartist}/{year} {album}/[{disc}-]{track} {title}`), with saved patterns, a choice of folder and of the characters names may hold, and a preview of every file before anything moves. Files are never replaced; a name that is taken is left alone.
-- Every organizer run is written to a journal first, so it can be undone and redone, even after a restart; a run cut short by a crash is finished from what is on the disk at the next start.
+- A facet browser in Tracks (**Browse**): linked lists of genres, album artists and albums (each list's field can be changed) that narrow each other and the table.
+- The Tracks table can show **Genre** and **Added** columns, and tags can be edited in it: F2 edits a cell, for all selected rows at once.
+- Album page: a selected track shows its own facts (composer, format, gain, plays, lyrics, copies, size, file and more) below the album's details.
+- Artist photos: an `artist.jpg` in the artist's folder, or a picture you choose or drop onto the artist page. Only local files are used.
+- Play history (**Library ▸ History**): every listen by day with its time, source and listening time, skips dimmed, with a filter and **Save as playlist**. **Library ▸ Export History…** writes it to a local file as ListenBrainz listens (JSON Lines) or a `.scrobbler.log`; nothing is sent.
+- Library statistics (**Library ▸ Statistics**): counts, playing time and size, formats and their quality, listening this year, and the most played artists and albums, with **Copy as text**.
+- Copies of the same file are recognised: byte-identical files share one set of play counts, ratings, history and playlist entries, and play from a main copy. `[library.duplicates]` keeps copies out of the library or shows only the main copy. Copies and other duplicates can be moved to the desktop trash after safety checks; `helikodu-cli duplicates` lists them. Before play counts of copies are first combined, the library is backed up once to `library.db.backup-before-copies`.
+- Folders outside the library: the Folders view also shows the home folder, connected drives and the file system, plays from them without storing anything, and adds a folder with **Add to library**.
+- Tags without a field of their own (`MOOD`, `BPM`, `GROUPING`, `LABEL`, `COMMENT` and others) are stored when files are scanned, so `tag:NAME` queries find them; files scanned by 0.2.0 get them the next time they are read.
+
+#### Playlists
+- Smart playlists: rules built with a rule builder that shows the same rules as query text (either can be edited), groups of rules, a limit by tracks, time or size, and an order; their tracks follow the library as it changes.
+- Favourites: the heart on the deck adds the playing track to **Favourites**, a playlist always first under **Playlists**. A playlist you named "Favourites" before becomes it.
+- Playlist folders, and pins for albums, artists and playlists at the top of the sidebar.
+- Undo and redo of every playlist change (Ctrl+Z, Ctrl+Shift+Z), a lock against changes, removing duplicates and missing tracks, shuffling the order for good, and a display grouped by album.
+- Playlist files (M3U, M3U8, PLS, XSPF) in the library folders can become playlists that follow their files (`[library] import_playlists`).
+
+#### Search
+- A query language: text with fields such as `genre:jazz -genre:fusion`, `tag:mood=calm` or `added<30d sort:added desc` lists the tracks it selects, with completion of field names and values and a notice with an example when part of a query cannot be read. The Tracks filter takes queries too.
+- Saved searches, with example queries, in the right column of the search page.
+
+#### Tools
+- **Tools ▸ Convert…**: converts tracks to Opus, MP3, AAC, Vorbis, FLAC, ALAC or WAV with presets of your own and naming patterns, copying tags and covers, several files at a time in the background.
+- **Tools ▸ Sync and Export…**: keeps a folder (a phone, a memory stick) in step with chosen playlists, searches, albums and artists, converting lossless files on the way, writing the playlists as `.m3u8` and removing only files Helikodu put there. A playlist's **Export** copies its files to a folder.
+- **Tools ▸ Organize Files…**: moves and renames files by a naming pattern, with saved patterns and a preview of every file before anything moves; files are never replaced. Every run is journaled, so it can be undone and redone even after a restart, and a run cut short by a crash is finished at the next start.
+- **Tools ▸ Cover Manager…**: finds albums without a cover, with small covers or with covers that differ between files, and puts pictures already on the computer into the files or beside them as `cover.jpg`.
+- **Tools ▸ Verify Files…**: decodes files from start to end and reports damaged parts, files that stop early, wrong lengths and FLAC audio that does not match its checksum.
+- **Library ▸ Missing Files…**: finds the files of tracks that are gone elsewhere, by size and content, and relinks them with their ratings, play counts and playlist places; tracks not found can be removed, with Undo.
+- Tag tools in the tag editor: tags from file names, track numbering, capitalisation, find and replace (also with regular expressions), repair of garbled text from old code pages, and sort names.
+- Tag edits can be undone and done again (Ctrl+Z, Ctrl+Shift+Z, or Undo in the toast): each file gets back its tags, cover and lyrics, unless it was changed since. Outside a playlist, Ctrl+Z steps through one history of tag edits and file moves, with a notice saying what was undone.
 - **Rename file…** and **Move to trash…** in the context menu of tracks; a rename can be undone.
-- **Library ▸ Missing Files…** lists tracks whose file is gone, finds the files elsewhere by size and content (renamed files too) and relinks them, keeping ratings, play counts and playlist places; tracks that are not found can be removed from the library, with Undo.
-- **Tools ▸ Verify Files…** decodes files from start to end and reports damaged parts, files that stop early, lengths that differ from the stated length, and FLAC audio that does not match its stored checksum.
-- Folders outside the library: the Folders view also shows the home folder, connected drives and the file system, plays from them without storing anything, and adds a folder to the library with **Add to library**.
-- Waveform seek bar: the bars of the seek bar follow the loudness of the track. Peaks are computed in the background for the playing track, the next few in the queue and the last played, never while the library is scanned, and kept within the **Analysis data** limit (Settings ▸ Library ▸ Storage), oldest first.
-- Analyzer in Now Playing: a spectrum with peak hold and an RMS and peak meter for each channel ("CLIP" at full scale), measured after the last processing stage. It moves only while sound plays and the page is shown.
-- Tag edits can be undone and done again (Ctrl+Z, Ctrl+Shift+Z, and Undo in the toast after saving): each file gets back its tags, cover and lyrics, unless it was changed since. The last 100 changes are kept for 90 days.
-- Outside an open playlist, Ctrl+Z and Ctrl+Shift+Z step through one history of tag edits and file organizer runs together, newest first, with a notice saying what was undone ("Undid tag edit of 3 files", "Undid moving 120 files").
-- The file organizer, the converter and folder sync read naming patterns the same way, so one pattern gives a track the same name in each: square brackets can be nested and hold a folder, `{disc}` has a value only on albums of several discs, and an empty field is written as "Unknown".
-- Saved organizer patterns and your own converter presets can be renamed and deleted (right-click, the Menu key, F2 or Delete in the list).
-- Tag tools, from the tag editor: fill tags from file names with a pattern, number the tracks, change capital letters, find and replace (also with regular expressions), repair garbled text from old code pages, and create sort names. Their values go into the editor and are written when it saves.
-- Tags can be edited in the Tracks table: F2 edits a cell, for all selected rows at once.
-- The tag editor's Cover tab takes a dropped picture, saves the front cover as a file, and can also put a new cover as `cover.jpg` in the album folder.
-- Ratings can also be written into the files (**Settings → Advanced**, off by default).
-- Album page: a selected track shows its own facts (composer, format, gain, plays, last played, lyrics, copies, size, file and more) below the album's details; **Open folder** then opens the track's folder.
+- The organizer, the converter and folder sync read naming patterns the same way, so one pattern names a track the same in each.
+- The tag editor's Cover tab takes a dropped picture, saves the front cover as a file, and can put a new cover as `cover.jpg` in the album folder.
+- Ratings can be written into the files (**Settings ▸ Advanced**, off by default).
 
-- Home: the albums added and played lately, the most played tracks and albums to rediscover.
-- Mini player (Ctrl+Shift+M): a small window with the cover, the track, the seek bar and the controls, and a drawer with the queue and the lyrics.
-- Tray icon (StatusNotifierItem): the playing track, the playback controls, showing and hiding the window, the mini player and Quit; closing the window can keep playing in the tray.
-- Keyboard shortcuts can be changed in **Settings ▸ Shortcuts**, with a warning when keys are in use; Shuffle and Repeat can have shortcuts.
-- Shortcuts in other applications (play or pause, next, previous, show the window) through the desktop's GlobalShortcuts portal.
-- Settings can be searched: the settings found are shown, working, in groups by page.
-- Playback pauses when the screen locks (off by default) and before the computer goes to sleep (on by default).
-
-- Facet browser in Tracks: the **Browse** button opens linked lists of genres, album artists and albums (each list's field can be changed to artist, composer, year or format) that narrow each other and the table; several values can be chosen with Ctrl and Shift.
-- Library statistics (**Library ▸ Statistics**): counts, playing time and size; formats and their quality; listening this year; the most played artists and albums. **Copy as text** copies the figures.
+#### Desktop integration
+- A mini player (Ctrl+Shift+M): the cover, the track, the seek bar and the controls, with a drawer for the queue and the lyrics.
+- A tray icon (StatusNotifierItem) with the playing track, the controls, the window, the mini player and Quit. It is off by default; closing the window quits unless **Closing the window** asks to keep playing in the tray and a tray shows the icon.
+- Keyboard shortcuts can be changed in **Settings ▸ Shortcuts**, with a warning when keys are in use, and global shortcuts work in other applications through the desktop's GlobalShortcuts portal.
+- Settings can be searched.
 - A narrow window: below the widths that leave the content 560 pixels, the queue panel and then the sidebar open over the content; below 720 pixels the deck is compact.
-- `helikodu-cli` controls the running application: `status`, `queue`, `playlists`, `play-pause`, `pause`, `resume`, `stop`, `next`, `previous`, `seek`, `volume`, `shuffle`, `repeat`, `enqueue` (files or a query, next or last), `play-query`, `rate` and `export-playlist`, with `--json` where they print. Exit code 4 means the application is not running.
-- A documented D-Bus interface for scripts, `io.github.sorrelfox.Helikodu.Control1`, which `helikodu-cli` uses (`docs/dev/dbus-api.md`).
-- Favourites: the heart on the player deck adds the playing track to **Favourites**, a playlist that is always first under **Playlists** with its count, and takes it out again. It cannot be renamed, moved, locked or deleted. A playlist you named "Favourites" before becomes it.
-- The limiter's editor in **Settings → DSP and EQ** shows its activity while music plays: the gain reduction now, the largest in this track and how often it limited.
-- **Follow the playing track** in the View menu is remembered between runs.
+- MPRIS: the track list (the queue) and the playlists.
+- `helikodu-cli` controls the running application: `status`, `queue`, `playlists`, `play-pause`, `pause`, `resume`, `stop`, `next`, `previous`, `seek`, `volume`, `shuffle`, `repeat`, `enqueue`, `play-query`, `rate` and `export-playlist`, with `--json` where they print, through a documented D-Bus interface, `io.github.sorrelfox.Helikodu.Control1` (`docs/dev/dbus-api.md`).
+- Backups of the library: one a day, the last 7 kept, with **Back up now** and **Restore…** in **Settings ▸ Advanced**. A damaged library database is replaced with the newest good backup at start; one that cannot be written opens read-only; one that cannot be opened leaves Helikodu playing files without a library. The window says what happened.
+- Local crash reports: after a crash, the next start says so, with the report behind **Details**. Nothing is sent anywhere.
+- A log on disk with **Normal detail** or **Full detail**, rotated within the Logs storage limit (**No logs** writes nothing), and **Copy diagnostics** with the build, the output devices and the state of the library database.
 
-- Backups of the library: one a day, the last 7 kept, with **Back up now** and **Restore…** in Settings › Advanced. A restore asks first and is done when Helikodu starts again; the library it replaces is kept.
-- A damaged library database is replaced with the newest good backup at start; one that cannot be written opens read-only, and one that cannot be opened leaves Helikodu playing files without a library. The window says what happened.
-- Local crash reports: after a crash, the next start says so, with the report behind **Details** (**Copy**, **Open folder**). Nothing is sent anywhere.
-- A log on disk with **Normal detail** or **Full detail**, rotated within the Logs storage limit, and **Open log folder**; **No logs** writes nothing. **Copy diagnostics** also lists the build, the output devices and the state of the library database.
-
-- **Help ▸ User Guide** (F1) opens the user guide installed with the application, one page with every chapter and the FAQ, in the web browser; it is a local file, so it opens without a network. Meson builds and installs it to `share/helikodu/guide/`.
+#### Help and docs
+- **Help ▸ User Guide** (F1) opens the user guide installed with the application, every chapter and the FAQ on one local page, so it opens without a network.
+- A manual page for `helikodu-scan-worker`, and the new commands in the manual page of `helikodu-cli`.
 - Ready-built programs for 64-bit ARM (aarch64) on the GitHub Releases page, beside the x86_64 build.
-- A manual page for `helikodu-scan-worker`, and `helikodu-cli duplicates` in the manual page of `helikodu-cli`.
 
 ### Changed
 
-- The player deck at the bottom of the window follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.
-- The tray icon is off by default, and closing the window quits Helikodu by default. Settings files written before this change take the new defaults (**System tray** and **Closing the window** in Settings › Appearance turn them on again). Turning the icon on or off takes effect at once.
+- The player deck follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.
+- The **Follow the playing track** setting of the View menu is remembered between runs.
+- HES (PC Engine) game music is no longer played: libgme's HES emulator reads outside its memory on damaged files.
+- Large libraries are faster: the album grid, the Tracks filter and long lists no longer read their rows page by page (at 500,000 tracks start-up with albums went from 2.4 s to 1.0 s), rows scrolled past are no longer loaded, and a first scan uses far less memory (1.4 GB to 0.34 GB at 500,000 files). Pages and menus are built when first opened, which takes some 2,600 widgets out of the window after start-up.
 
 ### Fixed
 
-- Tracks table: after a column was shown (such as **Added** or **Genre**), most rows put the wide padding of the table's edge on that column instead of on the first and last columns, so the text of the last columns stood a little off from the rows made later.
-- Supported formats opened from About could not be closed with its close button while About, hidden behind it, was still open. About now closes first.
-- A menu with one item, such as the artist photo menu, no longer shows empty space below the item.
-- Sync and export: cancelling the folder chooser no longer opens it again and again. The window asks for a folder only when **New destination** or **Add destination…** is clicked, shows an empty state when there is no destination yet, and Cancel leaves everything as it was. No window opens more than one folder chooser at a time.
-- A library database on a read-only file was opened as if it could be written; changes then failed one by one. It now opens read-only and says so.
-- File moves of the organizer that a crash cut short are now settled at the next start.
-- The lyrics offsets file is now written atomically (synced before it replaces the old one), and temporary files of settings saves cut short are cleared.
-- Large libraries: the album grid, smart playlists and the Tracks filter no longer read their lists page by page (at 500,000 tracks start-up with albums went from 2.4 s to 1.0 s, a smart playlist of 12,600 tracks from 2.5 s to 0.24 s), and after fast scrolling the app no longer keeps loading rows that were scrolled past, which kept a core busy for minutes. A first scan of a large library uses far less memory (1.4 GB to 0.34 GB at 500,000 files).
-- The playing track is marked the same way in every track list, wherever playback was started: the artist page's Most played, the album and audiobook pages, search results, playlists, smart playlists, the play history, folders (outside files too) and the queue panel show its row in the accent with the moving playing indicator. With one track shown for identical copies, a playing copy marks its main track's row.
-- The copies badge after a title stays right after the text when the table scrolls, instead of keeping the place where an earlier title ended.
-- Invisible padding around tag values (spaces, no-break spaces, tabs, zero-width characters) is trimmed when files are scanned and when titles are shown.
-- With a colour scheme chosen in Helikodu that differs from the desktop's, text no longer takes the desktop theme's colours: sidebar entries, titles and other labels were light on light (or dark on dark) under themes such as Breeze, mostly while the window did not have the focus.
-- Tags without a field of their own (`MOOD`, `BPM`, `GROUPING`, `LABEL`, `COMMENT` and others) are stored when files are scanned, so `tag:NAME` queries find them, and shuffling by grouping uses the `GROUPING` tag.
-- The album page's **Details** column no longer grows wider than its 260 px when a sentence in it is long: its text wraps. Its width can be dragged at its left border, and is kept for all album and audiobook pages between runs.
-- Album covers in the album grids (Albums, Genres and others) no longer stay placeholders when the grid gains a column, as when the window or a pane gets wider: the tiles that move into view load their covers.
-- Home's Most played and the mini player's queue mark the playing track too: the row in the accent, with the playing indicator in place of its number, moving while playing. Home's tiles ring the playing album when playback changes, not only when the page is filled.
-- While a text field has the focus, Ctrl+Shift+Z and Ctrl+Y redo in the field instead of redoing a playlist or tag edit, as Ctrl+Z and Ctrl+A already did; shortcuts changed in the settings are lifted the same way.
-- The Keyboard shortcuts window (Ctrl+?) lists the keys of every action from the settings, so Undo, Redo and Select all no longer read "Not set" when it was opened from a text field.
-- MP3 files whose lyrics were written by FFmpeg (as a `TXXX` frame named `USLT` or `lyrics-…` instead of a `USLT` frame) are counted as having lyrics when scanned.
-- DSD played as DoP no longer makes the DAC leave DSD mode or click when pausing, seeking, waiting for the next track or at the end: the device gets DSD silence (the DoP idle pattern) instead of PCM silence, and the DoP data is never faded.
-- Screen readers: the items of every menu (the main menu, the menu bar and the context menus) now have their names; with GTK 4.24 they were read without one.
-- Keyboard: Tab now leaves the track table, the album grid, the play history and the other long lists after the focused row, instead of visiting every row; Shift+Tab goes back the same way.
-- Convert no longer makes a new preset when the arrow keys reach **New preset**, and Sync and export no longer opens the folder chooser when its window opens or the arrow keys reach **New destination**: both act on Enter or a click.
-- Screen readers: the rows of Supported formats, the tag editor's files, the history, the playlists and smart playlists, the Folders tree and the new-item rows of Convert and Sync and export have names; the search fields of Keyboard shortcuts and Supported formats have labels; Home's albums and the rows of Settings › Shortcuts are read as buttons; the output button is no longer described with every device's capabilities.
-- Reduced motion also stops the slide of the notices in Settings and the tag editor, the sleep timer's minutes row and the mini player's drawer when the desktop asks for it through its settings portal.
-- Folder sync no longer trusts the list of its files on the destination (`.helikodu-sync.json`) blindly: entries that point outside the destination folder, and files reached through a linked folder, are never removed.
-- An ADX file with a header FFmpeg cannot play no longer crashes Helikodu (FFmpeg's ADX reader divided by zero); such files are refused.
-- Converting a file of four to six channels to ALAC no longer ends Helikodu when its length leaves a last block of one or two samples (FFmpeg's ALAC encoder stopped the program); that end is padded with a fraction of a millisecond of silence.
-- Converting to MP3 no longer ends Helikodu when the source holds floating-point samples that are not numbers or far beyond full scale; such samples are cleaned before they reach the encoder.
-- Damaged Opus, MP4 and other files whose headers made the tag reader fail inside its library are refused (or read by FFmpeg) instead of stopping the program.
-- Synced lyrics with word timings on a line longer than the line limit no longer keep timings past the end of the cut line.
-- SID tunes whose header points past the end of the file are refused before libsidplayfp reads outside its buffer.
+#### Playback and formats
+- DSD played as DoP no longer makes the DAC leave DSD mode or click when pausing, seeking, waiting for the next track or at the end: the device gets DSD silence instead of PCM silence.
+- Damaged files no longer stop the program: ADX files with a header FFmpeg cannot play, Opus, MP4 and other files whose headers made the tag reader fail, SID tunes whose header points past the end of the file, MIDI files without tracks and DSDIFF files with an impossible property size are refused or read safely.
 - NSF tunes whose header asks for the play routine thousands of times a second no longer make playback and seeking take many seconds per second of music.
-- HES (PC Engine) game music is no longer played: libgme's HES emulator reads outside its memory on damaged files.
-- A MIDI file without tracks is refused instead of stopping the program.
-- DSDIFF files whose property chunk claims an impossible size are refused cleanly.
-- Closing the window while music played could leave Helikodu playing with no window, until the process was killed: it kept playing in the tray even where no tray icon could be seen. Closing now quits, also with other Helikodu windows open; it keeps playing in the tray only when the settings ask for it and a tray shows the icon right now, the first time with a notification that says how to quit, and the window comes back when the tray goes away.
-- Playing with the window hidden no longer looks through every artist of the library at each track change (about 80 ms of work at 100,000 tracks when the track's artist credit is no artist of the list).
-- Less memory: the library pages, Home, History, Statistics, the main menu, the menu bar and the menus of the pages' buttons are built when first opened instead of at start-up (about 2,600 fewer widgets in the window after start-up).
-- Naming patterns with square brackets nested more than 16 deep are refused with a message instead of crashing; folder names cut short to fit the file system no longer end in a dot or a space under the portable rules.
+
+#### Library and interface
+- The playing track is marked the same way in every track list, wherever playback was started, with the playing indicator in the accent.
+- With a colour scheme chosen in Helikodu that differs from the desktop's, text no longer takes the desktop theme's colours (light on light or dark on dark under themes such as Breeze).
+- Album covers in the album grids no longer stay placeholders when the grid gains a column.
+- The album page's **Details** column wraps its text instead of growing wider; its width can be dragged and is kept between runs.
+- Invisible padding around tag values (spaces, no-break spaces, tabs, zero-width characters) is trimmed when files are scanned and when titles are shown.
+- In the Tracks table, a column that was shown no longer takes the padding of the table's edge from the first and last columns.
+- Supported formats, opened from About, can be closed while About is open.
+- A library database on a read-only file is opened read-only instead of failing on each change, and temporary files of settings saves cut short are cleared.
+
+#### Accessibility
+- Screen readers: the items of every menu have their names (with GTK 4.24 they were read without one); the rows of Supported formats, the tag editor's files, the playlists and the Folders tree have names; the search fields of Keyboard shortcuts and Supported formats have labels; the output button is no longer described with every device's capabilities.
+- Keyboard: Tab leaves the track table, the album grid and the other long lists after the focused row instead of visiting every row; Shift+Tab goes back the same way.
+- Reduced motion also stops the slide of the notices in Settings and the tag editor and the other remaining animations when the desktop asks for it through its settings portal.
+
+### Known issues
+
+- With a library of 100,000 tracks, memory use reaches about 264 MB after scrolling through the whole track table in the headless measurement, above the 250 MB budget (some 61 MB of it is the software GL driver's, which a GPU driver replaces). Start-up and the album grid stay under 250 MB. See `docs/dev/performance.md`.
+- vgmstream (game audio streams) is off in the default build and in the ready-built programs.
+- No SoundFont is included; MIDI files play only with a SoundFont you choose or one installed on the system.
+- HES (PC Engine) game music is not played (see Changed).
+- A screen-reader walkthrough with Orca and the manual checks on real GNOME, KDE Plasma and Sway sessions (`tests/ui/daily-driver.md`) have not yet been done by people; only the automated interface and accessibility checks have run.
+- The review of the smart playlist editor by outside testers is still to come; the editor may change before 1.0.
+- The bit-perfect check through an ALSA loopback device has not been run; bit-perfect output is verified through the WAV file output only.
+- The facet browser takes about 0.6 s to list the values of the whole library at 500,000 tracks.
+- The ready-built programs need the FFmpeg 7.1 libraries (`libavformat.so.61`, `libavcodec.so.61`, `libavutil.so.59`); on a system with only a newer FFmpeg, build from the source tarball instead.
 
 ## [0.2.0] - 2026-11-18
 

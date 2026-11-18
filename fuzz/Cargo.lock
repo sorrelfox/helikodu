@@ -386,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "helikodu-engine"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "ebur128",
  "helikodu-extra-decoders",
@@ -400,7 +400,7 @@ dependencies = [
 
 [[package]]
 name = "helikodu-extra-decoders"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "helikodu-gme-sys",
  "helikodu-model",
@@ -412,7 +412,7 @@ dependencies = [
 
 [[package]]
 name = "helikodu-ffmpeg-bridge"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "ffmpeg-sys-next",
  "helikodu-model",
@@ -437,14 +437,14 @@ dependencies = [
 
 [[package]]
 name = "helikodu-gme-sys"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "pkg-config",
 ]
 
 [[package]]
 name = "helikodu-library"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "helikodu-meta",
  "helikodu-model",
@@ -461,7 +461,7 @@ dependencies = [
 
 [[package]]
 name = "helikodu-meta"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "chardetng",
  "encoding_rs",
@@ -477,7 +477,7 @@ dependencies = [
 
 [[package]]
 name = "helikodu-model"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "serde",
  "thiserror",
@@ -485,18 +485,19 @@ dependencies = [
 
 [[package]]
 name = "helikodu-openmpt-sys"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "pkg-config",
 ]
 
 [[package]]
 name = "helikodu-service"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "helikodu-engine",
  "helikodu-library",
  "helikodu-model",
+ "log",
  "rustix",
  "serde",
  "serde_json",
@@ -506,7 +507,7 @@ dependencies = [
 
 [[package]]
 name = "helikodu-sidplayfp-sys"
-version = "0.2.0"
+version = "0.9.0"
 dependencies = [
  "cc",
  "pkg-config",
