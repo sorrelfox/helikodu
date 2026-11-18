@@ -6,15 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-### Fixed
-
-- Translations: the conditions and limit units of the smart playlist rules, the equalizer presets and the stages of the signal path were left in English in every language; they are translated now.
-- Translations: sentences with dropdowns in them (the smart playlist rules, when a play counts, how a looping tune ends, the converter, the sleep timer), counts and dates are now whole translatable sentences that each language can reorder, and words with two meanings in English (such as "Home", "Track" or "Missing") are translated apart.
-- Identical copies and duplicates: the Main and Remove columns grow to fit a longer translation of their headers.
-
 ## [0.9.0] - 2026-11-18
 
-The release candidate. This version brings everything planned for 1.0: smart playlists and a query language, play modes, lyrics and a play history, tools that convert, organize, sync and repair files, and the work of making Helikodu robust, fast with large libraries and accessible. With it the features are frozen for 1.0; until then only fixes, translations and documentation follow.
+The release candidate. This version brings everything planned for 1.0: smart playlists and a query language, play modes, lyrics and a play history, tools that convert, organize, sync and repair files, the interface in eleven more languages, and the work of making Helikodu robust, fast with large libraries and accessible. With it the features are frozen for 1.0; until then only fixes, translations and documentation follow.
 
 ### Added
 
