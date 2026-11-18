@@ -11,6 +11,7 @@ use helikodu_model::library::TrackRef;
 use helikodu_model::player::{
     EnqueueAt, EntryId, QueueContext, RepeatMode, ShuffleMode, StopAfter, Volume,
 };
+use helikodu_model::settings::{LoudnessSettings, OutputSettings};
 
 use super::config::PlayerPrefs;
 use crate::library::{AlbumId, GenreId, PersonId};
@@ -123,4 +124,14 @@ pub enum PlayerCommand {
     NextOutput,
     /// Change how the player behaves (from the playback settings).
     Configure(PlayerPrefs),
+    /// Apply the `[output]` and `[loudness]` settings while playing: a new sample
+    /// rate policy, sample format, buffer length or volume control reopens the stream
+    /// at the same position; loudness changes ramp the gain without a gap. The backend,
+    /// device and mode in `output` are left to [`SetOutput`](Self::SetOutput).
+    ConfigureAudio {
+        /// The `[output]` settings.
+        output: OutputSettings,
+        /// The `[loudness]` settings.
+        loudness: LoudnessSettings,
+    },
 }

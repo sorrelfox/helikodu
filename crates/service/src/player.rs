@@ -118,7 +118,6 @@ impl Player {
             strikes: HashMap::new(),
             crash: None,
             session: None,
-            replay_gain: config.replay_gain.mode,
             prefs: config.prefs,
             library: config.library.clone(),
         };

@@ -1,0 +1,241 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * The Helikodu stylesheet.
+ *
+ * The colour variables (--hk-*) come from tokens.css, which is generated from
+ * tokens.json, and from a second provider that the application rewrites when
+ * the accent, high contrast or reduced motion change.
+ *
+ * GTK CSS only paints. Sizes of boxes, spacing between children and alignment
+ * come from the widgets. Every restyled stock widget sets background-image:
+ * none and an explicit color, because GTK's default theme paints buttons,
+ * slider knobs and switches with background-image (section 10).
+ */
+
+/* ---- 1. Base and text --------------------------------------------------- */
+
+window.hk { background-color: var(--hk-win); color: var(--hk-t1); font-size: 13px; }
+.hk-glass { background-color: var(--hk-win); color: var(--hk-t1); }
+.hk *:focus-visible { outline: 2px solid var(--hk-accent-text); outline-offset: 1px; }
+
+.hk-t1 { color: var(--hk-t1); }
+.hk-t2 { color: var(--hk-t2); }
+.hk-t3 { color: var(--hk-t3); }
+.hk-numeric { font-feature-settings: "tnum"; }
+.hk-mono { font-family: monospace; font-feature-settings: "tnum", "liga" 0, "calt" 0; }
+.hk-secondary { font-size: 12px; }
+.hk-count { font-size: 11.5px; color: var(--hk-t3); font-feature-settings: "tnum"; }
+.hk-medium { font-weight: 500; }
+.hk-strong { font-weight: 600; }
+.hk-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hk-t3); }
+.hk-micro-label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hk-t3); }
+.hk-brand { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.hk-panel-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.hk-view-title { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.hk-hero-title { font-size: 34px; font-weight: 600; letter-spacing: -0.025em; }
+.hk-hero-title.small { font-size: 28px; letter-spacing: -0.02em; }
+.hk-mono-time { font-family: monospace; font-size: 12px; font-weight: 500; font-feature-settings: "tnum", "liga" 0, "calt" 0; }
+.hk-mono-meta { font-family: monospace; font-size: 10.5px; font-feature-settings: "tnum", "liga" 0, "calt" 0; }
+.hk-signal { font-family: monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+.hk-accent-text { color: var(--hk-accent-text); }
+.hk-playing { color: var(--hk-accent-text); font-weight: 600; }
+
+/* ---- 2. Shell surfaces -------------------------------------------------- */
+
+.hk-sidebar { background-color: var(--hk-side); border-right: 1px solid var(--hk-line); }
+.hk-content { background-color: var(--hk-pane); }
+.hk-panel { background-color: var(--hk-win); border-left: 1px solid var(--hk-line); }
+.hk-header { min-height: 45px; padding: 0 12px; border-bottom: 1px solid var(--hk-line); }
+.hk-sidebar .hk-header { padding: 0 10px 0 18px; border-bottom: none; }
+.hk-panel .hk-header { padding: 0 8px 0 16px; }
+.hk-header-divider { min-width: 1px; min-height: 18px; background-color: var(--hk-line); }
+.hk-statusbar { min-height: 28px; padding: 0 24px; border-top: 1px solid var(--hk-line); background-color: var(--hk-win); color: var(--hk-t3); font-size: 12px; }
+.hk-deck { border-top: 1px solid var(--hk-glass-border-top); }
+.hk-readout { padding: 12px 16px; border-radius: 8px; }
+.hk-pane-handle { background: none; }
+
+/* ---- 3. Lists ----------------------------------------------------------- */
+
+list.hk-list, list.hk-queue, list.hk-tracks { background: none; color: var(--hk-t1); }
+list.hk-list > row { min-height: 30px; padding: 0 10px; border-radius: 6px; color: var(--hk-t2); background: none; }
+list.hk-list > row:hover { background-color: var(--hk-hover); }
+list.hk-list > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); font-weight: 600; }
+list.hk-list > row.hk-dim { color: var(--hk-t3); }
+.hk-list-section { padding: 18px 10px 6px; }
+.hk-list-section.first { padding-top: 10px; }
+
+/* Tertiary text fails contrast on the selection tint: step it up one level. */
+row:selected .hk-t3, row:selected .hk-count, .hk-selected .hk-t3, .hk-selected .hk-count { color: var(--hk-t2); }
+
+list.hk-queue > row { min-height: 32px; padding: 0 8px; border-radius: 6px; color: var(--hk-t1); background: none; }
+list.hk-queue > row:hover { background-color: var(--hk-hover); }
+list.hk-queue > row.current { background-color: var(--hk-sel); font-weight: 600; }
+list.hk-queue > row.history { color: var(--hk-t3); }
+list.hk-queue > row.section { min-height: 0; padding: 13px 8px 5px; }
+list.hk-queue > row.section:hover { background: none; }
+.hk-queue-lead { min-width: 22px; color: var(--hk-t3); font-size: 12px; font-feature-settings: "tnum"; }
+list.hk-queue > row.current .hk-queue-lead { color: var(--hk-accent-text); }
+
+list.hk-tracks > row { min-height: 38px; padding: 0 12px; border-radius: 6px; background: none; }
+list.hk-tracks > row:hover { background-color: var(--hk-hover); }
+list.hk-tracks > row:selected { background-color: var(--hk-sel); }
+list.hk-tracks > row.playing { background-color: var(--hk-sel); }
+list.hk-tracks > row.disc { min-height: 0; padding: 14px 12px 6px; }
+list.hk-tracks > row.disc:hover { background: none; }
+.hk-table-header { min-height: 33px; padding: 0 12px; border-bottom: 1px solid var(--hk-line); }
+
+gridview.hk-grid { background: none; padding: 0 14px 12px; color: var(--hk-t1); }
+gridview.hk-grid > child { padding: 0 10px 22px; border-radius: 6px; background: none; }
+gridview.hk-grid > child:selected { background: none; }
+gridview.hk-grid > child:focus-visible { outline: none; }
+gridview.hk-grid > child:focus-visible .hk-cover { outline: 2px solid var(--hk-accent-text); outline-offset: 1px; }
+
+.hk-cover { border-radius: 6px; }
+.hk-cover.hero { border-radius: 8px; box-shadow: 0 10px 24px -8px rgba(0,0,0,0.45); }
+.hk-cover.small { border-radius: 4px; }
+.hk-cover.playing { box-shadow: 0 0 0 2px var(--hk-pane), 0 0 0 4px var(--hk-accent-fill); }
+
+.hk-placeholder { border-radius: 6px; border: 1px solid var(--hk-line); background-color: var(--hk-win); }
+.hk-placeholder-bar { min-height: 8px; border-radius: 3px; background-color: var(--hk-line); }
+
+/* ---- 4. Controls -------------------------------------------------------- */
+
+button.hk-btn {
+  min-height: 32px; padding: 0 14px 0 12px; border-radius: 8px; border: 1px solid var(--hk-line2);
+  background: none; box-shadow: none; color: var(--hk-t1); font-weight: 500;
+}
+button.hk-btn:hover { background-color: var(--hk-hover); }
+button.hk-btn.primary { padding: 0 16px 0 13px; border-color: transparent; background-color: var(--hk-accent); color: var(--hk-on-raw); font-weight: 600; }
+button.hk-btn.primary:hover { background-color: var(--hk-accent-fill); color: var(--hk-on-accent); }
+button.hk-btn.small { min-height: 28px; padding: 0 12px; border-radius: 7px; border-color: var(--hk-line); color: var(--hk-t2); font-weight: 400; }
+button.hk-btn.text { min-height: 28px; padding: 0 10px; border-radius: 6px; border-color: transparent; color: var(--hk-t2); font-weight: 400; }
+button.hk-btn.compact { min-height: 28px; padding: 0 13px; border-radius: 7px; }
+button.hk-btn.icon-only { min-width: 32px; padding: 0; }
+button.hk-btn:disabled, button.hk-btn.text:disabled { color: var(--hk-t3); }
+
+button.hk-icon { min-width: 30px; min-height: 30px; padding: 0; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-t2); }
+button.hk-icon:hover { background-color: var(--hk-hover); color: var(--hk-t1); }
+button.hk-icon:disabled { color: var(--hk-t3); }
+button.hk-icon:disabled > image { opacity: 0.6; }
+
+.hk-seg { padding: 2px; border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); }
+.hk-seg > button { min-height: 24px; padding: 0 10px; border: none; border-radius: 5px; background: none; box-shadow: none; color: var(--hk-t2); }
+.hk-seg > button:hover { background-color: var(--hk-hover); }
+.hk-seg > button:checked { background-color: var(--hk-seg); box-shadow: inset 0 0 0 1px var(--hk-line2); color: var(--hk-t1); font-weight: 600; }
+
+.hk-tabs > button { min-height: 45px; padding: 0 1px; border: none; border-radius: 0; background: none; box-shadow: none; color: var(--hk-t2); }
+.hk-tabs > button:hover { color: var(--hk-t1); }
+.hk-tabs > button:checked { color: var(--hk-t1); font-weight: 600; box-shadow: inset 0 -2px 0 var(--hk-accent-fill); }
+
+entry.hk-input { min-height: 30px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); color: var(--hk-t1); box-shadow: none; outline: none; }
+entry.hk-input > text > placeholder { color: var(--hk-t3); }
+entry.hk-input > image { color: var(--hk-t3); }
+entry.hk-input:focus-within { border-color: var(--hk-accent-fill); box-shadow: 0 0 0 3px var(--hk-sel); }
+.hk-key { min-height: 18px; min-width: 18px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--hk-line2); color: var(--hk-t2); font-size: 11px; font-weight: 500; }
+.hk-key.hint { border: none; color: var(--hk-t3); font-family: monospace; font-size: 10.5px; }
+
+.hk-badge { padding: 3px 7px; border-radius: 4px; border: 1px solid var(--hk-line2); color: var(--hk-t2); font-family: monospace; font-size: 10.5px; font-weight: 500; letter-spacing: 0.03em; }
+
+button.hk-link { padding: 0; min-height: 0; border: none; background: none; box-shadow: none; color: var(--hk-t1); font-weight: 600; }
+button.hk-link:hover > label { text-decoration: underline; }
+
+menubutton.hk-sort > button { min-height: 28px; padding: 0 10px 0 12px; border-radius: 7px; border: 1px solid var(--hk-line); background: none; box-shadow: none; color: var(--hk-t1); }
+menubutton.hk-sort > button:hover { background-color: var(--hk-hover); }
+menubutton.hk-menu > button { min-width: 30px; min-height: 30px; padding: 0; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-t2); }
+menubutton.hk-menu > button:hover, menubutton.hk-menu > button:checked { background-color: var(--hk-hover); color: var(--hk-t1); }
+
+/* ---- 5. Player deck (inside .hk-glass) ---------------------------------- */
+
+.hk-deck-title { font-size: 13px; font-weight: 600; }
+.hk-deck-subtitle { font-size: 12px; color: var(--hk-t2); }
+button.hk-play { min-width: 44px; min-height: 44px; padding: 0; border: none; border-radius: 22px; background-color: var(--hk-accent-fill); color: var(--hk-on-accent); box-shadow: none; }
+button.hk-play:hover { background-color: var(--hk-accent); }
+button.hk-play:disabled { background-color: var(--hk-glass-idle-button); color: var(--hk-glass-t3); }
+button.hk-transport { min-width: 36px; min-height: 36px; padding: 0; border: none; border-radius: 18px; background: none; box-shadow: none; color: var(--hk-t1); }
+button.hk-transport:disabled { color: var(--hk-glass-t3); }
+button.hk-transport:hover, button.hk-output:hover { background-color: var(--hk-hover); }
+button.hk-icon.active { color: var(--hk-accent-fill); }
+button.hk-output { min-height: 38px; padding: 0 8px 0 12px; border-radius: 8px; border: 1px solid var(--hk-glass-button-border); background: none; box-shadow: none; color: var(--hk-t1); }
+.hk-output-device { font-size: 12.5px; font-weight: 500; }
+.hk-time-toggle { padding: 0; min-height: 0; border: none; background: none; box-shadow: none; color: var(--hk-t1); }
+
+/* The volume slider: the 3 px trough is painted as a band inside an 11 px
+   trough, so the knob needs no negative margins (they make GTK warn). */
+scale.hk-volume { padding: 0; min-height: 11px; }
+scale.hk-volume > trough { min-height: 11px; border: none; border-radius: 2px; outline: none;
+  background-color: transparent;
+  background-image: linear-gradient(to bottom, transparent 4px, var(--hk-glass-line2) 4px, var(--hk-glass-line2) 7px, transparent 7px); }
+scale.hk-volume > trough > highlight { min-height: 11px; margin: 0; border: none; border-radius: 2px; background-color: transparent;
+  background-image: linear-gradient(to bottom, transparent 4px, var(--hk-glass-slider-fill) 4px, var(--hk-glass-slider-fill) 7px, transparent 7px); }
+scale.hk-volume > trough > slider { min-width: 11px; min-height: 11px; margin: 0; border: none; border-radius: 6px; background-color: var(--hk-glass-slider-thumb); box-shadow: none; }
+scale.hk-volume:disabled > trough > slider { background-color: var(--hk-glass-t3); }
+
+.hk-signal.bit-perfect { color: var(--hk-signal-bit-perfect-text); }
+.hk-signal.processed { color: var(--hk-signal-processed-text); }
+.hk-signal.idle { color: var(--hk-signal-idle-text); }
+
+popover.hk-popover > contents { padding: 0; border-radius: 14px; border: 1px solid var(--hk-glass-popover-border); background-color: var(--hk-glass-popover); color: var(--hk-glass-t1); }
+
+/* ---- 6. Menus ----------------------------------------------------------- */
+
+popover.menu > contents { padding: 6px; border-radius: 10px; border: 1px solid var(--hk-line2); background-color: var(--hk-menu); color: var(--hk-t1); box-shadow: var(--hk-menu-shadow); }
+popover.menu modelbutton { min-height: 28px; padding: 0 10px; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; color: var(--hk-t1); }
+popover.menu modelbutton:hover, popover.menu modelbutton:selected { background-color: var(--hk-seg); }
+popover.menu modelbutton:disabled { color: var(--hk-t3); }
+popover.menu modelbutton accelerator { color: var(--hk-t3); font-size: 12px; }
+popover.menu separator { min-height: 1px; margin: 4px 6px; background-color: var(--hk-line); }
+popover.menu label.title { color: var(--hk-t3); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+menubar { min-height: 28px; padding: 0 6px; border-bottom: 1px solid var(--hk-line); background-color: var(--hk-win); color: var(--hk-t1); }
+menubar > item { min-height: 24px; padding: 0 9px; border-radius: 5px; }
+menubar > item:hover, menubar > item:selected { background-color: var(--hk-seg); }
+
+/* ---- 7. Toasts and empty states ----------------------------------------- */
+
+.hk-toast { min-height: 44px; padding: 0 6px 0 16px; border-radius: 10px; border: 1px solid var(--hk-glass-toast-border); background-color: var(--hk-glass-bg); box-shadow: 0 14px 30px -8px rgba(0,0,0,0.55); }
+.hk-toast button.action { min-height: 30px; padding: 0 10px; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-accent); font-weight: 600; }
+.hk-toast button.action:hover { background-color: var(--hk-hover); }
+
+.hk-empty-tile { min-width: 56px; min-height: 56px; border-radius: 12px; border: 1px solid var(--hk-line); background-color: var(--hk-field); color: var(--hk-t2); }
+
+/* ---- 8. Album page ------------------------------------------------------ */
+
+.hk-hero { padding: 28px 32px 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-details { padding: 24px 20px; border-left: 1px solid var(--hk-line); }
+.hk-now-playing { padding: 16px; border-bottom: 1px solid var(--hk-line); }
+.hk-panel-footer { min-height: 43px; padding: 0 8px 0 16px; border-top: 1px solid var(--hk-line); }
+
+/* ---- 9. Window buttons -------------------------------------------------- */
+
+/* The desktop's window buttons inside the top strips. Only size and colours
+   are set; which buttons appear and on which side comes from the desktop. */
+windowcontrols { border-spacing: 6px; }
+windowcontrols > button {
+  min-width: 24px; min-height: 24px; padding: 0; margin: 0;
+  border: none; border-radius: 12px; background: none; box-shadow: none;
+  color: var(--hk-t2);
+}
+windowcontrols > button:hover { background-color: var(--hk-hover); color: var(--hk-t1); }
+windowcontrols > button > image { padding: 0; background: none; box-shadow: none; }
+
+/* ---- 10. Resets against theme rules ------------------------------------- */
+
+button.hk-btn, button.hk-icon, .hk-seg > button, .hk-tabs > button,
+button.hk-play, button.hk-transport, button.hk-output, button.hk-link,
+button.hk-time-toggle, .hk-toast button.action, windowcontrols > button,
+menubutton.hk-sort > button, menubutton.hk-menu > button,
+scale.hk-volume > trough > slider, entry.hk-input { background-image: none; }
+list.hk-list > row, list.hk-queue > row, list.hk-tracks > row { outline-offset: -2px; }
+scrollbar { background: none; border: none; }
+/* Some themes give the scrollbar knob negative margins, which makes GTK warn
+   about negative sizes. */
+scrollbar slider { margin: 0; }
+
+/* ---- 11. Stop-after mark and play modes ---------------------------------- */
+
+/* A disc with a stop square at the lower right of the play button while
+   "Stop after this track" is on. */
+.hk-stop-mark { min-width: 16px; min-height: 16px; border-radius: 8px; background-color: var(--hk-glass-stop-after-mark); box-shadow: 0 0 0 2px var(--hk-glass-bg); }
+.hk-stop-square { min-width: 6px; min-height: 6px; background-color: var(--hk-glass-bg); }

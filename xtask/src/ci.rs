@@ -63,6 +63,8 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     }
 
     step(&root, "format", &cargo, &["fmt", "--all", "--check"])?;
+    println!("==> generated files");
+    crate::codegen::run(&[String::from("--check")])?;
     step(
         &root,
         "clippy",

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<!-- Library, Albums: a toolbar over the album grid. -->
+<interface domain="helikodu">
+  <menu id="sort_menu">
+    <section>
+      <attribute name="label" translatable="yes">Sort by</attribute>
+      <item>
+        <attribute name="label" translatable="yes">Album artist</attribute>
+        <attribute name="action">albums.sort</attribute>
+        <attribute name="target">artist</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Title</attribute>
+        <attribute name="action">albums.sort</attribute>
+        <attribute name="target">title</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Year</attribute>
+        <attribute name="action">albums.sort</attribute>
+        <attribute name="target">year</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Date added</attribute>
+        <attribute name="action">albums.sort</attribute>
+        <attribute name="target">added</attribute>
+      </item>
+    </section>
+  </menu>
+  <template class="HkAlbumsView" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkBox" id="toolbar">
+        <property name="spacing">10</property>
+        <property name="margin-top">16</property>
+        <property name="margin-bottom">12</property>
+        <property name="margin-start">24</property>
+        <property name="margin-end">24</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Albums</property>
+            <property name="valign">baseline-center</property>
+            <style><class name="hk-view-title"/></style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="count">
+            <property name="valign">baseline-center</property>
+            <property name="hexpand">True</property>
+            <property name="xalign">0</property>
+            <style>
+              <class name="hk-t3"/>
+              <class name="hk-numeric"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="filters">
+            <property name="valign">center</property>
+            <property name="spacing">2</property>
+            <accessibility>
+              <property name="label" translatable="yes">Quick filter</property>
+            </accessibility>
+            <style><class name="hk-seg"/></style>
+            <child>
+              <object class="GtkToggleButton" id="filter_all">
+                <property name="label" translatable="yes">All</property>
+                <property name="active">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="filter_lossless">
+                <property name="label" translatable="yes">Lossless</property>
+                <property name="group">filter_all</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="filter_hires">
+                <property name="label" translatable="yes">Hi-res</property>
+                <property name="group">filter_all</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkMenuButton" id="sort_button">
+            <property name="valign">center</property>
+            <property name="menu-model">sort_menu</property>
+            <property name="always-show-arrow">True</property>
+            <property name="label" translatable="yes">Album artist</property>
+            <property name="tooltip-text" translatable="yes">Sort order</property>
+            <style><class name="hk-sort"/></style>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkStack" id="content">
+        <property name="vexpand">True</property>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">grid</property>
+            <property name="child">
+              <object class="GtkScrolledWindow" id="scroller">
+                <property name="hscrollbar-policy">never</property>
+                <child>
+                  <object class="GtkGridView" id="grid">
+                    <property name="max-columns">12</property>
+                    <property name="min-columns">1</property>
+                    <accessibility>
+                      <property name="label" translatable="yes">Albums</property>
+                    </accessibility>
+                    <style><class name="hk-grid"/></style>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">empty</property>
+            <property name="child">
+              <object class="GtkBox" id="empty_slot">
+                <property name="orientation">vertical</property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

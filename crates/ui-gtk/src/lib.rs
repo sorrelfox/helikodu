@@ -3,6 +3,29 @@
 
 //! The GTK 4 front end: windows, views, widgets and style.
 //!
-//! See the crate's README for its place in the workspace.
+//! See the crate's README for its place in the workspace. [`run`] starts the
+//! application with a [`backend::Backend`], the front end's adapter over the
+//! `service` crate.
 
 #![forbid(unsafe_code)]
+
+mod application;
+pub mod backend;
+mod deck;
+mod format;
+pub mod i18n;
+mod models;
+mod playback;
+pub mod snapshot;
+pub mod style;
+mod views;
+mod widgets;
+mod window;
+
+pub use application::{
+    APP_ID, RunOptions, install_actions, prepare_display, register_resources, run,
+};
+pub use window::{MainWindow, WindowStyle};
+
+/// The path of the resource bundle, from the application ID.
+pub(crate) const RESOURCE_BASE: &str = "/io/github/sorrelfox/Helikodu";

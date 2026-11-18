@@ -13,5 +13,11 @@ publish.workspace = true
 name = "helikodu"
 path = "src/main.rs"
 
+[dependencies]
+helikodu-desktop.workspace = true
+helikodu-model.workspace = true
+helikodu-service.workspace = true
+helikodu-ui-gtk.workspace = true
+
 [lints]
 workspace = true

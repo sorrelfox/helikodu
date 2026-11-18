@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<!-- The player deck: a seek strip over a row of three control groups. Always dark. -->
+<interface domain="helikodu">
+  <template class="HkDeck" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <property name="height-request">105</property>
+    <style>
+      <class name="hk-deck"/>
+      <class name="hk-glass"/>
+    </style>
+    <child>
+      <object class="GtkBox" id="seek_strip">
+        <property name="spacing">14</property>
+        <property name="margin-start">18</property>
+        <property name="margin-end">18</property>
+        <property name="margin-top">8</property>
+        <property name="height-request">36</property>
+        <child>
+          <object class="GtkLabel" id="elapsed">
+            <property name="label">-:--</property>
+            <property name="xalign">0</property>
+            <property name="width-request">42</property>
+            <style><class name="hk-mono-time"/></style>
+          </object>
+        </child>
+        <child>
+          <object class="HkWaveformSeekBar" id="seek_bar">
+            <property name="valign">center</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="remaining_button">
+            <property name="width-request">42</property>
+            <property name="tooltip-text" translatable="yes">Show the total length</property>
+            <style><class name="hk-time-toggle"/></style>
+            <child>
+              <object class="GtkLabel" id="remaining">
+                <property name="label">-:--</property>
+                <property name="xalign">1</property>
+                <style><class name="hk-mono-time"/></style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkCenterBox" id="controls">
+        <property name="height-request">60</property>
+        <property name="margin-start">18</property>
+        <property name="margin-end">18</property>
+        <property name="start-widget">
+          <object class="GtkBox">
+            <property name="spacing">12</property>
+            <child>
+              <object class="HkCoverArt" id="cover">
+                <property name="valign">center</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="valign">center</property>
+                <property name="spacing">1</property>
+                <child>
+                  <object class="GtkLabel" id="title">
+                    <property name="label" translatable="yes">Nothing playing</property>
+                    <property name="xalign">0</property>
+                    <property name="ellipsize">end</property>
+                    <property name="max-width-chars">32</property>
+                    <style><class name="hk-deck-title"/></style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="subtitle">
+                    <property name="label" translatable="yes">Choose an album to play</property>
+                    <property name="xalign">0</property>
+                    <property name="ellipsize">end</property>
+                    <property name="max-width-chars">36</property>
+                    <style><class name="hk-deck-subtitle"/></style>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="favourite">
+                <property name="icon-name">emblem-favorite-symbolic</property>
+                <property name="valign">center</property>
+                <property name="sensitive">False</property>
+                <property name="tooltip-text" translatable="yes">Add to Favourites</property>
+                <accessibility>
+                  <property name="label" translatable="yes">Add to Favourites</property>
+                </accessibility>
+                <style><class name="hk-icon"/></style>
+              </object>
+            </child>
+          </object>
+        </property>
+        <property name="center-widget">
+          <object class="GtkBox" id="transport">
+            <property name="spacing">6</property>
+            <property name="valign">center</property>
+            <child>
+              <object class="GtkButton" id="shuffle">
+                <property name="icon-name">media-playlist-shuffle-symbolic</property>
+                <property name="valign">center</property>
+                
+                <property name="tooltip-text" translatable="yes">Shuffle</property>
+                <accessibility>
+                  <property name="label" translatable="yes">Shuffle</property>
+                </accessibility>
+                <style><class name="hk-icon"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="previous">
+                <property name="icon-name">media-skip-backward-symbolic</property>
+                <property name="valign">center</property>
+                <property name="action-name">app.previous</property>
+                <property name="tooltip-text" translatable="yes">Previous</property>
+                <accessibility>
+                  <property name="label" translatable="yes">Previous</property>
+                </accessibility>
+                <style><class name="hk-transport"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkOverlay">
+                <property name="valign">center</property>
+                <property name="child">
+                  <object class="GtkButton" id="play">
+                    <property name="icon-name">media-playback-start-symbolic</property>
+                    <property name="valign">center</property>
+                    <property name="action-name">app.play-pause</property>
+                    <property name="tooltip-text" translatable="yes">Play</property>
+                    <accessibility>
+                      <property name="label" translatable="yes">Play</property>
+                    </accessibility>
+                    <style><class name="hk-play"/></style>
+                  </object>
+                </property>
+                <child type="overlay">
+                  <object class="GtkBox" id="stop_mark">
+                    <property name="visible">False</property>
+                    <property name="halign">end</property>
+                    <property name="valign">end</property>
+                    <property name="can-target">False</property>
+                    <style><class name="hk-stop-mark"/></style>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="halign">center</property>
+                        <property name="valign">center</property>
+                        <property name="hexpand">True</property>
+                        <style><class name="hk-stop-square"/></style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="next">
+                <property name="icon-name">media-skip-forward-symbolic</property>
+                <property name="valign">center</property>
+                <property name="action-name">app.next</property>
+                <property name="tooltip-text" translatable="yes">Next</property>
+                <accessibility>
+                  <property name="label" translatable="yes">Next</property>
+                </accessibility>
+                <style><class name="hk-transport"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="repeat">
+                <property name="icon-name">media-playlist-repeat-symbolic</property>
+                <property name="valign">center</property>
+                
+                <property name="tooltip-text" translatable="yes">Repeat</property>
+                <accessibility>
+                  <property name="label" translatable="yes">Repeat</property>
+                </accessibility>
+                <style><class name="hk-icon"/></style>
+              </object>
+            </child>
+          </object>
+        </property>
+        <property name="end-widget">
+          <object class="GtkBox">
+            <property name="spacing">8</property>
+            <property name="valign">center</property>
+            <child>
+              <object class="GtkImage" id="volume_icon">
+                <property name="icon-name">audio-volume-high-symbolic</property>
+                <property name="margin-end">4</property>
+                <style><class name="hk-t2"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkScale" id="volume">
+                <property name="width-request">92</property>
+                <property name="valign">center</property>
+                <property name="margin-end">16</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">1</property>
+                    <property name="step-increment">0.05</property>
+                    <property name="page-increment">0.1</property>
+                    <property name="value">1</property>
+                  </object>
+                </property>
+                <accessibility>
+                  <property name="label" translatable="yes">Volume</property>
+                </accessibility>
+                <style><class name="hk-volume"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="output">
+                <property name="valign">center</property>
+                <property name="tooltip-text" translatable="yes">Output device</property>
+                <style><class name="hk-output"/></style>
+                <child>
+                  <object class="GtkBox">
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="HkSignalLamp" id="lamp">
+                        <property name="valign">center</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="valign">center</property>
+                        <child>
+                          <object class="GtkLabel" id="device">
+                            <property name="xalign">0</property>
+                            <property name="ellipsize">end</property>
+                            <property name="max-width-chars">22</property>
+                            <style><class name="hk-output-device"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="signal">
+                            <property name="xalign">0</property>
+                            <style>
+                              <class name="hk-signal"/>
+                              <class name="idle"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">pan-up-symbolic</property>
+                        <property name="margin-start">6</property>
+                        <style><class name="hk-t2"/></style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </property>
+      </object>
+    </child>
+  </template>
+</interface>

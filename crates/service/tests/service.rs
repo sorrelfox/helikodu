@@ -159,3 +159,57 @@ fn library_queries_answer_on_another_thread() {
         "9 stars"
     );
 }
+
+/// Writes two seconds of 16-bit stereo digital silence as a WAV file.
+fn silent_wav(path: &Path) {
+    let rate: u32 = 44_100;
+    let data_len: u32 = rate * 2 * 4;
+    let mut b = Vec::new();
+    b.extend_from_slice(b"RIFF");
+    b.extend_from_slice(&(36 + data_len).to_le_bytes());
+    b.extend_from_slice(b"WAVEfmt ");
+    b.extend_from_slice(&16u32.to_le_bytes());
+    b.extend_from_slice(&1u16.to_le_bytes());
+    b.extend_from_slice(&2u16.to_le_bytes());
+    b.extend_from_slice(&rate.to_le_bytes());
+    b.extend_from_slice(&(rate * 4).to_le_bytes());
+    b.extend_from_slice(&4u16.to_le_bytes());
+    b.extend_from_slice(&16u16.to_le_bytes());
+    b.extend_from_slice(b"data");
+    b.extend_from_slice(&data_len.to_le_bytes());
+    b.resize(b.len() + data_len as usize, 0);
+    fs::write(path, b).unwrap();
+}
+
+#[test]
+fn output_and_loudness_settings_reach_the_playing_engine() {
+    use helikodu_model::player::TransportState;
+    use helikodu_model::settings::LoudnessMode;
+
+    let dir = folder("live_audio_settings");
+    let file = dir.join("silence.wav");
+    silent_wav(&file);
+    let service = start(&dir);
+    let events = service.subscribe(SubscribeOptions::all());
+    let transport = |wanted: TransportState| move |e: &Event| matches!(e, Event::Player(PlayerEvent::State { transport, .. }) if *transport == wanted);
+    service
+        .player()
+        .send(PlayerCommand::PlayFiles {
+            files: vec![file],
+            start: 0,
+        })
+        .unwrap();
+    until(&events, transport(TransportState::Playing));
+
+    // Loudness keeps the stream; a new buffer length reopens it and plays on.
+    service
+        .settings()
+        .update(|s| s.loudness.mode = LoudnessMode::Track)
+        .unwrap();
+    service
+        .settings()
+        .update(|s| s.output.buffer_ms = 400)
+        .unwrap();
+    until(&events, transport(TransportState::Reconfiguring));
+    until(&events, transport(TransportState::Playing));
+}

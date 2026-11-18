@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<!-- The right panel: a strip of tabs over the Queue, Lyrics and Signal path pages. -->
+<interface domain="helikodu">
+  <template class="HkPanel" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <style><class name="hk-panel"/></style>
+    <child>
+      <object class="GtkWindowHandle">
+        <child>
+          <object class="GtkBox" id="strip">
+            <property name="spacing">18</property>
+            <style><class name="hk-header"/></style>
+            <child>
+              <object class="GtkBox" id="tabs">
+                <property name="spacing">20</property>
+                <property name="hexpand">True</property>
+                <accessibility>
+                  <property name="label" translatable="yes">Panel</property>
+                </accessibility>
+                <style><class name="hk-tabs"/></style>
+                <child>
+                  <object class="GtkToggleButton" id="queue_tab">
+                    <property name="label" translatable="yes">Queue</property>
+                    <property name="active">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="lyrics_tab">
+                    <property name="label" translatable="yes">Lyrics</property>
+                    <property name="group">queue_tab</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="signal_tab">
+                    <property name="label" translatable="yes">Signal path</property>
+                    <property name="group">queue_tab</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="hide_button">
+                <property name="icon-name">helikodu-sidebar-symbolic</property>
+                <property name="valign">center</property>
+                <property name="visible">False</property>
+                <property name="action-name">win.toggle-panel</property>
+                <property name="tooltip-text" translatable="yes">Hide the panel</property>
+                <accessibility>
+                  <property name="label" translatable="yes">Hide the panel</property>
+                </accessibility>
+                <style><class name="hk-icon"/></style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkWindowControls" id="controls">
+                <property name="side">end</property>
+                <property name="valign">center</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkStack" id="pages">
+        <property name="vexpand">True</property>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">queue</property>
+            <property name="child">
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkBox" id="now_playing">
+                    <property name="spacing">14</property>
+                    <style><class name="hk-now-playing"/></style>
+                    <child>
+                      <object class="HkCoverArt" id="cover"/>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="valign">center</property>
+                        <property name="hexpand">True</property>
+                        <property name="spacing">2</property>
+                        <child>
+                          <object class="GtkLabel" id="title">
+                            <property name="max-width-chars">1</property>
+                            <property name="xalign">0</property>
+                            <property name="ellipsize">end</property>
+                            <style><class name="hk-panel-title"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="artist">
+                            <property name="max-width-chars">1</property>
+                            <property name="xalign">0</property>
+                            <property name="ellipsize">end</property>
+                            <style><class name="hk-t2"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="album">
+                            <property name="max-width-chars">1</property>
+                            <property name="xalign">0</property>
+                            <property name="ellipsize">end</property>
+                            <style>
+                              <class name="hk-t3"/>
+                              <class name="hk-secondary"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="HkRatingStars" id="rating">
+                            <property name="halign">start</property>
+                            <property name="margin-top">10</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="format">
+                            <property name="max-width-chars">1</property>
+                            <property name="xalign">0</property>
+                            <property name="margin-top">8</property>
+                            <property name="ellipsize">end</property>
+                            <style>
+                              <class name="hk-mono-meta"/>
+                              <class name="hk-t3"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkStack" id="queue_stack">
+                    <property name="vexpand">True</property>
+                    <child>
+                      <object class="GtkStackPage">
+                        <property name="name">list</property>
+                        <property name="child">
+                          <object class="GtkScrolledWindow">
+                            <property name="hscrollbar-policy">never</property>
+                            <child>
+                              <object class="GtkListBox" id="list">
+                                <property name="selection-mode">none</property>
+                                <property name="margin-start">8</property>
+                                <property name="margin-end">8</property>
+                                <property name="margin-bottom">8</property>
+                                <accessibility>
+                                  <property name="label" translatable="yes">Queue</property>
+                                </accessibility>
+                                <style><class name="hk-queue"/></style>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkStackPage">
+                        <property name="name">empty</property>
+                        <property name="child">
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">The queue is empty. Play an album to fill it.</property>
+                            <property name="wrap">True</property>
+                            <property name="justify">center</property>
+                            <property name="margin-start">24</property>
+                            <property name="margin-end">24</property>
+                            <property name="valign">center</property>
+                            <style><class name="hk-t3"/></style>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox" id="footer">
+                    <property name="spacing">4</property>
+                    <style><class name="hk-panel-footer"/></style>
+                    <child>
+                      <object class="GtkLabel" id="summary">
+                            <property name="max-width-chars">1</property>
+                        <property name="xalign">0</property>
+                        <property name="hexpand">True</property>
+                        <property name="ellipsize">end</property>
+                        <style>
+                          <class name="hk-t3"/>
+                          <class name="hk-secondary"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="label" translatable="yes">Save as playlist</property>
+                        <property name="valign">center</property>
+                        <property name="sensitive">False</property>
+                        <style>
+                          <class name="hk-btn"/>
+                          <class name="text"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="clear_button">
+                        <property name="label" translatable="yes">Clear</property>
+                        <property name="valign">center</property>
+                        <property name="tooltip-text" translatable="yes">Remove everything but the playing track</property>
+                        <style>
+                          <class name="hk-btn"/>
+                          <class name="text"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">lyrics</property>
+            <property name="child">
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Lyrics are shown here in a later version.</property>
+                <property name="wrap">True</property>
+                <property name="justify">center</property>
+                <property name="margin-start">24</property>
+                <property name="margin-end">24</property>
+                <style><class name="hk-t3"/></style>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">signal</property>
+            <property name="child">
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">The signal path is shown here in a later version.</property>
+                <property name="wrap">True</property>
+                <property name="justify">center</property>
+                <property name="margin-start">24</property>
+                <property name="margin-end">24</property>
+                <style><class name="hk-t3"/></style>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

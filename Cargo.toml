@@ -38,6 +38,14 @@ encoding_rs = "0.8"
 ffmpeg-sys-next = { version = "=9.1.1", default-features = false, features = ["avformat"] }
 # Stream and future combinators for the D-Bus signal streams of the desktop integration.
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
+# Translations of the GTK front end, through the C library's own gettext.
+gettext-rs = { version = "0.8", features = ["gettext-system"] }
+# Compiles the GTK front end's resource bundle at build time.
+glib-build-tools = "0.22"
+# GTK 4 without libadwaita. The baseline is GTK 4.18; newer behaviour is looked up at
+# run time.
+gtk = { package = "gtk4", version = "0.11.5", features = ["v4_18"] }
+helikodu-desktop = { path = "crates/desktop" }
 helikodu-engine = { path = "crates/engine", default-features = false }
 helikodu-extra-decoders = { path = "crates/extra-decoders", default-features = false }
 helikodu-ffmpeg-bridge = { path = "crates/ffmpeg-bridge" }
@@ -45,6 +53,7 @@ helikodu-library = { path = "crates/library" }
 helikodu-meta = { path = "crates/meta" }
 helikodu-model = { path = "crates/model" }
 helikodu-service = { path = "crates/service", default-features = false }
+helikodu-ui-gtk = { path = "crates/ui-gtk" }
 # Locale-aware sort order of the library: a custom SQLite collation. Unicode-3.0.
 # The compiled data is the CLDR collation data for every locale.
 icu_collator = "2.4"

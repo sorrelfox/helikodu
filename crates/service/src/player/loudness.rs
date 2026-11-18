@@ -10,8 +10,6 @@ use std::path::{Path, PathBuf};
 use helikodu_library::read_file_details;
 use helikodu_model::player::{Loudness, PlaybackItem};
 
-use super::config::ReplayGainMode;
-
 /// What the tags of one file say about its loudness and its album.
 #[derive(Debug, Clone, PartialEq)]
 struct Tagged {
@@ -21,20 +19,16 @@ struct Tagged {
 }
 
 /// Reads and remembers the loudness tags of queued files, by path.
-#[derive(Debug)]
+///
+/// The tags are read whatever the loudness mode, so that a change of the mode while
+/// playing ([`PlayerCommand::ConfigureAudio`](super::PlayerCommand::ConfigureAudio))
+/// finds the values of the item that plays.
+#[derive(Debug, Default)]
 pub(super) struct LoudnessTags {
-    mode: ReplayGainMode,
     read: HashMap<PathBuf, Tagged>,
 }
 
 impl LoudnessTags {
-    pub(super) fn new(mode: ReplayGainMode) -> Self {
-        Self {
-            mode,
-            read: HashMap::new(),
-        }
-    }
-
     /// Forgets what was read, for a new queue.
     pub(super) fn clear(&mut self) {
         self.read.clear();
@@ -42,20 +36,16 @@ impl LoudnessTags {
 
     /// `item`, which plays the file at `path`, with its loudness values and whether
     /// it plays as part of its album: whether the file before or after it in the
-    /// queue (`neighbours`) has the same album. Without loudness normalization the
-    /// item stays as it is and no tags are read.
+    /// queue (`neighbours`) has the same album. The engine looks at the album only in
+    /// the automatic mode.
     pub(super) fn complete(
         &mut self,
         path: &Path,
         neighbours: &[Option<PathBuf>; 2],
         item: PlaybackItem,
     ) -> PlaybackItem {
-        if self.mode == ReplayGainMode::Off {
-            return item;
-        }
         let tagged = self.tags(path);
-        let album_context = self.mode == ReplayGainMode::Auto
-            && tagged.album.is_some()
+        let album_context = tagged.album.is_some()
             && neighbours
                 .iter()
                 .flatten()

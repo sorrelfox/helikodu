@@ -10,6 +10,7 @@
 
 mod check_deps;
 mod ci;
+mod codegen;
 mod corpus;
 mod offline_audit;
 mod stress;
@@ -28,6 +29,7 @@ commands:
   ci              run every check that CI runs, in the same order
                   (--tests-only, --no-offline-audit)
   check-deps      check the crate dependency rules and the unsafe-code policy
+  codegen         write the files generated from the design tokens (--check)
   corpus          generate the test corpus into target/corpus (--check, --strict)
   offline-audit   run every test program without a network and fail on any
                   Internet socket (--self-test)
@@ -41,6 +43,7 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("ci") => ci::run(&args[1..]),
         Some("check-deps") => check_deps::run(),
+        Some("codegen") => codegen::run(&args[1..]),
         Some("corpus") => corpus::run(&args[1..]),
         Some("offline-audit") => offline_audit::run(&args[1..]),
         Some("stress") => stress::run(&args[1..]),

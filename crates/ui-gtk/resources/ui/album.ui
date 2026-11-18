@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<!-- The album page: the hero, then the track table beside the details column. -->
+<interface domain="helikodu">
+  <template class="HkAlbumPage" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkScrolledWindow">
+        <property name="vexpand">True</property>
+        <property name="hscrollbar-policy">never</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkBox" id="hero">
+                <property name="spacing">28</property>
+                <style><class name="hk-hero"/></style>
+                <child>
+                  <object class="HkCoverArt" id="cover"/>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="valign">center</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Album</property>
+                        <property name="xalign">0</property>
+                        <style><class name="hk-section-label"/></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="title">
+                        <property name="xalign">0</property>
+                        <property name="ellipsize">end</property>
+                        <property name="margin-top">4</property>
+                        <style><class name="hk-hero-title"/></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="spacing">6</property>
+                        <property name="margin-top">4</property>
+                        <child>
+                          <object class="GtkLabel" id="artist">
+                            <property name="xalign">0</property>
+                            <property name="ellipsize">end</property>
+                            <style><class name="hk-strong"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="meta">
+                            <property name="xalign">0</property>
+                            <property name="ellipsize">end</property>
+                            <style>
+                              <class name="hk-t3"/>
+                              <class name="hk-numeric"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="badges">
+                        <property name="spacing">6</property>
+                        <property name="margin-top">14</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="spacing">8</property>
+                        <property name="margin-top">18</property>
+                        <child>
+                          <object class="GtkButton" id="play">
+                            <style>
+                              <class name="hk-btn"/>
+                              <class name="primary"/>
+                            </style>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">media-playback-start-symbolic</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Play</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="shuffle">
+                            <style><class name="hk-btn"/></style>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">media-playlist-shuffle-symbolic</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Shuffle</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="sensitive">False</property>
+                            <style><class name="hk-btn"/></style>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">list-add-symbolic</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Add to queue</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="icon-name">view-more-symbolic</property>
+                            <property name="sensitive">False</property>
+                            <property name="tooltip-text" translatable="yes">More</property>
+                            <accessibility>
+                              <property name="label" translatable="yes">More</property>
+                            </accessibility>
+                            <style>
+                              <class name="hk-btn"/>
+                              <class name="icon-only"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="hexpand">True</property>
+                    <property name="margin-start">24</property>
+                    <property name="margin-end">20</property>
+                    <property name="margin-top">14</property>
+                    <property name="margin-bottom">24</property>
+                    <child>
+                      <object class="GtkBox" id="header">
+                        <property name="spacing">14</property>
+                        <style><class name="hk-table-header"/></style>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">#</property>
+                            <property name="width-request">24</property>
+                            <property name="xalign">1</property>
+                            <style><class name="hk-section-label"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Title</property>
+                            <property name="hexpand">True</property>
+                            <property name="xalign">0</property>
+                            <style><class name="hk-section-label"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Plays</property>
+                            <property name="width-request">56</property>
+                            <property name="xalign">1</property>
+                            <style><class name="hk-section-label"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Rating</property>
+                            <property name="width-request">74</property>
+                            <property name="xalign">0</property>
+                            <style><class name="hk-section-label"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Length</property>
+                            <property name="width-request">48</property>
+                            <property name="xalign">1</property>
+                            <style><class name="hk-section-label"/></style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkListBox" id="tracks">
+                        <property name="selection-mode">none</property>
+                        <property name="margin-top">6</property>
+                        <accessibility>
+                          <property name="label" translatable="yes">Tracks</property>
+                        </accessibility>
+                        <style><class name="hk-tracks"/></style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="width-request">260</property>
+                    <property name="spacing">12</property>
+                    <style><class name="hk-details"/></style>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Details</property>
+                        <property name="xalign">0</property>
+                        <style><class name="hk-section-label"/></style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkGrid" id="details">
+                        <property name="column-spacing">12</property>
+                        <property name="row-spacing">10</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="spacing">8</property>
+                        <property name="margin-top">12</property>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="label" translatable="yes">Edit tags</property>
+                            <property name="sensitive">False</property>
+                            <style>
+                              <class name="hk-btn"/>
+                              <class name="small"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="label" translatable="yes">Open folder</property>
+                            <property name="sensitive">False</property>
+                            <style>
+                              <class name="hk-btn"/>
+                              <class name="small"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

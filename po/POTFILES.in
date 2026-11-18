@@ -1,1 +1,22 @@
 # Source files with translatable strings, one path per line, relative to the repository root.
+crates/ui-gtk/resources/ui/albums.ui
+crates/ui-gtk/resources/ui/album.ui
+crates/ui-gtk/resources/ui/deck.ui
+crates/ui-gtk/resources/ui/main_window.ui
+crates/ui-gtk/resources/ui/panel.ui
+crates/ui-gtk/src/application.rs
+crates/ui-gtk/src/backend/service.rs
+crates/ui-gtk/src/deck.rs
+crates/ui-gtk/src/format.rs
+crates/ui-gtk/src/views/album.rs
+crates/ui-gtk/src/views/albums.rs
+crates/ui-gtk/src/views/album_tile.rs
+crates/ui-gtk/src/views/placeholder.rs
+crates/ui-gtk/src/widgets/playing_indicator.rs
+crates/ui-gtk/src/widgets/rating_stars.rs
+crates/ui-gtk/src/widgets/waveform_seek_bar.rs
+crates/ui-gtk/src/window/pane_handle.rs
+crates/ui-gtk/src/window/panel.rs
+crates/ui-gtk/src/window.rs
+crates/ui-gtk/src/window/sidebar.rs
+crates/ui-gtk/src/window/toast_overlay.rs

@@ -7,7 +7,7 @@ use std::ops::RangeInclusive;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use helikodu_engine::output::Pacing;
+use helikodu_engine::output::{Pacing, SharedReservation};
 use helikodu_engine::pipeline::{
     ClippingPrevention, LoudnessMode, LoudnessSettings, ProcessingSettings,
 };
@@ -197,6 +197,10 @@ pub struct PlayerConfig {
     pub bus: Option<EventBus<Event>>,
     /// The seed of the shuffle order; from the time when `None`.
     pub shuffle_seed: Option<u64>,
+    /// How the ALSA backend takes a sound card that another program holds, for
+    /// exclusive output. The desktop integration supplies one; the default takes
+    /// nothing.
+    pub reservation: SharedReservation,
 }
 
 impl PlayerConfig {
@@ -224,6 +228,7 @@ impl PlayerConfig {
             clock: SystemClock::shared(),
             bus: None,
             shuffle_seed: None,
+            reservation: SharedReservation::default(),
         }
     }
 
@@ -271,6 +276,7 @@ impl PlayerConfig {
                 loudness: self.loudness_settings(),
                 ..ProcessingSettings::default()
             },
+            device_reservation: self.reservation.clone(),
             ..EngineConfig::default()
         }
     }

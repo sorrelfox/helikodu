@@ -31,9 +31,11 @@ The Cargo features `pipewire`, `alsa` and `dsd` (all on by default) pass on to t
 | `PlayPause`, `Play`, `Pause`, `Stop`, `Next`, `Previous`, `Seek*` | Transport; `Previous` restarts after `PlayerPrefs::previous_restart` |
 | `SetVolume`, `AdjustVolume`, `SetOutput`, `NextOutput` | Volume and output, switched while playing |
 | `SetShuffle`, `SetRepeat`, `SetStopAfter`, `Configure` | Play modes and preferences |
+| `ConfigureAudio { output, loudness }` | The other `[output]` settings and `[loudness]` while playing: a new rate policy, format, buffer or volume control reopens the stream at the same position, loudness ramps the gain |
 
 Events (`PlayerEvent`): `State { playback, transport }`, `TrackChanged` (now playing), `Position`, `QueueChanged { version }`, `ModesChanged`, `StopAfterChanged`, `VolumeChanged`, `OutputChanged`, `DevicesChanged`, `Problem`, `Notice` (crash recovery, suspect skipped, context unavailable, session or listen not saved), `ListenRecorded`, `Ended`.
 
+- **Device reservation.** `PlayerConfig::reservation` (and `ServiceConfig::reservation`) is the `SharedReservation` the engine's ALSA backend uses to take a sound card from the sound server for exclusive output; the application passes the desktop crate's implementation. The default takes nothing.
 - **Queue.** Entries (`EntryId`, `TrackRef`, whether they came with the context) in play order, with the context order beside it. Shuffle stores its permutation, so "Previous" retraces what played; turning it off restores context order. With repeat-all and shuffle, each cycle plays every entry once in a new order. `QueueSnapshot::splice_from` gives the list-model change between two versions.
 - **Gapless.** The next entry is named at `NearEnd`; when the queue, modes or stop-after change afterwards, the engine gets the new one.
 - **Unplayable entries** are reported and skipped in the direction playback moved, and passed over for the rest of that queue.
@@ -42,7 +44,7 @@ Events (`PlayerEvent`): `State { playback, transport }`, `TrackChanged` (now pla
 
 ## Settings
 
-`SettingsStore` reads `$XDG_CONFIG_HOME/helikodu/settings.toml` into `helikodu_model::settings::Settings` (tables `library`, `playback`, `output`, `loudness`, `appearance`, `advanced`, and `version`). Older files are migrated step by step before they are read; a broken file gives the defaults and is kept as `settings.toml.bak` when first replaced; a value out of range resets its table; a file from a newer version is read but never written. `update` validates, saves atomically and publishes `SettingsEvent::Changed` with the changed groups; `applies(key)` says whether a change is live or needs a restart (output format and loudness, until the engine can change them while running).
+`SettingsStore` reads `$XDG_CONFIG_HOME/helikodu/settings.toml` into `helikodu_model::settings::Settings` (tables `library`, `playback`, `output`, `loudness`, `appearance`, `advanced`, and `version`). Older files are migrated step by step before they are read; a broken file gives the defaults and is kept as `settings.toml.bak` when first replaced; a value out of range resets its table; a file from a newer version is read but never written. `update` validates, saves atomically and publishes `SettingsEvent::Changed` with the changed groups; `applies(key)` says when a change takes effect: every setting is live. The service passes a changed device, backend or mode to the player as `SetOutput` and the rest of `[output]` and `[loudness]` as `ConfigureAudio`.
 
 ## Library
 

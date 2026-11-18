@@ -270,18 +270,12 @@ impl SettingsStore {
 /// When a change of the setting `key` (as in `settings.toml`, for example
 /// `output.device`) takes effect.
 ///
-/// The output device, backend and mode switch at once without stopping. The other
-/// output settings and loudness normalization are fixed when the audio engine
-/// starts, which for now means the next start of the program.
-pub fn applies(key: &str) -> Applies {
-    match key.split_once('.').map_or(key, |(group, _)| group) {
-        "output" => match key {
-            "output.backend" | "output.device" | "output.mode" => Applies::Live,
-            _ => Applies::Restart,
-        },
-        "loudness" => Applies::Restart,
-        _ => Applies::Live,
-    }
+/// Every setting applies at once. The output device, backend and mode switch without
+/// stopping; a new sample rate policy, sample format, buffer length or volume control
+/// reopens the stream at the same position; loudness normalization ramps the gain of
+/// the audio that plays.
+pub fn applies(_key: &str) -> Applies {
+    Applies::Live
 }
 
 /// Reads the settings at `path`, and what was wrong with them.
@@ -400,10 +394,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn output_selection_is_live_and_formats_are_not() {
+    fn output_and_loudness_settings_are_live() {
         assert_eq!(applies("output.device"), Applies::Live);
-        assert_eq!(applies("output.buffer_ms"), Applies::Restart);
-        assert_eq!(applies("loudness.mode"), Applies::Restart);
+        assert_eq!(applies("output.buffer_ms"), Applies::Live);
+        assert_eq!(applies("output.format"), Applies::Live);
+        assert_eq!(applies("loudness.mode"), Applies::Live);
         assert_eq!(applies("playback.seek_step_s"), Applies::Live);
         assert_eq!(applies("appearance"), Applies::Live);
     }

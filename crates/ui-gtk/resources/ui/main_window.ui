@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<!-- The main window: sidebar, content and panel side by side, the deck below. -->
+<interface domain="helikodu">
+  <menu id="main_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Open Files…</attribute>
+        <attribute name="action">app.open-files</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Open Folder…</attribute>
+        <attribute name="action">app.open-folder</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Add Folder to Library…</attribute>
+        <attribute name="action">app.add-folder</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">New Playlist</attribute>
+        <attribute name="action">app.new-playlist</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Import Playlist…</attribute>
+        <attribute name="action">app.import-playlist</attribute>
+      </item>
+    </section>
+    <section>
+      <submenu>
+        <attribute name="label" translatable="yes">Edit</attribute>
+        <item>
+          <attribute name="label" translatable="yes">Undo</attribute>
+          <attribute name="action">win.undo</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Redo</attribute>
+          <attribute name="action">win.redo</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Select All</attribute>
+          <attribute name="action">win.select-all</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Track Properties</attribute>
+          <attribute name="action">win.track-properties</attribute>
+        </item>
+      </submenu>
+      <submenu>
+        <attribute name="label" translatable="yes">View</attribute>
+        <item>
+          <attribute name="label" translatable="yes">Sidebar</attribute>
+          <attribute name="action">win.toggle-sidebar</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Queue Panel</attribute>
+          <attribute name="action">win.toggle-panel</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Menu Bar</attribute>
+          <attribute name="action">win.show-menubar</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Jump to the Playing Track</attribute>
+          <attribute name="action">win.jump-to-playing</attribute>
+        </item>
+      </submenu>
+      <submenu>
+        <attribute name="label" translatable="yes">Playback</attribute>
+        <item>
+          <attribute name="label" translatable="yes">Play/Pause</attribute>
+          <attribute name="action">app.play-pause</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Stop</attribute>
+          <attribute name="action">app.stop</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Previous</attribute>
+          <attribute name="action">app.previous</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Next</attribute>
+          <attribute name="action">app.next</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Seek Back</attribute>
+          <attribute name="action">app.seek-back</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Seek Forward</attribute>
+          <attribute name="action">app.seek-forward</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Stop After This Track</attribute>
+          <attribute name="action">app.stop-after</attribute>
+        </item>
+      </submenu>
+      <submenu>
+        <attribute name="label" translatable="yes">Library</attribute>
+        <item>
+          <attribute name="label" translatable="yes">Rescan</attribute>
+          <attribute name="action">app.rescan</attribute>
+        </item>
+      </submenu>
+      <submenu>
+        <attribute name="label" translatable="yes">Help</attribute>
+        <item>
+          <attribute name="label" translatable="yes">Keyboard Shortcuts</attribute>
+          <attribute name="action">app.shortcuts</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Supported Formats</attribute>
+          <attribute name="action">app.formats</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">About Helikodu</attribute>
+          <attribute name="action">app.about</attribute>
+        </item>
+      </submenu>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Preferences</attribute>
+        <attribute name="action">app.preferences</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Keyboard Shortcuts</attribute>
+        <attribute name="action">app.shortcuts</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Quit</attribute>
+        <attribute name="action">app.quit</attribute>
+      </item>
+    </section>
+  </menu>
+  <template class="HkMainWindow" parent="GtkApplicationWindow">
+    <property name="title">Helikodu</property>
+    <property name="default-width">1280</property>
+    <property name="default-height">800</property>
+    <property name="width-request">960</property>
+    <property name="height-request">600</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkPopoverMenuBar" id="menubar">
+            <property name="visible">False</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkOverlay" id="panes_overlay">
+            <property name="vexpand">True</property>
+            <property name="child">
+              <object class="GtkBox" id="panes">
+                <child>
+                  <object class="GtkRevealer" id="sidebar_revealer">
+                    <property name="hexpand">False</property>
+                    <property name="transition-type">slide-right</property>
+                    <property name="transition-duration">150</property>
+                    <property name="reveal-child">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox" id="content">
+                    <property name="orientation">vertical</property>
+                    <property name="hexpand">True</property>
+                    <style><class name="hk-content"/></style>
+                    <child>
+                      <object class="GtkWindowHandle">
+                        <child>
+                          <object class="GtkCenterBox" id="header">
+                            <style><class name="hk-header"/></style>
+                            <property name="start-widget">
+                              <object class="GtkBox">
+                                <property name="spacing">4</property>
+                                <child>
+                                  <object class="GtkButton" id="back">
+                                    <property name="icon-name">go-previous-symbolic</property>
+                                    <property name="valign">center</property>
+                                    <property name="action-name">win.back</property>
+                                    <property name="tooltip-text" translatable="yes">Back</property>
+                                    <accessibility>
+                                      <property name="label" translatable="yes">Back</property>
+                                    </accessibility>
+                                    <style><class name="hk-icon"/></style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkButton" id="forward">
+                                    <property name="icon-name">go-next-symbolic</property>
+                                    <property name="valign">center</property>
+                                    <property name="action-name">win.forward</property>
+                                    <property name="tooltip-text" translatable="yes">Forward</property>
+                                    <accessibility>
+                                      <property name="label" translatable="yes">Forward</property>
+                                    </accessibility>
+                                    <style><class name="hk-icon"/></style>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                            <property name="center-widget">
+                              <object class="GtkSearchEntry" id="search">
+                                <property name="placeholder-text" translatable="yes">Search artists, albums, tracks</property>
+                                <property name="valign">center</property>
+                                <property name="margin-start">16</property>
+                                <property name="margin-end">16</property>
+                                <property name="width-chars">20</property>
+                                <property name="max-width-chars">50</property>
+                                <property name="sensitive">False</property>
+                                <property name="tooltip-text" translatable="yes">Search comes in a later version</property>
+                                <style>
+                                  <class name="hk-input"/>
+                                  <class name="search"/>
+                                </style>
+                              </object>
+                            </property>
+                            <property name="end-widget">
+                              <object class="GtkBox">
+                                <property name="spacing">6</property>
+                                <child>
+                                  <object class="GtkMenuButton" id="menu_button">
+                                    <property name="icon-name">open-menu-symbolic</property>
+                                    <property name="valign">center</property>
+                                    <property name="menu-model">main_menu</property>
+                                    <property name="primary">True</property>
+                                    <property name="tooltip-text" translatable="yes">Main menu</property>
+                                    <accessibility>
+                                      <property name="label" translatable="yes">Main menu</property>
+                                    </accessibility>
+                                    <style><class name="hk-menu"/></style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkButton" id="show_panel">
+                                    <property name="icon-name">helikodu-playlist-symbolic</property>
+                                    <property name="valign">center</property>
+                                    <property name="visible">False</property>
+                                    <property name="action-name">win.toggle-panel</property>
+                                    <property name="tooltip-text" translatable="yes">Show the queue</property>
+                                    <accessibility>
+                                      <property name="label" translatable="yes">Show the queue</property>
+                                    </accessibility>
+                                    <style><class name="hk-icon"/></style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkBox" id="header_divider">
+                                    <property name="valign">center</property>
+                                    <property name="visible">False</property>
+                                    <style><class name="hk-header-divider"/></style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkWindowControls" id="header_controls">
+                                    <property name="side">end</property>
+                                    <property name="valign">center</property>
+                                    <property name="visible">False</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkOverlay" id="toast_overlay">
+                        <property name="vexpand">True</property>
+                        <property name="child">
+                          <object class="GtkStack" id="views">
+                            <property name="vexpand">True</property>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkRevealer" id="panel_revealer">
+                    <property name="hexpand">False</property>
+                    <property name="transition-type">slide-left</property>
+                    <property name="transition-duration">150</property>
+                    <property name="reveal-child">True</property>
+                    <property name="child">
+                      <object class="HkPanel" id="panel"/>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="HkDeck" id="deck"/>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

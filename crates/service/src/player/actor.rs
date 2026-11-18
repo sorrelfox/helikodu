@@ -20,7 +20,7 @@ use helikodu_model::player::{
 };
 
 use super::command::{ContextRequest, PlayerCommand};
-use super::config::{PlayerPrefs, ReplayGainMode, SessionConfig};
+use super::config::{PlayerPrefs, SessionConfig};
 use super::listen::{ListenTracker, Recorded, Recorder};
 use super::loudness::LoudnessTags;
 use super::outputs::{next_output, output_choices};
@@ -90,7 +90,6 @@ pub(super) struct Startup {
     pub(super) strikes: HashMap<TrackRef, u32>,
     pub(super) crash: Option<Notice>,
     pub(super) session: Option<(SessionFiles, SessionConfig)>,
-    pub(super) replay_gain: ReplayGainMode,
     pub(super) prefs: PlayerPrefs,
     pub(super) library: Option<MusicLibrary>,
 }
@@ -167,7 +166,7 @@ impl Actor {
             clock,
             shared,
             queue: startup.queue,
-            loudness: LoudnessTags::new(startup.replay_gain),
+            loudness: LoudnessTags::default(),
             library: startup.library,
             prefs: startup.prefs,
             last_id: 0,
@@ -524,6 +523,9 @@ impl Actor {
                 }
             }
             PlayerCommand::Configure(prefs) => self.prefs = prefs,
+            PlayerCommand::ConfigureAudio { output, loudness } => {
+                self.send(EngineCommand::UpdateSettings { output, loudness });
+            }
         }
     }
 

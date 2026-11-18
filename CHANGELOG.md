@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 - Output device lists mark the system default device for PipeWire and ALSA.
+- The desktop application `helikodu`: the window with sidebar, album grid and album page, player deck and queue panel in the project's own design, light and dark, with MPRIS, sleep inhibition, notifications and files opened from the file manager.
 
 - Cargo workspace with the programs in `apps/` and the libraries in `crates/`.
 - Developer commands: `cargo xtask ci` and `cargo xtask check-deps`.
