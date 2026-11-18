@@ -127,15 +127,7 @@ impl Worker {
     pub(super) fn set_output(&mut self, selection: OutputSelection) {
         self.selection = selection;
         match self.state {
-            TransportState::Playing | TransportState::Draining => {
-                self.set_state(TransportState::Reconfiguring);
-                let Some(resume) = self.stop_where_heard(Transition::DeviceSwitch) else {
-                    self.stop();
-                    return;
-                };
-                self.close_output();
-                self.continue_at(resume, Some(Transition::DeviceSwitch));
-            }
+            TransportState::Playing | TransportState::Draining => self.reopen_where_heard(),
             _ => {
                 // The new device is opened when playback starts; connect to the
                 // backend now, so that its device list is sent.
@@ -154,6 +146,19 @@ impl Worker {
                 }
             }
         }
+    }
+
+    /// Fades out, closes the stream, and continues at the heard position on a stream
+    /// opened anew with the current selection and settings, fading in. For playing
+    /// and draining states.
+    pub(super) fn reopen_where_heard(&mut self) {
+        self.set_state(TransportState::Reconfiguring);
+        let Some(resume) = self.stop_where_heard(Transition::DeviceSwitch) else {
+            self.stop();
+            return;
+        };
+        self.close_output();
+        self.continue_at(resume, Some(Transition::DeviceSwitch));
     }
 
     /// Replaces the item that follows the heard one.

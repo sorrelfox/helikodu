@@ -20,7 +20,9 @@ use crate::output::{
     EventSender, NullBackend, OutputBackend, OutputError, OutputStream, Pacing, SampleWriter,
     SharedReservation, StreamConfig, WavBackend, automatic_backend, connect_backend_with,
 };
-use crate::pipeline::{LoudnessInfo, PathPlan, PathRequest, VolumePlan, stream_config};
+use crate::pipeline::{
+    LoudnessInfo, PathPlan, PathRequest, ProcessingSettings, VolumePlan, stream_config,
+};
 
 /// The connected backend, kept between streams: connecting to a sound server takes
 /// time.
@@ -201,17 +203,7 @@ impl Worker {
             return Err(EngineError::NothingLoaded);
         };
         let device = output.spec();
-        let item = source.item();
-        let request = PathRequest {
-            source: source.format(),
-            loudness: loudness_info(&item.loudness),
-            album_context: item.album_context,
-            device,
-            volume: output.volume,
-            dsp: false,
-            crossfade: false,
-        };
-        source.attach(PathPlan::new(&request, &self.config.processing))?;
+        source.attach(plan_for(&self.config.processing, output, source))?;
         let channels = usize::from(device.channel_count());
         let needed = source.max_output_frames().max(4096) * channels;
         if self.staging.len() < needed {
@@ -281,6 +273,25 @@ impl Worker {
         }
         self.staged = 0..0;
     }
+}
+
+/// The processing plan of `source` on `output` with `settings`.
+pub(super) fn plan_for(
+    settings: &ProcessingSettings,
+    output: &Output,
+    source: &Source,
+) -> PathPlan {
+    let item = source.item();
+    let request = PathRequest {
+        source: source.format(),
+        loudness: loudness_info(&item.loudness),
+        album_context: item.album_context,
+        device: output.spec(),
+        volume: output.volume,
+        dsp: false,
+        crossfade: false,
+    };
+    PathPlan::new(&request, settings)
 }
 
 /// The loudness values of an item as the path plan takes them. Tags carry sample

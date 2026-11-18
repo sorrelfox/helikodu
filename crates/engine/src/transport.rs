@@ -44,6 +44,11 @@
 //!   [`EngineError::NothingLoaded`](helikodu_model::player::EngineError::NothingLoaded).
 //! - `SetOutput` while playing sends `StateChanged(Reconfiguring)`, fades out, opens
 //!   the new device and continues at the same position.
+//! - `UpdateSettings` replaces the output and loudness settings. A new sample rate
+//!   policy, sample format, buffer length or volume control reopens the stream the
+//!   same way (`Reconfiguring`) while playing, and on `Play` while paused. A loudness
+//!   change keeps the stream: the gain ramps (20 ms) to its new value from the next
+//!   rendered frame, which is heard after the audio already buffered.
 //! - At the end of an item with a next one, the next one joins without a gap if it
 //!   takes the same stream format (sample rate, sample format and channels the
 //!   settings ask the device for); otherwise the buffer plays out and the device is
@@ -77,6 +82,7 @@ mod config;
 mod device;
 mod recovery;
 mod render;
+mod settings;
 mod source;
 mod stats;
 mod timeline;

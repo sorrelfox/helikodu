@@ -58,6 +58,21 @@ macro_rules! row_id {
             pub fn get(self) -> i64 {
                 self.0
             }
+
+            #[doc = concat!("The ", $what, " numbered `id` in the database, as [`get`](Self::get) gives it.")]
+            ///
+            /// Valid only for ids obtained from this library, for example kept by a
+            /// front end as a plain number. A number the library did not give out, or
+            /// one whose row has gone since, finds nothing.
+            pub fn from_raw(id: i64) -> Self {
+                Self(id)
+            }
+        }
+
+        impl From<$name> for i64 {
+            fn from(id: $name) -> Self {
+                id.0
+            }
         }
 
         impl fmt::Display for $name {

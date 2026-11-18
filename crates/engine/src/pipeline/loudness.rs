@@ -136,6 +136,27 @@ pub struct LoudnessSettings {
     pub clipping: ClippingPrevention,
 }
 
+impl From<helikodu_model::settings::LoudnessSettings> for LoudnessSettings {
+    /// The `[loudness]` settings as the path plan takes them.
+    fn from(settings: helikodu_model::settings::LoudnessSettings) -> Self {
+        use helikodu_model::settings::{ClippingPrevention as Clipping, LoudnessMode as Mode};
+        Self {
+            mode: match settings.mode {
+                Mode::Off => LoudnessMode::Off,
+                Mode::Track => LoudnessMode::Track,
+                Mode::Album => LoudnessMode::Album,
+                Mode::Auto => LoudnessMode::Auto,
+            },
+            preamp_db: settings.preamp_db,
+            untagged_preamp_db: settings.untagged_preamp_db,
+            clipping: match settings.clipping {
+                Clipping::LowerGain => ClippingPrevention::Peak,
+                Clipping::Limiter => ClippingPrevention::Limiter,
+            },
+        }
+    }
+}
+
 /// Where a track's gain came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GainSource {

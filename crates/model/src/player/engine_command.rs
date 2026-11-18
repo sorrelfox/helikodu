@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{PlaybackItem, Volume};
 use crate::audio::{MediaTime, OutputSelection};
+use crate::settings::{LoudnessSettings, OutputSettings};
 
 /// A command to the engine. The engine answers with [`EngineEvent`](super::EngineEvent)s.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -37,4 +38,17 @@ pub enum EngineCommand {
     SetVolume(Volume),
     /// Move playback to another backend, device or mode, keeping the position.
     SetOutput(OutputSelection),
+    /// Replace the output and loudness settings while running.
+    ///
+    /// The backend, device and mode in `output` are ignored: [`SetOutput`](Self::SetOutput)
+    /// chooses them. A change of the sample rate policy, sample format, buffer length or
+    /// volume control reopens the stream at the heard position, as `SetOutput` does; the
+    /// other output settings apply from then on. A loudness change applies to the audio
+    /// rendered from then on, with a short gain ramp, without reopening the stream.
+    UpdateSettings {
+        /// The `[output]` settings.
+        output: OutputSettings,
+        /// The `[loudness]` settings.
+        loudness: LoudnessSettings,
+    },
 }

@@ -126,6 +126,17 @@ impl Source {
         Ok(())
     }
 
+    /// Moves to the gain of `plan`, a plan for the same source and device that may
+    /// differ from the attached one in its gain only, ramping to it on the audio
+    /// rendered from now on. Does nothing before [`attach`](Self::attach).
+    pub(super) fn retune(&mut self, plan: PathPlan) {
+        let Some(chain) = &mut self.chain else {
+            return;
+        };
+        chain.set_gain(plan.gain.map_or(1.0, |gain| gain.linear()));
+        self.plan = Some(plan);
+    }
+
     /// The output room, in frames, that [`render`](Self::render) needs to make
     /// progress.
     pub(super) fn max_output_frames(&self) -> usize {

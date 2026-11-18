@@ -18,6 +18,8 @@ mod playlists;
 mod scan;
 mod search;
 mod stats;
+mod tag_writes;
+mod track_source;
 mod watch;
 
 pub use catalog::{
@@ -59,6 +61,8 @@ pub use search::{MatchRank, SearchHit, SearchRequest, SearchResults, fold};
 pub use stats::{
     HistoryEntry, HistoryQuery, Listen, ListenEnd, ListenOutcome, PlayRules, Rating, TrackStats,
 };
+pub use tag_writes::{RateError, RatingOutcome, TagWriteReport, TagWriteSettings};
+pub use track_source::TrackSource;
 pub use watch::{PollReason, RescanReason, WatchEvent, WatchMode, WatchOptions, Watcher};
 
 /// Direct SQL access to the database, below [`Library`].

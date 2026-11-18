@@ -17,9 +17,12 @@ pub struct EngineConfig {
     /// The `[output]` settings: backend, device and mode (until
     /// [`SetOutput`](helikodu_model::player::EngineCommand::SetOutput) replaces them),
     /// sample rate and format policy, buffer length, volume control and the
-    /// device-lost policy.
+    /// device-lost policy (until
+    /// [`UpdateSettings`](helikodu_model::player::EngineCommand::UpdateSettings)
+    /// replaces them).
     pub output: OutputSettings,
-    /// Loudness, resampler quality, channel mixing and fade lengths.
+    /// Loudness (until `UpdateSettings` replaces it), resampler quality, channel
+    /// mixing and fade lengths.
     pub processing: ProcessingSettings,
     /// The volume to start with.
     pub volume: Volume,

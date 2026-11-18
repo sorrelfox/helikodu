@@ -226,6 +226,9 @@ impl Worker {
                 }
             }
             EngineCommand::SetOutput(selection) => self.set_output(selection),
+            EngineCommand::UpdateSettings { output, loudness } => {
+                self.update_settings(output, loudness.into());
+            }
         }
     }
 

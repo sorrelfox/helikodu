@@ -16,4 +16,5 @@ mod errors;
 mod gapless;
 mod media;
 mod session;
+mod settings;
 mod transitions;

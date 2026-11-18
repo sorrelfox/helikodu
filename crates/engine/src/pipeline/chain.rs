@@ -17,6 +17,7 @@ use super::{
 /// Channel mixing, gain and resampling for one source.
 #[derive(Debug)]
 pub struct SourceChain {
+    rate: u32,
     input_channels: usize,
     output_channels: usize,
     max_block: usize,
@@ -49,6 +50,7 @@ impl SourceChain {
             0
         };
         Ok(Self {
+            rate,
             input_channels,
             output_channels,
             max_block,
@@ -87,6 +89,22 @@ impl SourceChain {
     /// The gain stage, to change the gain while playing.
     pub fn gain_mut(&mut self) -> Option<&mut GainStage> {
         self.gain.as_mut()
+    }
+
+    /// Moves the loudness gain to the linear factor `linear`, ramping over
+    /// [`GainStage::RAMP`] from the gain applied so far. A chain built without a gain
+    /// stage gets one, starting at unity, so the change is as smooth as any other.
+    /// The resampler's state is kept: the audio goes on without a seam.
+    pub fn set_gain(&mut self, linear: f64) {
+        match &mut self.gain {
+            Some(gain) => gain.set_gain(linear),
+            None if linear == 1.0 => {}
+            None => {
+                let mut gain = GainStage::new(self.rate, self.output_channels, 1.0);
+                gain.set_gain(linear);
+                self.gain = Some(gain);
+            }
+        }
     }
 
     /// Processes the interleaved frames of `input` into `output`. Returns the number of
