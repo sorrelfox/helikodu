@@ -6,12 +6,64 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-18
+
+The first beta. This version is about the sound: an equalizer and other processing, crossfades, loudness measurement, a view of the signal path, more output backends and the long tail of formats.
+
 ### Added
 
+#### Sound processing
+- A DSP and EQ page in the settings with a chain of stages, each switched on separately and applied while music plays without a click: graphic equalizers of 10 and 31 bands with presets, a parametric equalizer of up to 64 filters with import and export of AutoEQ's `ParametricEQ.txt`, crossfeed for headphones with three presets, a channel mix (mono, balance, swapped channels, the LFE channel of surround files) and a true-peak limiter. Dither is added automatically where needed. With every stage off the samples pass untouched.
+- The limiter can be chosen to prevent clipping instead of lowering the gain.
+
+#### Transitions
+- Crossfades between tracks and when you skip, with equal-power gains and exact to the frame. Tracks of one album stay gapless, and so does bit-perfect playback in exclusive mode.
+- Adjustable fades for pause and resume, stop, seek and skip.
+
+#### Loudness
+- Tracks and albums are measured following EBU R128 (loudness, loudness range, sample and true peak), CUE tracks included, in the background with progress and a stop button, from the Loudness settings or a track's or album's menu, and with `helikodu-cli loudness`. Measured values take precedence over tags and are measured again when a file changes; writing them to the tags (ReplayGain 2.0, and R128 in Opus files) is an option.
+
+#### Output
+- The Signal path tab of the right panel shows a lamp (bit-perfect, DSP active, converted), every stage from the file to the device and live playback counters, and copies them for a bug report. The output button shows the format the device was actually opened with, and the output switcher lists each device's rates, formats and exclusive support.
+- 16-, 24- and 32-bit sources play bit-perfect: 32-bit integer samples reach the device without passing through floating point.
+- PulseAudio and JACK output.
+- A DAC warm-up setting, a resampler quality setting, the time after which a paused exclusive device is released, and per-device settings applied when a device opens.
+- Playback can pause when headphones are unplugged.
+
+#### Formats
 - Tracker modules (libopenmpt), game console music (libgme) and Commodore 64 SID tunes (libsidplayfp, with the HVSC song-length database when you point to it) play, and MIDI files with a SoundFont you choose or one your distribution installs. Game audio streams play through vgmstream in builds made with it. Files are recognised by their content, and the subsongs of a module, game or tune become tracks of their own in the library.
 - Looping game music plays its loop twice and fades out; the number of loops, the fade and the length of tunes without one are settings.
 - DSD files can go to a DAC as DoP when nothing on the way changes the samples; otherwise they are converted to PCM as before.
-- Tracks can be read into memory whole before they play, for slow or sleeping drives (`load_into_memory` in `[playback.decoders]`; off by default, never above 512 MiB).
+- Files with several audio streams can play another one.
+- Tracks can be read into memory whole before they play, for slow or sleeping drives (off by default, never above 512 MiB).
+
+#### Other
+- Logs can be switched off, which is the default in release builds.
+- A user guide page on the equalizer and sound processing; the guide covers crossfades, loudness measurement, the signal path and the new formats.
+
+### Changed
+- With the window style left on Auto, KDE Plasma gets the integrated window style like GNOME.
+
+### Fixed
+- Context menus open at their full height instead of scrolling, and scrollbars no longer cover the counts in lists.
+- Album grids outside the Albums view, such as the Genres page, show their covers.
+- A window narrower than a page scrolls the page sideways and keeps the sidebar and queue panel at their width.
+- Rebuilding a list while its context menu was attached could hang the application.
+- Ratings update every visible row and the now-playing panel at once.
+- Every track list plays on double-click or Enter and selects on a single click.
+- Popovers and drop-down lists no longer draw an opaque frame.
+- The artist page's table fits its headers, and the playing indicator moves while music plays.
+
+### Known issues
+
+- The bit-perfect check through an ALSA loopback device has not been run for this release; bit-perfect output is verified through the WAV file output only.
+- vgmstream (game audio streams) is off in the default build and in the ready-built programs.
+- No SoundFont is included; MIDI files play only with a SoundFont you choose or one installed on the system.
+- The limiter's editor does not show its activity yet.
+- Logs are not written to disk yet.
+- With a library of 100,000 tracks, memory use reaches about 260 MB after scrolling through the whole track table, above the 250 MB budget. Start-up and the album grid stay under 250 MB.
+- The manual checks on real GNOME, KDE Plasma and Sway sessions and a screen-reader pass with Orca (`tests/ui/daily-driver.md`) have not yet been done by people; only the automated interface checks have run.
+- The ready-built programs need the FFmpeg 7.1 libraries (`libavformat.so.61`, `libavcodec.so.61`, `libavutil.so.59`); on a system with only a newer FFmpeg, build from the source tarball instead.
 
 ## [0.1.0] - 2026-11-18
 

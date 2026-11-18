@@ -12,12 +12,15 @@ The output button in the player deck shows the device in use. Click it to see th
 
 | Setting | Choices |
 |---|---|
-| **Backend** | **Automatic** (PipeWire when it is running, ALSA otherwise), **PipeWire** or **ALSA** |
+| **Backend** | **Automatic** (PipeWire when it is running, ALSA otherwise), **PipeWire**, **PulseAudio**, **ALSA** or **JACK** |
 | **Device** | **System default**, or a device of that backend |
 | **Mode** | **Shared** or **Exclusive, bit-perfect** |
 | **Sample rate** | **Match the track when possible** (the default), **The device's default rate**, or always one fixed rate |
+| **Resampler quality** | **Fast**, **Medium**, **High** or **Maximum**, for when the rate has to be converted |
 | **Sample format** | **Automatic**, 16-bit, 24-bit (packed or in 32-bit words), 32-bit or 32-bit float |
 | **Volume control** | **System volume** (the default), **Software volume in Helikodu**, the device's **Hardware mixer**, or **Fixed at 100 % (bit-perfect)** |
+| **DSD files** | **Convert to PCM**, or **DoP when the device can**: in exclusive mode, with nothing changing the samples on the way |
+| **Release the device** | In exclusive mode, **On stop only** or **On stop and after a pause** of some seconds (30 s by default) |
 | **If the device disappears** | **Pause** (the default), **Continue on the default device** or **Stop** |
 | **Buffer** | How much audio is prepared ahead, 50 to 2000 ms (default 200 ms) |
 | **DAC warm-up** | Milliseconds of silence after the device opens, for converters that need a moment to lock on (default 0) |
@@ -25,7 +28,7 @@ The output button in the player deck shows the device in use. Click it to see th
 
 Changes apply while music plays, at the same position. Helikodu remembers the device by a stable name (a PipeWire node name such as `alsa_output.usb-Topping_D10s-00.analog-stereo`, or an ALSA name such as `hw:CARD=D10s,DEV=0`), so it finds it again after a restart or when you plug it into another USB port. If the chosen device is missing when Helikodu starts, it pauses and tells you; choose another device or plug it in.
 
-PulseAudio and JACK are not supported yet. On most current systems PulseAudio programs are served by PipeWire anyway.
+With **JACK**, the devices are the JACK clients that take audio, and Helikodu connects its ports to the one you choose (**System default** is `system`, the sound card). JACK plays at the server's sample rate, so Helikodu converts other rates. PulseAudio and JACK have no exclusive mode; there, Helikodu plays as in shared mode with its own software volume.
 
 ## Shared and exclusive mode
 
@@ -33,10 +36,14 @@ In **Shared** mode, Helikodu plays through the sound server like every other pro
 
 In **Exclusive** mode, Helikodu takes the device for itself:
 
-- With an ALSA hardware device (`hw:…`), Helikodu asks PipeWire to hand over the sound card and plays to it directly. Other programs cannot use that card while Helikodu holds it, and the card's other inputs and outputs disappear from the sound settings for that time. Helikodu gives the card back when playback stops and after 30 seconds of pause.
+- With an ALSA hardware device (`hw:…`), Helikodu asks PipeWire to hand over the sound card and plays to it directly. Other programs cannot use that card while Helikodu holds it, and the card's other inputs and outputs disappear from the sound settings for that time. Helikodu gives the card back when playback stops and, unless you choose otherwise under **Release the device**, after 30 seconds of pause.
 - With a PipeWire device, Helikodu asks PipeWire for exclusive use and for the track's sample rate, which switches the device to that rate.
 
-When nothing in the way changes the sound (no loudness gain, no resampling, volume at 100 % or outside Helikodu), playback is **bit-perfect**: the samples reach the device exactly as they are in the file. The deck shows **Bit-perfect** when this is the case.
+When nothing in the way changes the sound (no loudness gain, no resampling, volume at 100 % or outside Helikodu), playback is **bit-perfect**: the samples reach the device exactly as they are in the file. The deck shows **Bit-perfect** when this is the case, and the output button shows the format the device was actually opened with.
+
+## The signal path
+
+The **Signal path** tab of the right panel shows what happens to the sound on its way: a lamp (**Bit-perfect**, **DSP active**, **Converted** or **Idle**) with one sentence, then every stage from the file to the device (source, loudness, resampler, equalizer, crossfeed, channel mix, limiter, volume, output format and device), each marked as active, bypassed or not needed. Below are the playback counters: buffer, underruns and silence inserted. **Copy diagnostics** puts all of it on the clipboard for a bug report.
 
 ## Volume
 

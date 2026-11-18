@@ -17,10 +17,21 @@
 //! `set_connect_automatically` does not reach the devices it has already created).
 //! The backend therefore removes every connection of the new ports before the stream
 //! starts, while it plays only silence, and connects them to the chosen device
-//! itself. On PipeWire, running the program with
+//! itself, and waits until the server shows exactly those connections, so the
+//! first period the stream plays already reaches the device. On PipeWire, running
+//! the program with
 //! `PIPEWIRE_PROPS='{ jack.self-connect-mode = ignore-all }'` makes the server ignore
 //! cpal's own connections, so not even silence reaches the default device; the
 //! backend's connections come from its second client and are not affected.
+//!
+//! **Finding the stream's ports.** cpal does not tell the name of the client it
+//! registers: it is `cpal_client_<pid>_out`, or that name with a suffix the server
+//! adds while another client has it. The ports a new stream registers are the
+//! ports of this process's cpal clients the backend's client did not list before.
+//! The server shows them to the other clients a little later (PipeWire's JACK
+//! service a few milliseconds), so the backend waits for them; and a closed stream
+//! waits until its ports are no longer listed, so that a new stream that gets the
+//! same names is not taken for the old one.
 //!
 //! **Format.** JACK runs at the server's rate with 32-bit float samples; the engine
 //! resamples to that rate. The buffer is the server's period. There is no stream
@@ -33,7 +44,8 @@
 //! Building the backend needs `jack.pc` (the JACK development files), although
 //! `libjack` is only loaded at run time.
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, Instant};
 
 use ::jack as jack_lib;
 use cpal::traits::HostTrait;
@@ -53,14 +65,19 @@ const PATCH_CLIENT: &str = "helikodu-ports";
 /// The client that stands for the sound card on a JACK server, and for the default
 /// sink on PipeWire.
 const SYSTEM_CLIENT: &str = "system";
+/// How long the server may take to show a stream's ports or connections to the
+/// backend's client.
+const SETTLE_TIMEOUT: Duration = Duration::from_secs(2);
+/// How often the backend looks again while it waits.
+const SETTLE_POLL: Duration = Duration::from_millis(2);
 
 /// The JACK backend.
 pub struct JackBackend {
-    /// cpal's JACK host. Behind a lock: building a stream is not meant to run twice
-    /// at once (the port lists before and after tell the new ports apart).
-    host: Mutex<cpal::Host>,
+    /// cpal's JACK host. Behind a lock: building and closing a stream are not meant
+    /// to run at once (the port lists before and after tell the new ports apart).
+    host: Arc<Mutex<cpal::Host>>,
     /// The backend's own client, never activated: it lists and connects ports.
-    patch: jack_lib::Client,
+    patch: Arc<jack_lib::Client>,
     events: EventSender,
     watcher: DeviceWatcher,
 }
@@ -88,22 +105,19 @@ impl JackBackend {
             Some(list)
         });
         Ok(Self {
-            host: Mutex::new(host),
-            patch,
+            host: Arc::new(Mutex::new(host)),
+            patch: Arc::new(patch),
             events,
             watcher,
         })
     }
 
-    /// The output ports of cpal's clients.
-    fn own_ports(&self) -> Vec<String> {
-        let mut ports = self.patch.ports(
-            Some(&own_pattern()),
-            Some(audio_type()),
-            PortFlags::IS_OUTPUT,
-        );
-        ports.sort_by_key(|name| port_number(name));
-        ports
+    /// The connections of `port`, as the backend's client sees them.
+    fn connections(&self, port: &str) -> Vec<String> {
+        self.patch
+            .port_by_name(port)
+            .map(|p| p.get_connections())
+            .unwrap_or_default()
     }
 
     /// Removes every connection of `port` and connects it to `target`.
@@ -112,12 +126,7 @@ impl JackBackend {
             backend: KIND,
             reason: format!("cannot connect {port}: {error}"),
         };
-        let connections = self
-            .patch
-            .port_by_name(port)
-            .map(|p| p.get_connections())
-            .unwrap_or_default();
-        for other in connections {
+        for other in self.connections(port) {
             self.patch
                 .disconnect_ports_by_name(port, &other)
                 .map_err(failed)?;
@@ -128,6 +137,30 @@ impl JackBackend {
                 .map_err(failed)?;
         }
         Ok(())
+    }
+
+    /// Waits until each port is connected to its target and nothing else, removing
+    /// connections that show up late (cpal's own, made before the backend's).
+    fn settle(&self, pairs: &[(&String, Option<&String>)]) -> Result<(), OutputError> {
+        wait_for(SETTLE_TIMEOUT, || {
+            let mut settled = true;
+            for &(port, target) in pairs {
+                let connections = self.connections(port);
+                for other in connections.iter().filter(|c| Some(*c) != target) {
+                    // An error is a connection already going away.
+                    let _ = self.patch.disconnect_ports_by_name(port, other);
+                    settled = false;
+                }
+                if target.is_some_and(|t| !connections.contains(t)) {
+                    settled = false;
+                }
+            }
+            settled.then_some(())
+        })
+        .ok_or_else(|| OutputError::Backend {
+            backend: KIND,
+            reason: "the server did not show the stream's connections in time".into(),
+        })
     }
 }
 
@@ -162,8 +195,9 @@ impl OutputBackend for JackBackend {
                     backend: KIND,
                     reason: "cpal has no JACK output".into(),
                 })?;
-        let before = self.own_ports();
-        let (stream, writer) = cpal_stream::build(Build {
+        let channels = usize::from(spec.channel_count());
+        let before = own_ports(&self.patch);
+        let (mut stream, writer) = cpal_stream::build(Build {
             kind: KIND,
             device: &device,
             config,
@@ -171,30 +205,33 @@ impl OutputBackend for JackBackend {
             buffer: cpal::BufferSize::Default,
             events: self.events.clone(),
         })?;
-        let ports: Vec<String> = self
-            .own_ports()
-            .into_iter()
-            .filter(|port| !before.contains(port))
-            .collect();
+        let ports = wait_for(SETTLE_TIMEOUT, || {
+            new_client_ports(own_ports(&self.patch), &before, channels)
+        });
         drop(host);
-        if ports.len() != usize::from(spec.channel_count()) {
+        let Some(ports) = ports else {
             return Err(OutputError::Backend {
                 backend: KIND,
                 reason: format!(
-                    "found {} new ports for a stream of {} channels",
-                    ports.len(),
-                    spec.channel_count()
+                    "the server did not show the ports of a stream of {channels} channels"
                 ),
             });
-        }
+        };
+        stream.close_with(closer(
+            Arc::clone(&self.host),
+            Arc::clone(&self.patch),
+            ports.clone(),
+        ));
         // The stream plays silence until it is started, so whatever cpal connected
         // heard nothing.
-        for (port, target) in ports
+        let pairs: Vec<(&String, Option<&String>)> = ports
             .iter()
             .zip(targets.iter().map(Some).chain(std::iter::repeat(None)))
-        {
+            .collect();
+        for &(port, target) in &pairs {
             self.patch(port, target)?;
         }
+        self.settle(&pairs)?;
         self.watcher.watch(&config.device, stream.shared());
         Ok(stream.opened(writer))
     }
@@ -207,6 +244,70 @@ fn patch_client() -> Result<jack_lib::Client, OutputError> {
             backend: KIND,
             reason: error.to_string(),
         })
+}
+
+/// Closes a stream: drops it, then waits until its ports are no longer listed, while
+/// no other stream is built.
+fn closer(
+    host: Arc<Mutex<cpal::Host>>,
+    patch: Arc<jack_lib::Client>,
+    ports: Vec<String>,
+) -> cpal_stream::Closer {
+    Box::new(move |stream| {
+        let _host = host.lock().unwrap_or_else(PoisonError::into_inner);
+        drop(stream);
+        // Past the timeout the next stream fails to find its ports instead.
+        let _ = wait_for(SETTLE_TIMEOUT, || {
+            let listed = own_ports(&patch);
+            (!ports.iter().any(|port| listed.contains(port))).then_some(())
+        });
+    })
+}
+
+/// Calls `ready` until it has a value or `timeout` has passed.
+fn wait_for<T>(timeout: Duration, mut ready: impl FnMut() -> Option<T>) -> Option<T> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        if let Some(value) = ready() {
+            return Some(value);
+        }
+        if Instant::now() >= deadline {
+            return None;
+        }
+        std::thread::sleep(SETTLE_POLL);
+    }
+}
+
+/// The output ports of this process's cpal clients, in port number order.
+fn own_ports(patch: &jack_lib::Client) -> Vec<String> {
+    let mut ports = patch.ports(
+        Some(&own_pattern()),
+        Some(audio_type()),
+        PortFlags::IS_OUTPUT,
+    );
+    ports.sort_by_key(|name| port_number(name));
+    ports
+}
+
+/// The ports of a stream of `channels` channels among `listed`: those of the first
+/// client that has `channels` ports none of which was listed `before`.
+fn new_client_ports(
+    listed: Vec<String>,
+    before: &[String],
+    channels: usize,
+) -> Option<Vec<String>> {
+    let mut clients: Vec<(String, Vec<String>)> = Vec::new();
+    for port in listed.into_iter().filter(|port| !before.contains(port)) {
+        let name = client_of(&port);
+        match clients.iter_mut().find(|(client, _)| client == name) {
+            Some((_, ports)) => ports.push(port),
+            None => clients.push((name.to_owned(), vec![port])),
+        }
+    }
+    clients
+        .into_iter()
+        .map(|(_, ports)| ports)
+        .find(|ports| ports.len() == channels)
 }
 
 /// The JACK port type of audio ports (JACK's `JACK_DEFAULT_AUDIO_TYPE`).
@@ -366,6 +467,44 @@ mod tests {
         ports.sort_by_key(|p| port_number(p));
         assert_eq!(ports, ["c:out_0", "c:out_2", "c:out_10"]);
         assert_eq!(client_of("a:b:c"), "a");
+    }
+
+    #[test]
+    fn new_ports_are_those_of_one_new_client() {
+        let before = ["cpal_client_7_out:out_0", "cpal_client_7_out:out_1"].map(String::from);
+        let listed = [
+            "cpal_client_7_out:out_0",
+            "cpal_client_7_out:out_1",
+            "cpal_client_7_out-183:out_0",
+        ]
+        .map(String::from)
+        .to_vec();
+        // The server has shown only one of the new client's ports so far.
+        assert_eq!(new_client_ports(listed.clone(), &before, 2), None);
+        let mut listed = listed;
+        listed.push("cpal_client_7_out-183:out_1".into());
+        assert_eq!(
+            new_client_ports(listed, &before, 2).unwrap(),
+            ["cpal_client_7_out-183:out_0", "cpal_client_7_out-183:out_1"]
+        );
+        // Once the old client is gone, a new one may get its names back.
+        let listed = ["cpal_client_7_out:out_0", "cpal_client_7_out:out_1"]
+            .map(String::from)
+            .to_vec();
+        assert_eq!(new_client_ports(listed.clone(), &[], 2).unwrap(), listed);
+    }
+
+    #[test]
+    fn waiting_ends_with_a_value_or_the_timeout() {
+        let mut calls = 0;
+        assert_eq!(
+            wait_for(Duration::from_secs(1), || {
+                calls += 1;
+                (calls == 3).then_some(calls)
+            }),
+            Some(3)
+        );
+        assert_eq!(wait_for(Duration::ZERO, || None::<()>), None);
     }
 
     #[test]

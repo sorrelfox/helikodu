@@ -70,6 +70,16 @@ SPDX-License-Identifier: CC0-1.0
   <translation type="gettext">helikodu</translation>
 
   <releases>
+    <release version="0.2.0" date="2026-11-18" type="development">
+      <description>
+        <p>
+          The first beta: graphic and parametric equalizers, crossfeed, channel
+          mixing and a limiter, crossfades and fades, loudness measurement, a
+          signal path view, PulseAudio and JACK output, and tracker modules,
+          game music, SID tunes and MIDI files.
+        </p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-11-18" type="development">
       <description>
         <p>

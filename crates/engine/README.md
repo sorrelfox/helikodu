@@ -313,7 +313,7 @@ Tests against real sound servers and hardware are ignored by default. They never
 # PipeWire: needs a running PipeWire session with pipewire-pulse (`pactl`). Each test
 # loads a temporary null sink, plays digital silence into it by name (or reads its
 # capabilities), and unloads it.
-cargo test -p helikodu-engine --test pipewire_output -- --ignored
+cargo test -p helikodu-engine --test pipewire_output -- --ignored --test-threads 1
 
 # PulseAudio and JACK: needs PipeWire with pipewire-pulse and pipewire-jack. Lists the
 # devices, plays silence into a temporary null sink through each, checks where the

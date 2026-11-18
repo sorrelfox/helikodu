@@ -113,12 +113,17 @@ pub(super) fn build(request: Build<'_>) -> Result<(CpalStream, super::SampleWrit
         device: config.device.clone(),
         shared,
         stream: Some(stream),
+        closer: None,
     };
     Ok((stream, writer))
 }
 
 /// How long building a stream may take before the server counts as hung.
 const OPEN_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Closes a cpal stream in place of dropping it, for backends that wait for the
+/// server to finish with it.
+pub(super) type Closer = Box<dyn FnOnce(cpal::Stream) + Send>;
 
 /// An open stream of a cpal host.
 pub(super) struct CpalStream {
@@ -127,6 +132,7 @@ pub(super) struct CpalStream {
     device: DeviceSelection,
     shared: Arc<StreamShared>,
     stream: Option<cpal::Stream>,
+    closer: Option<Closer>,
 }
 
 impl std::fmt::Debug for CpalStream {
@@ -144,6 +150,11 @@ impl CpalStream {
     /// The state the device side shares, for the device watcher.
     pub(super) fn shared(&self) -> &Arc<StreamShared> {
         &self.shared
+    }
+
+    /// Closes the stream with `closer` when it is stopped or dropped.
+    pub(super) fn close_with(&mut self, closer: Closer) {
+        self.closer = Some(closer);
     }
 
     /// Boxes the stream with its writer.
@@ -213,7 +224,12 @@ impl OutputStream for CpalStream {
         if !self.shared.state().is_finished() {
             self.shared.set_state(StreamState::Closed);
         }
-        drop(self.stream.take());
+        if let Some(stream) = self.stream.take() {
+            match self.closer.take() {
+                Some(close) => close(stream),
+                None => drop(stream),
+            }
+        }
         Ok(())
     }
 }
@@ -307,7 +323,14 @@ impl ErrorHandler {
                     });
                 }
             }
-            ErrorEffect::Underrun => self.shared.note_device_underrun(),
+            // Before the stream starts, a skip only cost silence it played on its
+            // own (JACK reports one when the server rewires its graph for the new
+            // ports); it ran no audio short.
+            ErrorEffect::Underrun => {
+                if self.shared.state() == StreamState::Running {
+                    self.shared.note_device_underrun();
+                }
+            }
             ErrorEffect::Ignore => {}
         }
     }

@@ -14,11 +14,12 @@ Practically every audio format FFmpeg can decode, including:
 
 - **Lossless:** FLAC, ALAC, WAV, AIFF, WavPack, Monkey's Audio (APE), TAK, TTA, Wave64, CAF
 - **Lossy:** MP3, AAC and M4A, Ogg Vorbis, Opus, Musepack, WMA, AC-3, E-AC-3, DTS, MP2, Speex, AMR
-- **DSD:** DSF and DFF (played as high-resolution PCM)
+- **DSD:** DSF and DFF (played as high-resolution PCM, or sent to the DAC as DoP in exclusive mode)
+- **Tracker modules** (MOD, S3M, XM, IT and more, through libopenmpt), **game music** (NSF, SPC, GBS, VGM and more, through libgme), **Commodore 64 SID** tunes and **MIDI** files (with a SoundFont); game audio streams through vgmstream in builds made with it
 - **Containers:** Matroska audio (MKA), WebM audio, M4B audiobooks with chapters
 - **CUE sheets** that split one album file into tracks, and files with chapters
 
-Tracks of the same format play gaplessly. Helikodu recognises files by their content, so a file with the wrong extension still plays. Tracker modules, chiptunes and MIDI files are not supported yet.
+Tracks of the same format play gaplessly. Helikodu recognises files by their content, so a file with the wrong extension still plays. Modules, game music files and SID tunes that hold several songs become one track per song.
 
 Tags are read from every common tag format (ID3v2, ID3v1, APEv2, Vorbis comments, MP4 atoms, RIFF INFO, and others through FFmpeg), including multiple artists and genres.
 
@@ -43,7 +44,7 @@ In **exclusive** mode, Helikodu takes the device for itself:
 - On an **ALSA hardware device** (`hw:CARD=…`), Helikodu asks PipeWire's session manager to hand over the whole sound card and plays to it directly, at each track's own rate. Other programs cannot play on that card meanwhile. Helikodu gives the card back when you stop and after 30 seconds of pause.
 - On a **PipeWire device**, Helikodu asks PipeWire for exclusive use and forces the track's rate, whatever `allowed-rates` says.
 
-Exclusive mode with the volume set to **Fixed at 100 %** and **Even out loudness** set to **Off** gives bit-perfect playback: the deck shows **Bit-perfect** when the samples reach the device unchanged.
+Exclusive mode with the volume set to **Fixed at 100 %** **Even out loudness** set to **Off** and no stage on under **DSP and EQ** gives bit-perfect playback: the deck shows **Bit-perfect** when the samples reach the device unchanged.
 
 ## Why do the colours look different on KDE Plasma and GNOME?
 
