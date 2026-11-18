@@ -20,6 +20,11 @@ publish = false
 # alsa-sys versions cannot be linked into one build, so both move together.
 alsa = "0.11"
 anyhow = "1"
+# XDG portals (Settings, Inhibit, OpenURI) for the desktop integration. No default
+# features: its own zbus executor (`async-io`) instead of tokio, and only the portals used.
+ashpd = { version = "0.14", default-features = false, features = ["async-io", "inhibit", "open_uri", "settings"] }
+# Channels between worker threads and the GTK main loop (awaited there as futures).
+async-channel = "2.5"
 # Guesses the legacy charset of tag text that is not valid in its declared encoding.
 chardetng = "1"
 # Argument parsing of the command-line tool.
@@ -31,6 +36,8 @@ encoding_rs = "0.8"
 # Raw FFmpeg bindings; the safe layer is `ffmpeg-bridge`. Only libavformat (with
 # libavcodec and libavutil), linked dynamically through pkg-config.
 ffmpeg-sys-next = { version = "=9.1.1", default-features = false, features = ["avformat"] }
+# Stream and future combinators for the D-Bus signal streams of the desktop integration.
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 helikodu-engine = { path = "crates/engine", default-features = false }
 helikodu-extra-decoders = { path = "crates/extra-decoders", default-features = false }
 helikodu-ffmpeg-bridge = { path = "crates/ffmpeg-bridge" }

@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# D-Bus activation of the application (DBusActivatable=true in the .desktop
+# file). @bindir@ is replaced with the install location of the program.
+[D-BUS Service]
+Name=io.github.sorrelfox.Helikodu
+Exec=@bindir@/helikodu --gapplication-service

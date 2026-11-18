@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+[Desktop Entry]
+Type=Application
+Name=Helikodu
+GenericName=Music Player
+Comment=Play and organize your music library, offline
+# Translators: search terms, separated and ended by semicolons. Do not translate or localize the semicolons.
+Keywords=music;audio;player;library;playlist;album;flac;mp3;ogg;opus;gapless;
+Icon=io.github.sorrelfox.Helikodu
+TryExec=helikodu
+Exec=helikodu %U
+DBusActivatable=true
+Terminal=false
+StartupNotify=true
+SingleMainWindow=true
+Categories=AudioVideo;Audio;Player;Music;GTK;
+MimeType=audio/aac;audio/ac3;audio/flac;audio/x-flac;audio/matroska;audio/x-matroska;audio/mp2;audio/mp4;audio/x-m4a;audio/x-m4b;audio/mpeg;audio/ogg;audio/x-flac+ogg;audio/x-opus+ogg;audio/x-speex;audio/x-speex+ogg;audio/x-vorbis+ogg;audio/vnd.dts;audio/vnd.dts.hd;audio/vnd.wave;audio/x-wav;audio/webm;audio/x-aiff;audio/x-aifc;audio/x-ape;audio/x-dff;audio/x-dsf;audio/x-musepack;audio/x-ms-wma;audio/x-tak;audio/x-tta;audio/x-wavpack;application/x-shorten;video/matroska;video/x-matroska;video/mp4;video/ogg;video/webm;
+# The actions are activated over D-Bus (org.freedesktop.Application.ActivateAction)
+# by launchers that support it; `gapplication` (from GLib) does the same for the others.
+Actions=play-pause;next;previous;
+
+[Desktop Action play-pause]
+Name=Play or Pause
+Exec=gapplication action io.github.sorrelfox.Helikodu play-pause
+
+[Desktop Action next]
+Name=Next Track
+Exec=gapplication action io.github.sorrelfox.Helikodu next
+
+[Desktop Action previous]
+Name=Previous Track
+Exec=gapplication action io.github.sorrelfox.Helikodu previous

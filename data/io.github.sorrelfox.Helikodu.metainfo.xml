@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: CC0-1.0
+-->
+<component type="desktop-application">
+  <id>io.github.sorrelfox.Helikodu</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Helikodu</name>
+  <summary>Play and organize your music library, offline</summary>
+  <developer id="io.github.sorrelfox">
+    <name>sorrelfox</name>
+  </developer>
+
+  <description>
+    <p>
+      Helikodu is an audio player and music library manager for your own music,
+      kept on your own computer. It works entirely offline: it never connects to
+      the internet and sends no telemetry.
+    </p>
+    <ul>
+      <li>Plays practically every audio format, including the sound track of video files</li>
+      <li>Gapless playback, bit-perfect output where the hardware allows it, and ReplayGain 2.0 loudness normalization</li>
+      <li>Choose the sound system, the output device and the mode, or switch them while playing</li>
+      <li>A library built for large collections, with fast search and play statistics</li>
+      <li>Media controls, media keys and notifications on GNOME, KDE Plasma and other desktops</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.sorrelfox.Helikodu.desktop</launchable>
+  <provides>
+    <binary>helikodu</binary>
+    <dbus type="user">io.github.sorrelfox.Helikodu</dbus>
+  </provides>
+
+  <url type="homepage">https://sorrelfox.github.io/helikodu</url>
+  <url type="bugtracker">https://github.com/sorrelfox/helikodu/issues</url>
+  <url type="vcs-browser">https://github.com/sorrelfox/helikodu</url>
+  <url type="contribute">https://github.com/sorrelfox/helikodu/blob/main/CONTRIBUTING.md</url>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Player</category>
+  </categories>
+  <keywords>
+    <keyword>music</keyword>
+    <keyword>audio</keyword>
+    <keyword>player</keyword>
+    <keyword>library</keyword>
+    <keyword>gapless</keyword>
+    <keyword>offline</keyword>
+  </keywords>
+
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#f8c55a</color>
+    <color type="primary" scheme_preference="dark">#8a5a0c</color>
+  </branding>
+
+  <!-- No screenshots yet: they are added with the first release. -->
+
+  <content_rating type="oars-1.1"/>
+  <translation type="gettext">helikodu</translation>
+
+  <!-- No release yet. -->
+  <releases/>
+</component>

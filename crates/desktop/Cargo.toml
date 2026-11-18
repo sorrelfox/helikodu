@@ -10,6 +10,11 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+ashpd.workspace = true
+async-channel.workspace = true
+futures-util.workspace = true
+helikodu-model.workspace = true
+helikodu-service.workspace = true
 thiserror.workspace = true
 zbus.workspace = true
 
