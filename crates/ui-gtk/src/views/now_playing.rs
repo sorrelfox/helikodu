@@ -705,7 +705,7 @@ fn analyzer_page() -> (gtk::Box, SpectrumView, LevelMeter) {
     };
     page.append(&header(
         &tr("Spectrum"),
-        &tr("1/6 OCTAVE · PEAK HOLD 1.5 s"),
+        &tr("1/5 OCTAVE · PEAK HOLD 1.5 s"),
     ));
     let spectrum = SpectrumView::default();
     page.append(&spectrum);
