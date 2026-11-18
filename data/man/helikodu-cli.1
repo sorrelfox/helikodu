@@ -1,8 +1,8 @@
 .\" SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 .\" SPDX-License-Identifier: CC-BY-SA-4.0
-.TH HELIKODU-CLI 1 2026-11-17 Helikodu "User Commands"
+.TH HELIKODU-CLI 1 2026-11-18 Helikodu "User Commands"
 .SH NAME
-helikodu\-cli \- play audio files and query the Helikodu library from the terminal
+helikodu\-cli \- play audio files, query the Helikodu library and control the application from the terminal
 .SH SYNOPSIS
 .B helikodu\-cli play
 .IR file \&...
@@ -60,13 +60,60 @@ helikodu\-cli \- play audio files and query the Helikodu library from the termin
 .IR path ]
 .RI [ file | track-id ...]
 .br
+.B helikodu\-cli status
+.RB [ \-\-json ]
+.br
+.B helikodu\-cli queue
+.RB [ \-\-json ]
+.br
+.B helikodu\-cli playlists
+.RB [ \-\-json ]
+.br
+.B helikodu\-cli
+.BR play\-pause " | " pause " | " resume " | " stop " | " next " | " previous
+.br
+.B helikodu\-cli seek
+.I position
+.br
+.B helikodu\-cli volume
+.RI [ level ]
+.br
+.B helikodu\-cli shuffle
+.I mode
+.br
+.B helikodu\-cli repeat
+.I mode
+.br
+.B helikodu\-cli enqueue
+.RB [ \-\-next ]
+.IR file \&...
+.br
+.B helikodu\-cli enqueue
+.RB [ \-\-next ]
+.BI \-\-query " query"
+.br
+.B helikodu\-cli play\-query
+.RB [ \-\-shuffle ]
+.IR query \&...
+.br
+.B helikodu\-cli rate
+.IR stars | none
+.RB [ \-\-track
+.IR id ]
+.br
+.B helikodu\-cli export\-playlist
+.I playlist file
+.br
 .B helikodu\-cli \-\-version
 .SH DESCRIPTION
 .B helikodu\-cli
 is the command-line tool of Helikodu.
 It plays files in the terminal, lists the audio devices, and scans and
 queries the same library the desktop application uses.
-It works on its own; the application need not be running.
+These commands work on their own; the application need not be running.
+The commands under
+.B COMMANDS FOR THE RUNNING APPLICATION
+control the running application over D-Bus instead.
 .SH COMMANDS
 .SS play
 Plays the files in the order given.
@@ -261,6 +308,93 @@ The default is half the processors.
 .BI \-\-worker " path"
 The scan worker program that reads written files again, as for
 .BR scan .
+.SH COMMANDS FOR THE RUNNING APPLICATION
+These commands talk to the running Helikodu window through its D-Bus
+interface,
+.BR io.github.sorrelfox.Helikodu.Control1 .
+They never start the application: when it is not running they say so and
+end with exit status 4.
+Playback asked for this way passes the same full-volume confirmation as in
+the window.
+.SS status
+Shows the state, the playing track, the position, the volume, the play modes,
+the place in the queue and the output.
+.SS queue
+Lists the queue in playing order; the current track is marked with
+.BR > .
+.SS playlists
+Lists the playlists with their numbers, kinds and number of tracks.
+.SS play\-pause, pause, resume, stop, next, previous
+The transport.
+.B previous
+goes to the start of the track after its first seconds.
+.SS seek
+Moves to a
+.I position
+in the playing track, given in seconds
+.RB ( 83 )
+or as minutes and seconds
+.RB ( 1:23 );
+with
+.B +
+or
+.B \-
+in front it moves by that much
+.RB ( +10 ", " \-5 ).
+.SS volume
+Without an argument prints the volume, 0 to 100.
+With a
+.IR level ,
+0 to 100, sets it;
+.B +5
+and
+.B \-5
+change it by that much.
+.SS shuffle
+Sets the shuffle
+.IR mode :
+.BR off ", " tracks ", " albums ", " folders ", " groupings " or " within\-album .
+.SS repeat
+Sets the repeat
+.IR mode :
+.BR off ", " one " (the track), " album " or " all " (the queue)."
+.SS enqueue
+Adds files to the end of the queue, or with
+.B \-\-next
+after the playing track, and prints how many were added.
+.TP
+.BI \-\-query " query"
+Adds the library tracks the query finds instead of files (at most 10,000).
+The query is written as in the search field of the application, for example
+.BR "genre:jazz rating>=4" ;
+text without fields searches for its words.
+.TP
+.B \-\-next
+Adds after the playing track instead of at the end.
+.SS play\-query
+Replaces the queue with the library tracks the query finds (the words given
+are joined into one query) and plays them.
+Finding none is an error and leaves the queue as it is.
+.TP
+.B \-\-shuffle
+Plays them in random order.
+.SS rate
+Rates the playing library track with 0 to 5
+.IR stars ,
+or removes its rating with
+.BR none .
+.TP
+.BI \-\-track " id"
+Rates this library track, as
+.B search
+prints it, instead.
+.SS export\-playlist
+Writes a playlist, given by its name or its number as
+.B playlists
+prints them, to
+.IR file ;
+the extension picks the format:
+.BR .m3u8 ", " .m3u ", " .pls " or " .xspf .
 .SH COMMON OPTIONS
 .TP
 .B \-\-json
@@ -308,6 +442,10 @@ A usage error: an unknown option or value, or options that do not go together.
 .B 3
 .B play
 could not play any of the files.
+.TP
+.B 4
+A command for the running application found it not running, or found no
+session bus.
 .SH ENVIRONMENT
 .TP
 .B XDG_DATA_HOME
@@ -318,6 +456,9 @@ when it is not set).
 .TP
 .BR LC_ALL ", " LC_COLLATE ", " LANG
 The locale that sorting follows.
+.TP
+.B DBUS_SESSION_BUS_ADDRESS
+The session bus the commands for the running application use.
 .SH FILES
 .TP
 .I ~/.local/share/helikodu/library.db
@@ -345,6 +486,16 @@ Scan a folder and search it:
 .EX
 helikodu\-cli scan ~/Music \-\-exclude \(aq*.part\(aq
 helikodu\-cli search miles davis \-\-limit 10 \-\-json
+.EE
+.RE
+Play the best rated jazz of the library in the running application,
+shuffled, then skip a track:
+.PP
+.RS
+.EX
+helikodu\-cli play\-query \-\-shuffle \(aqgenre:jazz rating>=4\(aq
+helikodu\-cli next
+helikodu\-cli status \-\-json
 .EE
 .RE
 .SH SEE ALSO

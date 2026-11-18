@@ -18,7 +18,7 @@ Files given on the command line are played. If Helikodu is already running, they
 
 ## helikodu-cli
 
-`helikodu-cli` plays files in the terminal and works with the library without opening a window. It does not need the application to be running.
+`helikodu-cli` plays files in the terminal and works with the library without opening a window. The commands below do not need the application to be running; those that control it are under [Controlling the running application](#controlling-the-running-application).
 
 ```sh
 helikodu-cli play FILE...          # play files in the terminal
@@ -49,5 +49,27 @@ helikodu-cli search miles davis --limit 10 --json
 While `play` runs in a terminal, Space pauses, `n` and `p` go to the next and previous file, the arrow keys seek by 5 seconds, `+` and `-` change the volume, `o` moves playback to the next output device, and `q` quits.
 
 `scan`, `search`, `info`, `stats`, `loudness` and `duplicates` use the same library as the application, so you can scan from the command line and browse the result in the window. Most commands take `--json` for output that scripts can read.
+
+## Controlling the running application
+
+These `helikodu-cli` commands talk to the running Helikodu window over D-Bus. They never start it: when it is not running they say so and end with exit code 4.
+
+```sh
+helikodu-cli status [--json]       # what plays, the position, volume, modes and output
+helikodu-cli queue [--json]        # the queue in playing order
+helikodu-cli playlists [--json]    # the playlists with their numbers
+helikodu-cli play-pause | pause | resume | stop | next | previous
+helikodu-cli seek 1:23             # a position; +10 and -5 seek by seconds
+helikodu-cli volume [50|+5|-5]     # print or set the volume (0 to 100)
+helikodu-cli shuffle off|tracks|albums|folders|groupings|within-album
+helikodu-cli repeat off|one|album|all
+helikodu-cli enqueue [--next] FILE...           # add files at the end, or after the playing track
+helikodu-cli enqueue [--next] --query QUERY     # add the library tracks a query finds
+helikodu-cli play-query [--shuffle] QUERY...    # replace the queue with them and play
+helikodu-cli rate 4 | none [--track ID]         # rate the playing track (or a library track)
+helikodu-cli export-playlist PLAYLIST FILE      # write a playlist as M3U8, M3U, PLS or XSPF
+```
+
+A query is written as in the search field, for example `helikodu-cli play-query --shuffle 'genre:jazz rating>=4'`. Playback asked for this way asks for the same confirmation as in the window when the output plays at full volume. Other programs can use the same interface; its description is in the developer documentation (`docs/dev/dbus-api.md`).
 
 The manual page `man helikodu-cli` describes every command, option and exit code.

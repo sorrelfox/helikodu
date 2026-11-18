@@ -8,6 +8,12 @@ The sidebar lists the views of your library (**Home**, **Albums**, **Artists**, 
 
 **Home** shows the albums added most recently and those played most recently, each in one row of covers (as many as fit the window); **Show all** opens Albums sorted by date added, and **History** opens the play history. Below, **Most played** lists the five tracks played most often (double-click one to play the list from there), and **Rediscover** lists albums you have not played for three months, or never, with when you played them last; click one to open it.
 
+### A narrow window
+
+When the window is too narrow for the content to keep 560 pixels beside the panes, the panes leave the row and open over the content instead: first the queue panel (below a window width of about 1100 pixels at the usual pane widths), then the sidebar (below about 800 pixels). The header then starts with a sidebar button, without the **Forward** button, and has a queue button at the right. An open pane covers the rest of the content with a dark layer; a click beside it, **Esc**, its key (**F9** for the sidebar) or choosing a view closes it. The player deck stays in use.
+
+Below 720 pixels the deck is compact: the cover, title and artist at the left, **Previous**, **Play** and **Next** in the middle, and at the right a volume button, whose slider opens above it, and the output button with only its lamp and the output's rate and bits. Shuffle and repeat are then in the menu of the **Play** button (right-click or long press).
+
 ## Search
 
 Type in the search field at the top of the window (**Search artists, albums, tracks**), or press **Ctrl+F** to go there. The results appear while you type, under **Artists**, **Albums** and **Tracks**, each with the number found. Search looks at titles, artists, albums, genres, composers and file paths.
@@ -86,6 +92,14 @@ While a chapter plays, the deck shows the chapter's number and title, and the se
 Click a column header to sort by it: the first click sorts in ascending order, the second in descending order, and the third turns that column's sorting off. Every column can be sorted. Sorting by several columns at once works by clicking them one after another: the column clicked last decides first, and the columns clicked before it decide among equal values, up to four columns. The headers show the order with arrows and, with more than one column, numbers. The status bar at the bottom says what the table is **Sorted by**; without your own order, tracks are sorted by artist, album, disc and track number.
 
 Double-click a track, or press **Enter**, to play from that track. **Ctrl+A** selects all tracks.
+
+### Browsing by genre, artist and album
+
+The **Browse** button opens three linked lists above the table: **Genre**, **Album artist** and **Album**, each with the number of tracks of every value and an **All …** row at the top. Choosing a value narrows the lists to its right and the table; **Ctrl**-click and **Shift**-click choose several values. The count in the toolbar then says how many of all tracks are shown. The field of each list can be changed with the button in its head: **Genre**, **Album artist**, **Album**, **Artist**, **Composer**, **Year** or **Format**. Text in the **Filter** field filters first, so the lists show only the values of the tracks it finds. **Browse** again closes the lists and shows every track.
+
+## Library statistics
+
+**Library ▸ Statistics** in the main menu counts your library: the tracks (and how many were added this month), albums (and how many have no cover), artists (and composers), the playing time and the size of the files. Below are the **Formats** and their **Quality** (lossless at CD quality, lossless hi-res, lossy), with the share of each; what you listened to this year (plays, time listened, skips, and the share of the library never played); and the most played artists and albums. A row of **Formats** or **Quality** opens **Tracks** with those tracks; an artist or album opens its page. The figures are counted when the page opens; **Copy as text** puts them on the clipboard.
 
 ## Folders
 

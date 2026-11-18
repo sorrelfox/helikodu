@@ -13,6 +13,7 @@
 //! service's interface changes, only `service.rs` follows it.
 
 pub mod browse;
+pub mod insights;
 pub mod sample;
 pub mod service;
 pub mod services;
@@ -34,6 +35,10 @@ pub use helikodu_model::player::{
     PlaybackStats, SignalLamp, SignalPath, SignalStage, StageKind, StageState,
 };
 pub use helikodu_model::settings::UiState;
+pub use insights::{
+    FacetChoice, FacetField, FacetKey, FacetList, FacetValue, LibraryStats, PlayedAlbumRow,
+    PlayedArtistRow, StatisticsSince,
+};
 
 /// Identifies an album for as long as the backend runs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
@@ -885,6 +890,31 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
         let _ = track;
         Ok(None)
     }
+    /// The values of `field` among the tracks of `query` (its text filters first)
+    /// that pass every choice of `chosen`, each with its number of tracks.
+    fn facet_values(
+        &self,
+        query: &TrackQuery,
+        chosen: &[FacetChoice],
+        field: FacetField,
+    ) -> Result<FacetList, BackendError> {
+        let _ = (query, chosen, field);
+        Err(unsupported())
+    }
+    /// The tracks of `query` that pass every choice of `chosen`, in its order.
+    fn facet_track_keys(
+        &self,
+        query: &TrackQuery,
+        chosen: &[FacetChoice],
+    ) -> Result<Vec<TrackKey>, BackendError> {
+        let _ = (query, chosen);
+        Err(unsupported())
+    }
+    /// What the Library statistics view shows, counted now.
+    fn statistics(&self, since: StatisticsSince) -> Result<LibraryStats, BackendError> {
+        let _ = since;
+        Err(unsupported())
+    }
 }
 
 /// What the album page's details column shows about the selected track beyond
@@ -1100,6 +1130,13 @@ pub enum PlayerRequest {
     Enqueue {
         /// The tracks.
         tracks: Vec<TrackKey>,
+        /// After the current track instead of at the end.
+        next: bool,
+    },
+    /// Adds files after the current track (`next`) or at the end of the queue.
+    EnqueueFiles {
+        /// The files.
+        files: Vec<PathBuf>,
         /// After the current track instead of at the end.
         next: bool,
     },

@@ -26,6 +26,7 @@
 mod duplicates;
 mod history_export;
 mod info;
+mod insights;
 mod kinds;
 mod location;
 mod playlists;
@@ -92,7 +93,9 @@ pub use helikodu_library::{
     CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId, KeepRule,
     MainCopyError, MatchBy, Trash, TrashError, TrashOutcome, TrashRefusal, Trashed, backup_path,
 };
+pub use helikodu_library::{FacetChoice, FacetField, FacetKey, FacetList, FacetValue};
 pub use helikodu_library::{FileSection, YearSpan, YearSummary};
+pub use helikodu_library::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 /// The undo journal of tag edits: [`MusicLibrary::edit_tags`] records each
 /// save, [`MusicLibrary::undo_tags`] and [`MusicLibrary::redo_tags`] step through
 /// them.

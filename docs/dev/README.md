@@ -5,6 +5,7 @@ Guides for contributors: the architecture overview, the testing and test-corpus 
 | Document | Content |
 |---|---|
 | [architecture.md](architecture.md) | Crates, processes and threads, the command/event model, data on disk and the rules that apply everywhere |
+| [dbus-api.md](dbus-api.md) | The application's D-Bus interface for scripts and `helikodu-cli`: its methods, the status JSON, errors and versions |
 | [threat-model.md](threat-model.md) | What can harm a user, where it enters, and how Helikodu defends against it |
 | [bug-severity.md](bug-severity.md) | The four severity levels and how each is handled |
 | [releasing.md](releasing.md) | How a release is made: the version, the checklist, and what the Release workflow builds and publishes |

@@ -1194,7 +1194,9 @@ dependencies = [
  "crossterm",
  "helikodu-model",
  "helikodu-service",
+ "serde",
  "serde_json",
+ "zbus",
 ]
 
 [[package]]
@@ -1370,6 +1372,7 @@ dependencies = [
  "helikodu-desktop",
  "helikodu-model",
  "helikodu-service",
+ "serde_json",
 ]
 
 [[package]]

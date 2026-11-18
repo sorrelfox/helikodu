@@ -21,6 +21,7 @@ mod play_modes;
 mod playback;
 mod popovers;
 mod query_text;
+mod remote_api;
 mod shortcuts;
 pub mod snapshot;
 pub mod style;

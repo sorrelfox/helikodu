@@ -1,0 +1,47 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* The facet browser, Library statistics, and the narrow window. */
+
+/* Tracks: the Browse button, pressed while the browser is open. */
+button.hk-browse { min-height: 28px; padding: 0 12px 0 10px; border-radius: 7px; border: 1px solid var(--hk-line); background: none; background-image: none; box-shadow: none; color: var(--hk-t1); }
+button.hk-browse:hover { background-color: var(--hk-hover); }
+button.hk-browse:checked { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); font-weight: 600; }
+button.hk-browse image { -gtk-icon-size: 16px; }
+
+/* The browser: three panes with a line between them. */
+.hk-facets { border-bottom: 1px solid var(--hk-line); }
+.hk-facet-pane + .hk-facet-pane { border-left: 1px solid var(--hk-line); }
+.hk-pane-head { min-height: 30px; padding: 0 14px 0 8px; border-bottom: 1px solid var(--hk-line); background-color: var(--hk-win); color: var(--hk-t3); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; }
+menubutton.hk-facet-field > button { min-height: 22px; padding: 0 4px 0 8px; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; color: var(--hk-t2); text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; }
+menubutton.hk-facet-field > button:hover { background-color: var(--hk-hover); color: var(--hk-t1); }
+menubutton.hk-facet-field > button arrow { min-width: 12px; min-height: 12px; margin-left: 4px; -gtk-icon-source: -gtk-icontheme("pan-down-symbolic"); -gtk-icon-size: 12px; }
+listview.hk-list.facet { padding: 4px 6px; background: none; color: var(--hk-t1); }
+listview.hk-list.facet > row { min-height: 26px; padding: 0 10px; border-radius: 5px; background: none; color: var(--hk-t1); }
+listview.hk-list.facet > row:hover { background-color: var(--hk-hover); }
+listview.hk-list.facet > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); font-weight: 600; }
+listview.hk-list.facet .hk-facet-count { font-size: 11.5px; font-weight: 400; color: var(--hk-t3); }
+
+/* Library statistics. */
+.hk-statistics { padding: 20px 24px 24px; }
+.hk-stat { padding: 14px 16px 13px; border-radius: 8px; border: 1px solid var(--hk-line); }
+.hk-stat .figure { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.hk-stat .caption, .hk-stat-caption { font-size: 12px; color: var(--hk-t3); }
+.hk-stat-head { min-height: 30px; border-bottom: 1px solid var(--hk-line); }
+.hk-stat-head .hk-stat-title { font-size: 13px; font-weight: 600; }
+.hk-stat-row { min-height: 30px; }
+.hk-stat-row.plays { min-height: 32px; }
+button.hk-stat-row { padding: 0; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; color: var(--hk-t1); font-weight: 400; }
+button.hk-stat-row:hover { background-color: var(--hk-hover); }
+.hk-stat-figure { font-size: 18px; font-weight: 600; }
+levelbar.hk-bar > trough { min-height: 4px; padding: 0; border: none; border-radius: 2px; background-color: var(--hk-line); background-image: none; box-shadow: none; }
+levelbar.hk-bar > trough > block { min-height: 4px; border: none; border-radius: 2px; background-image: none; box-shadow: none; }
+levelbar.hk-bar > trough > block.filled { background-color: var(--hk-t2); }
+levelbar.hk-bar.plays > trough, levelbar.hk-bar.plays > trough > block { min-height: 3px; }
+levelbar.hk-bar.plays > trough > block.filled { background-color: var(--hk-accent-fill); }
+levelbar.hk-bar > trough > block.empty { background-color: transparent; }
+
+/* Narrow window: the pane over the content and the layer behind it. */
+.hk-scrim { background-color: rgba(0, 0, 0, 0.5); }
+.hk-overlay-pane { box-shadow: 16px 0 40px -12px rgba(0, 0, 0, 0.55); }
+.hk-overlay-pane.end { box-shadow: -16px 0 40px -12px rgba(0, 0, 0, 0.55); }

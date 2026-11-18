@@ -16,6 +16,7 @@ gtk.workspace = true
 helikodu-desktop.workspace = true
 helikodu-model.workspace = true
 helikodu-service.workspace = true
+serde_json.workspace = true
 
 [build-dependencies]
 glib-build-tools.workspace = true
@@ -71,6 +72,12 @@ harness = false
 # Composers, Years, the audiobook page and folders outside the library against the
 # sample backend; GTK needs its own main function.
 name = "browse"
+harness = false
+
+[[test]]
+# The facet browser, Library statistics and the narrow window against the sample
+# backend; GTK needs its own main function.
+name = "insights"
 harness = false
 
 [lints]

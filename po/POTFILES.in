@@ -97,3 +97,8 @@ crates/ui-gtk/src/views/home.rs
 crates/ui-gtk/src/window/desktop.rs
 crates/ui-gtk/src/dialogs/settings/shortcuts.rs
 crates/ui-gtk/src/dialogs/settings/search.rs
+crates/ui-gtk/src/views/facet_browser.rs
+crates/ui-gtk/src/views/statistics.rs
+crates/ui-gtk/src/window/narrow.rs
+crates/ui-gtk/src/deck/compact.rs
+crates/ui-gtk/src/backend/service/insights.rs

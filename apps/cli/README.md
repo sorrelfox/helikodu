@@ -5,7 +5,7 @@ Builds `helikodu-cli`: remote control of the running application over D-Bus, and
 - **May depend on:** `model`, `service`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
 
-The offline commands are in `src/offline/`; the remote control of the running application will be in `src/remote/`.
+The offline commands are in `src/offline/`; the commands for the running application are in `src/remote/`. They use its D-Bus interface (`docs/dev/dbus-api.md`) through zbus, with the interface's names written out here, since this program may not depend on `desktop`; `tests/remote.rs` checks them against the interface's introspection data.
 
 ## Usage
 
@@ -22,6 +22,16 @@ helikodu-cli stats [--top N] [--json] [--database PATH]
 helikodu-cli loudness [--album|--library] [--write-tags] [--threads N] [--worker PATH]
                       [--json] [--database PATH] [FILE|TRACK-ID...]
 helikodu-cli duplicates [--json] [--database PATH]
+helikodu-cli status|queue|playlists [--json]
+helikodu-cli play-pause|pause|resume|stop|next|previous
+helikodu-cli seek POSITION            # 83, 1:23, +10, -5
+helikodu-cli volume [LEVEL]           # 0..100, +5, -5
+helikodu-cli shuffle off|tracks|albums|folders|groupings|within-album
+helikodu-cli repeat off|one|album|all
+helikodu-cli enqueue [--next] FILE...|--query QUERY
+helikodu-cli play-query [--shuffle] QUERY...
+helikodu-cli rate STARS|none [--track ID]
+helikodu-cli export-playlist PLAYLIST FILE
 helikodu-cli --version
 ```
 
@@ -199,6 +209,10 @@ Measures library tracks, given as files or track numbers, with the EBU R128 / Re
 
 `integrated_lufs` and the gains are `null` for silence; peaks are linear. `album` is `null` when the track was measured without its whole album. `tags` is `not_asked`, `written`, `skipped` or `failed`, with `tags_reason`. A track that cannot be measured has `loudness` `null` and `error`.
 
+### The commands for the running application
+
+`status`, `queue`, `playlists`, the transport, `seek`, `volume`, `shuffle`, `repeat`, `enqueue`, `play-query`, `rate` and `export-playlist` call the interface `io.github.sorrelfox.Helikodu.Control1` of the running application on the session bus. They first ask the bus whether the application owns its name and never start it: when it does not, or there is no session bus, they print `Helikodu is not running` and exit with 4. An error the application returns (no such playlist, no library track playing) is printed and exits with 1. `--json` prints the application's JSON as it comes; the text form is for people.
+
 ### Exit codes
 
 | Code | Meaning |
@@ -207,6 +221,7 @@ Measures library tracks, given as files or track numbers, with the EBU R128 / Re
 | 1 | A runtime error: the output could not be opened or failed, no backend could be listed, there is no library yet, the library or a file could not be read, a scan could not start or a folder given to it could not be read, or `info` found no such track; for `loudness`, also a track that could not be measured or whose tags could not be written |
 | 2 | A usage error: an unknown option or value, or options that do not go together |
 | 3 | `play` could not play any of the files |
+| 4 | A command for the running application found it not running, or no session bus |
 
 ## Tests
 
@@ -218,5 +233,7 @@ cargo test -p helikodu-cli
 - `tests/replaygain.rs` plays FLAC files with ReplayGain tags and an Opus file with R128 tags, made by the `ffmpeg` tool, to the `wav` backend and checks the level of the output in every mode: the track and album gains, the preamp, the automatic choice by album neighbours, clipping prevention by the peak, and untagged files.
 - `tests/loudness.rs` scans two FLAC files made by `ffmpeg` as one album and parses the JSON of `loudness`: one track measured without album values and the file untouched, the rest of the library with the album gain, nothing left after that, the album of a track number with `--write-tags` (the tags read back by `info`), and the usage errors.
 - `tests/library.rs` makes a small library with `ffmpeg` (including a file name that is not UTF-8 and an excluded folder), scans it with real worker processes into a temporary database, and parses the JSON of `scan`, `search`, `info`, `stats` and `duplicates`, and checks the errors and exit codes. It builds `helikodu-scan-worker` into the same target folder, beside `helikodu-cli`. It gives one track play counts with the `sqlite3` tool when that is installed.
+
+- `tests/remote.rs` starts a private `dbus-daemon`, serves a stand-in for the application's interface on it and runs every command for the running application against it, checking the calls, the text and JSON output and the exit codes (4 without the application).
 
 Tests whose tool or encoder is missing print `SKIPPED:` and pass.

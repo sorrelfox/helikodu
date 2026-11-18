@@ -12,6 +12,7 @@ use gtk::subclass::prelude::*;
 use gtk::{CompositeTemplate, glib};
 
 mod chapters;
+mod compact;
 mod modes;
 
 use crate::backend::{Backend, CoverKey, PlaybackState, PlayerRequest, SignalState};
@@ -349,6 +350,9 @@ impl Deck {
     /// timer…, Jump to the playing track.
     pub(crate) fn popup_play_menu(&self) -> gtk::PopoverMenu {
         let menu = gtk::gio::Menu::new();
+        if let Some(modes) = self.compact_menu_section() {
+            menu.append_section(None, &modes);
+        }
         let stop = gtk::gio::Menu::new();
         stop.append(Some(&tr("Stop")), Some("app.stop"));
         stop.append_submenu(

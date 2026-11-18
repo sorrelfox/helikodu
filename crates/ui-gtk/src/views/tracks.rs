@@ -30,6 +30,7 @@ use crate::models::{TrackItem, TrackListModel};
 use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
+use crate::views::facet_browser::FacetBrowser;
 use crate::views::table::{TableCell, cell_at, selected_positions};
 use crate::widgets::{PlayingIndicator, RatingStars, label};
 
@@ -164,6 +165,9 @@ pub(crate) struct TracksView {
     /// The column and row of the last click, where F2 edits.
     clicked_column: Cell<Option<TrackColumn>>,
     clicked_row: Cell<Option<u32>>,
+    /// The facet browser and its button (not on the artist page).
+    browser: Option<Rc<FacetBrowser>>,
+    browse: gtk::ToggleButton,
 }
 
 impl std::fmt::Debug for TracksView {
@@ -190,6 +194,19 @@ impl TracksView {
         count.set_valign(gtk::Align::Baseline);
         count.set_hexpand(true);
         toolbar.append(&count);
+        // The facet browser's button, before the filter.
+        let browse = gtk::ToggleButton::new();
+        browse.add_css_class("hk-browse");
+        browse.set_valign(gtk::Align::Center);
+        {
+            let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+            content.append(&gtk::Image::from_icon_name("helikodu-browse-symbolic"));
+            content.append(&gtk::Label::new(Some(&tr("Browse"))));
+            browse.set_child(Some(&content));
+        }
+        browse.set_tooltip_text(Some(&tr("Browse by genre, artist and album")));
+        browse.update_property(&[gtk::accessible::Property::Label(&tr("Browse"))]);
+        toolbar.append(&browse);
         let filter = gtk::Entry::new();
         filter.add_css_class("hk-input");
         filter.add_css_class("hk-filter");
@@ -205,8 +222,13 @@ impl TracksView {
         columns_button.set_valign(gtk::Align::Center);
         columns_button.set_tooltip_text(Some(&tr("Show or hide columns")));
         toolbar.append(&columns_button);
+        let browser = (!embedded).then(|| FacetBrowser::new(backend));
         if !embedded {
             root.append(&toolbar);
+        }
+        if let Some(browser) = &browser {
+            browser.root.set_visible(false);
+            root.append(&browser.root);
         }
 
         let model = TrackListModel::new(backend);
@@ -279,12 +301,68 @@ impl TracksView {
                 editing: RefCell::new(None),
                 clicked_column: Cell::new(None),
                 clicked_row: Cell::new(None),
+                browser,
+                browse,
             }
         });
         columns_button.set_menu_model(Some(&view.columns_menu()));
         view.connect(playback);
+        view.connect_browser();
         view.show_sort();
         view
+    }
+
+    fn connect_browser(self: &Rc<Self>) {
+        let Some(browser) = &self.browser else {
+            self.browse.set_visible(false);
+            return;
+        };
+        let weak = Rc::downgrade(self);
+        browser.connect_changed(move || {
+            if let Some(view) = weak.upgrade() {
+                view.reload();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.browse.connect_toggled(move |button| {
+            if let Some(view) = weak.upgrade() {
+                view.show_browser(button.is_active());
+            }
+        });
+    }
+
+    fn show_browser(self: &Rc<Self>, shown: bool) {
+        let Some(browser) = &self.browser else { return };
+        if browser.root.is_visible() == shown {
+            return;
+        }
+        browser.root.set_visible(shown);
+        if shown {
+            browser.set_text(self.filter.text().trim());
+        }
+        if browser.narrows() {
+            self.reload();
+        }
+    }
+
+    /// The facet browser when it is shown.
+    fn shown_browser(&self) -> Option<&Rc<FacetBrowser>> {
+        self.browser.as_ref().filter(|b| b.root.is_visible())
+    }
+
+    /// Opens or closes the facet browser (for tests).
+    pub(crate) fn set_browsing(&self, shown: bool) {
+        self.browse.set_active(shown);
+    }
+
+    /// The facet browser (for tests).
+    pub(crate) fn facet_browser(&self) -> Option<Rc<FacetBrowser>> {
+        self.browser.clone()
+    }
+
+    /// The number of rows and the count in the toolbar (for tests).
+    pub(crate) fn shown_count(&self) -> (usize, String) {
+        (self.model.n_items() as usize, self.count.text().to_string())
     }
 
     fn columns_menu(self: &Rc<Self>) -> gio::Menu {
@@ -472,6 +550,9 @@ impl TracksView {
                 if let Some(view) = weak.upgrade()
                     && view.filter_generation.get() == generation
                 {
+                    if let Some(browser) = view.shown_browser() {
+                        browser.set_text(view.filter.text().trim());
+                    }
                     view.reload();
                 }
             });
@@ -710,7 +791,11 @@ impl TracksView {
             text: self.filter.text().trim().to_owned(),
             sort: self.sort.borrow().clone(),
         };
-        let filtered = !query.text.is_empty();
+        let facets = self
+            .shown_browser()
+            .filter(|b| b.narrows())
+            .map(|b| b.chosen());
+        let filtered = !query.text.is_empty() || facets.is_some();
         let unfiltered = TrackQuery {
             text: String::new(),
             sort: Vec::new(),
@@ -722,7 +807,10 @@ impl TracksView {
         glib::spawn_future_local(async move {
             let result = backend
                 .query(move |library| {
-                    let keys = library.track_keys(&query)?;
+                    let keys = match &facets {
+                        Some(chosen) => library.facet_track_keys(&query, chosen)?,
+                        None => library.track_keys(&query)?,
+                    };
                     let total = if need_total {
                         Some(library.track_keys(&unfiltered)?.len())
                     } else {
@@ -801,6 +889,9 @@ impl TracksView {
         self.quiet.set(true);
         self.filter.set_text(text);
         self.quiet.set(false);
+        if let Some(browser) = self.shown_browser() {
+            browser.set_text(text);
+        }
         self.reload();
     }
 
@@ -845,6 +936,9 @@ impl TracksView {
     pub(crate) fn library_changed(self: &Rc<Self>) {
         self.model.forget_rows();
         self.total.set(0);
+        if let Some(browser) = self.shown_browser() {
+            browser.set_text(self.filter.text().trim());
+        }
         self.reload();
     }
 

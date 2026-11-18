@@ -11,6 +11,7 @@
 mod browse;
 mod copies;
 mod history;
+mod insights;
 mod lyrics;
 mod playlists;
 mod query;
@@ -1005,6 +1006,30 @@ impl LibrarySource for SampleLibrary {
 
     fn years(&self) -> Result<Vec<super::YearRow>, BackendError> {
         Ok(self.year_rows())
+    }
+
+    fn facet_values(
+        &self,
+        query: &TrackQuery,
+        chosen: &[super::FacetChoice],
+        field: super::FacetField,
+    ) -> Result<super::FacetList, BackendError> {
+        self.sample_facets(query, chosen, field)
+    }
+
+    fn facet_track_keys(
+        &self,
+        query: &TrackQuery,
+        chosen: &[super::FacetChoice],
+    ) -> Result<Vec<TrackKey>, BackendError> {
+        self.sample_facet_keys(query, chosen)
+    }
+
+    fn statistics(
+        &self,
+        since: super::StatisticsSince,
+    ) -> Result<super::LibraryStats, BackendError> {
+        self.sample_statistics(since)
     }
 
     fn composer_duration(&self, composer: ArtistKey) -> Result<Duration, BackendError> {

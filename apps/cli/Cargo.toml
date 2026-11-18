@@ -44,7 +44,9 @@ clap.workspace = true
 crossterm.workspace = true
 helikodu-model.workspace = true
 helikodu-service.workspace = true
+serde.workspace = true
 serde_json.workspace = true
+zbus.workspace = true
 
 [lints]
 workspace = true

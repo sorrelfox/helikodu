@@ -13,7 +13,7 @@ pub(crate) mod search;
 pub(crate) mod stats;
 
 mod database;
-mod format;
+pub(crate) mod format;
 mod keys;
 mod status;
 

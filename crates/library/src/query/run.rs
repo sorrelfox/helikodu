@@ -19,7 +19,7 @@ pub(crate) fn utc_offset(c: &Connection, now: i64) -> rusqlite::Result<i64> {
 }
 
 /// The condition with the masked library folders left out.
-fn condition(
+pub(super) fn condition(
     c: &Connection,
     compiled: &Compiled,
     include_masked: bool,
@@ -30,7 +30,7 @@ fn condition(
 
 /// The ids of the tracks a limit keeps, in order; `None` without a limit. A limit by
 /// time or size adds up the sorted tracks until the next one would pass it.
-fn kept(
+pub(super) fn kept(
     c: &Connection,
     compiled: &Compiled,
     condition: &str,

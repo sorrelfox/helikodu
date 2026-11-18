@@ -9,6 +9,7 @@ Everything here talks D-Bus through zbus with its own small executor (`default-r
 
 | Module | What it does |
 |---|---|
+| `app_api.rs`, `app_api/interface.xml` | The application's own D-Bus interface (`io.github.sorrelfox.Helikodu.Control1`): its names, version and introspection data. The window serves it on the bus connection the application owns its name on (`ui-gtk/src/remote_api.rs`); `docs/dev/dbus-api.md` documents it |
 | `mpris.rs`, `mpris/` | MPRIS2 (`org.mpris.MediaPlayer2`, `.Player`, `.TrackList` and `.Playlists`) under `org.mpris.MediaPlayer2.io.github.sorrelfox.Helikodu` |
 | `power.rs` | Suspend inhibition while playing: the Inhibit portal, logind outside a sandbox |
 | `portals.rs` | Colour scheme, accent colour, contrast and reduced motion from the Settings portal |

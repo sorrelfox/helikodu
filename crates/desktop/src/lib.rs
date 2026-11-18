@@ -5,6 +5,8 @@
 //!
 //! See the crate's README for its place in the workspace.
 //!
+//! - [`app_api`]: the application's own D-Bus interface, for `helikodu-cli` and
+//!   scripts.
 //! - [`mpris`]: MPRIS2 for media widgets, lock screens and media keys.
 //! - [`power`]: keeping the system from suspending while playing (the Inhibit
 //!   portal, or logind outside a sandbox).
@@ -20,6 +22,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod app_api;
 pub mod global_shortcuts;
 pub mod mpris;
 pub mod open_folder;

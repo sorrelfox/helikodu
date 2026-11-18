@@ -13,6 +13,7 @@
 //! - Saved searches are stored as printed query text in `saved_searches`.
 
 mod compiler;
+mod facets;
 mod parser;
 mod printer;
 mod run;
@@ -25,6 +26,7 @@ use std::time::SystemTime;
 use helikodu_model::library::TrackId;
 use helikodu_model::query::{Query, TermProblem};
 
+pub use facets::{FacetChoice, FacetField, FacetKey, FacetList, FacetValue};
 pub use parser::{ParsedQuery, parse as parse_query, parse_lenient as parse_query_lenient};
 pub use printer::print as print_query;
 pub use saved::{SavedSearch, SavedSearchId};

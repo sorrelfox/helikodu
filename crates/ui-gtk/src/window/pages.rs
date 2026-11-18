@@ -38,7 +38,7 @@ use crate::views::tracks::TracksView;
 /// The views and state of the library pages.
 pub(crate) struct Pages {
     pub(super) backend: Backend,
-    tracks: Rc<TracksView>,
+    pub(super) tracks: Rc<TracksView>,
     artists: Rc<ArtistsView>,
     genres: Rc<GenresView>,
     composers: Rc<CategoryView>,
@@ -206,7 +206,7 @@ impl MainWindow {
     }
 
     /// The search entry of the content header.
-    fn search_entry(&self) -> gtk::SearchEntry {
+    pub(super) fn search_entry(&self) -> gtk::SearchEntry {
         let header = self.imp().back.parent().and_then(|b| b.parent());
         header
             .and_downcast::<gtk::CenterBox>()
@@ -345,7 +345,7 @@ impl MainWindow {
         self.go(before.unwrap_or(Page::Library("albums")), true);
     }
 
-    fn show_all_tracks(&self, text: &str) {
+    pub(super) fn show_all_tracks(&self, text: &str) {
         let Some(pages) = self.pages() else { return };
         pages.before_search.replace(None);
         pages.tracks.filter_entry().set_text(text);
@@ -446,6 +446,7 @@ impl MainWindow {
             "search" => pages.search_entry.clone().upcast(),
             "history" => self.history_view()?.focus_target(),
             "home" => self.home_focus_target()?,
+            "statistics" => self.statistics_focus()?,
             _ => return None,
         })
     }

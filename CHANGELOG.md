@@ -43,6 +43,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Settings can be searched: the settings found are shown, working, in groups by page.
 - Playback pauses when the screen locks (off by default) and before the computer goes to sleep (on by default).
 
+- Facet browser in Tracks: the **Browse** button opens linked lists of genres, album artists and albums (each list's field can be changed to artist, composer, year or format) that narrow each other and the table; several values can be chosen with Ctrl and Shift.
+- Library statistics (**Library ▸ Statistics**): counts, playing time and size; formats and their quality; listening this year; the most played artists and albums. **Copy as text** copies the figures.
+- A narrow window: below the widths that leave the content 560 pixels, the queue panel and then the sidebar open over the content; below 720 pixels the deck is compact.
+- `helikodu-cli` controls the running application: `status`, `queue`, `playlists`, `play-pause`, `pause`, `resume`, `stop`, `next`, `previous`, `seek`, `volume`, `shuffle`, `repeat`, `enqueue` (files or a query, next or last), `play-query`, `rate` and `export-playlist`, with `--json` where they print. Exit code 4 means the application is not running.
+- A documented D-Bus interface for scripts, `io.github.sorrelfox.Helikodu.Control1`, which `helikodu-cli` uses (`docs/dev/dbus-api.md`).
+
 ### Changed
 
 - The player deck at the bottom of the window follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.

@@ -14,6 +14,7 @@
 
 mod browse;
 mod history;
+mod insights;
 mod lyrics;
 mod mpris;
 mod services;
@@ -1434,6 +1435,30 @@ impl LibrarySource for ServiceLibrary {
         browse::track_facts(self.library()?, track)
     }
 
+    fn facet_values(
+        &self,
+        query: &TrackQuery,
+        chosen: &[super::FacetChoice],
+        field: super::FacetField,
+    ) -> Result<super::FacetList, BackendError> {
+        self.facet_list(query, chosen, field)
+    }
+
+    fn facet_track_keys(
+        &self,
+        query: &TrackQuery,
+        chosen: &[super::FacetChoice],
+    ) -> Result<Vec<TrackKey>, BackendError> {
+        self.facet_keys(query, chosen)
+    }
+
+    fn statistics(
+        &self,
+        since: super::StatisticsSince,
+    ) -> Result<super::LibraryStats, BackendError> {
+        self.library_statistics(since)
+    }
+
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {
         let (Some(library), Some(hash)) = (self.service.library(), CoverHash::from_bytes(&cover.0))
         else {
@@ -1649,6 +1674,17 @@ impl PlayerControl for ServicePlayer {
                 tracks: tracks
                     .into_iter()
                     .map(|t| TrackRef::Library(track_id(t)))
+                    .collect(),
+                at: if next {
+                    EnqueueAt::Next
+                } else {
+                    EnqueueAt::End
+                },
+            }),
+            PlayerRequest::EnqueueFiles { files, next } => self.command(PlayerCommand::Enqueue {
+                tracks: files
+                    .into_iter()
+                    .map(|f| TrackRef::File(MediaSource::file(f)))
                     .collect(),
                 at: if next {
                     EnqueueAt::Next

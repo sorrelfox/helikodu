@@ -23,6 +23,7 @@ mod playlists;
 mod query;
 mod scan;
 mod search;
+mod statistics;
 mod stats;
 mod tag_journal;
 pub mod tag_tools;
@@ -76,6 +77,7 @@ pub use playlists::{
     DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions, ImportReport, ItemContent,
     PlaylistError, PlaylistId, PlaylistItem, PlaylistItemId, PlaylistSummary,
 };
+pub use query::{FacetChoice, FacetField, FacetKey, FacetList, FacetValue};
 pub use query::{
     ParsedQuery, QueryError, QueryRequest, SavedSearch, SavedSearchId, SyntaxError,
     SyntaxErrorKind, parse_query, parse_query_lenient, print_query,
@@ -85,6 +87,7 @@ pub use scan::{
     ScanOptions, ScanSummary, SymlinkPolicy, WORKER_PROGRAM, WorkerOptions, find_worker_program,
 };
 pub use search::{MatchRank, SearchHit, SearchRequest, SearchResults, fold};
+pub use statistics::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 pub use stats::{
     HistoryEntry, HistoryQuery, HistoryTotals, Listen, ListenEnd, ListenOutcome, PlayRules, Rating,
     TrackStats,

@@ -1,0 +1,92 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: GPL-3.0-or-later
+
+The application's own D-Bus interface, served by the running window at the bus
+name io.github.sorrelfox.Helikodu, object /io/github/sorrelfox/Helikodu. It does
+what MPRIS cannot: enqueue next or last, play a query, rate, export a playlist,
+and report the status and the queue as JSON. docs/dev/dbus-api.md describes it.
+
+A new version of the interface gets a new name (Control2); within a version,
+methods are only ever added.
+-->
+<node>
+  <interface name="io.github.sorrelfox.Helikodu.Control1">
+    <!-- The version of this interface: 1. -->
+    <property name="Version" type="u" access="read"/>
+    <!-- The player's status as a JSON object. -->
+    <method name="GetStatus">
+      <arg name="status" type="s" direction="out"/>
+    </method>
+    <!-- The queue in playing order as a JSON object. -->
+    <method name="GetQueue">
+      <arg name="queue" type="s" direction="out"/>
+    </method>
+    <!-- The playlists as a JSON array. -->
+    <method name="ListPlaylists">
+      <arg name="playlists" type="s" direction="out"/>
+    </method>
+    <method name="PlayPause"/>
+    <method name="Play"/>
+    <method name="Pause"/>
+    <method name="Stop"/>
+    <method name="Next"/>
+    <method name="Previous"/>
+    <!-- Moves the position by this many milliseconds (negative: back). -->
+    <method name="Seek">
+      <arg name="offset_ms" type="x" direction="in"/>
+    </method>
+    <!-- Moves to this position in the playing track. -->
+    <method name="SetPosition">
+      <arg name="position_ms" type="t" direction="in"/>
+    </method>
+    <!-- The volume control, 0.0 to 1.0. -->
+    <method name="SetVolume">
+      <arg name="volume" type="d" direction="in"/>
+    </method>
+    <!-- off, tracks, albums, folders, groupings or within-album. -->
+    <method name="SetShuffle">
+      <arg name="mode" type="s" direction="in"/>
+    </method>
+    <!-- off, one, album or all. -->
+    <method name="SetRepeat">
+      <arg name="mode" type="s" direction="in"/>
+    </method>
+    <!-- Adds files after the playing track (next) or at the end; returns how
+         many were added. -->
+    <method name="Enqueue">
+      <arg name="files" type="as" direction="in"/>
+      <arg name="next" type="b" direction="in"/>
+      <arg name="added" type="u" direction="out"/>
+    </method>
+    <!-- Adds the library tracks a query finds (the query language of the
+         search field) after the playing track or at the end. -->
+    <method name="EnqueueQuery">
+      <arg name="query" type="s" direction="in"/>
+      <arg name="next" type="b" direction="in"/>
+      <arg name="added" type="u" direction="out"/>
+    </method>
+    <!-- Replaces the queue with the tracks a query finds and plays them. -->
+    <method name="PlayQuery">
+      <arg name="query" type="s" direction="in"/>
+      <arg name="shuffle" type="b" direction="in"/>
+      <arg name="tracks" type="u" direction="out"/>
+    </method>
+    <!-- Rates a library track (0: the playing one) with 0 to 5 stars, or
+         removes its rating with -1. -->
+    <method name="Rate">
+      <arg name="track" type="t" direction="in"/>
+      <arg name="stars" type="i" direction="in"/>
+    </method>
+    <!-- Writes a playlist, named or by its number, to a file; the format
+         follows the file name's extension (m3u8, m3u, pls, xspf). Returns how
+         many entries were written. -->
+    <method name="ExportPlaylist">
+      <arg name="playlist" type="s" direction="in"/>
+      <arg name="path" type="s" direction="in"/>
+      <arg name="entries" type="u" direction="out"/>
+    </method>
+  </interface>
+</node>

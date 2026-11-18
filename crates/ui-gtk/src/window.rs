@@ -12,6 +12,7 @@ pub(crate) mod desktop;
 pub(crate) mod dialog_hooks;
 pub(crate) mod history;
 pub(crate) mod home;
+pub(crate) mod narrow;
 pub(crate) mod now_playing;
 pub(crate) mod pages;
 pub(crate) mod pane_handle;
@@ -19,6 +20,7 @@ pub(crate) mod panel;
 pub(crate) mod play_modes;
 pub(crate) mod playlists;
 pub(crate) mod sidebar;
+pub(crate) mod statistics;
 pub(crate) mod tag_undo;
 pub(crate) mod toast_overlay;
 
@@ -183,6 +185,10 @@ mod imp {
         pub(super) desktop: RefCell<Option<Rc<desktop::Integration>>>,
         /// The Home page.
         pub(super) home_view: RefCell<Option<Rc<crate::views::home::HomeView>>>,
+        /// The narrow layout's state.
+        pub(super) narrow: RefCell<Option<Rc<narrow::Narrow>>>,
+        /// The Library statistics page.
+        pub(super) statistics: RefCell<Option<Rc<crate::views::statistics::StatisticsView>>>,
     }
 
     #[glib::object_subclass]
@@ -315,6 +321,7 @@ impl MainWindow {
         self.setup_pages(backend, &playback, &covers);
         self.setup_history(backend, &playback, &covers);
         self.setup_home(backend, &playback, &covers);
+        self.setup_statistics(backend, &covers);
 
         imp.deck.bind(backend, &playback, &covers);
         self.setup_dialogs(backend, &playback);
@@ -416,6 +423,8 @@ impl MainWindow {
             }
         });
         self.set_reduced_motion(crate::style::current().reduced_motion);
+        self.setup_narrow();
+        crate::remote_api::export(self, backend, &playback);
     }
 
     /// Says so in a toast when the output device goes away; the output button
@@ -626,6 +635,7 @@ impl MainWindow {
         let selected: String = match page {
             Page::Library(history::PAGE) => self.show_history(),
             Page::Library(home::PAGE) => self.show_home(),
+            Page::Library(statistics::PAGE) => self.show_statistics(),
             Page::Library(name) if self.has_page(name) => self.show_page(page),
             Page::Artist(_) | Page::Genre(_) | Page::Playlist(_) | Page::Search => {
                 self.show_page(page)
@@ -665,7 +675,8 @@ impl MainWindow {
                 | Page::Artist(_)
                 | Page::Genre(_)
         ) || page == Page::Library(history::PAGE)
-            || page == Page::Library(home::PAGE);
+            || page == Page::Library(home::PAGE)
+            || page == Page::Library(statistics::PAGE);
         let shown = imp.panel_wanted.get() && (imp.panel_chosen.get() || !wide);
         if imp.panel_revealer.reveals_child() != shown {
             imp.panel_revealer.set_reveal_child(shown);
