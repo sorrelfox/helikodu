@@ -84,6 +84,7 @@ The release candidate. This version brings everything planned for 1.0: smart pla
 - **Help ▸ User Guide** (F1) opens the user guide installed with the application, every chapter and the FAQ on one local page, so it opens without a network.
 - A manual page for `helikodu-scan-worker`, and the new commands in the manual page of `helikodu-cli`.
 - Ready-built programs for 64-bit ARM (aarch64) on the GitHub Releases page, beside the x86_64 build.
+- A [website](https://sorrelfox.github.io/helikodu/) that shows what Helikodu does, with screenshots in both colour schemes, and carries the user guide and these release notes.
 
 #### Languages
 - Translations into German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, Russian, Ukrainian and Simplified Chinese.

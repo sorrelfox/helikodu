@@ -27,6 +27,8 @@ Pages may use these marks, each replaced when the site is built:
 
     {{version}}  {{released}}  {{languages}}  {{language-count}}
     {{release-url}}  {{repository}}  {{root}}
+    {{known-issues}}          a list item that links to the known issues of
+                              the version, when its release notes have some
     {{cover NAME}}            a generated cover, as the application draws them
     {{cover-defs}}            the drawings the covers refer to, once per page
     {{shot NAME | ALT}}       a screenshot, light or dark as the visitor's desktop
@@ -201,6 +203,8 @@ class Site:
         if not m:
             fail(f"CHANGELOG.md has no section for version {self.version}")
         self.released = long_date(m.group(1))
+        section = self.changelog[m.end():].split("\n## ", 1)[0]
+        self.known_issues = bool(re.search(r"^### Known issues$", section, re.M))
         self.languages, self.language_count = languages()
         self.layout = (HERE / "layout.html").read_text(encoding="utf-8")
         self.written = []
@@ -265,6 +269,9 @@ class Site:
             "languages": self.languages,
             "language-count": str(self.language_count),
             "release-url": f"{REPOSITORY}/releases/tag/v{self.version}",
+            "known-issues": (f'<li><a href="{root}changelog/#v{html.escape(self.version)}'
+                             f'--known-issues">Known issues of {html.escape(self.version)}</a></li>'
+                             if self.known_issues else ""),
             "repository": REPOSITORY,
             "root": root,
         }

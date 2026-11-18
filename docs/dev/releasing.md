@@ -36,10 +36,11 @@ The version is set in one place: `version` under `[workspace.package]` in the ro
 
 1. **Changelog and metainfo.** `CHANGELOG.md` (Keep a Changelog style) lists the user-visible changes under the new version, and the metainfo has its `<release>` entry (see above).
 2. **Translations.** The string freeze has run its course and the translations are merged (see [Translations](#translations) below).
-3. **Version bump** in `Cargo.toml` and `Cargo.lock` (see above).
-4. **Checks.** `cargo xtask ci` passes on a clean checkout (a fresh `git clone`, not the working copy). The extended checks (the "Extended checks" workflow, started by hand in the Actions tab) and the CI workflow (also started by hand) are green for the commit to be tagged.
-5. **Manual QA** sign-off on the commit to be tagged.
-6. **Dry run.** Start the Release workflow by hand on the branch (Actions → Release → Run workflow). It builds everything and keeps the files as a workflow artifact, `release-assets`, without publishing. Download it, then unpack the binary tarball and start the programs on a desktop. Locally, `cargo xtask dist` makes the source tarball in `target/dist/`; check that it builds offline:
+3. **Website.** The start page (`docs/site/pages/index.html`) says what the release can do, and the screenshots are drawn again if the interface has changed (`docs/site/shots.py`). `docs/site/build.py --out target/site` builds the site and checks its links; the Pages workflow publishes it when the tag is pushed (see [docs/site/README.md](../site/README.md)).
+4. **Version bump** in `Cargo.toml` and `Cargo.lock` (see above).
+5. **Checks.** `cargo xtask ci` passes on a clean checkout (a fresh `git clone`, not the working copy). The extended checks (the "Extended checks" workflow, started by hand in the Actions tab) and the CI workflow (also started by hand) are green for the commit to be tagged.
+6. **Manual QA** sign-off on the commit to be tagged.
+7. **Dry run.** Start the Release workflow by hand on the branch (Actions → Release → Run workflow). It builds everything and keeps the files as a workflow artifact, `release-assets`, without publishing. Download it, then unpack the binary tarball and start the programs on a desktop. Locally, `cargo xtask dist` makes the source tarball in `target/dist/`; check that it builds offline:
 
    ```sh
    mkdir /tmp/helikodu-dist && tar -xJf target/dist/helikodu-0.1.0.tar.xz -C /tmp/helikodu-dist
@@ -47,7 +48,7 @@ The version is set in one place: `version` under `[workspace.package]` in the ro
    meson setup _build --buildtype=release -Doffline=true && meson compile -C _build
    ```
 
-7. **Signed tag.** Tag the release commit on `main` and push the tag:
+8. **Signed tag.** Tag the release commit on `main` and push the tag:
 
    ```sh
    git tag -s v0.1.0 -m "Helikodu 0.1.0"
@@ -55,7 +56,7 @@ The version is set in one place: `version` under `[workspace.package]` in the ro
    ```
 
    The push starts the Release workflow (and the CI workflow). It makes the source tarball, then on an x86_64 and an aarch64 runner runs the build and tests (`cargo xtask ci --tests-only`) and builds the programs from the tarball offline, and creates the GitHub Release once both builds have passed. Each build runs with at most four Cargo jobs inside a container capped at 12 GB of memory, the runner's limit; see [ci/README.md](../../ci/README.md#memory-limit).
-8. **Check the release page**: the notes, the pre-release mark and the four files. Download the files and run `sha256sum --check SHA256SUMS`.
+9. **Check the release page**: the notes, the pre-release mark and the four files. Download the files and run `sha256sum --check SHA256SUMS`.
 
 If the workflow fails, fix the cause on `main`, delete the tag (`git push --delete origin v0.1.0`, `git tag -d v0.1.0`) and tag again. A published release is never replaced: a mistake in it is fixed by a new patch version.
 
