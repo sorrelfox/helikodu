@@ -255,6 +255,30 @@ fn tray_menu(app: &gtk::Application) {
     spin(50);
     assert!(!mapped_texts(&settings).contains(&"Show an icon in the tray".to_owned()));
     settings.close();
+
+    // Closing keeps playing in the tray only when asked for and while a tray
+    // shows the icon; the tray going away brings the window back.
+    let services = backend.services();
+    services
+        .update_settings(&mut |s| {
+            s.appearance.tray_icon = true;
+            s.appearance.close_to_tray = true;
+        })
+        .unwrap();
+    window.demo_tray_host(true);
+    window.close();
+    spin(50);
+    assert!(!window.is_visible());
+    assert!(window.kept_in_tray());
+    window.demo_tray_host(false);
+    spin(50);
+    assert!(window.is_visible());
+    services
+        .update_settings(&mut |s| {
+            s.appearance.tray_icon = false;
+            s.appearance.close_to_tray = false;
+        })
+        .unwrap();
     window.close();
 }
 

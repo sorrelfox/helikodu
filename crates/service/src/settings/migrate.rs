@@ -19,7 +19,7 @@ pub type Migration = fn(&mut Table);
 /// The migrations of this build, version 0 first. There are as many as
 /// [`Settings::VERSION`](helikodu_model::settings::Settings::VERSION) (a unit test
 /// checks it).
-pub const MIGRATIONS: &[Migration] = &[from_0];
+pub const MIGRATIONS: &[Migration] = &[from_0, from_1];
 
 /// Migrates `table` with `steps` (normally [`MIGRATIONS`]) to the version after the
 /// last step and returns the version it was written with. A table without a
@@ -51,6 +51,17 @@ pub fn migrate(table: &mut Table, steps: &[Migration]) -> Result<u32, String> {
 /// layout version 1 still uses.
 fn from_0(_table: &mut Table) {}
 
+/// Version 1 showed the tray icon and kept playing in the tray when the window
+/// was closed, by default; version 2 does neither. Every file is written whole,
+/// so a version 1 file cannot tell the old defaults from a choice: all of them
+/// take the new ones.
+fn from_1(table: &mut Table) {
+    if let Some(Value::Table(appearance)) = table.get_mut("appearance") {
+        appearance.remove("tray_icon");
+        appearance.remove("close_to_tray");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use helikodu_model::settings::Settings;
@@ -66,7 +77,10 @@ mod tests {
     fn a_file_without_a_version_is_version_0() {
         let mut table: Table = toml::from_str("[output]\nbackend = \"alsa\"\n").unwrap();
         assert_eq!(migrate(&mut table, MIGRATIONS), Ok(0));
-        assert_eq!(table["version"], Value::Integer(1));
+        assert_eq!(
+            table["version"],
+            Value::Integer(i64::from(Settings::VERSION))
+        );
         let settings: Settings = table.try_into().unwrap();
         assert_eq!(settings.output.backend.to_string(), "alsa");
     }
@@ -107,6 +121,17 @@ mod tests {
         let mut newer: Table = toml::from_str("version = 9\n").unwrap();
         assert_eq!(migrate(&mut newer, steps), Ok(9));
         assert_eq!(newer["version"], Value::Integer(9));
+    }
+
+    #[test]
+    fn version_1_takes_the_defaults_without_the_tray() {
+        let mut table: Table =
+            toml::from_str("version = 1\n[appearance]\nclose_to_tray = true\ntray_icon = true\n")
+                .unwrap();
+        assert_eq!(migrate(&mut table, MIGRATIONS), Ok(1));
+        let settings: Settings = table.try_into().unwrap();
+        assert!(!settings.appearance.close_to_tray);
+        assert!(!settings.appearance.tray_icon);
     }
 
     #[test]

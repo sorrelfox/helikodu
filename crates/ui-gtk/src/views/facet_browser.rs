@@ -335,8 +335,7 @@ impl FacetBrowser {
             );
             menu.append_item(&item);
         }
-        pane.field_button.set_menu_model(Some(&menu));
-        crate::widgets::menu_names::name_menus(&pane.field_button);
+        crate::widgets::menu_names::set_menu_later(&pane.field_button, &menu);
         // Choosing values.
         let weak = Rc::downgrade(self);
         pane.selection

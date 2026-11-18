@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 /// stripe_rows = true
 /// language = ""             # empty: the desktop's language
 /// notifications = true      # when the track changes
-/// tray_icon = true          # where the desktop has a tray
-/// close_to_tray = true      # closing the window keeps playing in the tray
+/// tray_icon = false         # where the desktop has a tray
+/// close_to_tray = false     # closing the window keeps playing in the tray
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -38,9 +38,11 @@ pub struct AppearanceSettings {
     /// Whether the desktop shows a notification when the track changes.
     pub notifications: bool,
     /// Whether an icon is shown in the system tray, where the desktop has one.
+    /// Off by default.
     pub tray_icon: bool,
     /// Whether closing the window keeps playing in the tray instead of quitting
-    /// (only with the tray icon; Ctrl+Q always quits).
+    /// (only while a tray shows the icon; Ctrl+Q always quits). Off by default:
+    /// closing the window quits.
     pub close_to_tray: bool,
 }
 
@@ -54,8 +56,8 @@ impl Default for AppearanceSettings {
             stripe_rows: true,
             language: String::new(),
             notifications: true,
-            tray_icon: true,
-            close_to_tray: true,
+            tray_icon: false,
+            close_to_tray: false,
         }
     }
 }

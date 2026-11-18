@@ -308,8 +308,7 @@ impl TracksView {
                 browse,
             }
         });
-        columns_button.set_menu_model(Some(&view.columns_menu()));
-        crate::widgets::menu_names::name_menus(&columns_button);
+        crate::widgets::menu_names::set_menu_later(&columns_button, &view.columns_menu());
         view.connect(playback);
         view.connect_edges();
         view.connect_browser();

@@ -11,15 +11,26 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
 use super::{MainWindow, Page};
-use crate::backend::{Backend, FacetField, LibraryStats};
-use crate::models::CoverCache;
+use crate::backend::{FacetField, LibraryStats};
 use crate::views::statistics::{Opens, StatisticsView};
 
 /// The name of the page in the view stack.
 pub(crate) const PAGE: &str = "statistics";
 
 impl MainWindow {
-    pub(super) fn setup_statistics(&self, backend: &Backend, covers: &Rc<CoverCache>) {
+    pub(super) fn setup_statistics(&self) {
+        let show = gio::ActionEntry::builder("show-statistics")
+            .activate(|window: &Self, _, _| window.go(Page::Library(PAGE), true))
+            .build();
+        self.add_action_entries([show]);
+    }
+
+    /// The statistics page, built when it is first wanted.
+    fn statistics_view(&self) -> Option<Rc<StatisticsView>> {
+        if let Some(view) = self.imp().statistics.borrow().clone() {
+            return Some(view);
+        }
+        let pages = self.pages()?;
         let tracks = self.downgrade();
         let artist = self.downgrade();
         let album = self.downgrade();
@@ -40,17 +51,10 @@ impl MainWindow {
                 }
             }),
         };
-        let view = StatisticsView::new(backend, covers, opens);
+        let view = StatisticsView::new(&pages.backend, &pages.covers, opens);
         self.imp().views.add_named(&view.root, Some(PAGE));
-        self.imp().statistics.replace(Some(view));
-        let show = gio::ActionEntry::builder("show-statistics")
-            .activate(|window: &Self, _, _| window.go(Page::Library(PAGE), true))
-            .build();
-        self.add_action_entries([show]);
-    }
-
-    fn statistics_view(&self) -> Option<Rc<StatisticsView>> {
-        self.imp().statistics.borrow().clone()
+        self.imp().statistics.replace(Some(view.clone()));
+        Some(view)
     }
 
     /// Shows the statistics page, counting again; Home stays selected in the
@@ -85,7 +89,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn set_browsing(&self, shown: bool) {
         if let Some(pages) = self.pages() {
-            pages.tracks.set_browsing(shown);
+            pages.tracks().set_browsing(shown);
         }
     }
 
@@ -93,7 +97,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn facet_rows(&self) -> Vec<Vec<(String, usize, bool)>> {
         self.pages()
-            .and_then(|p| p.tracks.facet_browser())
+            .and_then(|p| p.tracks().facet_browser())
             .map(|b| b.rows())
             .unwrap_or_default()
     }
@@ -101,7 +105,7 @@ impl MainWindow {
     /// Chooses rows of a facet pane as a click and Ctrl-clicks would (for tests).
     #[doc(hidden)]
     pub fn choose_facets(&self, pane: usize, positions: &[u32]) {
-        if let Some(browser) = self.pages().and_then(|p| p.tracks.facet_browser()) {
+        if let Some(browser) = self.pages().and_then(|p| p.tracks().facet_browser()) {
             browser.choose(pane, positions);
         }
     }
@@ -109,7 +113,7 @@ impl MainWindow {
     /// Changes the field of a facet pane (for tests).
     #[doc(hidden)]
     pub fn set_facet_field(&self, pane: usize, field: FacetField) {
-        if let Some(browser) = self.pages().and_then(|p| p.tracks.facet_browser()) {
+        if let Some(browser) = self.pages().and_then(|p| p.tracks().facet_browser()) {
             browser.choose_field(pane, field);
         }
     }
@@ -119,7 +123,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn tracks_shown(&self) -> (usize, String) {
         self.pages()
-            .map(|p| p.tracks.shown_count())
+            .map(|p| p.tracks().shown_count())
             .unwrap_or_default()
     }
 }

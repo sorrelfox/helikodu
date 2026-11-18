@@ -128,8 +128,7 @@ impl ArtistsView {
         let order = gio::Menu::new();
         order.append(Some(&tr("Name")), Some("artists.order::name"));
         order.append(Some(&tr("Number of albums")), Some("artists.order::count"));
-        filter.set_menu_model(Some(&order));
-        crate::widgets::menu_names::name_menus(&filter);
+        crate::widgets::menu_names::set_menu_later(&filter, &order);
         filter.set_tooltip_text(Some(&tr("Sort the artists")));
         filter.update_property(&[gtk::accessible::Property::Label(&tr("Sort the artists"))]);
         let (pane, count, list) = list_pane(&tr("Artists"), filter.upcast_ref());
@@ -172,8 +171,7 @@ impl ArtistsView {
         more_menu.append(Some(&tr("Add to queue")), Some("artists.enqueue"));
         let photo_menu = gio::Menu::new();
         more_menu.append_section(None, &photo_menu);
-        more.set_menu_model(Some(&more_menu));
-        crate::widgets::menu_names::name_menus(&more);
+        crate::widgets::menu_names::set_menu_later(&more, &more_menu);
         let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         buttons.set_valign(gtk::Align::Center);
         buttons.append(&play);

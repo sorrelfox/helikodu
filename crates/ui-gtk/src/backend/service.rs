@@ -24,7 +24,7 @@ mod services;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::RecvTimeoutError;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;
@@ -153,6 +153,12 @@ pub struct ServiceLibrary {
     listed: Mutex<Option<(AlbumQuery, Vec<AlbumRow>)>>,
     /// The artist list, for search and names.
     artist_rows: Mutex<Vec<ArtistRow>>,
+    /// Names asked for that are no artist of the list, and the count of library
+    /// changes they were found missing at: a credit such as "A feat. B" is
+    /// asked for at every track change, and must not read every artist again.
+    not_artists: Mutex<(u64, HashSet<String>)>,
+    /// How many times the library changed.
+    changes: Arc<AtomicU64>,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -750,7 +756,23 @@ impl LibrarySource for ServiceLibrary {
         if let Some(key) = find(&lock(&self.artist_rows)) {
             return Ok(Some(key));
         }
-        Ok(find(&self.artists()?))
+        let changes = self.changes.load(Ordering::Relaxed);
+        {
+            let mut missing = lock(&self.not_artists);
+            if missing.0 != changes {
+                *missing = (changes, HashSet::new());
+            } else if missing.1.contains(&name) {
+                return Ok(None);
+            }
+        }
+        let found = find(&self.artists()?);
+        if found.is_none() {
+            let mut missing = lock(&self.not_artists);
+            if missing.0 == changes {
+                missing.1.insert(name);
+            }
+        }
+        Ok(found)
     }
 
     fn set_artist_photo(&self, key: ArtistKey, file: &Path) -> Result<ArtistRow, BackendError> {
@@ -1955,6 +1977,8 @@ struct Forwarder {
     path_known: bool,
     /// What the current entry plays, for its waveform.
     playing: Option<MediaSource>,
+    /// Counts the changes of the library.
+    changes: Arc<AtomicU64>,
 }
 
 impl Forwarder {
@@ -2304,7 +2328,10 @@ impl Forwarder {
                     path: path.clone(),
                 })
             }
-            LibraryEvent::Changed => self.send(Update::LibraryChanged),
+            LibraryEvent::Changed => {
+                self.changes.fetch_add(1, Ordering::Relaxed);
+                self.send(Update::LibraryChanged)
+            }
             LibraryEvent::RatingChanged { track, stars } => self.send(Update::RatingChanged {
                 track: TrackKey(track.get()),
                 stars: *stars,
@@ -2491,6 +2518,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
     let events =
         service.subscribe(SubscribeOptions::all().with_position_interval(POSITION_INTERVAL));
     let positions = Arc::new(AtomicBool::new(true));
+    let changes = Arc::new(AtomicU64::new(0));
     let forwarder = Forwarder {
         service: Arc::clone(&service),
         updates: sender.clone(),
@@ -2500,6 +2528,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         positions: Arc::clone(&positions),
         path_known: false,
         playing: None,
+        changes: Arc::clone(&changes),
     };
     thread::Builder::new()
         .name("helikodu-ui-events".into())
@@ -2516,6 +2545,8 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         album_rows: Mutex::new(Vec::new()),
         listed: Mutex::new(None),
         artist_rows: Mutex::new(Vec::new()),
+        not_artists: Mutex::new((0, HashSet::new())),
+        changes,
     });
     let player = Rc::new(ServicePlayer {
         service: Arc::clone(&service),

@@ -180,8 +180,7 @@ impl LyricsPage {
         more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
         more.add_css_class("hk-icon");
         more.add_css_class("small");
-        more.set_menu_model(Some(&lyrics_menu()));
-        crate::widgets::menu_names::name_menus(&more);
+        crate::widgets::menu_names::set_menu_later(&more, &lyrics_menu());
         footer.append(&more);
         root.append(&footer);
 

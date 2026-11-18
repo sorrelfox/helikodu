@@ -312,8 +312,7 @@ impl State {
             item.set_action_and_target_value(Some("tagtools.insert"), Some(&name.to_variant()));
             menu.append_item(&item);
         }
-        insert.set_menu_model(Some(&menu));
-        crate::widgets::menu_names::name_menus(&insert);
+        crate::widgets::menu_names::set_menu_later(&insert, &menu);
         row.append(&insert);
         self.pattern.replace(Some(entry));
         let hint = note(&tr(

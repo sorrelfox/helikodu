@@ -12,25 +12,14 @@ use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
 
 use super::{MainWindow, Page};
-use crate::backend::Backend;
 use crate::i18n::{fill, ntr, tr};
-use crate::models::CoverCache;
-use crate::playback::Playback;
 use crate::views::history::HistoryView;
 
 /// The name of the page in the view stack.
 pub(crate) const PAGE: &str = "history";
 
 impl MainWindow {
-    pub(super) fn setup_history(
-        &self,
-        backend: &Backend,
-        playback: &Rc<Playback>,
-        covers: &Rc<CoverCache>,
-    ) {
-        let view = HistoryView::new(backend, playback, covers);
-        self.imp().views.add_named(&view.root, Some(PAGE));
-        self.imp().history_view.replace(Some(view));
+    pub(super) fn setup_history(&self) {
         let show = gio::ActionEntry::builder("show-history")
             .activate(|window: &Self, _, _| window.go(Page::Library(PAGE), true))
             .build();
@@ -40,8 +29,16 @@ impl MainWindow {
         self.add_action_entries([show, export]);
     }
 
+    /// The history page, built when it is first wanted.
     pub(super) fn history_view(&self) -> Option<Rc<HistoryView>> {
-        self.imp().history_view.borrow().clone()
+        if let Some(view) = self.imp().history_view.borrow().clone() {
+            return Some(view);
+        }
+        let pages = self.pages()?;
+        let view = HistoryView::new(&pages.backend, &pages.playback, &pages.covers);
+        self.imp().views.add_named(&view.root, Some(PAGE));
+        self.imp().history_view.replace(Some(view.clone()));
+        Some(view)
     }
 
     /// Shows the history page; Home stays selected in the sidebar.

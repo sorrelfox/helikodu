@@ -1836,8 +1836,7 @@ fn tools_button(editor: &Rc<Editor>) -> gtk::MenuButton {
         item.set_action_and_target_value(Some("tageditor.tool"), Some(&tool.id().to_variant()));
         menu.append_item(&item);
     }
-    button.set_menu_model(Some(&menu));
-    crate::widgets::menu_names::name_menus(&button);
+    crate::widgets::menu_names::set_menu_later(&button, &menu);
     button
 }
 

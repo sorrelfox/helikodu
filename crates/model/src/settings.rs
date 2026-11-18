@@ -73,7 +73,7 @@ pub struct Settings {
 
 impl Settings {
     /// The version of the schema this build writes.
-    pub const VERSION: u32 = 1;
+    pub const VERSION: u32 = 2;
 
     /// Checks the values that the types alone do not constrain.
     pub fn validate(&self) -> Result<(), SettingsError> {
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn defaults_round_trip() {
         let text = toml::to_string(&Settings::default()).unwrap();
-        assert!(text.starts_with("version = 1\n"), "{text}");
+        assert!(text.starts_with("version = 2\n"), "{text}");
         for table in [
             "[library]",
             "[playback]",

@@ -34,6 +34,20 @@ pub(crate) fn name_menus(widget: &impl IsA<gtk::Widget>) {
     }
 }
 
+/// Gives `button` the menu `model` when it is first opened, its items named
+/// as [`name_menus`] names them. A menu button builds the whole menu with
+/// its model, opened or not; most menus of the window are never opened in a
+/// session.
+pub(crate) fn set_menu_later(button: &gtk::MenuButton, model: &impl IsA<gtk::gio::MenuModel>) {
+    let model = model.as_ref().clone();
+    button.set_create_popup_func(move |button| {
+        if button.menu_model().is_none() {
+            button.set_menu_model(Some(&model));
+            name_menus(button);
+        }
+    });
+}
+
 /// Gives every menu item below `widget` its text as its accessible label.
 fn name_items(widget: &gtk::Widget) {
     if widget.type_().name() == "GtkModelButton" && widget.find_property("text").is_some() {

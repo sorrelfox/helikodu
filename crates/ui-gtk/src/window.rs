@@ -140,6 +140,9 @@ mod imp {
         pub(super) forward: TemplateChild<gtk::Button>,
         #[template_child]
         pub(super) menu_button: TemplateChild<gtk::MenuButton>,
+        /// The main menu's model; the button gets it when first opened.
+        #[template_child]
+        pub(super) main_menu: TemplateChild<gio::Menu>,
         #[template_child]
         pub(super) show_panel: TemplateChild<gtk::Button>,
         #[template_child]
@@ -189,6 +192,9 @@ mod imp {
         pub(super) narrow: RefCell<Option<Rc<narrow::Narrow>>>,
         /// The Library statistics page.
         pub(super) statistics: RefCell<Option<Rc<crate::views::statistics::StatisticsView>>>,
+        /// The player's state the Playback menu is to show once the main
+        /// menu has closed.
+        pub(super) pending_playback_menu: RefCell<Option<crate::playback::PlayerView>>,
     }
 
     #[glib::object_subclass]
@@ -294,11 +300,22 @@ impl MainWindow {
             window.save_ui_state();
             // With a tray, closing the window keeps playing there.
             if window.close_to_tray() {
-                window.set_visible(false);
+                window.hide_to_tray();
                 return glib::Propagation::Stop;
             }
             if let Some(mini) = window.mini_player() {
                 mini.window().destroy();
+            }
+            // Otherwise closing quits, whatever other windows (a tool, a
+            // dialog) are open, unless another main window stays.
+            if let Some(application) = window.application() {
+                let other = application
+                    .windows()
+                    .iter()
+                    .any(|w| w != window.upcast_ref::<gtk::Window>() && w.is::<MainWindow>());
+                if !other {
+                    application.quit();
+                }
             }
             glib::Propagation::Proceed
         });
@@ -319,9 +336,9 @@ impl MainWindow {
         imp.albums.replace(Some(albums));
         imp.album.replace(Some(album));
         self.setup_pages(backend, &playback, &covers);
-        self.setup_history(backend, &playback, &covers);
-        self.setup_home(backend, &playback, &covers);
-        self.setup_statistics(backend, &covers);
+        // History, Home and Statistics are built when first opened.
+        self.setup_history();
+        self.setup_statistics();
 
         imp.deck.bind(backend, &playback, &covers);
         self.setup_dialogs(backend, &playback);
@@ -389,14 +406,14 @@ impl MainWindow {
         let follow = |window: &Self| window.update_position_following();
         self.connect_visible_notify(follow);
         self.connect_suspended_notify(follow);
-        if let Some(menu) = imp.menu_button.menu_model() {
-            imp.menubar.set_menu_model(Some(&menubar_model(&menu)));
-        }
-        if let Some(popover) = imp.menu_button.popover() {
-            popover.add_css_class("hk-main-menu");
-        }
-        crate::widgets::menu_names::name_menus(&*imp.menu_button);
-        crate::widgets::menu_names::name_menus(&*imp.menubar);
+        // The main menu and the menu bar build their menus when first opened:
+        // the menus are many widgets.
+        let weak = self.downgrade();
+        imp.menu_button.set_create_popup_func(move |_| {
+            if let Some(window) = weak.upgrade() {
+                window.build_main_menu();
+            }
+        });
         self.set_style(style);
         self.go(Page::Library("albums"), true);
         self.load_counts();
@@ -507,6 +524,39 @@ impl MainWindow {
         }
     }
 
+    /// Gives the main menu button its menu, the first time it opens.
+    fn build_main_menu(&self) {
+        let button = &self.imp().menu_button;
+        if button.menu_model().is_some() {
+            return;
+        }
+        button.set_menu_model(Some(&*self.imp().main_menu));
+        if let Some(popover) = button.popover() {
+            popover.set_has_arrow(false);
+            popover.add_css_class("hk-main-menu");
+            let weak = self.downgrade();
+            popover.connect_closed(move |_| {
+                if let Some(window) = weak.upgrade() {
+                    window.main_menu_closed();
+                }
+            });
+        }
+        crate::widgets::menu_names::name_menus(&**button);
+    }
+
+    /// Gives the menu bar its menus while it is shown, and takes them away
+    /// while it is hidden, as its menus are many widgets.
+    fn fill_menubar(&self, shown: bool) {
+        let imp = self.imp();
+        if !shown {
+            imp.menubar.set_menu_model(None::<&gio::MenuModel>);
+        } else if imp.menubar.menu_model().is_none() {
+            imp.menubar
+                .set_menu_model(Some(&menubar_model(imp.main_menu.upcast_ref())));
+            crate::widgets::menu_names::name_menus(&*imp.menubar);
+        }
+    }
+
     /// Shows the window controls and the panel button in the header when the
     /// panel is hidden.
     fn update_header(&self) {
@@ -558,6 +608,7 @@ impl MainWindow {
                     .unwrap_or(false);
                 action.set_state(&shown.to_variant());
                 window.imp().menubar.set_visible(shown);
+                window.fill_menubar(shown);
                 window.update_header();
             })
             .build();

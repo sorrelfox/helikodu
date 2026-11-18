@@ -13,9 +13,9 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
+use gtk::{gio, glib};
 use helikodu_desktop::global_shortcuts::{
     BoundShortcut, GlobalShortcuts, ShortcutEvent, ShortcutSpec,
 };
@@ -36,6 +36,8 @@ enum Event {
     TrayActivate,
     TrayScroll(i32),
     TrayHost(bool),
+    /// Whether the desktop has a tray, asked while the icon is off.
+    TrayDesktop(bool),
     Shortcuts(Result<GlobalShortcuts, String>),
     Shortcut(ShortcutEvent),
     Session(SessionChange),
@@ -75,7 +77,12 @@ pub(crate) struct Integration {
     covers: Rc<CoverCache>,
     mini: RefCell<Option<Rc<MiniPlayer>>>,
     tray: RefCell<Option<Tray>>,
+    /// Whether a tray shows the icon: the icon is registered and a host is there.
     tray_host: Cell<bool>,
+    /// Whether the desktop has a tray, icon or not.
+    tray_desktop: Cell<bool>,
+    /// Whether closing the window has left it in the tray in this run.
+    kept_in_tray: Cell<bool>,
     shortcuts: RefCell<Option<GlobalShortcuts>>,
     bound: RefCell<Option<Vec<BoundShortcut>>>,
     session: RefCell<Option<SessionWatch>>,
@@ -109,6 +116,8 @@ impl MainWindow {
             mini: RefCell::new(None),
             tray: RefCell::new(None),
             tray_host: Cell::new(false),
+            tray_desktop: Cell::new(false),
+            kept_in_tray: Cell::new(false),
             shortcuts: RefCell::new(None),
             bound: RefCell::new(None),
             session: RefCell::new(None),
@@ -154,6 +163,9 @@ impl MainWindow {
         let started = std::thread::Builder::new()
             .name("helikodu-desktop-start".into())
             .spawn(move || {
+                // Whether to offer the tray icon in the settings.
+                let _ = events
+                    .send_blocking(Event::TrayDesktop(helikodu_desktop::tray::host_present()));
                 let forward = events.clone();
                 let shortcuts = GlobalShortcuts::start(move |event| {
                     let _ = forward.send_blocking(Event::Shortcut(event));
@@ -185,6 +197,17 @@ impl MainWindow {
             }
             Event::TrayHost(shown) => {
                 integration.tray_host.set(shown);
+                integration.tray_desktop.set(shown);
+                if !shown {
+                    // The tray is gone: a window left there comes back.
+                    self.show_from_tray();
+                }
+                self.desktop_changed();
+            }
+            Event::TrayDesktop(present) => {
+                integration
+                    .tray_desktop
+                    .set(present || integration.tray_host.get());
                 self.desktop_changed();
             }
             Event::Shortcuts(result) => {
@@ -271,6 +294,7 @@ impl MainWindow {
         if !wanted {
             integration.tray.replace(None);
             integration.tray_host.set(false);
+            self.show_from_tray();
             self.desktop_changed();
             return;
         }
@@ -314,10 +338,54 @@ impl MainWindow {
         self.integration().is_some_and(|i| i.tray_host.get())
     }
 
-    /// Whether closing the window keeps playing in the tray.
+    /// Whether the desktop has a tray, so that the settings offer the icon.
+    pub(crate) fn tray_offered(&self) -> bool {
+        self.integration()
+            .is_some_and(|i| i.tray_desktop.get() || i.tray_host.get())
+    }
+
+    /// Whether closing the window keeps playing in the tray: only when the
+    /// settings ask for it and a tray shows the icon right now, or the window
+    /// could not be found again.
     pub(super) fn close_to_tray(&self) -> bool {
         self.tray_available()
             && self.settings_value(|s| s.appearance.tray_icon && s.appearance.close_to_tray)
+    }
+
+    /// Hides the window to the tray, where playing goes on; the first time in
+    /// a run, a notification says where it went and how to quit.
+    pub(super) fn hide_to_tray(&self) {
+        self.set_visible(false);
+        let Some(integration) = self.integration() else {
+            return;
+        };
+        if integration.kept_in_tray.replace(true) {
+            return;
+        }
+        if let Some(application) = self.application() {
+            let notification = gio::Notification::new(&tr("Helikodu"));
+            notification.set_body(Some(&tr(
+                "Helikodu keeps playing in the tray. Quit from the tray menu or with Ctrl+Q.",
+            )));
+            notification.set_default_action("app.activate");
+            application.send_notification(Some("tray"), &notification);
+        }
+    }
+
+    /// Whether closing the window has left it in the tray in this run (for
+    /// tests).
+    #[doc(hidden)]
+    pub fn kept_in_tray(&self) -> bool {
+        self.integration().is_some_and(|i| i.kept_in_tray.get())
+    }
+
+    /// Shows the window again when it waits in a tray that is gone, unless
+    /// the mini player stands in for it.
+    fn show_from_tray(&self) {
+        let mini = self.mini_player().is_some_and(|m| m.is_shown());
+        if !self.is_visible() && !mini && self.is_realized() {
+            self.present();
+        }
     }
 
     /// The tray menu and tooltip for what plays now.

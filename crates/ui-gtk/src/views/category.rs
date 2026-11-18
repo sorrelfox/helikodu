@@ -205,8 +205,7 @@ impl CategoryView {
         let order_button = gtk::MenuButton::new();
         order_button.set_icon_name("view-sort-descending-symbolic");
         order_button.add_css_class("hk-menu");
-        order_button.set_menu_model(Some(&order));
-        crate::widgets::menu_names::name_menus(&order_button);
+        crate::widgets::menu_names::set_menu_later(&order_button, &order);
         let order_text = match category {
             Category::Composers => tr("Sort the composers"),
             Category::Years => tr("Sort the years"),

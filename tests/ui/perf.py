@@ -195,7 +195,9 @@ def report(results):
             add(what, f"{painted:.0f} frames painted; CPU {full[f'{phase}.cpu_process_pct']:.2f} %",
                 "no drawing work", painted == 0,
                 f"main thread {full[f'{phase}.cpu_main_pct']:.3f} %, "
-                f"{full[f'{phase}.main_wakeups_per_s']:.1f} main-thread wake-ups/s")
+                f"{full[f'{phase}.main_wakeups_per_s']:.1f} main-thread wake-ups/s"
+                + (f"; busiest threads: {full[f'{phase}.busiest_threads']}"
+                   if full.get(f"{phase}.busiest_threads") else ""))
         else:
             add(what, "not measured", "no drawing work", False)
     if "tracks.keys_loaded_ms" in full:

@@ -403,8 +403,8 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     scroller.upcast()
 }
 
-/// "System tray" and "Closing the window", hidden while no tray shows the
-/// icon.
+/// "System tray" and "Closing the window", hidden where the desktop has no
+/// tray.
 fn tray_rows(context: &Rc<Context>, body: &gtk::Box) {
     let settings = context.settings();
     let tray = row(
@@ -441,7 +441,7 @@ fn tray_rows(context: &Rc<Context>, body: &gtk::Box) {
     always.set_valign(gtk::Align::Center);
     line.append(&always);
     let close_row = row(&tr("Closing the window"), None, &line);
-    let shown = |main: Option<crate::window::MainWindow>| main.is_some_and(|m| m.tray_available());
+    let shown = |main: Option<crate::window::MainWindow>| main.is_some_and(|m| m.tray_offered());
     let visible = shown(context.main.upgrade());
     tray.set_visible(visible);
     close_row.set_visible(visible);
@@ -452,7 +452,7 @@ fn tray_rows(context: &Rc<Context>, body: &gtk::Box) {
         let close_row = close_row.downgrade();
         let owner = body.clone();
         main.connect_desktop_changed(&owner, move |main| {
-            let visible = main.tray_available();
+            let visible = main.tray_offered();
             if let Some(tray) = tray.upgrade() {
                 tray.set_visible(visible);
             }

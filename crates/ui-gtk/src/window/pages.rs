@@ -6,7 +6,7 @@
 //! menu target and its actions; the file actions of the main menu; and files
 //! dropped on the window.
 
-use std::cell::RefCell;
+use std::cell::{OnceCell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -35,26 +35,180 @@ use crate::views::search::SearchView;
 use crate::views::smart_playlist::SmartPlaylistView;
 use crate::views::tracks::TracksView;
 
-/// The views and state of the library pages.
+/// The views and state of the library pages. Each view is built when it is
+/// first wanted: most sessions open only a few of the pages, and a page not
+/// built holds no widgets.
 pub(crate) struct Pages {
+    window: glib::WeakRef<MainWindow>,
+    views: gtk::Stack,
     pub(super) backend: Backend,
-    pub(super) tracks: Rc<TracksView>,
-    artists: Rc<ArtistsView>,
-    genres: Rc<GenresView>,
-    composers: Rc<CategoryView>,
-    years: Rc<CategoryView>,
-    folders: Rc<FoldersView>,
-    playlist: Rc<PlaylistView>,
-    pub(super) smart: Rc<SmartPlaylistView>,
+    pub(super) playback: Rc<Playback>,
+    tracks: OnceCell<Rc<TracksView>>,
+    artists: OnceCell<Rc<ArtistsView>>,
+    genres: OnceCell<Rc<GenresView>>,
+    composers: OnceCell<Rc<CategoryView>>,
+    years: OnceCell<Rc<CategoryView>>,
+    folders: OnceCell<Rc<FoldersView>>,
+    playlist: OnceCell<Rc<PlaylistView>>,
+    smart: OnceCell<Rc<SmartPlaylistView>>,
     pub(super) covers: Rc<CoverCache>,
     pub(super) pins: RefCell<Vec<PinRow>>,
-    search: Rc<SearchView>,
+    search: OnceCell<Rc<SearchView>>,
     search_entry: gtk::SearchEntry,
     completion: Rc<QueryCompletion>,
     target: RefCell<Option<Target>>,
     playlists: RefCell<Vec<PlaylistRow>>,
     undo: RefCell<Option<Rc<dyn Fn()>>>,
     before_search: RefCell<Option<Page>>,
+}
+
+impl Pages {
+    /// Puts a view just built into the window's stack of pages.
+    fn add(&self, name: &str, root: &impl IsA<gtk::Widget>) {
+        self.views.add_named(root, Some(name));
+    }
+
+    /// What a click on an album of a page opens.
+    fn open_album(&self) -> impl Fn(crate::backend::AlbumKey) + Clone + 'static {
+        let weak = self.window.clone();
+        move |key| {
+            if let Some(window) = weak.upgrade() {
+                window.open_album(key);
+            }
+        }
+    }
+
+    /// The Tracks page.
+    pub(super) fn tracks(&self) -> &Rc<TracksView> {
+        self.tracks.get_or_init(|| {
+            let view = TracksView::new(&self.backend, &self.playback, false);
+            self.add("tracks", &view.root);
+            view
+        })
+    }
+
+    fn artists(&self) -> &Rc<ArtistsView> {
+        self.artists.get_or_init(|| {
+            let view = ArtistsView::new(
+                &self.backend,
+                &self.playback,
+                &self.covers,
+                self.open_album(),
+            );
+            let weak = self.window.clone();
+            view.connect_open(move |key| {
+                if let Some(window) = weak.upgrade() {
+                    window.go(Page::Artist(key), true);
+                }
+            });
+            self.add("artists", &view.root);
+            view
+        })
+    }
+
+    fn genres(&self) -> &Rc<GenresView> {
+        self.genres.get_or_init(|| {
+            let view = GenresView::new(
+                &self.backend,
+                &self.playback,
+                &self.covers,
+                self.open_album(),
+            );
+            let weak = self.window.clone();
+            view.connect_open(move |key| {
+                if let Some(window) = weak.upgrade() {
+                    window.go(Page::Genre(key), true);
+                }
+            });
+            self.add("genres", &view.root);
+            view
+        })
+    }
+
+    fn category(&self, category: Category) -> Rc<CategoryView> {
+        let view = CategoryView::new(
+            category,
+            &self.backend,
+            &self.playback,
+            &self.covers,
+            self.open_album(),
+        );
+        let name = match category {
+            Category::Composers => "composers",
+            Category::Years => "years",
+        };
+        self.add(name, &view.root);
+        view
+    }
+
+    fn composers(&self) -> &Rc<CategoryView> {
+        self.composers
+            .get_or_init(|| self.category(Category::Composers))
+    }
+
+    fn years(&self) -> &Rc<CategoryView> {
+        self.years.get_or_init(|| self.category(Category::Years))
+    }
+
+    fn folders(&self) -> &Rc<FoldersView> {
+        self.folders.get_or_init(|| {
+            let view = FoldersView::new(&self.backend, &self.playback);
+            self.add("folders", &view.root);
+            view
+        })
+    }
+
+    fn playlist(&self) -> &Rc<PlaylistView> {
+        self.playlist.get_or_init(|| {
+            let view = PlaylistView::new(&self.backend, &self.playback, &self.covers);
+            self.add("playlist", &view.root);
+            view
+        })
+    }
+
+    /// The smart playlist page.
+    pub(super) fn smart(&self) -> &Rc<SmartPlaylistView> {
+        self.smart.get_or_init(|| {
+            let view = SmartPlaylistView::new(&self.backend, &self.covers, &self.playback);
+            view.install_actions();
+            self.add("smart-playlist", &view.root);
+            view
+        })
+    }
+
+    fn search(&self) -> &Rc<SearchView> {
+        self.search.get_or_init(|| {
+            let view = SearchView::new(&self.backend, &self.covers, &self.playback);
+            let weak = self.window.clone();
+            view.connect_open(move |page| {
+                if let Some(window) = weak.upgrade() {
+                    window.go(page, true);
+                }
+            });
+            let weak = self.window.clone();
+            view.connect_show_all(move |text| {
+                if let Some(window) = weak.upgrade() {
+                    window.show_all_tracks(&text);
+                }
+            });
+            let weak = self.window.clone();
+            view.connect_clear(move || {
+                if let Some(window) = weak.upgrade() {
+                    window.clear_search();
+                }
+            });
+            let weak = self.window.clone();
+            view.connect_use_text(move |text| {
+                if let Some(pages) = weak.upgrade().and_then(|w| w.pages()) {
+                    pages.search_entry.set_text(&text);
+                    pages.search_entry.grab_focus();
+                    pages.search_entry.set_position(-1);
+                }
+            });
+            self.add("search", &view.root);
+            view
+        })
+    }
 }
 
 impl std::fmt::Debug for Pages {
@@ -90,63 +244,26 @@ impl MainWindow {
         covers: &Rc<CoverCache>,
     ) {
         let imp = self.imp();
-        let weak = self.downgrade();
-        let open_album = move |key| {
-            if let Some(window) = weak.upgrade() {
-                window.open_album(key);
-            }
-        };
-        let tracks = TracksView::new(backend, playback, false);
-        let artists = ArtistsView::new(backend, playback, covers, open_album.clone());
-        let genres = GenresView::new(backend, playback, covers, open_album.clone());
-        let composers = CategoryView::new(
-            Category::Composers,
-            backend,
-            playback,
-            covers,
-            open_album.clone(),
-        );
-        let years = CategoryView::new(
-            Category::Years,
-            backend,
-            playback,
-            covers,
-            open_album.clone(),
-        );
-        let folders = FoldersView::new(backend, playback);
-        let playlist = PlaylistView::new(backend, playback, covers);
-        let smart = SmartPlaylistView::new(backend, covers, playback);
-        smart.install_actions();
-        let search = SearchView::new(backend, covers, playback);
-        imp.views.add_named(&tracks.root, Some("tracks"));
-        imp.views.add_named(&artists.root, Some("artists"));
-        imp.views.add_named(&genres.root, Some("genres"));
-        imp.views.add_named(&composers.root, Some("composers"));
-        imp.views.add_named(&years.root, Some("years"));
-        imp.views.add_named(&folders.root, Some("folders"));
-        imp.views.add_named(&playlist.root, Some("playlist"));
-        imp.views.add_named(&smart.root, Some("smart-playlist"));
-        imp.views.add_named(&search.root, Some("search"));
         // Each page is as wide as it needs; a wide page must not widen the window.
         imp.views.set_hhomogeneous(false);
-        if let Some(popover) = imp.menu_button.popover() {
-            popover.set_has_arrow(false);
-        }
         let search_entry = self.search_entry();
         let completion = QueryCompletion::new(&search_entry);
         let pages = Rc::new(Pages {
+            window: self.downgrade(),
+            views: imp.views.get(),
             backend: backend.clone(),
-            tracks,
-            artists,
-            genres,
-            composers,
-            years,
-            folders,
-            playlist,
-            smart,
+            playback: playback.clone(),
+            tracks: OnceCell::new(),
+            artists: OnceCell::new(),
+            genres: OnceCell::new(),
+            composers: OnceCell::new(),
+            years: OnceCell::new(),
+            folders: OnceCell::new(),
+            playlist: OnceCell::new(),
+            smart: OnceCell::new(),
             covers: covers.clone(),
             pins: RefCell::new(Vec::new()),
-            search,
+            search: OnceCell::new(),
             search_entry,
             completion,
             target: RefCell::new(None),
@@ -155,45 +272,6 @@ impl MainWindow {
             before_search: RefCell::new(None),
         });
         imp.pages.replace(Some(pages.clone()));
-
-        let weak = self.downgrade();
-        pages.artists.connect_open(move |key| {
-            if let Some(window) = weak.upgrade() {
-                window.go(Page::Artist(key), true);
-            }
-        });
-        let weak = self.downgrade();
-        pages.genres.connect_open(move |key| {
-            if let Some(window) = weak.upgrade() {
-                window.go(Page::Genre(key), true);
-            }
-        });
-        let weak = self.downgrade();
-        pages.search.connect_open(move |page| {
-            if let Some(window) = weak.upgrade() {
-                window.go(page, true);
-            }
-        });
-        let weak = self.downgrade();
-        pages.search.connect_show_all(move |text| {
-            if let Some(window) = weak.upgrade() {
-                window.show_all_tracks(&text);
-            }
-        });
-        let weak = self.downgrade();
-        pages.search.connect_clear(move || {
-            if let Some(window) = weak.upgrade() {
-                window.clear_search();
-            }
-        });
-        let weak = self.downgrade();
-        pages.search.connect_use_text(move |text| {
-            if let Some(pages) = weak.upgrade().and_then(|w| w.pages()) {
-                pages.search_entry.set_text(&text);
-                pages.search_entry.grab_focus();
-                pages.search_entry.set_position(-1);
-            }
-        });
         self.setup_search(&pages);
         self.guard_text_fields();
         actions::install(self);
@@ -248,8 +326,11 @@ impl MainWindow {
         });
         let weak = self.downgrade();
         entry.connect_activate(move |_| {
-            if let Some(pages) = weak.upgrade().and_then(|w| w.pages()) {
-                pages.search.activate_selected();
+            if let Some(search) = weak
+                .upgrade()
+                .and_then(|w| w.pages()?.search.get().cloned())
+            {
+                search.activate_selected();
             }
         });
         // Up and Down move through the results without leaving the entry.
@@ -268,7 +349,9 @@ impl MainWindow {
                 gdk::Key::Up => -1,
                 _ => return glib::Propagation::Proceed,
             };
-            pages.search.move_selection(by);
+            if let Some(search) = pages.search.get() {
+                search.move_selection(by);
+            }
             glib::Propagation::Stop
         });
         entry.add_controller(keys);
@@ -306,9 +389,9 @@ impl MainWindow {
             let current = self.current_page();
             pages.before_search.replace(current);
             self.go(Page::Search, true);
-            pages.search.refresh_saved();
+            pages.search().refresh_saved();
         }
-        pages.search.search(text);
+        pages.search().search(text);
     }
 
     pub(super) fn current_page(&self) -> Option<Page> {
@@ -336,7 +419,7 @@ impl MainWindow {
     pub(super) fn show_all_tracks(&self, text: &str) {
         let Some(pages) = self.pages() else { return };
         pages.before_search.replace(None);
-        pages.tracks.filter_entry().set_text(text);
+        pages.tracks().filter_entry().set_text(text);
         pages.search_entry.set_text("");
         self.go(Page::Library("tracks"), true);
     }
@@ -355,43 +438,43 @@ impl MainWindow {
         match page {
             Page::Library("tracks") => {
                 pages
-                    .tracks
+                    .tracks()
                     .set_scope(crate::backend::TrackScope::All, &tr("Tracks"));
                 views.set_visible_child_name("tracks");
                 "tracks".into()
             }
             Page::Library("artists") => {
-                pages.artists.show(None);
+                pages.artists().show(None);
                 views.set_visible_child_name("artists");
                 "artists".into()
             }
             Page::Artist(key) => {
-                pages.artists.show(Some(key));
+                pages.artists().show(Some(key));
                 views.set_visible_child_name("artists");
                 "artists".into()
             }
             Page::Library("genres") => {
-                pages.genres.show(None);
+                pages.genres().show(None);
                 views.set_visible_child_name("genres");
                 "genres".into()
             }
             Page::Genre(key) => {
-                pages.genres.show(Some(key));
+                pages.genres().show(Some(key));
                 views.set_visible_child_name("genres");
                 "genres".into()
             }
             Page::Library("composers") => {
-                pages.composers.show();
+                pages.composers().show();
                 views.set_visible_child_name("composers");
                 "composers".into()
             }
             Page::Library("years") => {
-                pages.years.show();
+                pages.years().show();
                 views.set_visible_child_name("years");
                 "years".into()
             }
             Page::Library("folders") => {
-                pages.folders.show();
+                pages.folders().show();
                 views.set_visible_child_name("folders");
                 "folders".into()
             }
@@ -402,16 +485,17 @@ impl MainWindow {
                     .iter()
                     .any(|p| p.key == key && p.kind == PlaylistType::Smart);
                 if smart {
-                    let editing = pages.smart.key() == Some(key) && pages.smart.is_editing();
-                    pages.smart.show(key, editing);
+                    let editing = pages.smart().key() == Some(key) && pages.smart().is_editing();
+                    pages.smart().show(key, editing);
                     views.set_visible_child_name("smart-playlist");
                 } else {
-                    pages.playlist.show(key);
+                    pages.playlist().show(key);
                     views.set_visible_child_name("playlist");
                 }
                 format!("playlist:{}", key.0)
             }
             Page::Search => {
+                pages.search();
                 views.set_visible_child_name("search");
                 String::new()
             }
@@ -423,14 +507,14 @@ impl MainWindow {
     pub(super) fn page_focus_target(&self, name: &str) -> Option<gtk::Widget> {
         let pages = self.pages()?;
         Some(match name {
-            "tracks" => pages.tracks.focus_target(),
-            "artists" => pages.artists.focus_target(),
-            "genres" => pages.genres.focus_target(),
-            "composers" => pages.composers.focus_target(),
-            "years" => pages.years.focus_target(),
-            "folders" => pages.folders.focus_target(),
-            "playlist" => pages.playlist.focus_target(),
-            "smart-playlist" => pages.smart.focus_target(),
+            "tracks" => pages.tracks().focus_target(),
+            "artists" => pages.artists().focus_target(),
+            "genres" => pages.genres().focus_target(),
+            "composers" => pages.composers().focus_target(),
+            "years" => pages.years().focus_target(),
+            "folders" => pages.folders().focus_target(),
+            "playlist" => pages.playlist().focus_target(),
+            "smart-playlist" => pages.smart().focus_target(),
             "search" => pages.search_entry.clone().upcast(),
             "history" => self.history_view()?.focus_target(),
             "home" => self.home_focus_target()?,
@@ -442,14 +526,31 @@ impl MainWindow {
     /// Reloads the pages after the library changed.
     pub(super) fn library_changed(&self) {
         let Some(pages) = self.pages() else { return };
-        pages.tracks.library_changed();
-        pages.artists.library_changed();
-        pages.genres.library_changed();
-        pages.composers.library_changed();
-        pages.years.library_changed();
-        pages.folders.library_changed();
-        pages.playlist.reload();
-        pages.smart.reload();
+        // A page not built yet reads the library when it is.
+        if let Some(view) = pages.tracks.get() {
+            view.library_changed();
+        }
+        if let Some(view) = pages.artists.get() {
+            view.library_changed();
+        }
+        if let Some(view) = pages.genres.get() {
+            view.library_changed();
+        }
+        for view in [pages.composers.get(), pages.years.get()]
+            .into_iter()
+            .flatten()
+        {
+            view.library_changed();
+        }
+        if let Some(view) = pages.folders.get() {
+            view.library_changed();
+        }
+        if let Some(view) = pages.playlist.get() {
+            view.reload();
+        }
+        if let Some(view) = pages.smart.get() {
+            view.reload();
+        }
         self.load_playlists(None);
         self.load_pins();
     }
@@ -524,12 +625,12 @@ impl MainWindow {
     fn current_target(&self) -> Option<Target> {
         let pages = self.pages()?;
         match self.imp().views.visible_child_name().as_deref() {
-            Some("tracks") => pages.tracks.target(),
-            Some("artists") => pages.artists.target(),
-            Some("playlist") => pages.playlist.target(),
-            Some("smart-playlist") => pages.smart.target(),
-            Some("folders") => pages.folders.target(),
-            Some("search") => pages.search.target(),
+            Some("tracks") => pages.tracks().target(),
+            Some("artists") => pages.artists().target(),
+            Some("playlist") => pages.playlist().target(),
+            Some("smart-playlist") => pages.smart().target(),
+            Some("folders") => pages.folders().target(),
+            Some("search") => pages.search().target(),
             _ => None,
         }
     }
@@ -565,11 +666,15 @@ impl MainWindow {
         if let Some(pages) = self.pages()
             && changed.is_some()
         {
-            if pages.playlist.key() == changed {
-                pages.playlist.reload();
+            if let Some(view) = pages.playlist.get()
+                && view.key() == changed
+            {
+                view.reload();
             }
-            if pages.smart.key() == changed {
-                pages.smart.reload();
+            if let Some(view) = pages.smart.get()
+                && view.key() == changed
+            {
+                view.reload();
             }
         }
         self.load_playlists(None);
@@ -661,9 +766,15 @@ impl MainWindow {
     /// Shows changed ratings where tracks are listed.
     pub(crate) fn ratings_changed(&self, keys: &[TrackKey], stars: Option<u8>) {
         if let Some(pages) = self.pages() {
-            pages.tracks.ratings_changed(keys, stars);
-            pages.artists.ratings_changed(keys, stars);
-            pages.playlist.ratings_changed(keys, stars);
+            if let Some(view) = pages.tracks.get() {
+                view.ratings_changed(keys, stars);
+            }
+            if let Some(view) = pages.artists.get() {
+                view.ratings_changed(keys, stars);
+            }
+            if let Some(view) = pages.playlist.get() {
+                view.ratings_changed(keys, stars);
+            }
         }
         if let Some(album) = self.imp().album.borrow().as_ref() {
             album.ratings_changed(keys, stars);
@@ -711,8 +822,8 @@ impl MainWindow {
         match self.playlist_row(key).map(|p| p.kind) {
             Some(PlaylistType::Folder) => self.ask_folder_name(key),
             Some(PlaylistType::Smart) => {
-                self.open_smart_playlist(key, pages.smart.is_editing());
-                let name = pages.smart.name_label();
+                self.open_smart_playlist(key, pages.smart().is_editing());
+                let name = pages.smart().name_label();
                 let current = self.playlist_row(key).map(|p| p.name).unwrap_or_default();
                 let weak = self.downgrade();
                 super::playlists::ask_name(
@@ -727,10 +838,10 @@ impl MainWindow {
                 );
             }
             _ => {
-                if pages.playlist.key() != Some(key) {
+                if pages.playlist().key() != Some(key) {
                     self.go(Page::Playlist(key), true);
                 }
-                pages.playlist.ask_name();
+                pages.playlist().ask_name();
             }
         }
     }
@@ -738,7 +849,7 @@ impl MainWindow {
     /// Opens the smart playlist `key`, viewing or editing its rules.
     pub(crate) fn open_smart_playlist(&self, key: PlaylistKey, editing: bool) {
         let Some(pages) = self.pages() else { return };
-        pages.smart.show(key, editing);
+        pages.smart().show(key, editing);
         self.go(Page::Playlist(key), true);
         self.imp().views.set_visible_child_name("smart-playlist");
     }
@@ -976,8 +1087,8 @@ impl MainWindow {
             .activate(|window: &Self, _, _| {
                 let Some(pages) = window.pages() else { return };
                 match window.imp().views.visible_child_name().as_deref() {
-                    Some("tracks") => pages.tracks.select_all(),
-                    Some("playlist") => pages.playlist.select_all(),
+                    Some("tracks") => pages.tracks().select_all(),
+                    Some("playlist") => pages.playlist().select_all(),
                     _ => {}
                 }
             })
@@ -1248,8 +1359,8 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn smart_playlist_state(&self) -> (Vec<String>, String, usize) {
         self.pages().map_or_else(Default::default, |p| {
-            let (chips, text) = p.smart.rule_texts();
-            (chips, text, p.smart.track_count())
+            let (chips, text) = p.smart().rule_texts();
+            (chips, text, p.smart().track_count())
         })
     }
 
@@ -1257,14 +1368,14 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn smart_playlist_text(&self, text: &str) {
         if let Some(pages) = self.pages() {
-            pages.smart.enter_text(text);
+            pages.smart().enter_text(text);
         }
     }
 
     /// Opens the open playlist's more menu (for tests and screenshots).
     #[doc(hidden)]
     pub fn demo_playlist_more_menu(&self) -> Option<gtk::Popover> {
-        self.pages()?.playlist.demo_more_menu()
+        self.pages()?.playlist().demo_more_menu()
     }
 
     /// The names of the pinned rows (for tests).
@@ -1278,7 +1389,7 @@ impl MainWindow {
     /// The search view (for tests).
     #[doc(hidden)]
     pub fn search_results(&self) -> Option<(usize, usize, usize)> {
-        self.pages().map(|p| p.search.counts())
+        self.pages().map(|p| p.search().counts())
     }
 
     /// Types `text` into the search entry (for tests).
@@ -1294,14 +1405,14 @@ impl MainWindow {
     /// searched (for tests).
     #[doc(hidden)]
     pub fn search_query_state(&self) -> Option<(usize, bool)> {
-        self.pages().and_then(|p| p.search.query_state())
+        self.pages().and_then(|p| p.search().query_state())
     }
 
     /// The names of the saved searches in the side column (for tests).
     #[doc(hidden)]
     pub fn saved_search_names(&self) -> Vec<String> {
         self.pages()
-            .map(|p| p.search.saved_names())
+            .map(|p| p.search().saved_names())
             .unwrap_or_default()
     }
 
@@ -1347,13 +1458,13 @@ impl MainWindow {
     /// How many tracks the track table holds and the batches it fetched (for tests).
     #[doc(hidden)]
     pub fn track_table_stats(&self) -> (u32, u64) {
-        self.pages().map_or((0, 0), |p| p.tracks.stats())
+        self.pages().map_or((0, 0), |p| p.tracks().stats())
     }
 
     /// The vertical adjustment of the track table (for tests).
     #[doc(hidden)]
     pub fn track_table_adjustment(&self) -> Option<gtk::Adjustment> {
-        self.pages().and_then(|p| p.tracks.vadjustment())
+        self.pages().and_then(|p| p.tracks().vadjustment())
     }
 
     /// Sorts the track table by the given columns, descending where `true`
@@ -1361,7 +1472,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn sort_tracks(&self, keys: &[(crate::backend::TrackColumn, bool)]) {
         if let Some(pages) = self.pages() {
-            pages.tracks.set_sort(
+            pages.tracks().set_sort(
                 keys.iter()
                     .map(|(column, descending)| crate::backend::TrackSort {
                         column: *column,
@@ -1376,7 +1487,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn track_keys(&self, count: usize) -> Vec<TrackKey> {
         self.pages()
-            .map(|p| p.tracks.keys().iter().take(count).copied().collect())
+            .map(|p| p.tracks().keys().iter().take(count).copied().collect())
             .unwrap_or_default()
     }
 
@@ -1384,14 +1495,14 @@ impl MainWindow {
     /// screenshots).
     #[doc(hidden)]
     pub fn demo_track_menu(&self) -> Option<gtk::Popover> {
-        self.pages()?.playlist.demo_menu(0, 3).map(|p| p.upcast())
+        self.pages()?.playlist().demo_menu(0, 3).map(|p| p.upcast())
     }
 
     /// The tiles in view of the Genres page's album grid, and how many show
     /// their cover image (for tests).
     #[doc(hidden)]
     pub fn genre_cover_stats(&self) -> (usize, usize) {
-        self.pages().map_or((0, 0), |p| p.genres.cover_stats())
+        self.pages().map_or((0, 0), |p| p.genres().cover_stats())
     }
 
     /// Opens the context menu of the first track of the album page (for
@@ -1410,7 +1521,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn demo_select_tracks(&self, start: u32, count: u32) {
         if let Some(pages) = self.pages() {
-            pages.tracks.select_rows(start, count);
+            pages.tracks().select_rows(start, count);
         }
     }
 
@@ -1418,7 +1529,7 @@ impl MainWindow {
     /// does; the entry, if the edit began (for tests).
     #[doc(hidden)]
     pub fn demo_edit_track_cell(&self, column: crate::backend::TrackColumn) -> Option<gtk::Entry> {
-        self.pages().and_then(|p| p.tracks.demo_edit(column))
+        self.pages().and_then(|p| p.tracks().demo_edit(column))
     }
 
     /// The texts the other selected rows show while a cell of `column` is
@@ -1429,7 +1540,7 @@ impl MainWindow {
         column: crate::backend::TrackColumn,
     ) -> (Vec<String>, (String, String)) {
         self.pages()
-            .map(|p| (p.tracks.previewed(column), p.tracks.status_texts()))
+            .map(|p| (p.tracks().previewed(column), p.tracks().status_texts()))
             .unwrap_or_default()
     }
 
@@ -1437,7 +1548,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn demo_folder_step(&self) {
         if let Some(pages) = self.pages() {
-            pages.folders.demo_step();
+            pages.folders().demo_step();
         }
     }
 
@@ -1483,7 +1594,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn demo_rate_track_row(&self, position: u32, stars: Option<u8>) -> bool {
         self.pages()
-            .is_some_and(|p| p.tracks.demo_rate(position, stars))
+            .is_some_and(|p| p.tracks().demo_rate(position, stars))
     }
 
     /// The rows marked as playing and whether each playing indicator moves,
@@ -1533,7 +1644,7 @@ impl MainWindow {
     /// (for tests).
     #[doc(hidden)]
     pub fn track_row_rating(&self, position: u32) -> Option<Option<u8>> {
-        self.pages().and_then(|p| p.tracks.shown_rating(position))
+        self.pages().and_then(|p| p.tracks().shown_rating(position))
     }
 
     /// The ratings the album page's track rows show (for tests).
@@ -1557,7 +1668,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn playlist_titles(&self) -> Vec<String> {
         self.pages()
-            .map(|p| p.playlist.titles())
+            .map(|p| p.playlist().titles())
             .unwrap_or_default()
     }
 
@@ -1565,7 +1676,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn list_counts(&self) -> (usize, usize, usize) {
         self.pages().map_or((0, 0, 0), |p| {
-            (p.artists.count(), p.genres.count(), p.folders.count())
+            (p.artists().count(), p.genres().count(), p.folders().count())
         })
     }
 
@@ -1576,10 +1687,10 @@ impl MainWindow {
         let Some(pages) = self.pages() else {
             return false;
         };
-        let Some(artist) = pages.artists.current() else {
+        let Some(artist) = pages.artists().current() else {
             return false;
         };
-        pages.artists.change_photo(artist, path);
+        pages.artists().change_photo(artist, path);
         true
     }
 
@@ -1588,7 +1699,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn shown_artist_photo(&self) -> [(bool, bool); 2] {
         self.pages()
-            .and_then(|p| p.artists.current().map(|a| p.artists.photo_state(a)))
+            .and_then(|p| p.artists().current().map(|a| p.artists().photo_state(a)))
             .unwrap_or_default()
     }
 
@@ -1596,7 +1707,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn browse_counts(&self) -> (usize, usize) {
         self.pages()
-            .map_or((0, 0), |p| (p.composers.count(), p.years.count()))
+            .map_or((0, 0), |p| (p.composers().count(), p.years().count()))
     }
 
     /// Chooses row `index` of the Composers (`years` false) or Years list and
@@ -1607,9 +1718,9 @@ impl MainWindow {
             return String::new();
         };
         let view = if years {
-            &pages.years
+            &pages.years()
         } else {
-            &pages.composers
+            &pages.composers()
         };
         view.choose(index);
         view.shown_name()

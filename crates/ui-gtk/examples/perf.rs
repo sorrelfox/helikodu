@@ -268,6 +268,22 @@ fn cpu() -> Cpu {
     cpu
 }
 
+/// The CPU seconds of each thread so far, by thread name.
+fn thread_cpu() -> std::collections::HashMap<String, f64> {
+    let mut by_name = std::collections::HashMap::new();
+    if let Ok(tasks) = std::fs::read_dir("/proc/self/task") {
+        for task in tasks.flatten() {
+            let dir = task.path();
+            let name = std::fs::read_to_string(dir.join("comm"))
+                .map(|n| n.trim().to_owned())
+                .unwrap_or_default();
+            *by_name.entry(name).or_insert(0.0) +=
+                schedstat(&format!("{}/schedstat", dir.display())).unwrap_or(0.0);
+        }
+    }
+    by_name
+}
+
 /// Percentile of sorted values.
 fn percentile(sorted: &[f64], p: f64) -> f64 {
     if sorted.is_empty() {
@@ -338,6 +354,40 @@ fn widgets(window: &MainWindow, report: &mut Report, when: &str) {
         &format!("widgets_{when}.mapped"),
         all.iter().filter(|w| w.is_mapped()).count() as f64,
     );
+    // Menus and other popovers are built with their buttons, shown or not.
+    let in_popovers = all
+        .iter()
+        .filter(|w| w.ancestor(gtk::Popover::static_type()).is_some())
+        .count();
+    report.number(&format!("widgets_{when}.in_popovers"), in_popovers as f64);
+    if let Some(dump) = std::env::var_os("HK_PERF_WIDGETS") {
+        let mut lines = String::new();
+        // Where the widgets are: the subtrees of more than 50 widgets with no
+        // child of more than half of them.
+        for widget in &all {
+            let n = descendants(widget).len();
+            if n > 50 {
+                let biggest = descendants(widget)
+                    .iter()
+                    .filter(|c| c.parent().as_ref() == Some(widget))
+                    .map(|c| descendants(c).len())
+                    .max()
+                    .unwrap_or(0);
+                if biggest * 2 < n {
+                    lines += &format!(
+                        "{when}: {n} widgets under {} {:?} (in {})\n",
+                        widget.type_().name(),
+                        widget.css_classes(),
+                        widget
+                            .parent()
+                            .map(|p| p.type_().name().to_owned())
+                            .unwrap_or_default()
+                    );
+                }
+            }
+        }
+        let _ = std::fs::write(format!("{}.{when}", dump.to_string_lossy()), lines);
+    }
     let mut types: Vec<(glib::Type, usize)> = types.into_iter().collect();
     types.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
     let top: Vec<String> = types
@@ -439,10 +489,27 @@ async fn idle(window: &MainWindow, seconds: u64, report: &mut Report, prefix: &s
         )
     });
     let start = cpu();
+    let threads_start = thread_cpu();
     let t0 = Instant::now();
     glib::timeout_future_seconds(u32::try_from(seconds).unwrap_or(60)).await;
     let elapsed = t0.elapsed().as_secs_f64();
     let end = cpu();
+    // The busiest threads, by name (threads of one name added up).
+    let mut busiest: Vec<(String, f64)> = thread_cpu()
+        .into_iter()
+        .map(|(name, t)| {
+            let before = threads_start.get(&name).copied().unwrap_or(0.0);
+            (name, (t - before) / elapsed * 100.0)
+        })
+        .filter(|(_, pct)| *pct >= 0.01)
+        .collect();
+    busiest.sort_by(|a, b| b.1.total_cmp(&a.1));
+    let busiest: Vec<String> = busiest
+        .iter()
+        .take(4)
+        .map(|(name, pct)| format!("{name} {pct:.2} %"))
+        .collect();
+    report.text(&format!("{prefix}.busiest_threads"), &busiest.join(", "));
     if let Some((id, clock)) = handler {
         clock.disconnect(id);
     }

@@ -14,7 +14,8 @@
 //! the program, or go away when the panel restarts. [`TrayHooks::host`] is
 //! called with `true` or `false` each time that changes (and once after
 //! starting); the item registers again whenever a watcher appears. Without a
-//! host there is no icon, and the front end hides its tray settings.
+//! host there is no icon, and the front end hides its tray settings;
+//! [`host_present`] asks whether there is one without serving an item.
 //!
 //! Clicks, scrolling and menu items reach the hooks on zbus's executor thread;
 //! a GLib front end sends them on to its main context.
@@ -436,6 +437,28 @@ async fn follow_watcher(connection: &Connection, shared: &Shared, name: &str) {
             (shared.hooks.host)(shown);
         }
     }
+}
+
+/// Whether the desktop has a tray right now: a StatusNotifierWatcher on the
+/// session bus with a host registered. Asks without registering an item, so
+/// it can be asked while the icon is off. Blocks for the round trips.
+pub fn host_present() -> bool {
+    zbus::block_on(async {
+        match Connection::session().await {
+            Ok(connection) => check_in(&connection, "", false).await,
+            Err(_) => false,
+        }
+    })
+}
+
+/// [`host_present`] on the bus at `address`, such as a private bus in a test.
+pub fn host_present_at(address: &str) -> bool {
+    zbus::block_on(async {
+        match zbus::connection::Builder::address(address).build().await {
+            Ok(connection) => check_in(&connection, "", false).await,
+            Err(_) => false,
+        }
+    })
 }
 
 /// Registers the item (when `register`) and says whether a host is there.

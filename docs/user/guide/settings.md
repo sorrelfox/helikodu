@@ -26,10 +26,10 @@ Type in **Search settings** above the pages to find a setting by its name, its e
 - **Tables**: **Shade every second row**.
 - **Language**: **Same as the desktop**; Helikodu uses the language of your desktop.
 - **Notifications**: **Show a notification when the track changes**. It is not shown while the Helikodu window is in front.
-- **System tray**: **Show an icon in the tray**. A click on the icon shows or hides the window, scrolling over it changes the volume, and its menu has the playing track, the playback controls, **Hide the window**, **Mini player** and **Quit**.
-- **Closing the window**: **Keeps playing in the tray** or **Quits Helikodu**. **Ctrl+Q** always quits.
+- **System tray**: **Show an icon in the tray** (off by default). A click on the icon shows or hides the window, scrolling over it changes the volume, and its menu has the playing track, the playback controls, **Hide the window**, **Mini player** and **Quit**.
+- **Closing the window**: **Quits Helikodu** (the default) or **Keeps playing in the tray**. **Ctrl+Q** always quits. The first time the window goes to the tray, a notification says so.
 
-The two tray rows are shown only where the desktop has a system tray (KDE Plasma has one; GNOME needs an extension such as AppIndicator). Without a tray there is no icon and closing the window quits.
+The two tray rows are shown only where the desktop has a system tray (KDE Plasma has one; GNOME needs an extension such as AppIndicator). Without a tray, or with the icon off, there is no icon and closing the window quits. If the tray goes away while the window is in it (the panel restarts, the icon is turned off), the window comes back.
 
 High-contrast and reduced-motion preferences of the desktop are followed as well.
 

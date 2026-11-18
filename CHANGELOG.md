@@ -76,6 +76,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - The player deck at the bottom of the window follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.
+- The tray icon is off by default, and closing the window quits Helikodu by default. Settings files written before this change take the new defaults (**System tray** and **Closing the window** in Settings › Appearance turn them on again). Turning the icon on or off takes effect at once.
 
 ### Fixed
 
@@ -115,6 +116,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - HES (PC Engine) game music is no longer played: libgme's HES emulator reads outside its memory on damaged files.
 - A MIDI file without tracks is refused instead of stopping the program.
 - DSDIFF files whose property chunk claims an impossible size are refused cleanly.
+- Closing the window while music played could leave Helikodu playing with no window, until the process was killed: it kept playing in the tray even where no tray icon could be seen. Closing now quits, also with other Helikodu windows open; it keeps playing in the tray only when the settings ask for it and a tray shows the icon right now, the first time with a notification that says how to quit, and the window comes back when the tray goes away.
+- Playing with the window hidden no longer looks through every artist of the library at each track change (about 80 ms of work at 100,000 tracks when the track's artist credit is no artist of the list).
+- Less memory: the library pages, Home, History, Statistics, the main menu, the menu bar and the menus of the pages' buttons are built when first opened instead of at start-up (about 2,600 fewer widgets in the window after start-up).
 - Naming patterns with square brackets nested more than 16 deep are refused with a message instead of crashing; folder names cut short to fit the file system no longer end in a dot or a space under the portable rules.
 
 ## [0.2.0] - 2026-11-18

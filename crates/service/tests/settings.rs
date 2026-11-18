@@ -66,7 +66,7 @@ fn changes_are_saved_announced_and_read_back() {
     assert!(events.try_recv().is_err());
 
     let text = fs::read_to_string(&path).unwrap();
-    assert!(text.contains("version = 1"), "{text}");
+    assert!(text.contains("version = 2"), "{text}");
     assert!(text.contains("accent = \"green\""), "{text}");
     let again = SettingsStore::open(&path, EventBus::new());
     assert_eq!(again.get(), store.get());
@@ -95,7 +95,7 @@ fn an_old_file_is_migrated() {
     store.update(|s| s.playback.seek_step_s = 10).unwrap();
     let text = fs::read_to_string(&path).unwrap();
     assert!(
-        text.contains("version = 1") && text.contains("buffer_ms = 300"),
+        text.contains("version = 2") && text.contains("buffer_ms = 300"),
         "{text}"
     );
 }

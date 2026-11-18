@@ -10,22 +10,19 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
 use super::{MainWindow, Page};
-use crate::backend::Backend;
-use crate::models::CoverCache;
-use crate::playback::Playback;
 use crate::views::home::HomeView;
 
 /// The name of the page in the view stack and the sidebar.
 pub(crate) const PAGE: &str = "home";
 
 impl MainWindow {
-    pub(super) fn setup_home(
-        &self,
-        backend: &Backend,
-        playback: &Rc<Playback>,
-        covers: &Rc<CoverCache>,
-    ) {
-        let view = HomeView::new(backend, playback, covers);
+    /// The Home page, built when it is first wanted.
+    fn home_view(&self) -> Option<Rc<HomeView>> {
+        if let Some(view) = self.imp().home_view.borrow().clone() {
+            return Some(view);
+        }
+        let pages = self.pages()?;
+        let view = HomeView::new(&pages.backend, &pages.playback, &pages.covers);
         let weak = self.downgrade();
         view.connect_open(move |key| {
             if let Some(window) = weak.upgrade() {
@@ -41,11 +38,8 @@ impl MainWindow {
             }
         });
         self.imp().views.add_named(&view.root, Some(PAGE));
-        self.imp().home_view.replace(Some(view));
-    }
-
-    fn home_view(&self) -> Option<Rc<HomeView>> {
-        self.imp().home_view.borrow().clone()
+        self.imp().home_view.replace(Some(view.clone()));
+        Some(view)
     }
 
     /// Shows the Home page.
@@ -59,7 +53,9 @@ impl MainWindow {
 
     /// Reads Home again after the library changed.
     pub(super) fn home_changed(&self) {
-        if let Some(view) = self.home_view() {
+        // Not built yet, it reads the library when it is.
+        let built = self.imp().home_view.borrow().clone();
+        if let Some(view) = built {
             view.library_changed();
         }
     }

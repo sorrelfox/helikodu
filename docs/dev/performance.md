@@ -21,7 +21,7 @@ helikodu-cli scan --database /tmp/lib.db target/synth-library/flac-100000-seed1
 tests/ui/perf.py --database /tmp/lib.db --idle-secs 30   # start-up, memory, frames, idle
 ```
 
-`perf.py` (see [tests/ui/README.md](../../tests/ui/README.md)) runs the `perf` example of `helikodu-ui-gtk` under a headless compositor. Besides the budgets it reports the RSS after opening the track table and the number of widgets in the window, shown and hidden.
+`perf.py` (see [tests/ui/README.md](../../tests/ui/README.md)) runs the `perf` example of `helikodu-ui-gtk` under a headless compositor. Besides the budgets it reports the RSS after opening the track table, the number of widgets in the window (shown, hidden and inside popovers), and the busiest threads while playing. With `HK_PERF_WIDGETS=PREFIX` in the environment the `perf` example also writes, to `PREFIX.<when>`, every subtree of more than 50 widgets whose children each hold less than half of them: where the widgets are.
 
 The library queries behind the views are timed by the `queries` example, over a copy of a library (it creates and deletes one smart playlist):
 
@@ -89,6 +89,34 @@ Before the change, filtering the track table by one letter read the matches 1,00
 
 The query plans of the facets, statistics, history and missing-files queries use the existing indexes (`history_started`, `history_identity`, `files_missing`, `track_people_role`, `tracks_identity`); the whole-library facet and statistics queries read every track once, which no index avoids. No index was added.
 
+### Building pages when first opened
+
+Measured on 2026-11-18 as above (100k, three warm starts, 60 s idle phases). Before: the state described in the table above; after: the library pages, Home, History, Statistics and the menus built when first opened, and the artist lookup of the deck's credit line fixed.
+
+| Check | Before | After | Budget |
+|---|---|---|---|
+| Warm start, first frame / with albums | 314 / 398 ms | 251 / 335 ms | 1.0 s |
+| Widgets after start-up (shown) | 4,433 (269) | 1,806 (269) | |
+| Widgets after scrolling tracks (shown) | 8,331 (510) | 5,835 (510) | |
+| RSS after start-up | 223 MB | 206 MB | 250 MB |
+| RSS after scrolling albums | 248 MB | 234 MB | 250 MB |
+| RSS after opening tracks | 271 MB | 258 MB | 250 MB |
+| RSS after scrolling tracks | 277 MB | 264 MB | 250 MB |
+| RSS after scrolling tracks, without the GL driver's libraries | 216 MB | 203 MB | |
+| Playing, window hidden / minimized (one-second tracks) | 6.3 / 4.9 % | 0.78 / 0.80 % | |
+| Idle frames, scrolling | none; p95 16.7 ms | none; p95 16.7 ms | |
+
+The idle CPU while paused read 0.64 % in the run after the change: the daily library backup (`helikodu-backup`) happened to run in that minute; it is not periodic work of the window. Stopped, the process used 0.017 %.
+
+**Playing with the window hidden.** The synthetic tracks last one second, so a track starts every second. With 3-minute tracks (two generated FLAC files) the process used 0.30 % of a core while hidden even before the change, and with one-second tracks in a library of 1,000 tracks 0.8 %; at 100k it was 5 %, nearly all on the front end's query thread (`helikodu-worker`). The deck's credit line (`NowLinks`) asks whether the track's artist credit names an artist; when it named none of the artist list (a credit such as "A feat. B", or the synthetic library's track artists), the lookup read every artist of the library again (about 80 ms at 100k), at every track change. Names found missing are now remembered until the library changes. What is left while hidden is decoding, the null output and about five main-thread wake-ups a second (the playing state, not drawing).
+
+**Memory.** Building the views when they are first opened took 2,600 widgets and about 13 MB out of the window, start-up got some 60 ms faster, but the budget is still missed by some 14 MB after the track table was opened. What remains, measured:
+
+- **The track table** holds the rows of about 205 positions (GTK keeps up to 200 list items around the visible ones, whatever the height; this is not configurable): with 8 columns about 3,900 widgets, which cost 18 MB. With only the Title column shown (an experiment) the same scroll ends at 247 MB. Fewer widgets per row would need a row drawn as one widget instead of a `GtkColumnView`.
+- **Accessibility** objects: with `GTK_A11Y=none` the RSS after scrolling tracks is 8 MB lower; the headless session runs the accessibility bus as a desktop does.
+- **Allocator arenas**: with `GLIBC_TUNABLES=glibc.malloc.arena_max=2` it is 11 MB lower (memory freed on the query and service threads stays in their arenas). Setting this needs either the environment (a launcher or package) or `mallopt`, which is `unsafe` and not allowed in the front end's crates.
+- The GL driver's libraries (58 MiB) as before.
+
 ## What was changed
 
 - **Reading page after page.** Lists that wanted every row read them 1,000 at a time with `LIMIT … OFFSET`, which sorts or ranks the whole list again for each page: the album grid, the tracks of smart playlists, and search results in the track table and in the queue. Each now runs its query once (`Library::all_albums`, `Library::all_smart_playlist_tracks`, `Library::search_ids`).
@@ -96,9 +124,11 @@ The query plans of the facets, statistics, history and missing-files queries use
 - **Rows nobody waits for.** The track table and the album grid fetched the rows of every position asked for while scrolling, even of rows scrolled past long ago; after a fast scroll or a jump at 500k this kept a core busy for minutes after the scrolling stopped. Positions whose items are gone are now dropped before each fetch.
 - **One query per row.** The copy count of each row of search results, the queue and the track table took one or two queries per row, and the album of each track was looked up in a map of every track in the library (rebuilt from a query of every track when a track was missing from it). Both now come from one query per batch of rows (`Library::albums_and_copies`), and the map is gone.
 - **Statistics.** The formats and the three quality classes come from one pass over the tracks instead of two; the most played artists and albums start from the played tracks instead of from every track.
+- **Pages built when first opened.** Tracks, Artists, Genres, Composers, Years, Folders, the playlist and smart playlist pages, search results, Home, History and Statistics are built the first time they are shown; changes of the library, ratings and playlists reach only the pages already built. The main menu builds its popover when first opened, the menu bar only while it is shown, and the menu buttons of the pages (sort orders, columns, facet fields, lyrics) when first opened.
+- **Artist lookup of the deck.** See above: names that are no artist are remembered until the library changes.
 - **Scan memory.** The reports of the scan workers waited in an unbounded queue when the database writes fell behind, and every job was made before the first was handed out. The queue is now bounded and the jobs are made as they are handed out: the peak RSS of a first scan of 500,000 files fell from 1.37 GB to 337 MB.
 
 ## What is left
 
-- **Memory at 100k.** The window holds some 4,400 widgets after start-up of which about 260 are shown: the pages not shown are built at start-up (about 1,800 widgets), the menu bar and menu buttons build their menus up front (about 1,000), and the album grid keeps some 900 widgets of tiles off screen. Opening the track table adds about 3,700 widgets: GTK keeps the rows of about 200 positions around the visible ones, at about 5 KB a widget. Building the pages when they are first opened would save the most.
+- **Memory at 100k.** 264 MB after scrolling the track table (203 MB without the GL driver's libraries), against 250 MB: see [Building pages when first opened](#building-pages-when-first-opened) for where the rest goes. The album grid still keeps some 1,000 widgets of tiles around the visible ones, and Now Playing (about 180 widgets) is built at start-up.
 - **Facets over the whole library** take about 0.6 s at 500k; within a choice they are fast.

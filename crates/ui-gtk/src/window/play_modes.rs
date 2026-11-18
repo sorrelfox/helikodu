@@ -59,8 +59,8 @@ impl MainWindow {
     /// Sets up the play modes. Called once from `setup`.
     pub(super) fn setup_play_modes(&self, backend: &Backend, playback: &Rc<Playback>) {
         let imp = self.imp();
-        let menu = imp.menu_button.menu_model();
-        if let Some(view_menu) = menu.as_ref().and_then(|m| submenu(m, &tr("View"))) {
+        let menu: gio::MenuModel = imp.main_menu.get().upcast();
+        if let Some(view_menu) = submenu(&menu, &tr("View")) {
             view_menu.append(
                 Some(&tr("Follow the playing track")),
                 Some("win.follow-playing"),
@@ -99,17 +99,6 @@ impl MainWindow {
         // while no popover follows it and the popovers then build it anew —
         // not while the main menu is open, but once it has closed.
         let shown = Rc::new(std::cell::Cell::new(None));
-        let pending = Rc::new(std::cell::RefCell::new(None::<PlayerView>));
-        if let Some(popover) = imp.menu_button.popover() {
-            let weak = self.downgrade();
-            let pending = pending.clone();
-            popover.connect_closed(move |_| {
-                let view = pending.borrow_mut().take();
-                if let (Some(window), Some(view)) = (weak.upgrade(), view) {
-                    window.refill_playback_menu(&view);
-                }
-            });
-        }
         let weak = self.downgrade();
         playback.connect(move |view, change| {
             let Some(window) = weak.upgrade() else { return };
@@ -126,6 +115,7 @@ impl MainWindow {
                             .menu_button
                             .popover()
                             .is_some_and(|p| p.is_visible());
+                        let pending = &window.imp().pending_playback_menu;
                         if open {
                             pending.replace(Some(view.clone()));
                         } else {
@@ -144,13 +134,19 @@ impl MainWindow {
         });
     }
 
+    /// Shows in the Playback menu what changed while the main menu was open.
+    pub(super) fn main_menu_closed(&self) {
+        let view = self.imp().pending_playback_menu.take();
+        if let Some(view) = view {
+            self.refill_playback_menu(&view);
+        }
+    }
+
     /// Fills the Playback menu for `view` and has the main menu and the menu
     /// bar build their popovers anew.
     fn refill_playback_menu(&self, view: &PlayerView) {
         let imp = self.imp();
-        let Some(menu) = imp.menu_button.menu_model() else {
-            return;
-        };
+        let menu: gio::MenuModel = imp.main_menu.get().upcast();
         let Some(playback_menu) = submenu(&menu, &tr("Playback")) else {
             return;
         };
@@ -277,12 +273,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn playback_menu_labels(&self) -> Vec<String> {
         let mut out = Vec::new();
-        if let Some(menu) = self
-            .imp()
-            .menu_button
-            .menu_model()
-            .and_then(|m| submenu(&m, &tr("Playback")))
-        {
+        if let Some(menu) = submenu(self.imp().main_menu.upcast_ref(), &tr("Playback")) {
             labels(menu.upcast_ref(), &mut out);
         }
         out
@@ -291,11 +282,7 @@ impl MainWindow {
     /// The Playback menu (for tests and screenshots).
     #[doc(hidden)]
     pub fn playback_menu(&self) -> Option<gio::MenuModel> {
-        self.imp()
-            .menu_button
-            .menu_model()
-            .and_then(|m| submenu(&m, &tr("Playback")))
-            .map(|m| m.upcast())
+        submenu(self.imp().main_menu.upcast_ref(), &tr("Playback")).map(|m| m.upcast())
     }
 
     /// The deck's shuffle and repeat buttons.

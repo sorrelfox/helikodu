@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use helikodu_desktop::tray::{
     ITEM_INTERFACE, ITEM_PATH, MENU_INTERFACE, MENU_PATH, Tray, TrayAction, TrayConfig,
-    TrayContent, TrayHooks, TrayMenuItem,
+    TrayContent, TrayHooks, TrayMenuItem, host_present_at,
 };
 use zbus::{Connection, OwnedVariant, interface};
 
@@ -109,6 +109,29 @@ fn menu() -> Vec<TrayMenuItem> {
         TrayMenuItem::Separator,
         TrayMenuItem::action(TrayAction::Quit, "Quit"),
     ]
+}
+
+#[test]
+fn a_host_is_found_without_registering() {
+    let Some(bus) = PrivateBus::start() else {
+        return;
+    };
+    assert!(!host_present_at(&bus.address));
+    let items = Arc::new(Mutex::new(Vec::new()));
+    let _watcher = zbus::block_on(
+        zbus::connection::Builder::address(bus.address.as_str())
+            .serve_at(
+                "/StatusNotifierWatcher",
+                FakeWatcher {
+                    items: Arc::clone(&items),
+                },
+            )
+            .name("org.kde.StatusNotifierWatcher")
+            .build(),
+    )
+    .unwrap();
+    assert!(host_present_at(&bus.address));
+    assert!(items.lock().unwrap().is_empty());
 }
 
 #[test]

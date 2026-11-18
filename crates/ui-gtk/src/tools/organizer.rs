@@ -977,8 +977,7 @@ fn options() -> Options {
     insert_content.append(&gtk::Label::new(Some(&tr("Insert field"))));
     insert_content.append(&gtk::Image::from_icon_name("pan-down-symbolic"));
     insert.set_child(Some(&insert_content));
-    insert.set_menu_model(Some(&menu));
-    crate::widgets::menu_names::name_menus(&insert);
+    crate::widgets::menu_names::set_menu_later(&insert, &menu);
     insert.add_css_class("hk-menu-btn");
     insert.update_property(&[gtk::accessible::Property::Label(&tr("Insert field"))]);
     insert.set_valign(gtk::Align::Center);
