@@ -369,9 +369,7 @@ impl AlbumPage {
 
     fn show_tracks(&self) {
         let imp = self.imp();
-        while let Some(child) = imp.tracks.first_child() {
-            imp.tracks.remove(&child);
-        }
+        crate::widgets::remove_rows(&imp.tracks);
         let detail = imp.detail.borrow();
         let Some(detail) = detail.as_ref() else {
             return;
@@ -415,5 +413,16 @@ impl AlbumPage {
     /// The play button, for keyboard focus.
     pub(crate) fn focus_target(&self) -> gtk::Widget {
         self.imp().play.get().upcast()
+    }
+
+    /// Opens the context menu of the first track row, as a right click
+    /// would (for tests and screenshots).
+    pub(crate) fn demo_menu(&self) -> Option<gtk::PopoverMenu> {
+        let tracks = self.imp().tracks.get();
+        let row = tracks.row_at_index(0)?;
+        let bounds = row.compute_bounds(&tracks)?;
+        let y = f64::from(bounds.y() + bounds.height() / 2.0);
+        let target = self.row_target(y)?;
+        actions::popup(&tracks, target, Some((240.0, y)))
     }
 }

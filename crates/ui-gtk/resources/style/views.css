@@ -118,7 +118,9 @@ listview.hk-tree treeexpander expander { -gtk-icon-size: 12px; min-width: 12px; 
 
 /* ---- 4. Search ---------------------------------------------------------- */
 
-.hk-search { padding: 0 16px; }
+/* The right padding is the list's margin, so the scrollbar sits beside the rows. */
+.hk-search { padding: 0 8px 0 16px; }
+list.hk-results { margin-right: 8px; }
 .hk-search-head { min-height: 34px; padding: 16px 8px 4px; }
 list.hk-results { background: none; color: var(--hk-t1); padding-bottom: 16px; }
 list.hk-results > row { min-height: 40px; padding: 0 10px; border-radius: 6px; background: none; color: var(--hk-t1); }

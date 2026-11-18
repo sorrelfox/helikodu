@@ -56,6 +56,12 @@ Helikodu has its own design and does not use the desktop's widget theme, so it l
 
 You can choose all of these yourself in **Settings → Appearance**, or try them once with `helikodu --scheme dark --accent violet --style classic`.
 
+## How do I get rid of the title bar on KDE Plasma?
+
+On desktops other than GNOME, Helikodu starts in the *Classic* window style, so KDE Plasma draws its usual title bar above the window. To have no title bar, choose **Integrated** in **Settings → Appearance → Window style** and start Helikodu again (or try it once with `helikodu --style integrated`). Helikodu then draws its own header with the window buttons in it and tells KWin not to decorate the window.
+
+If a title bar is still drawn, a KWin rule forces it: look in **System Settings → Window Management → Window Rules** for a rule that matches Helikodu (or every window) and sets **No titlebar and frame**, and remove that property or set it to **Do Not Affect**. A rule can also hide the title bar in the *Classic* style: add **No titlebar and frame**, **Force**, **Yes** for the window class `io.github.sorrelfox.Helikodu`.
+
 ## Where are my settings and my library?
 
 Settings are in `~/.config/helikodu/settings.toml`, the library (with ratings, play counts and playlists) in `~/.local/share/helikodu/library.db`, the last session in `~/.local/state/helikodu/`, and cover thumbnails in `~/.cache/helikodu/`. See [Where Helikodu keeps its files](guide/files.md).

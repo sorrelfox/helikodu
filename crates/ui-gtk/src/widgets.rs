@@ -46,6 +46,18 @@ pub(crate) fn label(text: &str, classes: &[&str]) -> gtk::Label {
     label
 }
 
+/// Removes every row of `list` and leaves its other children, such as a
+/// context menu open on it (removing that would fail, again and again).
+pub(crate) fn remove_rows(list: &gtk::ListBox) {
+    let mut child = list.first_child();
+    while let Some(widget) = child {
+        child = widget.next_sibling();
+        if widget.is::<gtk::ListBoxRow>() {
+            list.remove(&widget);
+        }
+    }
+}
+
 /// An icon-only button with its tooltip and accessible name.
 pub(crate) fn icon_button(icon: &str, name: &str) -> gtk::Button {
     let button = gtk::Button::from_icon_name(icon);

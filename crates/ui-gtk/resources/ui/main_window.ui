@@ -273,8 +273,22 @@ SPDX-License-Identifier: GPL-3.0-or-later
                       <object class="GtkOverlay" id="toast_overlay">
                         <property name="vexpand">True</property>
                         <property name="child">
-                          <object class="GtkStack" id="views">
+                          <!-- The views scroll sideways when the window is
+                               narrower than the view needs, so the sidebar
+                               and the panel always keep their width. -->
+                          <object class="GtkScrolledWindow" id="views_scroller">
+                            <property name="hscrollbar-policy">automatic</property>
+                            <property name="vscrollbar-policy">never</property>
+                            <property name="propagate-natural-width">True</property>
+                            <property name="propagate-natural-height">True</property>
                             <property name="vexpand">True</property>
+                            <property name="hexpand">True</property>
+                            <style><class name="hk-views-scroller"/></style>
+                            <property name="child">
+                              <object class="GtkStack" id="views">
+                                <property name="vexpand">True</property>
+                              </object>
+                            </property>
                           </object>
                         </property>
                       </object>

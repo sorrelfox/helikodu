@@ -240,7 +240,7 @@ impl Deck {
             let p = p.clone();
             glib::idle_add_local_once(move || p.unparent());
         });
-        popover.popup();
+        crate::views::actions::popup_when_built(&popover);
         popover
     }
 

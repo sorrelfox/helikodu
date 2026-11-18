@@ -1014,7 +1014,7 @@ impl MainWindow {
             let p = p.clone();
             glib::idle_add_local_once(move || p.unparent());
         });
-        popover.popup();
+        crate::views::actions::popup_when_built(&popover);
     }
 
     /// Plays the playlist `key` from its start.
@@ -1107,6 +1107,25 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn demo_track_menu(&self) -> Option<gtk::Popover> {
         self.pages()?.playlist.demo_menu(0, 3).map(|p| p.upcast())
+    }
+
+    /// The tiles in view of the Genres page's album grid, and how many show
+    /// their cover image (for tests).
+    #[doc(hidden)]
+    pub fn genre_cover_stats(&self) -> (usize, usize) {
+        self.pages().map_or((0, 0), |p| p.genres.cover_stats())
+    }
+
+    /// Opens the context menu of the first track of the album page (for
+    /// tests and screenshots).
+    #[doc(hidden)]
+    pub fn demo_album_track_menu(&self) -> Option<gtk::Popover> {
+        self.imp()
+            .album
+            .borrow()
+            .as_ref()?
+            .demo_menu()
+            .map(|p| p.upcast())
     }
 
     /// Selects `count` rows of the track table from `start` (for screenshots).

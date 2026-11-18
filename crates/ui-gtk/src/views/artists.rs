@@ -449,9 +449,7 @@ impl ArtistsView {
 
     fn fill(self: &Rc<Self>, letters: bool) {
         self.quiet.set(true);
-        while let Some(child) = self.list.first_child() {
-            self.list.remove(&child);
-        }
+        crate::widgets::remove_rows(&self.list);
         let rows = self.rows.borrow().clone();
         self.count.set_text(&crate::format::count(rows.len()));
         {

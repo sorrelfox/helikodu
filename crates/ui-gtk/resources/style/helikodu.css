@@ -194,10 +194,15 @@ popover.hk-popover > contents { min-width: 0; min-height: 0; margin: 0; box-shad
 
 /* Every size is set here, so menus keep the design's size under any theme. */
 popover.menu { padding: 0; margin: 0; font-size: 13px; font-weight: 400; }
-popover.menu > contents { min-width: 0; padding: 6px; border-radius: 10px; border: 1px solid var(--hk-line2); background-color: var(--hk-menu); color: var(--hk-t1); box-shadow: var(--hk-menu-shadow); }
-popover.menu.hk-main-menu > contents { min-width: 254px; }
-popover.menu.hk-play-menu > contents { min-width: 274px; }
-popover.menu.hk-context-menu > contents { min-width: 220px; }
+popover.menu > contents { min-width: 0; margin: 0; padding: 6px 0 6px 6px; border-radius: 10px; border: 1px solid var(--hk-line2); background-color: var(--hk-menu); color: var(--hk-t1); box-shadow: var(--hk-menu-shadow); }
+/* The right padding is the items' margin instead, so a menu taller than the
+   screen scrolls with its scrollbar in that gutter, not over the items. */
+popover.menu > contents > scrolledwindow > viewport > stack { margin-right: 6px; }
+popover.menu > contents > scrolledwindow > scrollbar.vertical slider { min-width: 4px; }
+popover.menu > contents > scrolledwindow > scrollbar.overlay-indicator.vertical:not(.dragging):not(.hovering) slider { min-width: 2px; }
+popover.menu.hk-main-menu > contents { min-width: 260px; }
+popover.menu.hk-play-menu > contents { min-width: 280px; }
+popover.menu.hk-context-menu > contents { min-width: 226px; }
 popover.menu modelbutton { min-height: 28px; min-width: 0; padding: 0 8px 0 10px; margin: 0; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; color: var(--hk-t1); }
 popover.menu.hk-play-menu modelbutton { padding: 0 8px; }
 popover.menu modelbutton > box { border-spacing: 0; }
@@ -259,10 +264,19 @@ button.hk-time-toggle, .hk-toast button.action, windowcontrols > button,
 menubutton.hk-sort > button, menubutton.hk-menu > button,
 scale.hk-volume > trough > slider, entry.hk-input { background-image: none; }
 list.hk-list > row, list.hk-queue > row, list.hk-tracks > row { outline-offset: -2px; }
-scrollbar { background: none; border: none; }
-/* Some themes give the scrollbar knob negative margins, which makes GTK warn
-   about negative sizes. */
-scrollbar slider { margin: 0; }
+/* Scrollbars are 8 px wide under every theme (Breeze makes them 16), so an
+   overlay scrollbar stays in the 8 px gutter the lists and menus keep at
+   their right and never covers a row's text or count. Margins are never
+   negative: some themes give the knob negative margins, which makes GTK
+   warn about negative sizes. */
+scrollbar { padding: 0; margin: 0; background: none; border: none; box-shadow: none; }
+scrollbar > range > trough { min-width: 0; min-height: 0; margin: 0; padding: 0; border: none; background: none; box-shadow: none; }
+scrollbar slider { min-width: 6px; min-height: 6px; margin: 1px; border: none; border-radius: 3px; background-color: var(--hk-t3); background-image: none; box-shadow: none; }
+scrollbar.vertical slider { min-height: 30px; }
+scrollbar.horizontal slider { min-width: 30px; }
+scrollbar.overlay-indicator:not(.dragging):not(.hovering) slider { min-width: 4px; min-height: 4px; margin: 2px; }
+scrollbar.overlay-indicator.vertical:not(.dragging):not(.hovering) slider { min-height: 30px; }
+scrollbar.overlay-indicator.horizontal:not(.dragging):not(.hovering) slider { min-width: 30px; }
 
 /* ---- 11. Stop-after mark and play modes ---------------------------------- */
 

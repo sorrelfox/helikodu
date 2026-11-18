@@ -31,6 +31,9 @@ type OpenHandler = Rc<dyn Fn(AlbumKey)>;
 const MAX_COLUMNS: i32 = 12;
 /// No column is narrower: the cover alone, without its margins.
 const NARROWEST_COLUMN: i32 = 160;
+/// How many frames in a row the visibility pass waits for tiles to get their
+/// place before it gives up until the next scroll or bind.
+const MAX_UNPLACED_PASSES: u32 = 30;
 
 mod imp {
     use super::*;
@@ -67,6 +70,8 @@ mod imp {
         pub(super) loaded: Cell<bool>,
         pub(super) click: Cell<u64>,
         pub(super) visibility_pass: Cell<bool>,
+        /// The passes run again in a row for tiles without their place yet.
+        pub(super) unplaced_passes: Cell<u32>,
         pub(super) embedded: Cell<bool>,
     }
 
@@ -242,6 +247,13 @@ impl AlbumsView {
         if let Some(adjustment) = imp.grid.vadjustment() {
             let weak = self.downgrade();
             adjustment.connect_value_changed(move |_| {
+                if let Some(view) = weak.upgrade() {
+                    view.schedule_visibility_pass();
+                }
+            });
+            // A taller grid shows tiles kept below without scrolling.
+            let weak = self.downgrade();
+            adjustment.connect_page_size_notify(move |_| {
                 if let Some(view) = weak.upgrade() {
                     view.schedule_visibility_pass();
                 }
@@ -465,16 +477,23 @@ impl AlbumsView {
         let viewport = imp.grid.get();
         let (w, h) = (f64::from(viewport.width()), f64::from(viewport.height()));
         let mut visible = Vec::new();
+        // A tile just bound may not have its place yet (a grid shown in
+        // another page, as Genres does): the pass runs again once it has.
+        let mut unplaced = false;
         imp.tiles.borrow_mut().retain(|weak| {
             let Some(tile) = weak.upgrade() else {
                 return false;
             };
-            let in_view = tile.is_mapped()
-                && tile.compute_bounds(&viewport).is_some_and(|b| {
-                    let (x, y) = (f64::from(b.x()), f64::from(b.y()));
-                    let (bw, bh) = (f64::from(b.width()), f64::from(b.height()));
-                    x + bw > 0.0 && y + bh > 0.0 && x < w && y < h
-                });
+            let bounds = tile
+                .is_mapped()
+                .then(|| tile.compute_bounds(&viewport))
+                .flatten();
+            unplaced |= bounds.is_some_and(|b| b.width() <= 0.0 || b.height() <= 0.0);
+            let in_view = bounds.is_some_and(|b| {
+                let (x, y) = (f64::from(b.x()), f64::from(b.y()));
+                let (bw, bh) = (f64::from(b.width()), f64::from(b.height()));
+                bw > 0.0 && bh > 0.0 && x + bw > 0.0 && y + bh > 0.0 && x < w && y < h
+            });
             tile.set_in_view(in_view);
             if in_view && let Some(waiting) = tile.waiting_cover() {
                 visible.push(waiting);
@@ -482,6 +501,13 @@ impl AlbumsView {
             true
         });
         covers.prioritise(&visible);
+        let retries = imp.unplaced_passes.get();
+        if unplaced && retries < MAX_UNPLACED_PASSES {
+            imp.unplaced_passes.set(retries + 1);
+            self.schedule_visibility_pass();
+        } else {
+            imp.unplaced_passes.set(0);
+        }
     }
 
     fn mark_playing(&self) {
@@ -592,6 +618,29 @@ impl AlbumsView {
     /// The grid, for keyboard focus.
     pub(crate) fn focus_target(&self) -> gtk::Widget {
         self.imp().grid.get().upcast()
+    }
+
+    /// The tiles in view that show an album, and how many of them show its
+    /// cover image (for tests).
+    pub(crate) fn cover_stats(&self) -> (usize, usize) {
+        let viewport = self.imp().grid.get();
+        let (w, h) = (viewport.width() as f32, viewport.height() as f32);
+        let tiles: Vec<AlbumTile> = self
+            .imp()
+            .tiles
+            .borrow()
+            .iter()
+            .filter_map(glib::WeakRef::upgrade)
+            .filter(|t| {
+                t.key().is_some()
+                    && t.is_mapped()
+                    && t.compute_bounds(&viewport).is_some_and(|b| {
+                        b.width() > 0.0 && b.x() < w && b.y() < h && b.y() + b.height() > 0.0
+                    })
+            })
+            .collect();
+        let covered = tiles.iter().filter(|t| t.cover().has_image()).count();
+        (tiles.len(), covered)
     }
 
     /// The number of albums shown and the batches fetched (for tests).

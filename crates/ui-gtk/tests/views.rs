@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use helikodu_ui_gtk::backend::{Backend, TrackColumn, sample};
+use helikodu_ui_gtk::backend::{AlbumKey, Backend, TrackColumn, sample};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
 
@@ -129,6 +129,7 @@ fn playlists_edit_with_undo(app: &gtk::Application) {
     wait_for("the entries", 2, || window.playlist_titles().len() == 48);
     let before = window.playlist_titles();
     let menu = window.demo_track_menu().expect("the context menu opens");
+    wait_for("the menu", 2, || menu.is_visible());
     menu.popdown();
     spin(20);
     WidgetExt::activate_action(&window, "win.sel-remove", None).unwrap();
@@ -145,6 +146,7 @@ fn the_context_menu_queues(app: &gtk::Application) {
     assert!(window.open_first_playlist());
     wait_for("the entries", 2, || !window.playlist_titles().is_empty());
     let menu = window.demo_track_menu().expect("the context menu opens");
+    wait_for("the menu", 2, || menu.is_visible());
     menu.popdown();
     WidgetExt::activate_action(&window, "win.sel-enqueue", None).unwrap();
     wait_for("the toast", 2, || {
@@ -153,6 +155,7 @@ fn the_context_menu_queues(app: &gtk::Application) {
             .is_some_and(|t| t.contains("added to the queue"))
     });
     let menu = window.demo_track_menu().expect("the context menu opens");
+    wait_for("the menu", 2, || menu.is_visible());
     menu.popdown();
     WidgetExt::activate_action(&window, "win.sel-add-to-playlist", Some(&0u64.to_variant()))
         .unwrap();
@@ -291,6 +294,210 @@ fn frame_times(app: &gtk::Application) {
     window.destroy();
 }
 
+/// The widgets under `root`, depth first.
+fn descendants(root: &gtk::Widget) -> Vec<gtk::Widget> {
+    let mut all = Vec::new();
+    let mut child = root.first_child();
+    while let Some(widget) = child {
+        all.push(widget.clone());
+        all.extend(descendants(&widget));
+        child = widget.next_sibling();
+    }
+    all
+}
+
+/// A context menu opens at its full size: no item is cut off and it does
+/// not scroll while it fits on the screen, and its scrollbar would sit in
+/// the gutter at the right of the items.
+fn the_context_menu_fits(app: &gtk::Application) {
+    let (window, _) = window(app);
+    window.open_album(AlbumKey(1));
+    spin(300);
+    let menu = window
+        .demo_album_track_menu()
+        .expect("the album page's track menu opens");
+    // Without the grab, which the test compositor may refuse to a window
+    // that is not in front; the size is the same.
+    menu.set_autohide(false);
+    wait_for("the menu", 2, || menu.is_mapped());
+    spin(100);
+    let scroller = descendants(menu.upcast_ref())
+        .into_iter()
+        .find_map(|w| w.downcast::<gtk::ScrolledWindow>().ok())
+        .expect("the menu's scrolled window");
+    let adjustment = scroller.vadjustment();
+    assert!(
+        adjustment.upper() <= adjustment.page_size() + 0.5,
+        "the menu scrolls: {} of {} shown",
+        adjustment.page_size(),
+        adjustment.upper()
+    );
+    let (_, natural, _, _) = menu.measure(gtk::Orientation::Vertical, menu.width());
+    assert_eq!(menu.height(), natural, "the menu has its natural height");
+    let items: Vec<gtk::Widget> = descendants(scroller.upcast_ref())
+        .into_iter()
+        .filter(|w| w.css_name() == "modelbutton" && w.is_mapped())
+        .collect();
+    assert!(items.len() >= 9, "every item is shown: {}", items.len());
+    let bar = scroller.vscrollbar();
+    let bar_width = bar.measure(gtk::Orientation::Horizontal, -1).1;
+    for item in &items {
+        let bounds = item.compute_bounds(&scroller).unwrap();
+        assert!(
+            bounds.y() + bounds.height() <= scroller.height() as f32 + 0.5,
+            "an item is cut off"
+        );
+        let gutter = scroller.width() as f32 - (bounds.x() + bounds.width());
+        assert!(
+            gutter >= bar_width as f32,
+            "the scrollbar ({bar_width} px) would cover the items (gutter {gutter})"
+        );
+    }
+    menu.popdown();
+    // The closed menu leaves its list in an idle callback; a list box that
+    // still holds it when destroyed would try to remove it forever.
+    wait_for("the menu to go", 2, || menu.parent().is_none());
+    window.destroy();
+}
+
+/// A sidebar width saved too narrow is widened to the minimum, and the rows
+/// keep their names and counts inside the sidebar.
+fn the_sidebar_keeps_its_minimum(app: &gtk::Application) {
+    let backend = sample::backend(&sample::SampleOptions {
+        albums: 300,
+        playing: None,
+    });
+    let store = backend.ui_state();
+    let mut state = store.load();
+    state.panes.sidebar_width = 40;
+    state.panes.sidebar_visible = true;
+    state.panes.queue_visible = true;
+    store.save(&state).unwrap();
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Classic);
+    window.set_default_size(960, 600);
+    window.present();
+    spin(300);
+    for page in ["albums", "genres", "artists", "tracks"] {
+        window.open_page(page);
+        spin(300);
+        let sidebar = descendants(window.upcast_ref())
+            .into_iter()
+            .find(|w| w.has_css_class("hk-sidebar"))
+            .expect("the sidebar");
+        let bounds = sidebar.compute_bounds(&window).unwrap();
+        assert!(
+            bounds.width() >= 180.0,
+            "{page}: the sidebar is {} px wide",
+            bounds.width()
+        );
+        assert!(
+            bounds.x() >= 0.0,
+            "{page}: the sidebar starts left of the window"
+        );
+        for label in descendants(&sidebar)
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::Label>().ok())
+            .filter(|l| l.is_mapped() && !l.text().is_empty())
+        {
+            let b = label.compute_bounds(&window).unwrap();
+            assert!(
+                b.x() >= bounds.x() && b.x() + b.width() <= bounds.x() + bounds.width() + 0.5,
+                "{page}: \"{}\" is cut off",
+                label.text()
+            );
+        }
+    }
+    window.destroy();
+}
+
+/// Every scrolled list leaves room at the right of its rows for the
+/// scrollbar, so it never covers a count.
+fn scrollbars_leave_room(app: &gtk::Application) {
+    let (window, _) = window(app);
+    for page in ["albums", "genres", "artists", "folders"] {
+        window.open_page(page);
+        spin(400);
+        for scroller in descendants(window.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::ScrolledWindow>().ok())
+            .filter(|s| s.is_mapped() && s.vscrollbar_policy() != gtk::PolicyType::Never)
+        {
+            let Some(row) = descendants(scroller.upcast_ref())
+                .into_iter()
+                .find(|w| w.css_name() == "row" && w.is_mapped())
+            else {
+                continue;
+            };
+            let bar = scroller.vscrollbar();
+            let bar_width = bar.measure(gtk::Orientation::Horizontal, -1).1;
+            assert!(
+                bar_width <= 8,
+                "{page}: the scrollbar is {bar_width} px wide"
+            );
+            let bounds = row.compute_bounds(&scroller).unwrap();
+            let gutter = scroller.width() as f32 - (bounds.x() + bounds.width());
+            assert!(
+                gutter >= bar_width as f32,
+                "{page}: a list's rows reach under its scrollbar (gutter {gutter}, scrollbar {bar_width})"
+            );
+        }
+    }
+    window.destroy();
+}
+
+/// The Genres page's album grid shows the covers, not the placeholders.
+fn genre_grid_shows_covers(app: &gtk::Application) {
+    let folder = std::env::temp_dir().join(format!("helikodu-views-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let backend = sample::covered_backend(
+        &sample::SampleOptions {
+            albums: 300,
+            playing: None,
+        },
+        &folder,
+    )
+    .unwrap();
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    window.set_default_size(1440, 900);
+    window.present();
+    spin(200);
+    window.open_page("genres");
+    wait_for("the genre's covers", 5, || {
+        let (tiles, covered) = window.genre_cover_stats();
+        tiles > 0 && covered == tiles
+    });
+    window.destroy();
+    let _ = std::fs::remove_dir_all(&folder);
+}
+
+/// The integrated style decorates the window itself (GTK then asks the
+/// compositor for no title bar); the classic style leaves it to the desktop.
+fn window_styles_ask_for_their_decorations(app: &gtk::Application) {
+    let (window, _) = window(app);
+    assert!(
+        window.titlebar().is_some(),
+        "integrated: a titlebar of its own"
+    );
+    assert!(window.is_decorated());
+    assert!(
+        window.has_css_class("csd"),
+        "integrated: client-side decorations"
+    );
+    window.destroy();
+    let backend = sample::backend(&sample::SampleOptions {
+        albums: 10,
+        playing: None,
+    });
+    let window = MainWindow::new(app, &backend, WindowStyle::Classic);
+    assert!(
+        window.titlebar().is_none(),
+        "classic: the desktop's title bar"
+    );
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
@@ -304,6 +511,17 @@ const TESTS: &[Test] = &[
     ("search_and_no_results", search_and_no_results),
     ("menus_open", menus_open),
     ("the_empty_library", the_empty_library),
+    ("the_context_menu_fits", the_context_menu_fits),
+    (
+        "the_sidebar_keeps_its_minimum",
+        the_sidebar_keeps_its_minimum,
+    ),
+    ("scrollbars_leave_room", scrollbars_leave_room),
+    ("genre_grid_shows_covers", genre_grid_shows_covers),
+    (
+        "window_styles_ask_for_their_decorations",
+        window_styles_ask_for_their_decorations,
+    ),
     ("frame_times", frame_times),
 ];
 

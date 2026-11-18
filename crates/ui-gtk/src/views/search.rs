@@ -287,9 +287,7 @@ impl SearchView {
     }
 
     fn show(&self, text: &str, results: SearchResults) {
-        while let Some(child) = self.list.first_child() {
-            self.list.remove(&child);
-        }
+        crate::widgets::remove_rows(&self.list);
         let count = results.artists.len() + results.albums.len() + results.track_total;
         if count == 0 {
             self.empty_title

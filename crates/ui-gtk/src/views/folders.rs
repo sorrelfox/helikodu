@@ -527,9 +527,7 @@ impl FoldersView {
     }
 
     fn show_files(&self) {
-        while let Some(child) = self.files.first_child() {
-            self.files.remove(&child);
-        }
+        crate::widgets::remove_rows(&self.files);
         let playing = self.playing.get();
         for (i, file) in self.listing.borrow().files.iter().enumerate() {
             let row = gtk::ListBoxRow::new();

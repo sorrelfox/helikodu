@@ -152,6 +152,11 @@ impl CoverArt {
         self.imp().wanted.set(cover);
     }
 
+    /// Whether a cover image is shown rather than the placeholder.
+    pub(crate) fn has_image(&self) -> bool {
+        self.imp().texture.borrow().is_some()
+    }
+
     /// The cover the widget should show.
     pub(crate) fn wanted(&self) -> Option<CoverKey> {
         self.imp().wanted.get()

@@ -311,9 +311,7 @@ impl GenresView {
 
     fn fill(self: &Rc<Self>) {
         self.quiet.set(true);
-        while let Some(child) = self.list.first_child() {
-            self.list.remove(&child);
-        }
+        crate::widgets::remove_rows(&self.list);
         let mut rows = self.rows.borrow().clone();
         if self.by_count.get() {
             rows.sort_by_key(|r| std::cmp::Reverse(r.album_count));
@@ -388,6 +386,11 @@ impl GenresView {
     /// The list, for keyboard focus.
     pub(crate) fn focus_target(&self) -> gtk::Widget {
         self.list.clone().upcast()
+    }
+
+    /// The grid's tiles in view and those showing their cover (for tests).
+    pub(crate) fn cover_stats(&self) -> (usize, usize) {
+        self.albums.cover_stats()
     }
 
     /// The number of genres listed (for tests).

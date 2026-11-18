@@ -278,8 +278,23 @@ pub(crate) fn popup(
         let p = p.clone();
         glib::idle_add_local_once(move || p.unparent());
     });
-    popover.popup();
+    popup_when_built(&popover);
     Some(popover)
+}
+
+/// Shows a menu made just now once GTK has finished building it, so that it
+/// opens at its full size. GTK adds the separators between the sections in an
+/// idle callback, and a popover already shown keeps the size it was first
+/// shown at (on Wayland), so a menu shown at once is cut off at the bottom and
+/// scrolls.
+pub(crate) fn popup_when_built(popover: &gtk::PopoverMenu) {
+    let popover = popover.clone();
+    glib::idle_add_local_full(glib::Priority::LOW, move || {
+        if popover.parent().is_some() {
+            popover.popup();
+        }
+        glib::ControlFlow::Break
+    });
 }
 
 /// Whether a key press asks for the context menu: the Menu key or Shift+F10.

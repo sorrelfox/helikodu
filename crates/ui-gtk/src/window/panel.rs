@@ -237,9 +237,7 @@ impl Panel {
             None => imp.now_playing.set_visible(false),
         }
 
-        while let Some(child) = imp.list.first_child() {
-            imp.list.remove(&child);
-        }
+        crate::widgets::remove_rows(&imp.list);
         let queue = &view.queue;
         if queue.items.is_empty() {
             imp.queue_stack.set_visible_child_name("empty");

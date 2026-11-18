@@ -22,11 +22,11 @@ use std::time::{Duration, SystemTime};
 
 use super::{
     AlbumDetail, AlbumFilter, AlbumKey, AlbumQuery, AlbumRow, AlbumScope, AlbumSort, ArtistDetail,
-    ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, DiscGroup, FolderFile, FolderListing,
-    FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts, LibrarySource, NowPlaying,
-    OutputInfo, PlaybackState, PlayerControl, PlayerRequest, PlaylistKey, PlaylistRow,
-    QueueSnapshot, Repeat, SearchResults, SignalState, TrackColumn, TrackKey, TrackQuery, TrackRow,
-    TrackScope, TrackSort, Update,
+    ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, CoverKey, DiscGroup, FolderFile,
+    FolderListing, FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts, LibrarySource,
+    NowPlaying, OutputInfo, PlaybackState, PlayerControl, PlayerRequest, PlaylistKey, PlaylistRow,
+    QueueSnapshot, Repeat, SearchResults, SignalState, ThumbnailState, TrackColumn, TrackKey,
+    TrackQuery, TrackRow, TrackScope, TrackSort, Update,
 };
 
 /// What the sample backend contains and does at the start.
@@ -153,6 +153,8 @@ pub struct SampleLibrary {
     roots: Vec<(PathBuf, FolderState)>,
     /// The tiles past this position stay unloaded, as while a scan runs.
     loaded: usize,
+    /// The thumbnail file every cover shows, when the albums have covers.
+    cover_file: Option<PathBuf>,
 }
 
 fn format(r: &mut Random) -> AudioFormat {
@@ -338,6 +340,7 @@ impl SampleLibrary {
             playlists: Mutex::new(Playlists::default()),
             roots,
             loaded: usize::MAX,
+            cover_file: None,
         };
         library.add_sample_playlists(&mut r);
         library
@@ -530,6 +533,13 @@ impl SampleLibrary {
 }
 
 impl LibrarySource for SampleLibrary {
+    fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {
+        let _ = (cover, size);
+        match &self.cover_file {
+            Some(path) => ThumbnailState::Ready(path.clone()),
+            None => ThumbnailState::Unavailable,
+        }
+    }
     fn counts(&self) -> Result<LibraryCounts, BackendError> {
         let artists = (0..self.artists.len())
             .filter(|i| self.albums.iter().any(|a| a.artist == *i))
@@ -1297,6 +1307,50 @@ pub fn scanning_backend(
     let mut library = SampleLibrary::new(options.albums);
     library.loaded = loaded;
     build_over(library, options, false)
+}
+
+/// The backend of [`backend`] with a cover on every album: each shows the
+/// same thumbnail, a PNG file written into `folder`.
+pub fn covered_backend(options: &SampleOptions, folder: &Path) -> Result<Backend, BackendError> {
+    let path = folder.join("sample-cover.png");
+    write_cover(&path)
+        .map_err(|e| BackendError(format!("cannot write {}: {e}", path.display())))?;
+    let mut library = SampleLibrary::new(options.albums);
+    for album in &mut library.albums {
+        let mut key = [0u8; 32];
+        key[..8].copy_from_slice(&album.row.key.0.to_le_bytes());
+        album.row.cover = Some(CoverKey(key));
+        for track in &mut album.tracks {
+            track.cover = album.row.cover;
+        }
+    }
+    library.cover_file = Some(path);
+    Ok(build_over(library, options, false).0)
+}
+
+/// A 192 px square in two colours, as a thumbnail file.
+fn write_cover(path: &Path) -> Result<(), gtk::glib::BoolError> {
+    const SIDE: usize = 192;
+    let mut pixels = Vec::with_capacity(SIDE * SIDE * 4);
+    for y in 0..SIDE {
+        for x in 0..SIDE {
+            let on = (x / 24 + y / 24) % 2 == 0;
+            pixels.extend_from_slice(if on {
+                &[0x2E, 0x8B, 0x57, 0xFF]
+            } else {
+                &[0xF4, 0xF1, 0xDE, 0xFF]
+            });
+        }
+    }
+    let side = i32::try_from(SIDE).unwrap_or(192);
+    let texture = gtk::gdk::MemoryTexture::new(
+        side,
+        side,
+        gtk::gdk::MemoryFormat::R8g8b8a8,
+        &gtk::glib::Bytes::from_owned(pixels),
+        SIDE * 4,
+    );
+    gtk::gdk::prelude::TextureExt::save_to_png(&texture, path)
 }
 
 fn build(options: &SampleOptions, first_run: bool) -> (Backend, async_channel::Sender<Update>) {
