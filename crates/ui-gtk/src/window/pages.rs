@@ -22,6 +22,7 @@ use crate::backend::{
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
 use crate::playback::Playback;
+use crate::popovers::query_completion::QueryCompletion;
 use crate::views::actions::{self, Origin, Target};
 use crate::views::artists::ArtistsView;
 use crate::views::drag::{self, DraggedTracks};
@@ -41,6 +42,7 @@ pub(crate) struct Pages {
     playlist: Rc<PlaylistView>,
     search: Rc<SearchView>,
     search_entry: gtk::SearchEntry,
+    completion: Rc<QueryCompletion>,
     target: RefCell<Option<Target>>,
     playlists: RefCell<Vec<PlaylistRow>>,
     undo: RefCell<Option<Rc<dyn Fn()>>>,
@@ -79,7 +81,7 @@ impl MainWindow {
         let genres = GenresView::new(backend, playback, covers, open_album.clone());
         let folders = FoldersView::new(backend, playback);
         let playlist = PlaylistView::new(backend, playback, covers);
-        let search = SearchView::new(backend, covers);
+        let search = SearchView::new(backend, covers, playback);
         imp.views.add_named(&tracks.root, Some("tracks"));
         imp.views.add_named(&artists.root, Some("artists"));
         imp.views.add_named(&genres.root, Some("genres"));
@@ -92,6 +94,7 @@ impl MainWindow {
             popover.set_has_arrow(false);
         }
         let search_entry = self.search_entry();
+        let completion = QueryCompletion::new(&search_entry);
         let pages = Rc::new(Pages {
             backend: backend.clone(),
             tracks,
@@ -101,6 +104,7 @@ impl MainWindow {
             playlist,
             search,
             search_entry,
+            completion,
             target: RefCell::new(None),
             playlists: RefCell::new(Vec::new()),
             undo: RefCell::new(None),
@@ -138,6 +142,14 @@ impl MainWindow {
                 window.clear_search();
             }
         });
+        let weak = self.downgrade();
+        pages.search.connect_use_text(move |text| {
+            if let Some(pages) = weak.upgrade().and_then(|w| w.pages()) {
+                pages.search_entry.set_text(&text);
+                pages.search_entry.grab_focus();
+                pages.search_entry.set_position(-1);
+            }
+        });
         self.setup_search(&pages);
         self.guard_text_fields();
         actions::install(self);
@@ -171,6 +183,15 @@ impl MainWindow {
             let text = entry.text().to_string();
             window.search_for(&text);
         });
+        // The query font and the underline follow every keystroke, and so does
+        // the completion.
+        let weak = self.downgrade();
+        entry.connect_changed(move |entry| {
+            crate::query_text::mark(entry, &crate::query_text::read(&entry.text()));
+            if let Some(pages) = weak.upgrade().and_then(|w| w.pages()) {
+                pages.completion.update();
+            }
+        });
         let weak = self.downgrade();
         entry.connect_stop_search(move |_| {
             if let Some(window) = weak.upgrade() {
@@ -191,6 +212,9 @@ impl MainWindow {
             let Some(pages) = weak.upgrade().and_then(|w| w.pages()) else {
                 return glib::Propagation::Proceed;
             };
+            if pages.completion.key(key) {
+                return glib::Propagation::Stop;
+            }
             let by = match key {
                 gdk::Key::Down => 1,
                 gdk::Key::Up => -1,
@@ -245,6 +269,7 @@ impl MainWindow {
             let current = self.current_page();
             pages.before_search.replace(current);
             self.go(Page::Search, true);
+            pages.search.refresh_saved();
         }
         pages.search.search(text);
     }
@@ -1075,6 +1100,49 @@ impl MainWindow {
         if let Some(pages) = self.pages() {
             pages.search_entry.set_text(text);
         }
+    }
+
+    /// The number of tracks the query results list and whether the notice
+    /// about text that cannot be read is shown; `None` while words are
+    /// searched (for tests).
+    #[doc(hidden)]
+    pub fn search_query_state(&self) -> Option<(usize, bool)> {
+        self.pages().and_then(|p| p.search.query_state())
+    }
+
+    /// The names of the saved searches in the side column (for tests).
+    #[doc(hidden)]
+    pub fn saved_search_names(&self) -> Vec<String> {
+        self.pages()
+            .map(|p| p.search.saved_names())
+            .unwrap_or_default()
+    }
+
+    /// The names the completion under the search entry lists (for tests).
+    #[doc(hidden)]
+    pub fn search_completions(&self) -> Vec<String> {
+        self.pages()
+            .map(|p| p.completion.names())
+            .unwrap_or_default()
+    }
+
+    /// Types `text` into the focused search entry and returns the completion
+    /// under it (for screenshots).
+    #[doc(hidden)]
+    pub fn demo_query_completion(&self, text: &str) -> Option<gtk::Popover> {
+        let pages = self.pages()?;
+        pages.search_entry.grab_focus();
+        pages.search_entry.set_text(text);
+        pages.search_entry.set_position(-1);
+        pages.completion.update();
+        Some(pages.completion.popover())
+    }
+
+    /// Whether the search entry is set in the query font (for tests).
+    #[doc(hidden)]
+    pub fn search_entry_is_query(&self) -> bool {
+        self.pages()
+            .is_some_and(|p| p.search_entry.has_css_class("hk-query"))
     }
 
     /// Opens a library page by its name (for tests).

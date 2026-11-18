@@ -4,4 +4,5 @@
 //! Popovers that open from the window's controls.
 
 pub(crate) mod output_switcher;
+pub(crate) mod query_completion;
 pub(crate) mod sleep_timer;

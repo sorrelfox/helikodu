@@ -53,6 +53,10 @@ pub struct GenreKey(pub u64);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct PlaylistKey(pub u64);
 
+/// Identifies a saved search for as long as the backend runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub struct SavedSearchKey(pub u64);
+
 /// Identifies a cover picture: the content hash the thumbnail cache uses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CoverKey(pub [u8; 32]);
@@ -223,6 +227,10 @@ pub struct TrackRow {
     /// How many other byte-identical copies of its file the library has (other
     /// paths to the same file not counted).
     pub copies: u32,
+    /// Its genres, joined with `, `.
+    pub genre: String,
+    /// When it came into the library, if known.
+    pub added: Option<SystemTime>,
 }
 
 /// One disc of an album.
@@ -333,6 +341,10 @@ pub enum TrackColumn {
     Plays,
     /// The length.
     Length,
+    /// The genres.
+    Genre,
+    /// When the track came into the library.
+    Added,
 }
 
 /// One key of a track list's order.
@@ -361,7 +373,8 @@ pub enum TrackScope {
 pub struct TrackQuery {
     /// The part of the library.
     pub scope: TrackScope,
-    /// Words the tracks must match, as in search; empty for all.
+    /// What the tracks must match, as in search: words, or a query of the query
+    /// language when the text has fields; empty for all.
     pub text: String,
     /// The order, most significant key first; empty for album order.
     pub sort: Vec<TrackSort>,
@@ -380,6 +393,19 @@ pub struct PlaylistRow {
     pub duration: Duration,
     /// When it last changed.
     pub modified: Option<SystemTime>,
+}
+
+/// A saved search, as the side column of the search page lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SavedSearchRow {
+    /// The saved search.
+    pub key: SavedSearchKey,
+    /// Its name.
+    pub name: String,
+    /// Its query text.
+    pub text: String,
+    /// How many tracks it finds now.
+    pub count: usize,
 }
 
 /// What a search found.
@@ -538,6 +564,35 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     fn subfolders(&self, path: &Path) -> Result<Vec<FolderRow>, BackendError>;
     /// The audio files in `path`.
     fn folder(&self, path: &Path) -> Result<FolderListing, BackendError>;
+    /// The saved searches in the user's order, each with its count.
+    fn saved_searches(&self) -> Result<Vec<SavedSearchRow>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// Saves `query` as `name`, after the other saved searches.
+    fn save_search(
+        &self,
+        name: &str,
+        query: &helikodu_model::query::Query,
+    ) -> Result<SavedSearchKey, BackendError> {
+        let _ = (name, query);
+        Err(BackendError(crate::i18n::tr(
+            "Searches cannot be saved here.",
+        )))
+    }
+    /// Renames the saved search `key`.
+    fn rename_saved_search(&self, key: SavedSearchKey, name: &str) -> Result<(), BackendError> {
+        let _ = (key, name);
+        Err(BackendError(crate::i18n::tr(
+            "Searches cannot be saved here.",
+        )))
+    }
+    /// Deletes the saved search `key`.
+    fn delete_saved_search(&self, key: SavedSearchKey) -> Result<(), BackendError> {
+        let _ = key;
+        Err(BackendError(crate::i18n::tr(
+            "Searches cannot be saved here.",
+        )))
+    }
 }
 
 /// The window state kept between runs.

@@ -207,7 +207,38 @@ fn catalog_tags(tags: &meta_tags::TrackTags) -> CatalogTags {
         movement: tags.movement.clone(),
         movement_no: tags.movement_number,
         has_lyrics: tags.has_lyrics,
+        other: other_tags(tags),
     }
+}
+
+/// The tags without a column of their own, for `track_tags`: the grouping, labels,
+/// catalogue numbers and comment, then every field the reader did not map, each key
+/// in upper case.
+fn other_tags(tags: &meta_tags::TrackTags) -> Vec<(String, String)> {
+    let named = [
+        ("GROUPING", tags.grouping.iter().collect::<Vec<_>>()),
+        ("LABEL", tags.labels.iter().collect()),
+        ("CATALOGNUMBER", tags.catalog_numbers.iter().collect()),
+        ("COMMENT", tags.comment.iter().collect()),
+    ];
+    let mut other: Vec<(String, String)> = named
+        .into_iter()
+        .flat_map(|(key, values)| {
+            values
+                .into_iter()
+                .map(move |value| (key.to_owned(), value.clone()))
+        })
+        .chain(
+            tags.extra
+                .iter()
+                .map(|(key, value)| (key.to_ascii_uppercase(), value.clone())),
+        )
+        .filter(|(key, value)| !key.is_empty() && !value.trim().is_empty())
+        .collect();
+    // A value given twice under one key is stored once.
+    let mut seen = std::collections::HashSet::new();
+    other.retain(|pair| seen.insert(pair.clone()));
+    other
 }
 
 /// The library's role for a credit; the artists, album artists and composers have
@@ -449,5 +480,31 @@ mod tests {
         assert_eq!(records[1].audio.duration, Some(Duration::from_secs(60)));
         assert_eq!(records[1].tags.title.as_deref(), Some("T2"));
         assert_eq!(records[1].kind, TrackKind::AudioFromVideo);
+    }
+
+    #[test]
+    fn tags_without_a_column_go_to_the_other_tags() {
+        let tags = meta_tags::TrackTags {
+            grouping: Some("Side A".into()),
+            labels: vec!["Label".into()],
+            comment: Some("Nice".into()),
+            extra: vec![
+                ("mood".into(), "Calm".into()),
+                ("mood".into(), "Calm".into()),
+                ("bpm".into(), "120".into()),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            catalog_tags(&tags).other,
+            [
+                ("GROUPING", "Side A"),
+                ("LABEL", "Label"),
+                ("COMMENT", "Nice"),
+                ("MOOD", "Calm"),
+                ("BPM", "120"),
+            ]
+            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+        );
     }
 }

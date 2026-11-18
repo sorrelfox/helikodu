@@ -301,6 +301,9 @@ pub struct CatalogTags {
     pub movement_no: Option<u32>,
     /// Whether the file carries lyrics.
     pub has_lyrics: bool,
+    /// Every other tag as key and value, the key in upper case; a key may repeat.
+    /// The query language finds them as `tag:NAME`.
+    pub other: Vec<(String, String)>,
 }
 
 /// One person credited on a track besides its artists, album artists and composers.

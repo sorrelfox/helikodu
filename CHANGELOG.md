@@ -11,6 +11,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Lyrics: synced and plain lyrics from a `.lrc` or `.txt` file beside the track (any charset) or from its tags (`SYLT`, `USLT`, `LYRICS`, `UNSYNCEDLYRICS`, `©lyr`, APEv2 `Lyrics`), in the Lyrics tab of the right panel. The line sung now stays in the middle; a click on a line plays from there; the offset of each track can be moved in steps of 0.1 s.
 - Copies of the same file are recognised: byte-identical files (content and tags) share one set of play counts, ratings, history and playlist entries, and play from a main copy that another copy replaces when it disappears. The setting `[library.duplicates]` keeps copies out of the library (`on_scan = "skip"`) or shows only the main copy (`show_one`). Copies, and other duplicates found by recording or album track, can be moved to the desktop trash after safety checks; `helikodu-cli duplicates` lists them. Before play counts of copies are first combined, the library is backed up once to `library.db.backup-before-copies`.
 - Now Playing (F11, or a click on the deck's cover): the cover, the track, the synced lyrics or the queue, and the signal path from the file to the device.
+- Search understands the query language: text with fields such as `genre:jazz -genre:fusion` or `added<30d sort:added desc` lists the tracks it selects in a table, with completion of field names and values under the search field, and a notice with an example when part of the query cannot be read. The Tracks filter takes queries too.
+- Saved searches: save a search under a name, and open, rename or delete it from the right column of the search page, which also shows example queries.
+- The Tracks table can show **Genre** and **Added** columns.
+
+### Fixed
+
+- Tags without a field of their own (`MOOD`, `BPM`, `GROUPING`, `LABEL`, `COMMENT` and others) are stored when files are scanned, so `tag:NAME` queries find them, and shuffling by grouping uses the `GROUPING` tag.
 
 ## [0.2.0] - 2026-11-18
 

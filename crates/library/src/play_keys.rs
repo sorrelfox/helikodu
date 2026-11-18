@@ -95,7 +95,7 @@ fn play_keys_of(c: &Connection, track: TrackId) -> rusqlite::Result<Option<PlayK
     c.prepare_cached(
         "SELECT t.album_id, d.path,
                 coalesce((SELECT g.value FROM track_tags g
-                          WHERE g.track_id = t.id AND g.key = 'grouping' LIMIT 1), t.work),
+                          WHERE g.track_id = t.id AND g.key = 'GROUPING' LIMIT 1), t.work),
                 (SELECT p.person_id FROM track_people p
                  WHERE p.track_id = t.id AND p.role = 0 ORDER BY p.position LIMIT 1),
                 s.flags

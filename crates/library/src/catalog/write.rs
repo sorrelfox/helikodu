@@ -16,7 +16,7 @@ use super::covers;
 use super::fingerprint::TrackFingerprint;
 use super::folders::disc_folder;
 use super::ids::{IdentityId, RootId, sql_track_id, track_id_from_sql};
-use super::people::{artists_fold, write_genres, write_people};
+use super::people::{artists_fold, write_genres, write_other_tags, write_people};
 use super::track_record::TrackRecord;
 use crate::copies;
 use crate::db::{display_text, path_from_blob, path_to_blob, unix_time};
@@ -209,7 +209,7 @@ pub(crate) fn finish_tracks(
     Ok(())
 }
 
-/// Writes the rows of `record` (file, track, identity, people, genres) and notes in
+/// Writes the rows of `record` (file, track, identity, people, genres, other tags) and notes in
 /// `regroup` what its albums depend on; [`finish_tracks`] does the rest.
 pub(crate) fn write_track(
     c: &Connection,
@@ -293,6 +293,7 @@ pub(crate) fn write_track(
 
     write_people(c, track, &record.tags, &record.catalog)?;
     write_genres(c, track, &record.tags.genres)?;
+    write_other_tags(c, track, &record.catalog.other)?;
     if let Some(covers) = &record.covers {
         covers::write_track_covers(c, track, dir_id, &record.path, covers)?;
     }

@@ -6,22 +6,64 @@
 //! the matched text in the accent. Up and Down in the entry move through the
 //! rows; Enter plays a track or opens an artist or album. Without results the
 //! page says so and offers to clear the search.
+//!
+//! Text with a field operator is a query of the query language: it lists the
+//! tracks it selects in a table instead. A query that cannot be read keeps the
+//! last one that could, with a notice that says what fails.
+//!
+//! A side column shows examples of the query syntax and the saved searches.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gtk::prelude::*;
-use gtk::{gdk, glib, pango};
+use gtk::{gdk, gio, glib, pango};
+use helikodu_service::library::SyntaxError;
 
-use crate::backend::{Backend, PlayerRequest, SearchResults, TrackRow};
+use crate::backend::{
+    Backend, PlayerRequest, SavedSearchKey, SavedSearchRow, SearchResults, TrackColumn, TrackRow,
+};
 use crate::format;
-use crate::i18n::{fill, tr};
+use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
+use crate::playback::Playback;
+use crate::query_text;
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
+use crate::views::tracks::TracksView;
 use crate::widgets::avatar::Avatar;
 use crate::widgets::{CoverArt, TitleLine, label};
 use crate::window::Page;
+
+/// The examples of the side column: a query and what it shows.
+fn examples() -> [(&'static str, String); 4] {
+    [
+        ("artist:kask year:2018..2021", tr("A field and a range")),
+        (
+            "rating>=4 -genre:ambient",
+            tr("Compare, and exclude with a minus"),
+        ),
+        (
+            "added<30d sort:added desc",
+            tr("Relative dates and sorting"),
+        ),
+        (
+            "title~\"^Intro\" OR duration<30s",
+            tr("Regular expressions and OR"),
+        ),
+    ]
+}
+
+/// The columns of the query results: Title, Artist, Album, Genre, Added and
+/// Length.
+const QUERY_COLUMNS: &[(TrackColumn, i32, bool)] = &[
+    (TrackColumn::Title, 130, true),
+    (TrackColumn::Artist, 96, true),
+    (TrackColumn::Album, 100, true),
+    (TrackColumn::Genre, 80, false),
+    (TrackColumn::Added, 90, false),
+    (TrackColumn::Length, 64, false),
+];
 
 /// How many tracks are listed before "Show all".
 const TRACKS_SHOWN: usize = 7;
@@ -38,10 +80,12 @@ enum Entry {
 type OpenPage = Box<dyn Fn(Page)>;
 type ShowAll = Box<dyn Fn(String)>;
 type Clear = Box<dyn Fn()>;
+type UseText = Box<dyn Fn(String)>;
 
 /// The search page.
 pub(crate) struct SearchView {
-    pub(crate) root: gtk::Stack,
+    pub(crate) root: gtk::Box,
+    stack: gtk::Stack,
     title: gtk::Label,
     total: gtk::Label,
     list: gtk::ListBox,
@@ -55,6 +99,22 @@ pub(crate) struct SearchView {
     open: RefCell<Option<OpenPage>>,
     show_all: RefCell<Option<ShowAll>>,
     clear: RefCell<Option<Clear>>,
+    /// The query results.
+    tracks: Rc<TracksView>,
+    query_count: gtk::Label,
+    query_save: gtk::Button,
+    smart_save: gtk::Button,
+    plain_save: gtk::Button,
+    notice: gtk::Box,
+    notice_message: gtk::Label,
+    notice_example: gtk::Label,
+    /// The last query that could be read, which the table shows.
+    last_good: RefCell<Option<String>>,
+    /// The saved searches.
+    saved_list: gtk::ListBox,
+    saved_empty: gtk::Label,
+    saved: RefCell<Vec<SavedSearchRow>>,
+    use_text: RefCell<Option<UseText>>,
 }
 
 impl std::fmt::Debug for SearchView {
@@ -99,8 +159,14 @@ fn highlighted(text: &str, words: &[String]) -> pango::AttrList {
 
 impl SearchView {
     /// The page over `backend`.
-    pub(crate) fn new(backend: &Backend, covers: &Rc<CoverCache>) -> Rc<Self> {
-        let root = gtk::Stack::new();
+    pub(crate) fn new(
+        backend: &Backend,
+        covers: &Rc<CoverCache>,
+        playback: &Rc<Playback>,
+    ) -> Rc<Self> {
+        let stack = gtk::Stack::new();
+        stack.set_hexpand(true);
+        let root = stack.clone();
         let page = gtk::Box::new(gtk::Orientation::Vertical, 0);
         page.add_css_class("hk-search");
         let head = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -110,7 +176,10 @@ impl SearchView {
         head.append(&title);
         let total = label("", &["hk-t3", "hk-numeric"]);
         total.set_valign(gtk::Align::Baseline);
+        total.set_hexpand(true);
         head.append(&total);
+        let plain_save = save_button(&tr("Save search"), Some("user-bookmarks-symbolic"));
+        head.append(&plain_save);
         page.append(&head);
         let list = gtk::ListBox::new();
         list.add_css_class("hk-results");
@@ -152,8 +221,98 @@ impl SearchView {
         none.append(&clear);
         root.add_named(&none, Some("none"));
 
+        // The results of a query.
+        let query_page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        query_page.add_css_class("hk-query-results");
+        let head = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+        head.add_css_class("hk-search-head");
+        let query_title = label(&tr("Results"), &["hk-view-title"]);
+        query_title.set_accessible_role(gtk::AccessibleRole::Heading);
+        head.append(&query_title);
+        let query_count = label("", &["hk-t3", "hk-numeric"]);
+        query_count.set_valign(gtk::Align::Baseline);
+        query_count.set_hexpand(true);
+        head.append(&query_count);
+        let query_save = save_button(&tr("Save search"), Some("user-bookmarks-symbolic"));
+        head.append(&query_save);
+        let smart_save = save_button(&tr("Save as smart playlist"), None);
+        // Offered by the smart playlists, when they are there.
+        smart_save.set_action_name(Some("win.new-smart-playlist"));
+        head.append(&smart_save);
+        query_page.append(&head);
+        let notice = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+        notice.add_css_class("hk-notice");
+        notice.add_css_class("hk-query-notice");
+        let icon = gtk::Image::from_icon_name("dialog-warning-symbolic");
+        icon.set_valign(gtk::Align::Start);
+        notice.append(&icon);
+        let lines = gtk::Box::new(gtk::Orientation::Vertical, 2);
+        let first = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let notice_message = label("", &["hk-medium"]);
+        notice_message.set_ellipsize(pango::EllipsizeMode::None);
+        notice_message.set_wrap(true);
+        notice_message.set_single_line_mode(false);
+        first.append(&notice_message);
+        let notice_example = label("", &["hk-mono", "hk-query-example"]);
+        first.append(&notice_example);
+        lines.append(&first);
+        let still = label(
+            &tr("The list still shows the last query that could be read."),
+            &["hk-t3", "hk-hint"],
+        );
+        lines.append(&still);
+        notice.append(&lines);
+        notice.set_visible(false);
+        query_page.append(&notice);
+        let tracks = TracksView::new(backend, playback, true);
+        tracks.show_columns(QUERY_COLUMNS);
+        tracks.hide_status();
+        tracks.unmark_default_order();
+        tracks.root.set_vexpand(true);
+        query_page.append(&tracks.root);
+        root.add_named(&query_page, Some("query"));
+
+        // The side column: the query syntax and the saved searches.
+        let side = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        side.add_css_class("hk-search-side");
+        side.set_size_request(300, -1);
+        let syntax = label(&tr("Query syntax"), &["hk-section-label"]);
+        syntax.set_accessible_role(gtk::AccessibleRole::Heading);
+        side.append(&syntax);
+        let chips = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        side.append(&chips);
+        let saved_title = label(
+            &tr("Saved searches"),
+            &["hk-section-label", "hk-saved-title"],
+        );
+        saved_title.set_accessible_role(gtk::AccessibleRole::Heading);
+        side.append(&saved_title);
+        let saved_list = gtk::ListBox::new();
+        saved_list.add_css_class("hk-saved");
+        saved_list.set_selection_mode(gtk::SelectionMode::Single);
+        saved_list.set_activate_on_single_click(true);
+        saved_list.update_property(&[gtk::accessible::Property::Label(&tr("Saved searches"))]);
+        side.append(&saved_list);
+        let saved_empty = label(
+            &tr("Save a search to find it here again."),
+            &["hk-t3", "hk-hint"],
+        );
+        saved_empty.set_wrap(true);
+        saved_empty.set_single_line_mode(false);
+        saved_empty.set_visible(false);
+        side.append(&saved_empty);
+        let side_scroller = gtk::ScrolledWindow::new();
+        side_scroller.set_hscrollbar_policy(gtk::PolicyType::Never);
+        side_scroller.set_child(Some(&side));
+        side_scroller.add_css_class("hk-search-side-pane");
+
+        let root = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        root.append(&stack);
+        root.append(&side_scroller);
+
         let view = Rc::new(Self {
             root,
+            stack,
             title,
             total,
             list,
@@ -167,7 +326,36 @@ impl SearchView {
             open: RefCell::new(None),
             show_all: RefCell::new(None),
             clear: RefCell::new(None),
+            tracks,
+            query_count,
+            query_save,
+            smart_save,
+            plain_save,
+            notice,
+            notice_message,
+            notice_example,
+            last_good: RefCell::new(None),
+            saved_list,
+            saved_empty,
+            saved: RefCell::new(Vec::new()),
+            use_text: RefCell::new(None),
         });
+        for (query, caption) in examples() {
+            let chip = gtk::Button::with_label(query);
+            chip.add_css_class("hk-query-chip");
+            chip.set_halign(gtk::Align::Start);
+            chip.set_tooltip_text(Some(&tr("Search with this query")));
+            let weak = Rc::downgrade(&view);
+            chip.connect_clicked(move |_| {
+                if let Some(view) = weak.upgrade() {
+                    view.use_text(query);
+                }
+            });
+            chips.append(&chip);
+            let caption = label(&caption, &["hk-query-caption"]);
+            chips.append(&caption);
+        }
+        view.connect_query();
         let weak = Rc::downgrade(&view);
         clear.connect_clicked(move |_| {
             if let Some(view) = weak.upgrade()
@@ -283,12 +471,33 @@ impl SearchView {
         self.clear.replace(Some(Box::new(clear)));
     }
 
-    /// Searches for `text`.
+    /// Searches for `text`: words, or a query of the query language.
     pub(crate) fn search(self: &Rc<Self>, text: &str) {
         let text = text.trim().to_owned();
         self.text.replace(text.clone());
         let generation = self.generation.get() + 1;
         self.generation.set(generation);
+        let reading = query_text::read(&text);
+        let is_query = reading.is_query;
+        let good = reading.error.is_none();
+        self.show_notice(reading.error.as_ref().filter(|_| is_query));
+        if is_query {
+            self.stack.set_visible_child_name("query");
+            if good {
+                self.last_good.replace(Some(text.clone()));
+                self.smart_save
+                    .set_action_target_value(Some(&text.to_variant()));
+                self.tracks
+                    .show_text(&text, &fill(&tr("Search for “{}”"), &[&text]));
+            } else if self.last_good.borrow().is_none() {
+                self.tracks.clear();
+                self.show_query_count(0);
+            }
+            let saveable = self.last_good.borrow().is_some();
+            self.query_save.set_sensitive(saveable);
+            return;
+        }
+        self.last_good.replace(None);
         let backend = self.backend.clone();
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
@@ -308,7 +517,7 @@ impl SearchView {
         if count == 0 {
             self.empty_title
                 .set_text(&fill(&tr("No results for “{}”"), &[text]));
-            self.root.set_visible_child_name("none");
+            self.stack.set_visible_child_name("none");
             self.results.replace(results);
             self.entries.borrow_mut().clear();
             self.root.announce(
@@ -317,7 +526,7 @@ impl SearchView {
             );
             return;
         }
-        self.root.set_visible_child_name("results");
+        self.stack.set_visible_child_name("results");
         self.title.set_text(&fill(&tr("Results for “{}”"), &[text]));
         self.total.set_text(&crate::format::count(count));
         let words: Vec<String> = text.split_whitespace().map(str::to_lowercase).collect();
@@ -535,8 +744,17 @@ impl SearchView {
         None
     }
 
+    /// Whether the query results are shown.
+    fn showing_query(&self) -> bool {
+        self.stack.visible_child_name().as_deref() == Some("query")
+    }
+
     /// Moves the selection by `by` rows, skipping the section labels.
     pub(crate) fn move_selection(&self, by: i32) {
+        if self.showing_query() {
+            self.tracks.move_selection(by);
+            return;
+        }
         let mut rows = Vec::new();
         let mut child = self.list.first_child();
         while let Some(widget) = child {
@@ -576,6 +794,10 @@ impl SearchView {
 
     /// Plays or opens the selected row (Enter in the entry).
     pub(crate) fn activate_selected(&self) {
+        if self.showing_query() {
+            self.tracks.play_selected();
+            return;
+        }
         if let Some(row) = self.list.selected_row() {
             self.activate(&row);
         }
@@ -614,6 +836,9 @@ impl SearchView {
 
     /// The selected row as a context menu target.
     pub(crate) fn target(&self) -> Option<Target> {
+        if self.showing_query() {
+            return self.tracks.target();
+        }
         let row = self.list.selected_row()?;
         Some(match self.entry(&row)? {
             Entry::Artist(key) => Target::Artist(key),
@@ -635,4 +860,361 @@ impl SearchView {
             results.track_total,
         )
     }
+
+    /// The number of tracks the query results list, if they are shown, and
+    /// whether the notice is shown (for tests).
+    pub(crate) fn query_state(&self) -> Option<(usize, bool)> {
+        self.showing_query()
+            .then(|| (self.tracks.keys().len(), self.notice.is_visible()))
+    }
+
+    /// The names of the saved searches (for tests).
+    pub(crate) fn saved_names(&self) -> Vec<String> {
+        self.saved.borrow().iter().map(|s| s.name.clone()).collect()
+    }
+
+    /// Calls `use_text` with a query to put in the search entry.
+    pub(crate) fn connect_use_text(&self, use_text: impl Fn(String) + 'static) {
+        self.use_text.replace(Some(Box::new(use_text)));
+    }
+
+    fn use_text(&self, text: &str) {
+        if let Some(use_text) = self.use_text.borrow().as_ref() {
+            use_text(text.to_owned());
+        }
+    }
+
+    fn show_query_count(&self, count: usize) {
+        self.query_count.set_text(&fill(
+            &ntr("{} track", "{} tracks", count),
+            &[&format::count(count)],
+        ));
+    }
+
+    /// Shows what fails in the text, or hides the notice.
+    fn show_notice(&self, error: Option<&SyntaxError>) {
+        let Some(error) = error else {
+            self.notice.set_visible(false);
+            return;
+        };
+        self.notice.set_visible(true);
+        self.notice_message.set_text(&query_text::message(error));
+        match error.example() {
+            Some(example) => {
+                self.notice_example
+                    .set_text(&fill(&tr("for example {}"), &[example]));
+                self.notice_example.set_visible(true);
+            }
+            None => self.notice_example.set_visible(false),
+        }
+    }
+
+    fn connect_query(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.tracks.connect_loaded(move |count| {
+            if let Some(view) = weak.upgrade() {
+                view.show_query_count(count);
+            }
+        });
+        for button in [&self.query_save, &self.plain_save] {
+            let weak = Rc::downgrade(self);
+            button.connect_clicked(move |button| {
+                if let Some(view) = weak.upgrade() {
+                    view.ask_name(button.upcast_ref(), None);
+                }
+            });
+        }
+        let weak = Rc::downgrade(self);
+        self.saved_list.connect_row_activated(move |_, row| {
+            let Some(view) = weak.upgrade() else { return };
+            let text = view
+                .saved
+                .borrow()
+                .get(row.index().max(0) as usize)
+                .map(|s| s.text.clone());
+            if let Some(text) = text {
+                view.use_text(&text);
+            }
+        });
+        let click = gtk::GestureClick::new();
+        click.set_button(gdk::BUTTON_SECONDARY);
+        let weak = Rc::downgrade(self);
+        click.connect_pressed(move |gesture, _, x, y| {
+            let Some(view) = weak.upgrade() else { return };
+            let Some(row) = view.saved_list.row_at_y(y as i32) else {
+                return;
+            };
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            view.saved_list.select_row(Some(&row));
+            view.saved_menu(&row, Some((x, y)));
+        });
+        self.saved_list.add_controller(click);
+        let keys = gtk::EventControllerKey::new();
+        let weak = Rc::downgrade(self);
+        keys.connect_key_pressed(move |_, key, _, state| {
+            let Some(view) = weak.upgrade() else {
+                return glib::Propagation::Proceed;
+            };
+            let Some(row) = view.saved_list.selected_row() else {
+                return glib::Propagation::Proceed;
+            };
+            if actions::is_menu_key(key, state) {
+                view.saved_menu(&row, None);
+                return glib::Propagation::Stop;
+            }
+            if key == gdk::Key::Delete {
+                if let Some(saved) = view.saved_at(&row) {
+                    view.delete_saved(saved);
+                }
+                return glib::Propagation::Stop;
+            }
+            if key == gdk::Key::F2 {
+                if let Some(saved) = view.saved_at(&row) {
+                    view.ask_name(row.upcast_ref(), Some(saved));
+                }
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        self.saved_list.add_controller(keys);
+    }
+
+    fn saved_at(&self, row: &gtk::ListBoxRow) -> Option<SavedSearchRow> {
+        self.saved
+            .borrow()
+            .get(row.index().max(0) as usize)
+            .cloned()
+    }
+
+    /// The menu of a saved search: open, rename, delete.
+    fn saved_menu(self: &Rc<Self>, row: &gtk::ListBoxRow, at: Option<(f64, f64)>) {
+        let Some(saved) = self.saved_at(row) else {
+            return;
+        };
+        let group = gio::SimpleActionGroup::new();
+        for name in ["open", "rename", "delete"] {
+            let action = gio::SimpleAction::new(name, None);
+            let weak = Rc::downgrade(self);
+            let saved = saved.clone();
+            let row = row.downgrade();
+            action.connect_activate(move |action, _| {
+                let Some(view) = weak.upgrade() else { return };
+                match action.name().as_str() {
+                    "open" => view.use_text(&saved.text),
+                    "rename" => {
+                        if let Some(row) = row.upgrade() {
+                            view.ask_name(row.upcast_ref(), Some(saved.clone()));
+                        }
+                    }
+                    _ => view.delete_saved(saved.clone()),
+                }
+            });
+            group.add_action(&action);
+        }
+        self.saved_list.insert_action_group("saved", Some(&group));
+        let menu = gio::Menu::new();
+        menu.append(Some(&tr("Open")), Some("saved.open"));
+        let edit = gio::Menu::new();
+        edit.append(Some(&tr("Rename…")), Some("saved.rename"));
+        edit.append(Some(&tr("Delete…")), Some("saved.delete"));
+        menu.append_section(None, &edit);
+        let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        popover.set_has_arrow(false);
+        popover.set_parent(&self.saved_list);
+        let (x, y) = at.unwrap_or_else(|| {
+            let bounds = row.compute_bounds(&self.saved_list);
+            bounds.map_or((0.0, 0.0), |b| {
+                (f64::from(b.x() + 24.0), f64::from(b.y() + b.height()))
+            })
+        });
+        popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+        popover.connect_closed(|p| {
+            let p = p.clone();
+            glib::idle_add_local_once(move || p.unparent());
+        });
+        popover.popup();
+    }
+
+    /// Asks for a name under `anchor`: for a new saved search of the text
+    /// shown, or a new name of `saved`.
+    fn ask_name(self: &Rc<Self>, anchor: &gtk::Widget, saved: Option<SavedSearchRow>) {
+        let popover = gtk::Popover::new();
+        popover.add_css_class("hk-rename");
+        let line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let entry = gtk::Entry::new();
+        entry.add_css_class("hk-input");
+        entry.set_width_chars(24);
+        entry.set_placeholder_text(Some(&tr("Name")));
+        entry.update_property(&[gtk::accessible::Property::Label(&tr("Name of the search"))]);
+        match &saved {
+            Some(saved) => entry.set_text(&saved.name),
+            None => entry.set_text(&self.text.borrow()),
+        }
+        line.append(&entry);
+        let commit_label = if saved.is_some() {
+            tr("Rename")
+        } else {
+            tr("Save")
+        };
+        let commit_button = gtk::Button::with_label(&commit_label);
+        commit_button.add_css_class("hk-btn");
+        commit_button.add_css_class("primary");
+        commit_button.add_css_class("compact");
+        line.append(&commit_button);
+        popover.set_child(Some(&line));
+        popover.set_parent(anchor);
+        popover.set_position(gtk::PositionType::Bottom);
+        let weak = Rc::downgrade(self);
+        let commit = Rc::new(move |entry: &gtk::Entry, popover: &gtk::Popover| {
+            let name = entry.text().trim().to_owned();
+            popover.popdown();
+            let Some(view) = weak.upgrade() else { return };
+            if name.is_empty() {
+                return;
+            }
+            match &saved {
+                Some(saved) if saved.name != name => {
+                    let key = saved.key;
+                    view.change_saved(move |l| l.rename_saved_search(key, &name));
+                }
+                Some(_) => {}
+                None => {
+                    // What the page shows: the last query that could be read,
+                    // or the words.
+                    let text = view
+                        .last_good
+                        .borrow()
+                        .clone()
+                        .unwrap_or_else(|| view.text.borrow().clone());
+                    let query = query_text::read(&text).query;
+                    view.change_saved(move |l| l.save_search(&name, &query).map(|_| ()));
+                }
+            }
+        });
+        let (c, p) = (commit.clone(), popover.downgrade());
+        entry.connect_activate(move |entry| {
+            if let Some(p) = p.upgrade() {
+                c(entry, &p);
+            }
+        });
+        let (c, p, e) = (commit, popover.downgrade(), entry.downgrade());
+        commit_button.connect_clicked(move |_| {
+            if let (Some(p), Some(e)) = (p.upgrade(), e.upgrade()) {
+                c(&e, &p);
+            }
+        });
+        popover.connect_closed(|p| {
+            let p = p.clone();
+            glib::idle_add_local_once(move || p.unparent());
+        });
+        popover.popup();
+        entry.grab_focus();
+        entry.select_region(0, -1);
+    }
+
+    /// Asks before deleting `saved`.
+    fn delete_saved(self: &Rc<Self>, saved: SavedSearchRow) {
+        let dialog = gtk::AlertDialog::builder()
+            .message(fill(&tr("Delete the saved search “{}”?"), &[&saved.name]))
+            .detail(tr("The tracks it finds stay in the library."))
+            .buttons([tr("Cancel"), tr("Delete")])
+            .cancel_button(0)
+            .default_button(0)
+            .modal(true)
+            .build();
+        let window = self.root.root().and_downcast::<gtk::Window>();
+        let weak = Rc::downgrade(self);
+        let key: SavedSearchKey = saved.key;
+        dialog.choose(window.as_ref(), gio::Cancellable::NONE, move |answer| {
+            if let (Some(view), Ok(1)) = (weak.upgrade(), answer) {
+                view.change_saved(move |l| l.delete_saved_search(key));
+            }
+        });
+    }
+
+    /// Runs `change` on the saved searches, then lists them again; a failure
+    /// becomes a toast.
+    fn change_saved(
+        self: &Rc<Self>,
+        change: impl FnOnce(
+            &dyn crate::backend::LibrarySource,
+        ) -> Result<(), crate::backend::BackendError>
+        + Send
+        + 'static,
+    ) {
+        let backend = self.backend.clone();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let result = backend.query(move |l| change(l)).await;
+            let Some(view) = weak.upgrade() else { return };
+            if let Err(error) = result
+                && let Some(window) = view.root.root().and_downcast::<crate::window::MainWindow>()
+            {
+                window.toast(&error.0, true);
+            }
+            view.refresh_saved();
+        });
+    }
+
+    /// Lists the saved searches again, with their counts.
+    pub(crate) fn refresh_saved(self: &Rc<Self>) {
+        let backend = self.backend.clone();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let saved = backend.query(|l| l.saved_searches()).await;
+            let Some(view) = weak.upgrade() else { return };
+            view.show_saved(saved.unwrap_or_default());
+        });
+    }
+
+    fn show_saved(&self, saved: Vec<SavedSearchRow>) {
+        crate::widgets::remove_rows(&self.saved_list);
+        for search in &saved {
+            let row = gtk::ListBoxRow::new();
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+            let icon = gtk::Image::from_icon_name("user-bookmarks-symbolic");
+            icon.add_css_class("hk-t2");
+            line.append(&icon);
+            let text = gtk::Box::new(gtk::Orientation::Vertical, 1);
+            text.set_hexpand(true);
+            text.set_valign(gtk::Align::Center);
+            text.append(&label(&search.name, &[]));
+            text.append(&label(&search.text, &["hk-t3", "hk-mono-meta"]));
+            line.append(&text);
+            let count = label(&format::count(search.count), &["hk-t3", "hk-numeric"]);
+            count.set_xalign(1.0);
+            line.append(&count);
+            row.set_child(Some(&line));
+            row.set_tooltip_text(Some(&search.text));
+            row.update_property(&[gtk::accessible::Property::Label(&fill(
+                &tr("{}, {}"),
+                &[
+                    &search.name,
+                    &fill(
+                        &ntr("{} track", "{} tracks", search.count),
+                        &[&format::count(search.count)],
+                    ),
+                ],
+            ))]);
+            self.saved_list.append(&row);
+        }
+        self.saved_empty.set_visible(saved.is_empty());
+        self.saved_list.set_visible(!saved.is_empty());
+        self.saved.replace(saved);
+    }
+}
+
+/// A small button of a results head.
+fn save_button(text: &str, icon: Option<&str>) -> gtk::Button {
+    let button = gtk::Button::new();
+    let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    if let Some(icon) = icon {
+        content.append(&gtk::Image::from_icon_name(icon));
+    }
+    content.append(&gtk::Label::new(Some(text)));
+    button.set_child(Some(&content));
+    button.add_css_class("hk-btn");
+    button.add_css_class("small");
+    button.set_valign(gtk::Align::Center);
+    button
 }

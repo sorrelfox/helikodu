@@ -270,6 +270,30 @@ pub(crate) fn write_genres(c: &Connection, track: i64, genres: &[String]) -> rus
     Ok(())
 }
 
+/// Writes the track's other tags (`track_tags`), changing only what differs. The
+/// order of the values of a key is kept: a changed order rewrites the track's rows.
+pub(crate) fn write_other_tags(
+    c: &Connection,
+    track: i64,
+    tags: &[(String, String)],
+) -> rusqlite::Result<()> {
+    let existing: Vec<(String, String)> = c
+        .prepare_cached("SELECT key, value FROM track_tags WHERE track_id = ?1 ORDER BY rowid")?
+        .query_map([track], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    if existing == tags {
+        return Ok(());
+    }
+    c.prepare_cached("DELETE FROM track_tags WHERE track_id = ?1")?
+        .execute([track])?;
+    let mut insert =
+        c.prepare_cached("INSERT INTO track_tags (track_id, key, value) VALUES (?1, ?2, ?3)")?;
+    for (key, value) in tags {
+        insert.execute(params![track, key, value])?;
+    }
+    Ok(())
+}
+
 /// The genre called `name` (compared folded), created if needed.
 fn genre(c: &Connection, name: &str) -> rusqlite::Result<i64> {
     let folded = fold(name);

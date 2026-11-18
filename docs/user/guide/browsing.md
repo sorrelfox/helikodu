@@ -12,6 +12,28 @@ Type in the search field at the top of the window (**Search artists, albums, tra
 - Only the first tracks are listed. **Show all N tracks** opens the **Tracks** view with all of them.
 - **Escape** empties the field and goes back to where you were. When nothing is found, **Clear search** does the same.
 
+### The query language
+
+Text with a field and an operator is a query: `genre:jazz -genre:fusion`, `rating>=4`, `added<30d sort:added desc`. The field then switches to a fixed-width font, and the results are a table of the tracks the query selects (**Title**, **Artist**, **Album**, **Genre**, **Added**, **Length**). Double-click a track or press **Enter** to play the results from there; a click on a column header sorts them.
+
+- **Fields:** `title`, `artist`, `albumartist`, `album`, `composer`, `performer`, `conductor`, `genre`, `year`, `codec`, `samplerate`, `bitdepth`, `plays`, `skips`, `rating`, `duration`, `added`, `lastplayed`, `path`, `folder`, `kind` and more; any other tag as `tag:NAME` (`tag:mood=calm`).
+- **Operators:** `:` contains, `=` equals, `!=` differs, `<`, `<=`, `>`, `>=`, and `~` for a regular expression. A range is `year:1970..1979`; a relative date is `added<30d` (days, `w` weeks, `m` months, `y` years).
+- **Combining:** words next to each other must all hold; `OR` gives either; a minus or `NOT` excludes; parentheses group.
+- **Order and size:** `sort:added desc` orders the results, `limit:50` keeps the first 50.
+- `has:lyrics`, `has:cover`, `has:rating` test for a value; `is:lossless`, `is:hires`, `is:loved` for a kind of track.
+
+While you type a field name, a list under the field offers the fields that start with it, with an example of each; after `kind:`, `codec:`, `has:` or `is:` it offers the values. **Tab** completes, **Up** and **Down** choose, **Escape** closes the list.
+
+When part of a query cannot be read, it is underlined, and a notice says what is wrong with an example that works. The table keeps showing the last query that could be read.
+
+The column on the right shows four example queries; click one to search with it.
+
+### Saved searches
+
+**Save search** above the results saves the search under a name. Saved searches are listed under **Saved searches** in the right column of the search page, each with the number of tracks it finds now. Click one to search with it again. Right-click it (or press the Menu key) to **Rename** or **Delete** it; **F2** renames and **Delete** deletes the selected one.
+
+Tags without a field of their own (such as `MOOD`, `BPM`, `GROUPING`, `LABEL` or `COMMENT`) are found with `tag:NAME`. Files scanned by an earlier version get them the next time they are read, for example after they change.
+
 ## Albums
 
 **Albums** shows your albums as a grid of covers. **Sort by** orders them by **Album artist**, **Title**, **Year** or **Date added**, and the quick filter shows **All** albums, only **Lossless** ones or only **Hi-res** ones. Albums whose tracks have no album tag are grouped under **Unknown album**; compilations are listed under **Various artists**.

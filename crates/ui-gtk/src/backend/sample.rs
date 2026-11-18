@@ -10,6 +10,7 @@
 
 mod copies;
 mod lyrics;
+mod query;
 mod services;
 mod signal;
 
@@ -29,8 +30,8 @@ use super::{
     ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, CoverKey, DiscGroup, FolderFile,
     FolderListing, FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts, LibrarySource,
     NowPlaying, OutputInfo, PlaybackState, PlayerControl, PlayerRequest, PlaylistKey, PlaylistRow,
-    QueueSnapshot, Repeat, SearchResults, SignalState, ThumbnailState, TrackColumn, TrackKey,
-    TrackQuery, TrackRow, TrackScope, TrackSort, Update,
+    QueueSnapshot, Repeat, SavedSearchKey, SavedSearchRow, SearchResults, SignalState,
+    ThumbnailState, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort, Update,
 };
 
 /// What the sample backend contains and does at the start.
@@ -91,6 +92,11 @@ const GENRES: &[&str] = &[
     "Soundtrack",
     "World",
 ];
+
+/// The time the albums were added before, so the sample shows the same dates.
+fn sample_now() -> SystemTime {
+    SystemTime::UNIX_EPOCH + Duration::from_secs(1_794_000_000)
+}
 
 /// SplitMix64: a small, stable generator for the invented content.
 #[derive(Debug, Clone)]
@@ -165,6 +171,8 @@ pub struct SampleLibrary {
     flags: Mutex<HashMap<TrackKey, super::TrackFlags>>,
     /// The copies moved to the trash and the main copies chosen.
     copies: Mutex<copies::CopyState>,
+    /// The saved searches.
+    searches: Mutex<Vec<query::SampleSearch>>,
 }
 
 fn format(r: &mut Random) -> AudioFormat {
@@ -317,6 +325,8 @@ impl SampleLibrary {
                         path: Some(folder.join(name)),
                         missing: false,
                         copies: copies::initial_copies(TrackKey(track_key)),
+                        genre: String::new(),
+                        added: None,
                     });
                     track_key += 1;
                 }
@@ -355,6 +365,7 @@ impl SampleLibrary {
             cover_file: None,
             flags: Mutex::new(HashMap::new()),
             copies: Mutex::new(copies::CopyState::default()),
+            searches: Mutex::new(query::sample_searches()),
         };
         library.add_sample_playlists(&mut r);
         library
@@ -391,6 +402,10 @@ impl SampleLibrary {
         }
     }
 
+    fn searches(&self) -> std::sync::MutexGuard<'_, Vec<query::SampleSearch>> {
+        self.searches.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     fn lists(&self) -> std::sync::MutexGuard<'_, Playlists> {
         self.playlists
             .lock()
@@ -411,6 +426,10 @@ impl SampleLibrary {
 
     fn track(&self, key: TrackKey) -> Option<TrackRow> {
         let mut row = self.track_row_unpatched(key)?;
+        if let Some(album) = self.get(row.album) {
+            row.genre = GENRES[album.genre].to_owned();
+            row.added = Some(sample_now() - Duration::from_secs(album.added));
+        }
         if row.copies > 0 {
             row.copies = self.copies_now(key);
         }
@@ -529,6 +548,8 @@ impl SampleLibrary {
             TrackColumn::Rating => a.rating.cmp(&b.rating),
             TrackColumn::Plays => a.plays.cmp(&b.plays),
             TrackColumn::Length => a.duration.cmp(&b.duration),
+            TrackColumn::Genre => lower(&a.genre).cmp(&lower(&b.genre)),
+            TrackColumn::Added => a.added.cmp(&b.added),
         }
     }
 
@@ -676,6 +697,29 @@ impl LibrarySource for SampleLibrary {
     }
 
     fn track_keys(&self, query: &TrackQuery) -> Result<Vec<TrackKey>, BackendError> {
+        let parsed = helikodu_service::library::parse_query_lenient(query.text.trim());
+        if parsed.error.is_none() && !parsed.query.is_empty() && !parsed.query.is_plain_text() {
+            let all = self.track_keys(&TrackQuery {
+                scope: query.scope,
+                ..TrackQuery::default()
+            })?;
+            let mut selector = parsed.query;
+            if !query.sort.is_empty() {
+                selector.sort.clear();
+            }
+            let rows = query::select(&selector, self.track_rows(&all)?, SystemTime::now());
+            let mut keys: Vec<TrackKey> = rows.iter().map(|r| r.key).collect();
+            if !query.sort.is_empty() {
+                let order = self.track_keys(&TrackQuery {
+                    scope: query.scope,
+                    sort: query.sort.clone(),
+                    ..TrackQuery::default()
+                })?;
+                let found: std::collections::HashSet<TrackKey> = keys.into_iter().collect();
+                keys = order.into_iter().filter(|k| found.contains(k)).collect();
+            }
+            return Ok(keys);
+        }
         let words: Vec<String> = query.text.split_whitespace().map(lower).collect();
         let order = self.sorted(&AlbumQuery::default());
         let mut rows: Vec<TrackRow> = order
@@ -977,6 +1021,57 @@ impl LibrarySource for SampleLibrary {
             other_files,
             state,
         })
+    }
+
+    fn saved_searches(&self) -> Result<Vec<SavedSearchRow>, BackendError> {
+        let searches = self.searches().clone();
+        searches
+            .into_iter()
+            .map(|search| {
+                let count = self
+                    .track_keys(&TrackQuery {
+                        text: search.text.clone(),
+                        ..TrackQuery::default()
+                    })?
+                    .len();
+                Ok(SavedSearchRow {
+                    key: search.key,
+                    name: search.name,
+                    text: search.text,
+                    count,
+                })
+            })
+            .collect()
+    }
+
+    fn save_search(
+        &self,
+        name: &str,
+        query: &helikodu_model::query::Query,
+    ) -> Result<SavedSearchKey, BackendError> {
+        let mut searches = self.searches();
+        let key = SavedSearchKey(searches.iter().map(|s| s.key.0).max().unwrap_or(0) + 1);
+        searches.push(query::SampleSearch {
+            key,
+            name: name.to_owned(),
+            text: helikodu_service::library::print_query(query),
+        });
+        Ok(key)
+    }
+
+    fn rename_saved_search(&self, key: SavedSearchKey, name: &str) -> Result<(), BackendError> {
+        let mut searches = self.searches();
+        let search = searches
+            .iter_mut()
+            .find(|s| s.key == key)
+            .ok_or_else(|| BackendError("no such saved search".into()))?;
+        search.name = name.to_owned();
+        Ok(())
+    }
+
+    fn delete_saved_search(&self, key: SavedSearchKey) -> Result<(), BackendError> {
+        self.searches().retain(|s| s.key != key);
+        Ok(())
     }
 }
 

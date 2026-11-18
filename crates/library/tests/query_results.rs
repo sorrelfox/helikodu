@@ -1261,3 +1261,35 @@ fn limit_units_parse_as_documented() {
         assert_eq!(parse_query(text).unwrap().limit, Some(limit));
     }
 }
+
+#[test]
+fn other_tags_of_scanned_tracks_are_found_by_tag_fields() {
+    let (library, root) = support::library();
+    let mut calm = support::tagged(root, "/music/a.flac", "a", "A", "X", "Album");
+    calm.catalog.other = vec![
+        ("MOOD".into(), "Calm".into()),
+        ("GROUPING".into(), "Side A".into()),
+    ];
+    let mut loud = support::tagged(root, "/music/b.flac", "b", "B", "X", "Album");
+    loud.catalog.other = vec![("MOOD".into(), "Loud".into())];
+    let written = library.upsert_tracks(vec![calm.clone(), loud]).unwrap();
+    let (a, b) = (written[0].track.get(), written[1].track.get());
+    let found = |text: &str| -> BTreeSet<u64> {
+        library
+            .query_track_ids(&QueryRequest::new(parse_query(text).unwrap()))
+            .unwrap()
+            .iter()
+            .map(|t| t.get())
+            .collect()
+    };
+    assert_eq!(found("tag:mood:calm"), BTreeSet::from([a]));
+    assert_eq!(found("has:tag:grouping"), BTreeSet::from([a]));
+    assert_eq!(found("tag:MOOD=loud"), BTreeSet::from([b]));
+    // A rescan replaces the values.
+    calm.catalog.other = vec![("MOOD".into(), "Happy".into())];
+    calm.file.mtime_ns = Some(2);
+    library.upsert_tracks(vec![calm]).unwrap();
+    assert!(found("tag:mood:calm").is_empty());
+    assert!(found("has:tag:grouping").is_empty());
+    assert_eq!(found("tag:mood:happy"), BTreeSet::from([a]));
+}

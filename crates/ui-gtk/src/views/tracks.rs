@@ -40,10 +40,12 @@ const COLUMNS: &[(TrackColumn, bool, i32, bool)] = &[
     (TrackColumn::Title, true, 220, true),
     (TrackColumn::Artist, true, 120, true),
     (TrackColumn::Album, true, 160, true),
+    (TrackColumn::Genre, false, 104, false),
     (TrackColumn::Year, true, 58, false),
     (TrackColumn::Format, true, 120, false),
     (TrackColumn::Rating, true, 86, false),
     (TrackColumn::Plays, false, 62, false),
+    (TrackColumn::Added, false, 96, false),
     (TrackColumn::Length, true, 64, false),
 ];
 
@@ -59,6 +61,8 @@ pub(crate) fn column_title(column: TrackColumn) -> String {
         TrackColumn::Rating => tr("Rating"),
         TrackColumn::Plays => tr("Plays"),
         TrackColumn::Length => tr("Length"),
+        TrackColumn::Genre => tr("Genre"),
+        TrackColumn::Added => tr("Added"),
     }
 }
 
@@ -74,6 +78,8 @@ fn column_id(column: TrackColumn) -> &'static str {
         TrackColumn::Rating => "rating",
         TrackColumn::Plays => "plays",
         TrackColumn::Length => "length",
+        TrackColumn::Genre => "genre",
+        TrackColumn::Added => "added",
     }
 }
 
@@ -89,6 +95,8 @@ fn cell_text(row: &TrackRow, column: TrackColumn) -> String {
         TrackColumn::Rating => String::new(),
         TrackColumn::Plays => row.plays.to_string(),
         TrackColumn::Length => row.duration.map(format::duration).unwrap_or_default(),
+        TrackColumn::Genre => row.genre.clone(),
+        TrackColumn::Added => crate::tools::tool_window::date(row.added),
     }
 }
 
@@ -117,6 +125,9 @@ pub(crate) fn next_sort(
     keys
 }
 
+/// What is called with the number of tracks after a load.
+type Loaded = Box<dyn Fn(usize)>;
+
 /// The track table and its toolbar.
 pub(crate) struct TracksView {
     pub(crate) root: gtk::Box,
@@ -139,6 +150,13 @@ pub(crate) struct TracksView {
     cells: RefCell<Vec<glib::WeakRef<TableCell>>>,
     title: RefCell<String>,
     loaded: Cell<bool>,
+    /// Set while the filter text is changed from code, which reloads at once.
+    quiet: Cell<bool>,
+    /// Whether the order without keys of the user's goes unmarked (it is the
+    /// query's own).
+    unmarked: Cell<bool>,
+    /// Called with the number of tracks after each load.
+    on_loaded: RefCell<Option<Loaded>>,
 }
 
 impl std::fmt::Debug for TracksView {
@@ -248,6 +266,9 @@ impl TracksView {
                 cells: RefCell::new(Vec::new()),
                 title: RefCell::new(tr("Tracks")),
                 loaded: Cell::new(false),
+                quiet: Cell::new(false),
+                unmarked: Cell::new(false),
+                on_loaded: RefCell::new(None),
             }
         });
         columns_button.set_menu_model(Some(&view.columns_menu()));
@@ -287,9 +308,10 @@ impl TracksView {
                 }
                 // The playing indicator is added when the row plays.
                 TrackColumn::Number => TableCell::text(1.0, &["hk-t3", "hk-numeric"]),
-                TrackColumn::Year | TrackColumn::Plays | TrackColumn::Length => {
-                    TableCell::text(1.0, &["hk-numeric", "hk-t2"])
-                }
+                TrackColumn::Year
+                | TrackColumn::Plays
+                | TrackColumn::Length
+                | TrackColumn::Added => TableCell::text(1.0, &["hk-numeric", "hk-t2"]),
                 TrackColumn::Format => TableCell::text(0.0, &["hk-mono-meta"]),
                 _ => TableCell::text(0.0, &[]),
             };
@@ -421,8 +443,12 @@ impl TracksView {
             });
         }
         let weak = Rc::downgrade(self);
-        self.filter.connect_changed(move |_| {
+        self.filter.connect_changed(move |filter| {
             let Some(view) = weak.upgrade() else { return };
+            crate::query_text::mark(filter, &crate::query_text::read(&filter.text()));
+            if view.quiet.get() {
+                return;
+            }
             let generation = view.filter_generation.get() + 1;
             view.filter_generation.set(generation);
             let weak = Rc::downgrade(&view);
@@ -566,7 +592,9 @@ impl TracksView {
         let keys = self.sort.borrow();
         // Without keys of the user's the library sorts by artist, album, disc
         // and number; the first two have columns and carry their marks.
-        let marks: Vec<(TrackColumn, bool)> = if keys.is_empty() {
+        let marks: Vec<(TrackColumn, bool)> = if keys.is_empty() && self.unmarked.get() {
+            Vec::new()
+        } else if keys.is_empty() {
             vec![(TrackColumn::Artist, false), (TrackColumn::Album, false)]
         } else {
             keys.iter().map(|k| (k.column, k.descending)).collect()
@@ -697,7 +725,86 @@ impl TracksView {
                 view.model.set_keys(keys);
             }
             view.show_selection();
+            if let Some(loaded) = view.on_loaded.borrow().as_ref() {
+                loaded(view.model.n_items() as usize);
+            }
         });
+    }
+
+    /// Shows only `columns`, in the table's order, each with its width and
+    /// whether it takes spare room.
+    pub(crate) fn show_columns(&self, columns: &[(TrackColumn, i32, bool)]) {
+        for (column, c) in &self.columns {
+            match columns.iter().find(|(shown, _, _)| shown == column) {
+                Some((_, width, expand)) => {
+                    c.set_visible(true);
+                    c.set_fixed_width(*width);
+                    c.set_expand(*expand);
+                }
+                None => c.set_visible(false),
+            }
+        }
+    }
+
+    /// Leaves the headers unmarked while the user has not sorted: the order is
+    /// the query's.
+    pub(crate) fn unmark_default_order(&self) {
+        self.unmarked.set(true);
+        self.show_sort();
+    }
+
+    /// Hides the status bar under the table.
+    pub(crate) fn hide_status(&self) {
+        if let Some(status) = self.status_selection.parent() {
+            status.set_visible(false);
+        }
+    }
+
+    /// Shows the tracks matching `text` (words or a query) at once; `title`
+    /// names them in the queue.
+    pub(crate) fn show_text(self: &Rc<Self>, text: &str, title: &str) {
+        self.title.replace(title.to_owned());
+        self.quiet.set(true);
+        self.filter.set_text(text);
+        self.quiet.set(false);
+        self.reload();
+    }
+
+    /// Shows no tracks.
+    pub(crate) fn clear(&self) {
+        self.generation.set(self.generation.get() + 1);
+        self.model.set_keys(Vec::new());
+    }
+
+    /// Calls `loaded` with the number of tracks after each load.
+    pub(crate) fn connect_loaded(&self, loaded: impl Fn(usize) + 'static) {
+        self.on_loaded.replace(Some(Box::new(loaded)));
+    }
+
+    /// Plays from the first selected row, or from the first row.
+    pub(crate) fn play_selected(&self) {
+        let first = selected_positions(&self.selection)
+            .first()
+            .copied()
+            .unwrap_or(0);
+        if (first as usize) < self.model.keys().len() {
+            self.play_from(first as usize);
+        }
+    }
+
+    /// Moves the selection by `by` rows and keeps it in view.
+    pub(crate) fn move_selection(&self, by: i32) {
+        let count = self.model.n_items();
+        if count == 0 {
+            return;
+        }
+        let current = selected_positions(&self.selection).first().copied();
+        let next = match current {
+            Some(p) => (i64::from(p) + i64::from(by)).clamp(0, i64::from(count) - 1) as u32,
+            None => 0,
+        };
+        self.table
+            .scroll_to(next, None, gtk::ListScrollFlags::SELECT, None);
     }
 
     /// Reloads after the library changed, dropping the cached rows.

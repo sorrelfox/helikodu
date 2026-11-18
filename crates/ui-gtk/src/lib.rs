@@ -19,6 +19,7 @@ mod models;
 mod play_modes;
 mod playback;
 mod popovers;
+mod query_text;
 pub mod snapshot;
 pub mod style;
 mod tools;

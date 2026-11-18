@@ -143,3 +143,37 @@ popover.menu modelbutton check {
 }
 popover.menu modelbutton check:hover, popover.menu modelbutton check:active { transform: none; background: none; box-shadow: none; }
 popover.menu modelbutton check:checked { -gtk-icon-source: -gtk-icontheme("helikodu-check-symbolic"); }
+
+/* ---- Query language and saved searches ---------------------------------- */
+
+searchentry.hk-query text, entry.hk-query text { font-family: monospace; font-size: 12px; font-feature-settings: "liga" 0, "calt" 0; }
+.hk-search-side-pane { min-width: 300px; border-left: 1px solid var(--hk-line); }
+.hk-search-side { padding: 22px 18px 16px; }
+.hk-search-side .hk-section-label { margin-bottom: 10px; }
+.hk-search-side .hk-saved-title { margin-top: 18px; }
+button.hk-query-chip {
+  min-height: 0; padding: 3px 7px; border-radius: 5px; border: 1px solid var(--hk-line);
+  background-color: var(--hk-field); box-shadow: none; color: var(--hk-t1);
+  font-family: monospace; font-size: 12px; font-weight: 400; font-feature-settings: "liga" 0, "calt" 0;
+}
+button.hk-query-chip:hover { background-color: var(--hk-hover); }
+.hk-query-caption { margin: 4px 0 12px; font-size: 12px; color: var(--hk-t2); }
+list.hk-saved { background: none; color: var(--hk-t1); }
+list.hk-saved > row { min-height: 44px; padding: 0 6px; border-radius: 6px; background: none; }
+list.hk-saved > row:hover { background-color: var(--hk-hover); }
+list.hk-saved > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
+list.hk-saved image { -gtk-icon-size: 14px; }
+.hk-query-results .hk-search-head { padding: 16px 24px 12px; }
+.hk-query-notice { margin: 0 24px 12px; }
+.hk-query-example { font-size: 12px; color: var(--hk-t2); }
+popover.hk-completion > contents {
+  padding: 6px; border-radius: 10px; border: 1px solid var(--hk-line2);
+  background-color: var(--hk-menu); color: var(--hk-t1); box-shadow: var(--hk-menu-shadow);
+}
+list.hk-completion-list { background: none; }
+list.hk-completion-list > row { min-height: 30px; padding: 0 8px; border-radius: 6px; background: none; }
+list.hk-completion-list > row:selected { background-color: var(--hk-hover); color: var(--hk-t1); }
+.hk-completion-name { font-size: 12px; }
+.hk-completion-example { font-size: 11px; }
+popover.hk-completion separator { margin: 6px 0; background-color: var(--hk-line); }
+.hk-completion-hint { padding: 0 8px 2px; font-size: 12px; }

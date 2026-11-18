@@ -72,3 +72,6 @@ crates/ui-gtk/src/tools/copies.rs
 crates/ui-gtk/src/tools/duplicates.rs
 crates/ui-gtk/src/tools/trash.rs
 crates/ui-gtk/src/widgets/copies_badge.rs
+crates/ui-gtk/src/backend.rs
+crates/ui-gtk/src/query_text.rs
+crates/ui-gtk/src/popovers/query_completion.rs

@@ -34,14 +34,15 @@ use helikodu_model::player::{
     ContextSource, EngineError, EnqueueAt, EntryId, PlayModes, PlaybackState as ServicePlayback,
     QueueContext, RepeatMode, ShuffleMode, StopAfter, Volume,
 };
+use helikodu_model::query::{Field, Query, SortBy, SortKey};
 use helikodu_model::settings::UiState;
 use helikodu_service::bus::Subscription;
 use helikodu_service::library::{
     AlbumFilter as ServiceAlbumFilter, AlbumId, AlbumQuality, AlbumQuery as ServiceAlbumQuery,
     AlbumSort as ServiceAlbumSort, AlbumSummary, ArtistQuery, ArtistRole, ArtistSummary, CoverHash,
     GenreId, GenreQuery, ItemContent, LibraryEvent, LibraryService, MAX_PAGE, MusicLibrary, Page,
-    PersonId, PlaylistId, QueueItemInfo, Thumbnail, ThumbnailSize, TrackFilter, TrackOrder,
-    TrackSortKey, TrackSummary,
+    PersonId, PlaylistId, QueueItemInfo, SavedSearchId, Thumbnail, ThumbnailSize, TrackFilter,
+    TrackOrder, TrackSortKey, TrackSummary, parse_query_lenient,
 };
 use helikodu_service::player::SleepWhen as ServiceSleepWhen;
 use helikodu_service::player::{
@@ -54,8 +55,9 @@ use super::{
     ArtistKey, ArtistRow, AudioFormat, Backend, BackendError, CoverKey, DiscGroup, FolderFile,
     FolderListing, FolderRow, FolderState, GenreKey, GenreRow, LibraryCounts, LibrarySource,
     NowPlaying, OutputInfo, PlaybackState, PlayerControl, PlayerRequest, PlaylistKey, PlaylistRow,
-    QueueSnapshot, Repeat, SearchResults, SignalState, ThumbnailState, TrackColumn, TrackKey,
-    TrackQuery, TrackRow, TrackScope, UiStateAccess, Update,
+    QueueSnapshot, Repeat, SavedSearchKey, SavedSearchRow, SearchResults, SignalState,
+    ThumbnailState, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort,
+    UiStateAccess, Update,
 };
 use crate::i18n::{fill, tr};
 
@@ -199,6 +201,11 @@ fn has_subfolders(path: &Path) -> bool {
     })
 }
 
+/// The library's id of a saved search.
+fn saved_search_id(key: SavedSearchKey) -> SavedSearchId {
+    SavedSearchId::from_raw(i64::try_from(key.0).unwrap_or(0))
+}
+
 /// The library's sort key for a column of the track table.
 fn sort_key(column: TrackColumn) -> TrackSortKey {
     match column {
@@ -211,7 +218,34 @@ fn sort_key(column: TrackColumn) -> TrackSortKey {
         TrackColumn::Rating => TrackSortKey::Rating,
         TrackColumn::Plays => TrackSortKey::Plays,
         TrackColumn::Length => TrackSortKey::Length,
+        // Sorted through the query language instead (see `query_sort`).
+        TrackColumn::Genre | TrackColumn::Added => TrackSortKey::Title,
     }
+}
+
+/// The query language's sort keys for a column of the track table.
+fn query_sort(keys: &[TrackSort]) -> Vec<SortKey> {
+    keys.iter()
+        .flat_map(|key| {
+            let fields = match key.column {
+                TrackColumn::Number => vec![Field::Disc, Field::Track],
+                TrackColumn::Title => vec![Field::Title],
+                TrackColumn::Artist => vec![Field::Artist],
+                TrackColumn::Album => vec![Field::Album],
+                TrackColumn::Year => vec![Field::Year],
+                TrackColumn::Format => vec![Field::Codec, Field::SampleRate, Field::BitDepth],
+                TrackColumn::Rating => vec![Field::Rating],
+                TrackColumn::Plays => vec![Field::Plays],
+                TrackColumn::Length => vec![Field::Duration],
+                TrackColumn::Genre => vec![Field::Genre],
+                TrackColumn::Added => vec![Field::Added],
+            };
+            fields.into_iter().map(move |field| SortKey {
+                by: SortBy::Field(field),
+                descending: key.descending,
+            })
+        })
+        .collect()
 }
 
 impl ServiceLibrary {
@@ -285,6 +319,59 @@ impl ServiceLibrary {
         }
     }
 
+    /// The tracks of `query` through the query language, when its text is a query
+    /// or it sorts by a column only the query language sorts by; `None` otherwise.
+    fn query_keys(
+        &self,
+        music: &MusicLibrary,
+        query: &TrackQuery,
+    ) -> Result<Option<Vec<TrackKey>>, BackendError> {
+        let text = query.text.trim();
+        let parsed = (!text.is_empty()).then(|| parse_query_lenient(text));
+        let is_query = parsed
+            .as_ref()
+            .is_some_and(|p| p.error.is_none() && !p.query.is_plain_text());
+        let by_query = query
+            .sort
+            .iter()
+            .any(|k| matches!(k.column, TrackColumn::Genre | TrackColumn::Added));
+        if !is_query && !by_query {
+            return Ok(None);
+        }
+        let mut search: Query = parsed.map(|p| p.query).unwrap_or_default();
+        if !query.sort.is_empty() {
+            search.sort = query_sort(&query.sort);
+        }
+        let ids = music.query_track_ids(&search, 0).map_err(error)?;
+        let mut keys: Vec<TrackKey> = ids.iter().map(|id| TrackKey(id.get())).collect();
+        // The albums of the tracks, for their rows; and the scope, if any.
+        let filter = match query.scope {
+            TrackScope::All => None,
+            TrackScope::Artist(key) => Some(TrackFilter::Artist(person(key), None)),
+            TrackScope::Genre(key) => Some(TrackFilter::Genre(genre_id(key))),
+        };
+        let unknown = {
+            let albums = lock(&self.albums_of);
+            keys.iter().any(|k| !albums.contains_key(k))
+        };
+        if unknown || filter.is_some() {
+            let tracks = music
+                .sorted_track_ids(filter.unwrap_or(TrackFilter::All), &[])
+                .map_err(error)?;
+            let mut albums = lock(&self.albums_of);
+            for (id, album) in &tracks {
+                albums.insert(TrackKey(id.get()), album.map_or(AlbumKey(0), album_key));
+            }
+            drop(albums);
+            if filter.is_some() {
+                let scope: HashSet<TrackKey> =
+                    tracks.iter().map(|(id, _)| TrackKey(id.get())).collect();
+                keys.retain(|k| scope.contains(k));
+            }
+        }
+        Ok(Some(keys))
+    }
+
     /// The row of one track by its key, from the database.
     fn track_row(&self, music: &MusicLibrary, key: TrackKey) -> Option<TrackRow> {
         let details = music.track_details(track_id(key)).ok().flatten()?;
@@ -320,6 +407,8 @@ impl ServiceLibrary {
             },
             path: Some(details.path),
             copies: copies_count(music, track_id(key)),
+            genre: details.tags.genres.join(", "),
+            added: Some(details.added_at),
             ..TrackRow::default()
         })
     }
@@ -639,6 +728,9 @@ impl LibrarySource for ServiceLibrary {
     fn track_keys(&self, query: &TrackQuery) -> Result<Vec<TrackKey>, BackendError> {
         let music = self.library()?;
         let text = query.text.trim();
+        if let Some(keys) = self.query_keys(music, query)? {
+            return Ok(keys);
+        }
         let mut found: Option<Vec<TrackKey>> = None;
         if !text.is_empty() {
             let mut keys = Vec::new();
@@ -973,6 +1065,38 @@ impl LibrarySource for ServiceLibrary {
             other_files,
             state,
         })
+    }
+
+    fn saved_searches(&self) -> Result<Vec<SavedSearchRow>, BackendError> {
+        Ok(self
+            .library()?
+            .saved_searches()
+            .map_err(error)?
+            .into_iter()
+            .map(|entry| SavedSearchRow {
+                key: SavedSearchKey(u64::try_from(entry.search.id.get()).unwrap_or(0)),
+                name: entry.search.name,
+                text: entry.search.text,
+                count: entry.count,
+            })
+            .collect())
+    }
+
+    fn save_search(&self, name: &str, query: &Query) -> Result<SavedSearchKey, BackendError> {
+        let id = self.library()?.save_search(name, query).map_err(error)?;
+        Ok(SavedSearchKey(u64::try_from(id.get()).unwrap_or(0)))
+    }
+
+    fn rename_saved_search(&self, key: SavedSearchKey, name: &str) -> Result<(), BackendError> {
+        self.library()?
+            .rename_saved_search(saved_search_id(key), name)
+            .map_err(error)
+    }
+
+    fn delete_saved_search(&self, key: SavedSearchKey) -> Result<(), BackendError> {
+        self.library()?
+            .delete_saved_search(saved_search_id(key))
+            .map_err(error)
     }
 
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {

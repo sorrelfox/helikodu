@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use helikodu_ui_gtk::backend::{AlbumKey, Backend, PlayerRequest, TrackColumn, sample};
+use helikodu_ui_gtk::backend::{AlbumKey, Backend, PlayerRequest, TrackColumn, TrackQuery, sample};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
 
@@ -187,6 +187,54 @@ fn search_and_no_results(app: &gtk::Application) {
         "clearing the search returns"
     );
     WidgetExt::activate_action(&window, "win.search", None).unwrap();
+    window.destroy();
+}
+
+fn query_search_and_saved_searches(app: &gtk::Application) {
+    let (window, backend) = window(app);
+    window.open_page("genres");
+    let jazz = backend
+        .library()
+        .track_keys(&TrackQuery {
+            text: "genre:jazz".into(),
+            ..TrackQuery::default()
+        })
+        .unwrap()
+        .len();
+    assert!(jazz > 0, "the sample has jazz");
+    window.search_text("genre:jazz");
+    wait_for("the query results", 2, || {
+        window.search_query_state() == Some((jazz, false))
+    });
+    assert!(window.search_entry_is_query(), "a query is set in mono");
+    wait_for("the saved searches", 2, || {
+        window.saved_search_names().len() == 3
+    });
+    // Text that cannot be read keeps the last query and says why.
+    window.search_text("genre:jazz year>");
+    wait_for("the notice", 2, || {
+        window.search_query_state() == Some((jazz, true))
+    });
+    window.search_text("harbour");
+    wait_for("the plain results", 2, || {
+        window.search_query_state().is_none()
+            && window
+                .search_results()
+                .is_some_and(|(a, b, c)| a + b + c > 0)
+    });
+    assert!(!window.search_entry_is_query());
+    // A saved search is listed with its count.
+    let query = helikodu_service::library::parse_query("plays=0").unwrap();
+    backend.library().save_search("Unplayed", &query).unwrap();
+    let saved = backend.library().saved_searches().unwrap();
+    assert_eq!(saved.len(), 4);
+    assert_eq!(saved[3].text, "plays=0");
+    window.search_text("");
+    spin(50);
+    window.search_text("plays=0");
+    wait_for("the new saved search", 2, || {
+        window.saved_search_names().last().map(String::as_str) == Some("Unplayed")
+    });
     window.destroy();
 }
 
@@ -642,6 +690,10 @@ const TESTS: &[Test] = &[
     ("playlists_edit_with_undo", playlists_edit_with_undo),
     ("the_context_menu_queues", the_context_menu_queues),
     ("search_and_no_results", search_and_no_results),
+    (
+        "query_search_and_saved_searches",
+        query_search_and_saved_searches,
+    ),
     ("menus_open", menus_open),
     ("the_empty_library", the_empty_library),
     ("the_context_menu_fits", the_context_menu_fits),

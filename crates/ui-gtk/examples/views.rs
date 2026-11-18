@@ -63,6 +63,17 @@ fn steps() -> Vec<Step> {
             w.search_text("harbuor");
             None
         }),
+        ("query-search", |w| {
+            w.search_text("genre:jazz -genre:fusion");
+            None
+        }),
+        ("query-error", |w| {
+            w.search_text("genre:jazz year>");
+            None
+        }),
+        ("query-completion", |w| {
+            w.demo_query_completion("genre:jazz a")
+        }),
         ("context-menu", |w| {
             w.search_text("");
             w.open_first_playlist();
@@ -136,6 +147,9 @@ fn save_menu(
             gtk::graphene::Rect::new(frame.0 + frame.2 / 2.0 - 220.0, h - 300.0, 440.0, 300.0)
         }
         "main-menu" => gtk::graphene::Rect::new(frame.0 + frame.2 + 8.0 - 300.0, 0.0, 300.0, 470.0),
+        "query-completion" => {
+            gtk::graphene::Rect::new(frame.0 - 20.0, frame.1 - 50.0, frame.2 + 40.0, 300.0)
+        }
         _ => gtk::graphene::Rect::new(frame.0 - 38.0, frame.1 - 12.0, 280.0, 380.0),
     };
     let renderer = window.renderer().ok_or("the window is not realised")?;
