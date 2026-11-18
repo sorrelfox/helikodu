@@ -7,8 +7,12 @@ fn main() {
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_PATH");
     println!("cargo:rerun-if-changed=shim/shim.cpp");
     println!("cargo:rerun-if-changed=shim/shim.h");
+    // The link lines are printed after the shim's: with `--as-needed` (the
+    // default on Debian and Ubuntu toolchains) a shared library named before
+    // the static shim that uses it is dropped.
     let library = match pkg_config::Config::new()
         .atleast_version("2.0")
+        .cargo_metadata(false)
         .probe("libsidplayfp")
     {
         Ok(library) => library,
@@ -32,4 +36,10 @@ fn main() {
         build.define(name, value.as_deref());
     }
     build.compile("helikodu_sidplayfp_shim");
+    for path in &library.link_paths {
+        println!("cargo:rustc-link-search=native={}", path.display());
+    }
+    for name in &library.libs {
+        println!("cargo:rustc-link-lib={name}");
+    }
 }

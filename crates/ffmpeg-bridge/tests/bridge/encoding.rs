@@ -103,11 +103,13 @@ fn lossy_formats_keep_the_length() {
         assert_eq!(decoded.spec.channel_count(), 2, "{name}: channels");
         let frames = decoded.frames() as i64;
         let want = src.frames() as i64;
-        // MP3 without a LAME tag cannot carry the exact length; the others can.
-        let slack = if format == EncodeFormat::Mp3 {
-            2_000
-        } else {
-            0
+        // MP3 without a LAME tag cannot carry the exact length. FFmpeg's AAC
+        // encoder before 8.0 pads the last frame by a few samples in MP4; the
+        // others keep the length exactly.
+        let slack = match format {
+            EncodeFormat::Mp3 => 2_000,
+            EncodeFormat::Aac => 1_024,
+            _ => 0,
         };
         assert!(
             (frames - want).abs() <= slack,
