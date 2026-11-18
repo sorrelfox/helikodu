@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# rpmlint findings that are intended; each says why.
+
+# Words of the description that are right: "gapless" and "crossfades" are the
+# usual terms for these playback features, "cli" is part of the program name
+# helikodu-cli, and "ffmpeg" of the package names ffmpeg-free and ffmpeg-libs.
+addFilter(r"spelling-error .*'(gapless|crossfades|cli|ffmpeg)'")
+
+# The changelog entry is written at build time from the version passed to
+# rpmbuild and the build date; the project's changes are in CHANGELOG.md.
+addFilter(r"macro-in-%changelog")

@@ -1,0 +1,56 @@
+Source: helikodu
+Section: sound
+Priority: optional
+Maintainer: sorrelfox <348316453+sorrelfox@users.noreply.github.com>
+Rules-Requires-Root: no
+Standards-Version: 4.7.2
+Homepage: https://github.com/sorrelfox/helikodu
+Vcs-Browser: https://github.com/sorrelfox/helikodu
+Vcs-Git: https://github.com/sorrelfox/helikodu.git
+# Rust is not listed: the toolchain pinned in rust-toolchain.toml is newer than
+# the distributions' rustc and comes from rustup (see packaging/deb/build-deb.sh).
+Build-Depends:
+ debhelper-compat (= 13),
+ appstream,
+ clang,
+ desktop-file-utils,
+ gettext,
+ libasound2-dev,
+ libavcodec-dev,
+ libavfilter-dev,
+ libavformat-dev,
+ libavutil-dev,
+ libclang-dev,
+ libgme-dev,
+ libgtk-4-dev (>= 4.18),
+ libjack-jackd2-dev,
+ libopenmpt-dev,
+ libpipewire-0.3-dev,
+ libsidplayfp-dev,
+ libsqlite3-dev (>= 3.43),
+ libswresample-dev,
+ meson,
+ ninja-build,
+ pkgconf,
+ python3,
+
+Package: helikodu
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Suggests:
+ fluid-soundfont-gm | timgm6mb-soundfont,
+ libjack-jackd2-0 | libjack0 | pipewire-jack,
+Description: offline audio player and music library manager
+ Helikodu plays and organizes your own music library, kept on your own
+ computer. It works entirely offline: it never connects to the internet
+ and sends no telemetry.
+ .
+ It plays practically every audio format through FFmpeg, plus tracker
+ modules, game music, SID tunes and MIDI files, with gapless playback,
+ loudness normalization, smart playlists, lyrics and a play history.
+ Output goes to PipeWire, PulseAudio, ALSA or JACK.
+ .
+ The package contains the desktop application (helikodu), the
+ command-line tool (helikodu-cli) and the offline user guide.

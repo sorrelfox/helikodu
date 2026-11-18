@@ -19,3 +19,9 @@ option(
   value: false,
   description: 'Build the vgmstream decoder for game audio streams; needs libvgmstream (public API 1.1), found through pkg-config or VGMSTREAM_LIB_DIR',
 )
+option(
+  'helperdir',
+  type: 'string',
+  value: '',
+  description: 'Folder for the scan worker, absolute or relative to the prefix; the programs look for it there as well as beside themselves and in ../libexec/helikodu (default: <libexecdir>/helikodu)',
+)

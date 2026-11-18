@@ -34,16 +34,15 @@ localedir = prefix / get_option('localedir')
 # it, so it is installed where packages do not strip documentation.
 guidedir = datadir / 'helikodu' / 'guide'
 
-# The programs look for the scan worker beside themselves or in
-# ../libexec/helikodu/ relative to their own folder (find_worker_program in
-# crates/library). The worker therefore goes to <prefix>/libexec/helikodu,
-# whatever libexecdir says, and bindir has to be <prefix>/bin.
-worker_dir = prefix / 'libexec' / 'helikodu'
-if get_option('bindir') != 'bin' and get_option('bindir') != prefix / 'bin'
-  error('bindir must be <prefix>/bin: the programs find the scan worker in ../libexec/helikodu')
-endif
-if get_option('libexecdir') != 'libexec' and get_option('libexecdir') != prefix / 'libexec'
-  warning('the scan worker is installed to @0@, not to libexecdir, because the programs look for it there'.format(worker_dir))
+# The programs look for the scan worker beside themselves, in
+# ../libexec/helikodu/ relative to their own folder, and in the folder set
+# here at build time (find_worker_program in crates/library). It goes to
+# <libexecdir>/helikodu unless the helperdir option names another folder,
+# such as /usr/lib/helikodu on Arch Linux.
+if get_option('helperdir') != ''
+  worker_dir = prefix / get_option('helperdir')
+else
+  worker_dir = prefix / get_option('libexecdir') / 'helikodu'
 endif
 
 # --- The programs -----------------------------------------------------------
@@ -83,6 +82,8 @@ endif
 cargo_env.set('HELIKODU_LOCALEDIR', localedir)
 # Where the GTK front end finds the user guide for the Help menu.
 cargo_env.set('HELIKODU_GUIDEDIR', guidedir)
+# Where the programs look for the scan worker after the places beside them.
+cargo_env.set('HELIKODU_HELPERDIR', worker_dir)
 
 # Cargo runs in the source folder so that it reads .cargo/config.toml there
 # (the vendored sources of a release tarball), then the programs are copied

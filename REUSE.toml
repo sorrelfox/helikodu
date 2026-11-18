@@ -41,3 +41,10 @@ path = ["**/*.md"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 sorrelfox and Helikodu contributors"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# The Debian packaging template (control files that cannot carry a header).
+[[annotations]]
+path = ["packaging/deb/debian/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 sorrelfox and Helikodu contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"

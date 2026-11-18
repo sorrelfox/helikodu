@@ -1,17 +1,24 @@
 # Publishes a release. A version tag (v0.1.0) builds the source tarball with
-# vendored crates and the Linux builds for x86_64 and aarch64, and publishes
-# them with a SHA256SUMS file as a GitHub Release whose notes are the tag's
-# section of CHANGELOG.md. Started by hand, it is a dry run: everything is
-# built and kept as workflow artifacts, and nothing is published.
+# vendored crates and, from it, every release file for x86_64 and aarch64, and
+# publishes them with a SHA256SUMS file as a GitHub Release whose notes are
+# the tag's section of CHANGELOG.md. Started by hand, it is a dry run:
+# everything is built and kept as workflow artifacts, and nothing is
+# published.
 #
 # Each architecture builds on a native runner (aarch64 on GitHub's arm64
-# runner, ubuntu-24.04-arm), in the Debian 13 container of ci/containers: the
-# oldest supported base (glibc 2.41, GTK 4.18, FFmpeg 7.1), so the binary runs
-# on that and newer systems that still ship the FFmpeg 7 libraries. Both build
-# from the same source tarball. An AppImage for each architecture is built
-# from it as well, in the container of build-aux/appimage (also Debian 13),
-# with its own minimal FFmpeg. See docs/dev/releasing.md and
-# docs/dev/appimage.md.
+# runner, ubuntu-24.04-arm). The jobs after `source`:
+#   build     the programs as .tar.xz and .tar.gz, in the Debian 13 container
+#             of ci/containers: the oldest supported base (glibc 2.41, GTK
+#             4.18, FFmpeg 7.1), so they run on that and newer systems that
+#             still ship the FFmpeg 7 libraries
+#   appimage  the AppImage, in the container of build-aux/appimage, with its
+#             own minimal FFmpeg (docs/dev/appimage.md)
+#   flatpak   the Flatpak as a single-file bundle (docs/dev/flatpak.md)
+#   rpm       the Fedora package (docs/dev/packaging-rpm.md)
+#   deb       the Debian 13 and Ubuntu 26.04 packages (docs/dev/packaging-deb.md)
+#   arch      the Arch Linux package, x86_64 only (docs/dev/packaging-arch.md)
+# Every container is capped at 12 GB of memory, the runners' limit
+# (ci/README.md). See docs/dev/releasing.md.
 name: Release
 
 on:
@@ -30,6 +37,8 @@ env:
   CARGO_TERM_COLOR: always
   # Keeps each job under the 12 GB memory limit; see ci/README.md.
   CARGO_BUILD_JOBS: 4
+  # The Fedora release the RPM is built for and named after (.fc45).
+  FEDORA_RELEASE: "45"
 
 jobs:
   source:
@@ -176,11 +185,14 @@ jobs:
             sudo rm /usr/local/share/man/man1/helikodu-scan-worker.1
             sudo rm /usr/local/share/locale/*/LC_MESSAGES/helikodu.mo
           EOF
-              tar --create --file=- --sort=name --format=posix \
+              # One archive, compressed twice: .tar.xz and .tar.gz hold the
+              # same files.
+              tar --create --file=/tmp/pack.tar --sort=name --format=posix \
                   --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime \
                   --mtime="@$epoch" --owner=0 --group=0 --numeric-owner \
-                  --mode=u+rw,go+r,go-w --directory /tmp/pack "$binary" \
-                | xz --compress --stdout -6 --threads=1 > "$out/$binary.tar.xz"
+                  --mode=u+rw,go+r,go-w --directory /tmp/pack "$binary"
+              xz --compress --stdout -6 --threads=1 /tmp/pack.tar > "$out/$binary.tar.xz"
+              gzip --no-name --best --stdout /tmp/pack.tar > "$out/$binary.tar.gz"
               ls -l "$out"
             '
       - uses: actions/upload-artifact@v4
@@ -221,7 +233,8 @@ jobs:
             *) echo "runs on $(uname -m), expected $ARCH" >&2; exit 1 ;;
           esac
           version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
-          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          export SOURCE_DATE_EPOCH
           HELIKODU_CONTAINER_ENGINE=docker build-aux/appimage/build.sh \
             --source "target/release-source/helikodu-$version.tar.xz" \
             --offline --out target/appimage --cache "$RUNNER_TEMP/appimage-cache"
@@ -245,9 +258,246 @@ jobs:
           path: target/release-appimage/
           if-no-files-found: error
 
+  flatpak:
+    name: Flatpak bundle (${{ matrix.arch }})
+    needs: source
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    # Flathub's image (amd64 and arm64) with flatpak-builder, the linter and
+    # the GNOME 51 runtime and SDK. flatpak-builder needs bubblewrap, hence the
+    # privileged container; the memory cap keeps the build under the 12 GB
+    # limit (ci/README.md). See docs/dev/flatpak.md.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged --memory 12g --memory-swap 12g
+    steps:
+      # The manifest builds the checked-out tag (its `dir` source); the
+      # crates come from cargo-sources.json, so the build is offline.
+      - uses: actions/checkout@v4
+      - name: Build
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+          case "$(uname -m)" in
+            "$ARCH") ;;
+            *) echo "built on $(uname -m), expected $ARCH" >&2; exit 1 ;;
+          esac
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          # No cache: release files are built from a clean state only.
+          flatpak-builder --user --force-clean --disable-rofiles-fuse \
+            --install-deps-from=flathub --jobs="$CARGO_BUILD_JOBS" \
+            --state-dir="$RUNNER_TEMP/state" --repo="$RUNNER_TEMP/repo" \
+            "$RUNNER_TEMP/build" packaging/flatpak/io.github.sorrelfox.Helikodu.yml
+      - name: Lint
+        run: |
+          set -eux
+          # The metainfo has no screenshots until the Flathub submission;
+          # every other finding fails the release.
+          cat > "$RUNNER_TEMP/lint-exceptions.json" <<'EOF'
+          {
+            "io.github.sorrelfox.Helikodu": {
+              "metainfo-missing-screenshots": "Screenshots are added for the Flathub submission",
+              "appstream-screenshots-not-mirrored-in-ostree": "Screenshots are added for the Flathub submission"
+            }
+          }
+          EOF
+          flatpak-builder-lint --exceptions --user-exceptions "$RUNNER_TEMP/lint-exceptions.json" repo "$RUNNER_TEMP/repo"
+      - name: Bundle
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+          version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
+          out="$GITHUB_WORKSPACE/target/release-flatpak"
+          rm -rf "$out"
+          mkdir -p "$out"
+          bundle="$out/helikodu-$version-$ARCH.flatpak"
+          # The Flathub remote in the bundle lets `flatpak install --bundle`
+          # install the GNOME runtime with it.
+          flatpak build-bundle --arch="$ARCH" \
+            --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+            "$RUNNER_TEMP/repo" "$bundle" io.github.sorrelfox.Helikodu
+          # The bundle installs, is the version and architecture it is named
+          # for, and both programs start.
+          flatpak install --user --noninteractive --bundle "$bundle"
+          flatpak info --user io.github.sorrelfox.Helikodu | tee "$RUNNER_TEMP/info"
+          grep -Eq "^ *Version: $version\$" "$RUNNER_TEMP/info"
+          grep -Eq "^ *Arch: $ARCH\$" "$RUNNER_TEMP/info"
+          # The container has no user session; flatpak run needs a runtime
+          # folder, with a short path for the sockets it makes there.
+          XDG_RUNTIME_DIR=$(mktemp -d)
+          export XDG_RUNTIME_DIR
+          flatpak run --user --no-documents-portal io.github.sorrelfox.Helikodu --version | grep -Fx "helikodu $version"
+          flatpak run --user --no-documents-portal --command=helikodu-cli io.github.sorrelfox.Helikodu --version
+          ls -l "$out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-flatpak-${{ matrix.arch }}
+          path: target/release-flatpak/
+          if-no-files-found: error
+
+  rpm:
+    name: Fedora RPM (${{ matrix.arch }})
+    needs: source
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    env:
+      # Fedora's flags add full debug information, which the build without it
+      # does not have: with six jobs its peak in a 12 GB container was 11.5 GB
+      # (page cache included). Three jobs and line tables only (still enough
+      # for the -debuginfo package's backtraces, which are not published)
+      # keep it well below the limit; see docs/dev/packaging-rpm.md.
+      CARGO_BUILD_JOBS: 3
+      HELIKODU_EXTRA_RUSTFLAGS: -C debuginfo=line-tables-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-source
+          path: target/release-source
+      # Built with rpmbuild from the source tarball, offline, against Fedora's
+      # libraries (ffmpeg-free), then installed in a second, clean container.
+      - name: Build, lint and install the RPM
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+          case "$(uname -m)" in
+            "$ARCH") ;;
+            *) echo "runs on $(uname -m), expected $ARCH" >&2; exit 1 ;;
+          esac
+          version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          export SOURCE_DATE_EPOCH
+          image="registry.fedoraproject.org/fedora:$FEDORA_RELEASE"
+          docker run --rm --memory 12g --memory-swap 12g \
+            -e CARGO_BUILD_JOBS -e HELIKODU_EXTRA_RUSTFLAGS -e SOURCE_DATE_EPOCH \
+            -v "$PWD:/src" "$image" \
+            sh /src/packaging/rpm/build.sh "/src/target/release-source/helikodu-$version.tar.xz" /src/target/rpm
+          # A pre-release is the RPM version 0.9.0~rc1; the file is published
+          # with a dot in place of the tilde, which GitHub does not keep.
+          rpm_version=$(echo "$version" | tr - '~')
+          file="helikodu-$rpm_version-1.fc$FEDORA_RELEASE.$ARCH.rpm"
+          test -f "target/rpm/$file"
+          docker run --rm --memory 12g --memory-swap 12g \
+            -v "$PWD:/src" "$image" \
+            sh /src/packaging/rpm/smoke-test.sh "/src/target/rpm/$file"
+          mkdir -p target/release-rpm
+          cp "target/rpm/$file" "target/release-rpm/$(echo "$file" | tr '~' .)"
+          ls -l target/release-rpm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-rpm-${{ matrix.arch }}
+          path: target/release-rpm/
+          if-no-files-found: error
+
+  deb:
+    name: Debian package (${{ matrix.distro }}, ${{ matrix.arch }})
+    needs: source
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # One package per distribution: their FFmpeg, GTK and other library
+        # versions differ, so a package built on one does not install on the
+        # other. See docs/dev/packaging-deb.md.
+        distro: ["debian:13", "ubuntu:26.04"]
+        arch: [x86_64, aarch64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-source
+          path: target/release-source
+      - name: Build the package from the source tarball
+        env:
+          DISTRO: ${{ matrix.distro }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+          case "$(uname -m)" in
+            "$ARCH") ;;
+            *) echo "runs on $(uname -m), expected $ARCH" >&2; exit 1 ;;
+          esac
+          version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
+          epoch=$(git log -1 --format=%ct)
+          docker run --rm --memory 12g --memory-swap 12g -e CARGO_BUILD_JOBS -e SOURCE_DATE_EPOCH="$epoch" \
+            -v "$PWD:/src" "docker.io/library/$DISTRO" \
+            sh /src/packaging/deb/build-deb.sh "/src/target/release-source/helikodu-$version.tar.xz" /src/target/release-deb
+      - name: Install, try and remove the package in a fresh container
+        env:
+          DISTRO: ${{ matrix.distro }}
+        run: |
+          set -eux
+          for deb in target/release-deb/*.deb; do
+            docker run --rm --memory 12g --memory-swap 12g -v "$PWD:/src:ro" "docker.io/library/$DISTRO" \
+              sh /src/packaging/deb/test-deb.sh "/src/$deb"
+          done
+      - name: Name the artifact
+        id: name
+        env:
+          DISTRO: ${{ matrix.distro }}
+          ARCH: ${{ matrix.arch }}
+        run: echo "name=release-deb-$(echo "$DISTRO" | tr -d :)-$ARCH" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: target/release-deb/*.deb
+          if-no-files-found: error
+
+  arch:
+    name: Arch Linux package (x86_64)
+    needs: source
+    # x86_64 only: the archlinux image has no arm64 variant (Arch Linux ARM
+    # is a separate project).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-source
+          path: target/release-source
+      # Builds with makepkg from the source tarball, offline, checks the
+      # package with namcap, installs it, tries the programs and removes it.
+      - name: Build, check and try the package
+        run: |
+          set -eux
+          version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
+          mkdir -p target/release-arch
+          docker run --rm --memory 12g --memory-swap 12g -e CARGO_BUILD_JOBS \
+            -v "$PWD:/src:ro" -v "$PWD/target/release-arch:/out" \
+            docker.io/library/archlinux:latest \
+            sh /src/packaging/arch/build-package.sh "/src/target/release-source/helikodu-$version.tar.xz" /out
+          ls -l target/release-arch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-arch
+          path: target/release-arch/
+          if-no-files-found: error
+
   assemble:
     name: Collect the release files and their checksums
-    needs: [source, build, appimage]
+    needs: [source, build, appimage, flatpak, rpm, deb, arch]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -260,7 +510,16 @@ jobs:
           set -eux
           cd release-assets
           ls -l
-          sha256sum ./*.tar.xz ./*.tar.gz ./*.AppImage | sed "s| \./| |" > SHA256SUMS
+          # GitHub renames uploaded files with a tilde in their name, and
+          # SHA256SUMS must name the files as they are published.
+          for file in *~*; do
+            if [ -e "$file" ]; then echo "a tilde in $file" >&2; exit 1; fi
+          done
+          # Every release file: the source tarball, the programs (.tar.xz,
+          # .tar.gz), the AppImages, the FFmpeg and vgmstream sources
+          # (.tar.xz, .tar.gz), the Flatpak bundles and the packages.
+          sha256sum ./*.tar.xz ./*.tar.gz ./*.AppImage ./*.flatpak ./*.rpm ./*.deb ./*.pkg.tar.zst \
+            | sed "s| \./| |" > SHA256SUMS
           cat SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
@@ -293,17 +552,37 @@ jobs:
           case "$version" in
             0.* | *-*) prerelease=--prerelease ;;
           esac
+          # The package versions of a pre-release (0.9.0-rc1): 0.9.0~rc1 for
+          # RPM and dpkg, published with a dot in place of the tilde, and
+          # 0.9.0rc1 for pacman.
+          dotted=$(echo "$version" | tr - .)
+          pacman_version=${version//-/}
+          files=("helikodu-$version.tar.xz")
+          for arch in x86_64 aarch64; do
+            files+=(
+              "helikodu-$version-$arch-linux.tar.xz"
+              "helikodu-$version-$arch-linux.tar.gz"
+              "Helikodu-$version-$arch.AppImage"
+              "helikodu-$version-$arch.flatpak"
+              "helikodu-$dotted-1.fc$FEDORA_RELEASE.$arch.rpm"
+            )
+          done
+          for debarch in amd64 arm64; do
+            files+=(
+              "helikodu_$dotted-1.debian13_$debarch.deb"
+              "helikodu_$dotted-1.ubuntu26.04_$debarch.deb"
+            )
+          done
+          files+=("helikodu-$pacman_version-1-x86_64.pkg.tar.zst")
           cd release-assets
+          files+=(ffmpeg-*.tar.xz vgmstream-*.tar.gz)
           sha256sum --check SHA256SUMS
+          # SHA256SUMS lists exactly the files that are published.
+          diff <(printf '%s\n' "${files[@]}" | sort) <(sed 's/^[0-9a-f]*  //' SHA256SUMS | sort)
           gh release create "$TAG" \
             --verify-tag \
             --title "Helikodu $version" \
             --notes-file release-notes.md \
             $prerelease \
-            "helikodu-$version.tar.xz" \
-            "helikodu-$version-x86_64-linux.tar.xz" \
-            "helikodu-$version-aarch64-linux.tar.xz" \
-            "Helikodu-$version-x86_64.AppImage" \
-            "Helikodu-$version-aarch64.AppImage" \
-            ffmpeg-*.tar.xz vgmstream-*.tar.gz \
+            "${files[@]}" \
             SHA256SUMS

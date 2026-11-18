@@ -1,0 +1,85 @@
+# SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Maintainer: sorrelfox <https://github.com/sorrelfox>
+#
+# Arch Linux package of Helikodu, built from the release source tarball with
+# its vendored crates, offline. The Release workflow builds it from the
+# tarball it has just made: it sets _srcver and the checksum below and puts
+# the tarball beside this file, where makepkg finds it without downloading.
+# For the AUR the same file is used with the version and checksum of the
+# published tarball (updpkgsums fills in the checksum). The checksum cannot
+# be written here in advance: this file is part of the tarball it checks.
+# See docs/dev/packaging-arch.md.
+#
+# vgmstream is only in the AUR, not in the Arch repositories, so the package
+# is built without its decoder.
+
+pkgname=helikodu
+_srcver=0.9.0
+# Upstream pre-release suffixes (1.0.0-rc1) become 1.0.0rc1, which pacman
+# sorts before 1.0.0.
+pkgver=${_srcver//-/}
+pkgrel=1
+pkgdesc='Offline music player and library manager for large local collections'
+arch=('x86_64')
+url='https://github.com/sorrelfox/helikodu'
+license=('GPL-3.0-or-later')
+depends=(
+  'alsa-lib'
+  'cairo'
+  'ffmpeg'
+  'glib2'
+  'glibc'
+  'graphene'
+  'gtk4'
+  'hicolor-icon-theme'
+  'libgcc'
+  'libgme'
+  'libopenmpt'
+  'libpipewire'
+  'libsidplayfp'
+  'libstdc++'
+  'pango'
+  'sqlite'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'gettext'
+  'jack'
+  'meson'
+  'python'
+)
+checkdepends=(
+  'appstream'
+  'desktop-file-utils'
+)
+optdepends=(
+  'pipewire: playback through PipeWire'
+  'jack: playback through JACK'
+)
+# Cargo's release profile already uses thin LTO; makepkg's own LTO flags would
+# only reach the C parts and clash with it.
+options=('!lto')
+source=("https://github.com/sorrelfox/helikodu/releases/download/v${_srcver}/helikodu-${_srcver}.tar.xz")
+sha256sums=('SKIP')
+
+build() {
+  # Use the system toolchain, not the version pinned in rust-toolchain.toml,
+  # when cargo comes from rustup.
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_HOME="$srcdir/cargo-home"
+  # Helper programs go to /usr/lib/<package> on Arch; the programs are built
+  # to look for the scan worker there.
+  arch-meson "helikodu-$_srcver" build -Doffline=true -Dhelperdir=/usr/lib/helikodu
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir" --no-rebuild
+}

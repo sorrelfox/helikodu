@@ -155,18 +155,19 @@ sudo meson install -C _build --no-rebuild   # or: meson install -C _build --dest
 
 `--no-rebuild` keeps `sudo` from starting Cargo again as root: Cargo decides what is up to date, so Meson always runs it.
 
-`helikodu` and `helikodu-cli` go to `<prefix>/bin` and the scan worker to `<prefix>/libexec/helikodu`, where the programs look for it.
+`helikodu` and `helikodu-cli` go to `<prefix>/bin` and the scan worker to `<prefix>/libexec/helikodu` (or the `helperdir` option's folder). The programs look for it beside themselves, in `../libexec/helikodu` from their own folder, and in the folder it was installed to.
 
 The release source tarballs include every Rust dependency, so they build without network access: add `-Doffline=true` to `meson setup`. How releases are made is described in [docs/dev/releasing.md](docs/dev/releasing.md).
 
 ### Options
 
-Meson options, given to `meson setup` as `-D<option>=true`:
+Meson options, given to `meson setup` as `-D<option>=<value>`:
 
 | Option | Default | Effect |
 |---|---|---|
 | `offline` | `false` | Builds with `cargo --offline`. Use it with a release source tarball, whose `vendor/` folder holds every crate |
 | `bundled_sqlite` | `false` | Builds the SQLite copy bundled with rusqlite instead of linking the system SQLite |
+| `helperdir` | `<libexecdir>/helikodu` | The folder for the scan worker, absolute or relative to the prefix (`/usr/lib/helikodu` on Arch Linux) |
 
 Cargo features of `helikodu` and `helikodu-cli`:
 
@@ -197,7 +198,7 @@ To leave a feature out, build with `--no-default-features` and list the others. 
 | `crates/` | The libraries, one folder per crate |
 | `data/` | Desktop entry, AppStream metainfo, icons, D-Bus files, manual pages |
 | `po/` | Translations |
-| `packaging/` | Flatpak, AUR, RPM and Debian packaging, for later versions |
+| `packaging/` | The Flatpak, Fedora RPM, Debian/Ubuntu and Arch Linux packaging, built for every release (the AppImage is in `build-aux/appimage/`) |
 | `docs/` | Developer and user documentation, and the website |
 | `tests/` | Fixtures, test corpus recipes, system and UI tests |
 | `fuzz/` | Fuzz targets |

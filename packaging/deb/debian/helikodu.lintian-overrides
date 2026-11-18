@@ -1,0 +1,7 @@
+# The user guide is application data: Help › User Guide opens it, so it must
+# not be dropped by systems that leave out /usr/share/doc.
+helikodu: package-contains-documentation-outside-usr-share-doc [usr/share/helikodu/guide/index.html]
+# The programs are Rust; the few C library calls they make have no fortified
+# variants to use.
+helikodu: hardening-no-fortify-functions [usr/bin/*]
+helikodu: hardening-no-fortify-functions [usr/libexec/helikodu/helikodu-scan-worker]

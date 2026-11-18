@@ -2,7 +2,7 @@
 
 ## The ready-built programs do not start
 
-Run `helikodu` in a terminal. If it says that `libavformat.so.61` (or another FFmpeg library) cannot be found, your system has a newer FFmpeg than the programs were built for. Build Helikodu from the source code instead; see [Installing Helikodu](installing.md).
+Run `helikodu` in a terminal. If it says that `libavformat.so.61` (or another FFmpeg library) cannot be found, your system has a newer FFmpeg than the programs were built for. Install the package for your distribution, the Flatpak or the AppImage instead, or build Helikodu from the source code; see [Installing Helikodu](installing.md).
 
 If it names another library, such as `libsidplayfp.so.6`, `libopenmpt.so.0` or `libgme.so.0`, that library is not installed. Install it with your distribution's package manager and start Helikodu again.
 

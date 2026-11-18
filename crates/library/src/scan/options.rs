@@ -93,7 +93,8 @@ pub enum SymlinkPolicy {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkerOptions {
     /// The worker program. When unset, `helikodu-scan-worker` beside the running
-    /// program, or in `../libexec/helikodu/` from it.
+    /// program, in `../libexec/helikodu/` from it, or in the folder chosen at
+    /// build time (Meson's `helperdir`).
     pub program: Option<PathBuf>,
     /// The number of workers; 0 picks one per processor, at most 8.
     pub count: usize,

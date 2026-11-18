@@ -1,6 +1,6 @@
 # The Flatpak
 
-`packaging/flatpak/io.github.sorrelfox.Helikodu.yml` builds Helikodu as a Flatpak on the GNOME runtime. It is not published yet: the first versions are released only on GitHub (see [releasing.md](releasing.md)), and the Flatpak is built locally until it goes to Flathub.
+`packaging/flatpak/io.github.sorrelfox.Helikodu.yml` builds Helikodu as a Flatpak on the GNOME runtime. It is not on Flathub yet: the first versions are released only on GitHub (see [releasing.md](releasing.md)), where every release carries the Flatpak as a single-file bundle per architecture ([below](#the-release-bundle)).
 
 | File | What it is |
 |---|---|
@@ -53,6 +53,28 @@ flatpak run --filesystem=/tmp/helikodu-flatpak --command=flatpak-builder-lint or
 ```
 
 The manifest check passes without findings. The repository check (on a repository made with `flatpak-builder --repo=…`) reports only `metainfo-missing-screenshots` and `appstream-screenshots-not-mirrored-in-ostree`: the metainfo has no screenshots yet; they are added for the Flathub submission (see below), and Flathub's build mirrors them. The linter runs in a sandbox of its own: for a repository outside your home folder, add `--filesystem=<that folder>` after `flatpak run`.
+
+## The release bundle
+
+The Release workflow's `flatpak` job builds `helikodu-<version>-<arch>.flatpak` for x86_64 and aarch64 and attaches both to the GitHub Release (see [releasing.md](releasing.md#how-the-files-are-built)). Per architecture it runs the same three steps as above, on a native runner in Flathub's `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51` image (which has the GNOME 51 runtime and SDK, `flatpak-builder` and `flatpak-builder-lint` for both architectures):
+
+```sh
+flatpak-builder --user --force-clean --disable-rofiles-fuse --install-deps-from=flathub --jobs=$CARGO_BUILD_JOBS \
+    --state-dir=STATE --repo=REPO BUILD packaging/flatpak/io.github.sorrelfox.Helikodu.yml
+flatpak-builder-lint --exceptions --user-exceptions EXCEPTIONS.json repo REPO
+flatpak build-bundle --arch=ARCH --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+    REPO helikodu-<version>-ARCH.flatpak io.github.sorrelfox.Helikodu
+```
+
+The `dir` source takes the checked-out tag. The linter may report only the two screenshot findings described above; anything else stops the release. The job then installs the bundle in its container, checks that `flatpak info` shows the release's version and architecture, and runs `helikodu --version` and `helikodu-cli --version` in it with `flatpak run`.
+
+`--runtime-repo` puts Flathub's `.flatpakrepo` into the bundle. When a user installs it, Flatpak offers to add the Flathub remote (if it is missing) and installs `org.gnome.Platform//51` and its extensions from there, so the bundle needs nothing installed beforehand except Flatpak:
+
+```sh
+flatpak install --user --bundle helikodu-<version>-x86_64.flatpak
+```
+
+The bundle holds only the application (about 16 MB); the runtime is a separate download of several hundred megabytes the first time. A bundle does not update itself: the next release's bundle is installed over it the same way. The installation's origin remote has no URL, so `flatpak update` does not touch the application (it updates the runtime).
 
 ## What is built
 

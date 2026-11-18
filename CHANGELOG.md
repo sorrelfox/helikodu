@@ -9,6 +9,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - An AppImage for x86_64 and aarch64 on the Releases page: one file that runs without installing, with its own minimal FFmpeg, GTK and the decoders for tracker modules, game music, SID tunes and game audio streams (vgmstream). `--cli` starts the command-line tool. It never looks for updates.
+- The Flatpak as a file to install directly (`helikodu-<version>-x86_64.flatpak` and `-aarch64.flatpak`); it brings the GNOME runtime from Flathub with it.
+- A Fedora 45 RPM package for x86_64 and aarch64, built against Fedora's own libraries.
+- Packages for Debian 13 and Ubuntu 26.04 LTS (`.deb`, for x86_64 and 64-bit ARM), installed with `sudo apt install ./helikodu_<version>-1.debian13_amd64.deb` or the Ubuntu file.
+- An Arch Linux package (`helikodu-<version>-1-x86_64.pkg.tar.zst`), built with the libraries of the Arch repositories.
+- The ready-built programs are also published as `.tar.gz` archives, next to the `.tar.xz` ones.
+- The Installing chapter of the user guide says which file to use on which system.
+- `helikodu --version` prints the version.
+- The `helperdir` Meson option chooses the folder the scan worker is installed to, and the programs look for it there too. The default is `<libexecdir>/helikodu`; until now it was always `<prefix>/libexec/helikodu`, whatever `libexecdir` said, and `bindir` had to be `<prefix>/bin`.
 
 ## [0.9.0] - 2026-11-18
 

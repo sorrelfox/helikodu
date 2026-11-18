@@ -28,9 +28,9 @@ Tracker modules, game music, SID tunes and MIDI files are read by their own
 decoders, which also report the songs a file holds; every other file is read
 through FFmpeg.
 .PP
-The programs look for the worker beside themselves and in
+The programs look for the worker beside themselves, in
 .I ../libexec/helikodu/
-relative to their own folder;
+relative to their own folder, and in the folder it was installed to;
 .B helikodu\-cli
 also takes another path with
 .BR \-\-worker .
@@ -54,7 +54,8 @@ An unknown argument or a limit that is not a number.
 .SH FILES
 .TP
 .I <prefix>/libexec/helikodu/helikodu\-scan\-worker
-Where an installation puts the program.
+Where an installation usually puts the program
+(\fI/usr/lib/helikodu/\fP on Arch Linux).
 .SH SEE ALSO
 .BR helikodu (1),
 .BR helikodu\-cli (1)

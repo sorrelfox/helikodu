@@ -1,0 +1,56 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Helikodu
+Upstream-Contact: https://github.com/sorrelfox/helikodu/issues
+Source: https://github.com/sorrelfox/helikodu
+
+Files: *
+Copyright: 2026 sorrelfox and Helikodu contributors
+License: GPL-3+
+
+Files: *.md docs/*
+Copyright: 2026 sorrelfox and Helikodu contributors
+License: CC-BY-SA-4.0
+ The documentation, including the user guide installed in
+ /usr/share/helikodu/guide, is licensed under the Creative Commons
+ Attribution-ShareAlike 4.0 International licence. The full text is in
+ LICENSES/CC-BY-SA-4.0.txt of the source tarball and at
+ https://creativecommons.org/licenses/by-sa/4.0/legalcode.
+
+Files: data/io.github.sorrelfox.Helikodu.metainfo.xml
+Copyright: 2026 sorrelfox and Helikodu contributors
+License: CC0-1.0
+ On Debian systems, the complete text of the CC0 1.0 Universal licence can
+ be found in /usr/share/common-licenses/CC0-1.0.
+
+Files: vendor/*
+Copyright: The authors of each Rust crate, as named in the crate's files
+License: MIT or Apache-2.0 or other licences accepted by the project
+ The source tarball includes the Rust crates the programs are built from
+ in vendor/, each with its own licence files. They are linked statically
+ into the programs. Every crate is under one of these licences, checked by
+ cargo-deny (deny.toml): Apache-2.0, Apache-2.0 WITH LLVM-exception,
+ BSD-2-Clause, BSD-3-Clause, BSL-1.0, CC0-1.0, GPL-2.0-or-later, GPL-3.0,
+ GPL-3.0-or-later, ISC, LGPL-2.1-or-later, LGPL-3.0-or-later, MIT, MPL-2.0,
+ Unicode-3.0, Unlicense, WTFPL and Zlib. The licence of each crate is
+ given in its Cargo.toml.
+
+Files: debian/*
+Copyright: 2026 sorrelfox and Helikodu contributors
+License: GPL-3+
+
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 3 can be found in /usr/share/common-licenses/GPL-3.

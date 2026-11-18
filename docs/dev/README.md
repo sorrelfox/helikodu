@@ -13,3 +13,6 @@ Guides for contributors: the architecture overview, the testing and test-corpus 
 | [flatpak.md](flatpak.md) | The Flatpak: building it, updating its crates and libraries, its permissions and the way to Flathub |
 | [releasing.md](releasing.md) | How a release is made: the version, the checklist, and what the Release workflow builds and publishes |
 | [appimage.md](appimage.md) | The AppImage: how it is built, what it carries and from where, its licences and limits |
+| [packaging-rpm.md](packaging-rpm.md) | The Fedora RPM: how it is built, FFmpeg (ffmpeg-free or RPM Fusion), building it locally |
+| [packaging-deb.md](packaging-deb.md) | The Debian and Ubuntu packages: one per distribution, how they are built from the source tarball, tested and checked with lintian |
+| [packaging-arch.md](packaging-arch.md) | The Arch Linux package: its PKGBUILD, how the Release workflow builds it, and building it locally |
