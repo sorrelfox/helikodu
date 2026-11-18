@@ -4,7 +4,7 @@ Helikodu is an offline audio player and music library manager for Linux, written
 
 The name is Estonian: *heli* means "sound" and *kodu* means "home". It is a home for your own music library, kept locally on your computer. It is pronounced HE-li-ko-du.
 
-> **Status: early development.** There is nothing to install or use yet. The repository currently contains the project's foundations: the workspace layout, the build checks and the contribution rules.
+> **Status: release candidate.** Version 0.9.0 brings everything planned for 1.0; until then only fixes, translations and documentation follow. The [website](https://sorrelfox.github.io/helikodu/) shows what Helikodu does, with screenshots, and carries the user guide and the release notes. The ready-built programs and the source code are on the [Releases](https://github.com/sorrelfox/helikodu/releases) page.
 
 ## Goals
 
