@@ -215,7 +215,7 @@ impl MainWindow {
             state.panes.queue_visible = narrow.panel_was_wanted.get();
         }
         if let Err(error) = store.save(&state) {
-            eprintln!("helikodu: cannot save the window state: {error}");
+            log::warn!("cannot save the window state: {error}");
         }
     }
 

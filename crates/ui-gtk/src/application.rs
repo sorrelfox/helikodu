@@ -36,6 +36,20 @@ pub struct RunOptions {
     pub notifications: bool,
 }
 
+/// Set when the program should start again once it has quit.
+static RESTART: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Asks for the program to start again after it quits (a backup waits to be
+/// put back). The program that called [`run`] does it.
+pub fn request_restart() {
+    RESTART.store(true, std::sync::atomic::Ordering::SeqCst);
+}
+
+/// Whether the program should start again now that [`run`] returned.
+pub fn restart_requested() -> bool {
+    RESTART.load(std::sync::atomic::Ordering::SeqCst)
+}
+
 /// Registers the resource bundle (stylesheet, templates, icons). Safe to call
 /// more than once.
 pub fn register_resources() {
@@ -182,7 +196,7 @@ pub fn run(
                 b.replace(Some(backend));
             }
             Err(error) => {
-                eprintln!("helikodu: {error}");
+                log::error!("{error}");
                 let application = application.clone();
                 glib::timeout_add_local_once(Duration::ZERO, move || application.quit());
             }
@@ -232,4 +246,5 @@ fn present(
     window.set_notifications(options.notifications);
     window.present();
     window.start_desktop_services();
+    crate::dialogs::maintenance::show_start_notices(&window, &backend);
 }

@@ -501,7 +501,7 @@ impl MainWindow {
             state.window.height = u32::try_from(h).unwrap_or(800);
         }
         if let Err(error) = store.save(&state) {
-            eprintln!("helikodu: cannot save the window state: {error}");
+            log::warn!("cannot save the window state: {error}");
         }
     }
 
@@ -758,6 +758,27 @@ impl MainWindow {
     pub fn toast(&self, text: &str, error: bool) {
         if let Some(toasts) = self.imp().toasts.borrow().as_ref() {
             toasts.show(text, None, error);
+        }
+    }
+
+    /// Shows a toast with a button labelled `action` that runs `run`.
+    pub(crate) fn toast_with(
+        &self,
+        text: &str,
+        action: &str,
+        error: bool,
+        run: impl Fn() + 'static,
+    ) {
+        if let Some(toasts) = self.imp().toasts.borrow().as_ref() {
+            toasts.show(
+                text,
+                Some(toast_overlay::ToastAction {
+                    label: action.to_owned(),
+                    undo: false,
+                    run: Box::new(run),
+                }),
+                error,
+            );
         }
     }
 

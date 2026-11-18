@@ -24,6 +24,7 @@
 //! ```
 
 mod artist_photos;
+pub mod backups;
 mod duplicates;
 mod files;
 mod history_export;
@@ -152,6 +153,9 @@ pub enum LibraryError {
     /// Files could not be organized, or a run could not be undone or redone.
     #[error(transparent)]
     Organize(#[from] OrganizeError),
+    /// A backup could not be made, checked or staged.
+    #[error(transparent)]
+    Backup(#[from] helikodu_library::backups::BackupError),
     /// A scan was asked for without folders, and the library has none.
     #[error("the library has no folders yet; name the folders to scan")]
     NoFolders,

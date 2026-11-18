@@ -40,10 +40,20 @@ impl ReadPool {
         size: usize,
         collation: &LocaleCollation,
     ) -> Result<Self, DbError> {
+        Self::open_as(location, size, collation, Role::Reader)
+    }
+
+    /// Opens `size` connections in the reading `role`.
+    pub(crate) fn open_as(
+        location: &Location,
+        size: usize,
+        collation: &LocaleCollation,
+        role: Role,
+    ) -> Result<Self, DbError> {
         let idle = (0..size.max(1))
             .map(|_| {
                 Ok(PooledConnection {
-                    connection: connection::open(location, Role::Reader, collation)?,
+                    connection: connection::open(location, role, collation)?,
                     generation: 0,
                 })
             })

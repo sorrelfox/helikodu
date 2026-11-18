@@ -38,6 +38,7 @@ bundled-sqlite = ["helikodu-library/bundled-sqlite"]
 helikodu-engine.workspace = true
 helikodu-library.workspace = true
 helikodu-model.workspace = true
+log.workspace = true
 rustix.workspace = true
 serde.workspace = true
 serde_json.workspace = true

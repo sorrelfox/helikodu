@@ -54,6 +54,11 @@ pub(crate) enum Role {
     Writer,
     /// A read-only connection of the pool.
     Reader,
+    /// A read-only connection to a database on a medium it cannot write to at
+    /// all, not even the shared-memory file of the write-ahead log: SQLite is
+    /// told the file cannot change (`immutable=1`). What is still only in the
+    /// log is not seen.
+    FrozenReader,
 }
 
 /// How many prepared statements a connection keeps.
@@ -69,10 +74,13 @@ pub(crate) fn open(
     check_sqlite_version()?;
     let access = match role {
         Role::Writer => OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
-        Role::Reader => OpenFlags::SQLITE_OPEN_READ_ONLY,
+        Role::Reader | Role::FrozenReader => OpenFlags::SQLITE_OPEN_READ_ONLY,
     };
     let flags = access | OpenFlags::SQLITE_OPEN_NO_MUTEX | OpenFlags::SQLITE_OPEN_URI;
     let connection = match location {
+        Location::File(path) if role == Role::FrozenReader => {
+            Connection::open_with_flags(format!("file:{}?immutable=1", uri_path(path)), flags)?
+        }
         Location::File(path) => Connection::open_with_flags(path, flags)?,
         // The memdb VFS shares a database between the connections that open the same
         // name starting with `/`, and handles locking like a file.
@@ -87,6 +95,10 @@ pub(crate) fn open(
     connection.pragma_update(None, "temp_store", "MEMORY")?;
     match role {
         Role::Writer => {
+            // SQLite opens a file it may not write read-only without saying so.
+            if connection.is_readonly(rusqlite::MAIN_DB)? {
+                return Err(DbError::NotWritable);
+            }
             if let Location::File(_) = location {
                 // Readers do not block the writer, nor the writer the readers.
                 let mode: String =
@@ -104,7 +116,7 @@ pub(crate) fn open(
             connection.pragma_update(None, "journal_size_limit", 64 * 1024 * 1024)?;
             check_fts5(&connection)?;
         }
-        Role::Reader => {
+        Role::Reader | Role::FrozenReader => {
             connection.pragma_update(None, "query_only", true)?;
             // 2 MiB of pages per reader: the file's pages stay in the system's
             // page cache anyway, and a reader's cache is kept for the life of
@@ -115,6 +127,22 @@ pub(crate) fn open(
     collation.register(&connection)?;
     functions::register(&connection)?;
     Ok(connection)
+}
+
+/// `path` for a `file:` URI: every byte but the unreserved ones and `/` is
+/// percent-encoded, so that `?`, `#`, `%` and bytes that are not UTF-8 survive.
+fn uri_path(path: &std::path::Path) -> String {
+    use std::fmt::Write as _;
+    use std::os::unix::ffi::OsStrExt;
+    let mut text = String::new();
+    for &byte in path.as_os_str().as_bytes() {
+        if byte.is_ascii_alphanumeric() || b"/-._~".contains(&byte) {
+            text.push(char::from(byte));
+        } else {
+            let _ = write!(text, "%{byte:02X}");
+        }
+    }
+    text
 }
 
 fn check_sqlite_version() -> Result<(), DbError> {

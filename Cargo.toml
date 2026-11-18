@@ -82,6 +82,9 @@ image = { version = "0.25.10", default-features = false, features = ["jpeg", "pn
 # run time).
 jack = "0.13.5"
 libc = "0.2"
+# The logging facade; the service keeps the log (no subscriber crate). Already built for
+# other dependencies.
+log = "0.4"
 # Tag reading and writing in pure Rust; FFmpeg is the read-only fallback for the
 # formats it lacks (Matroska, ASF/WMA, DSF, DFF, TAK, TTA).
 lofty = "0.25.5"
@@ -113,7 +116,8 @@ rtrb = "0.4.1"
 rubato = "=5.1.0"
 # SQLite for the library database. Needs SQLite 3.43 or newer with FTS5; the library
 # crate's `bundled-sqlite` feature builds the bundled copy instead of linking the system one.
-rusqlite = { version = "0.43", default-features = false, features = ["cache", "collation", "functions"] }
+# The online backup API makes the backups of the library database.
+rusqlite = { version = "0.43", default-features = false, features = ["backup", "cache", "collation", "functions"] }
 # Lowers the scheduling priority of the loudness scanner's threads (setpriority on
 # the thread id), and moves files without replacing others (renameat2 with
 # RENAME_NOREPLACE) for the file organizer and reads free space for sync. No networking.

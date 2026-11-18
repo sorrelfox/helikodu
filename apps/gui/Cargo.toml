@@ -43,6 +43,7 @@ helikodu-desktop.workspace = true
 helikodu-model.workspace = true
 helikodu-service.workspace = true
 helikodu-ui-gtk.workspace = true
+log.workspace = true
 
 [lints]
 workspace = true

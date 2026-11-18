@@ -287,10 +287,7 @@ impl Follower {
                 .and_then(|path| match self.provider.find(&LyricsQuery { path }) {
                     Ok(found) => found.map(Arc::new),
                     Err(e) => {
-                        eprintln!(
-                            "helikodu: cannot read the lyrics of {}: {e}",
-                            path.display()
-                        );
+                        log::warn!("cannot read the lyrics of {}: {e}", path.display());
                         None
                     }
                 });
@@ -393,16 +390,9 @@ impl Offsets {
         let Some(file) = &self.file else { return };
         let saved = serde_json::to_vec(&self.data)
             .map_err(std::io::Error::other)
-            .and_then(|bytes| {
-                if let Some(dir) = file.parent() {
-                    std::fs::create_dir_all(dir)?;
-                }
-                let temporary = file.with_extension("json.tmp");
-                std::fs::write(&temporary, bytes)?;
-                std::fs::rename(&temporary, file)
-            });
+            .and_then(|bytes| crate::files::write_atomic(file, &bytes));
         if let Err(e) = saved {
-            eprintln!("helikodu: cannot save the lyrics offsets: {e}");
+            log::warn!("cannot save the lyrics offsets: {e}");
         }
     }
 }

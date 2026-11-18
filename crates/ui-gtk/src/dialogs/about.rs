@@ -6,8 +6,10 @@
 //! bug reports. The project address is shown as text; the program opens no
 //! web page itself.
 //!
-//! This version keeps no log in memory, so the diagnostics are the versions,
-//! the system, the output and loudness settings and the decoders.
+//! The diagnostics are the versions and the build, the system, the output
+//! settings and devices, the loudness settings, the decoders and the state of
+//! the library database. They hold no file paths but the settings file's
+//! (with the home folder as `~`).
 
 use gtk::prelude::*;
 use gtk::{gdk, glib};
@@ -87,7 +89,16 @@ pub(crate) fn diagnostics(backend: &Backend) -> String {
     let versions = services.versions();
     let output = services.output();
     let mut lines = vec![
-        format!("Helikodu {} ({})", version(), std::env::consts::ARCH),
+        format!(
+            "Helikodu {} ({}, {} build)",
+            version(),
+            std::env::consts::ARCH,
+            if cfg!(debug_assertions) {
+                "debug"
+            } else {
+                "release"
+            }
+        ),
         format!("GTK {}", gtk_line()),
         format!("System: {}", system_name()),
         format!(
@@ -156,7 +167,44 @@ pub(crate) fn diagnostics(backend: &Backend) -> String {
         })
         .collect();
     lines.push(format!("Decoders: {}", decoders.join(", ")));
-    lines.push("Log: not kept in memory by this version".into());
+    let backend = services.resolve_backend(output.backend);
+    match services.devices(backend) {
+        Ok(devices) => {
+            let names: Vec<String> = devices
+                .iter()
+                .map(|d| {
+                    if d.is_default {
+                        format!("{} (default)", d.description)
+                    } else {
+                        d.description.clone()
+                    }
+                })
+                .collect();
+            lines.push(format!(
+                "Devices on {}: {}",
+                backend.as_str(),
+                names.join(", ")
+            ));
+        }
+        Err(error) => lines.push(format!("Devices on {}: {}", backend.as_str(), error.0)),
+    }
+    if let Some(backups) = services.backups() {
+        lines.push(format!(
+            "Library database: {}{}, last check {}",
+            if backups.read_only { "read-only, " } else { "" },
+            match backups.latest {
+                Some(at) => format!("latest backup {}", crate::format::local_time(at)),
+                None => "no backup yet".to_owned(),
+            },
+            match &backups.check {
+                Some((_, None)) => "found no problems".to_owned(),
+                Some((_, Some(problem))) => format!("found: {problem}"),
+                None => "not made yet".to_owned(),
+            }
+        ));
+    }
+    // File paths stay out: the library folders are counted above, and the
+    // logs and crash reports are files the user can look at and attach.
     lines.join("\n") + "\n"
 }
 

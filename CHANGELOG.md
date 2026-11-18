@@ -64,12 +64,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The limiter's editor in **Settings → DSP and EQ** shows its activity while music plays: the gain reduction now, the largest in this track and how often it limited.
 - **Follow the playing track** in the View menu is remembered between runs.
 
+- Backups of the library: one a day, the last 7 kept, with **Back up now** and **Restore…** in Settings › Advanced. A restore asks first and is done when Helikodu starts again; the library it replaces is kept.
+- A damaged library database is replaced with the newest good backup at start; one that cannot be written opens read-only, and one that cannot be opened leaves Helikodu playing files without a library. The window says what happened.
+- Local crash reports: after a crash, the next start says so, with the report behind **Details** (**Copy**, **Open folder**). Nothing is sent anywhere.
+- A log on disk with **Normal detail** or **Full detail**, rotated within the Logs storage limit, and **Open log folder**; **No logs** writes nothing. **Copy diagnostics** also lists the build, the output devices and the state of the library database.
+
 ### Changed
 
 - The player deck at the bottom of the window follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.
 
 ### Fixed
 
+- A library database on a read-only file was opened as if it could be written; changes then failed one by one. It now opens read-only and says so.
+- File moves of the organizer that a crash cut short are now settled at the next start.
+- The lyrics offsets file is now written atomically (synced before it replaces the old one), and temporary files of settings saves cut short are cleared.
 - The playing track is marked the same way in every track list, wherever playback was started: the artist page's Most played, the album and audiobook pages, search results, playlists, smart playlists, the play history, folders (outside files too) and the queue panel show its row in the accent with the moving playing indicator. With one track shown for identical copies, a playing copy marks its main track's row.
 - The copies badge after a title stays right after the text when the table scrolls, instead of keeping the place where an earlier title ended.
 - Invisible padding around tag values (spaces, no-break spaces, tabs, zero-width characters) is trimmed when files are scanned and when titles are shown.

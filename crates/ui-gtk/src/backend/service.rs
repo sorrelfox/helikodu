@@ -1572,7 +1572,7 @@ impl PlayerControl for ServicePlayer {
             Ok(watch) => {
                 self.analyzer.replace(Some(watch));
             }
-            Err(e) => eprintln!("helikodu: cannot start the analyzer: {e}"),
+            Err(e) => log::warn!("cannot start the analyzer: {e}"),
         }
     }
 
@@ -2473,15 +2473,13 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
             .subscribe(SubscribeOptions::player().with_position_interval(Duration::from_secs(5)));
         SuspendInhibition::system()
             .with_reason(tr("Playing music"))
-            .follow(events, |e| {
-                eprintln!("helikodu: cannot keep the system awake: {e}")
-            })
+            .follow(events, |e| log::warn!("cannot keep the system awake: {e}"))
             .ok()
     } else {
         None
     };
     for message in notices {
-        eprintln!("helikodu: {message}");
+        log::warn!("{message}");
     }
     let events =
         service.subscribe(SubscribeOptions::all().with_position_interval(POSITION_INTERVAL));

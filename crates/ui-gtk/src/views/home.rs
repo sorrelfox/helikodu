@@ -485,7 +485,7 @@ impl HomeView {
             view.loading.set(false);
             match data {
                 Ok(data) => view.fill(data),
-                Err(error) => eprintln!("helikodu: Home cannot be read: {}", error.0),
+                Err(error) => log::warn!("Home cannot be read: {}", error.0),
             }
         });
     }

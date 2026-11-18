@@ -5,18 +5,23 @@
 //! very large files, ratings in files (a later version), the library
 //! database, loading each track into memory for slow drives, the log detail
 //! and the diagnostics, developer mode, and putting every setting back to its
-//! default. Backups come in a later version.
+//! default. The library database row holds its backups: a daily one, "Back up
+//! now" and "Restore…", which puts a backup back at the next start.
 
 use std::rc::Rc;
 
 use gtk::prelude::*;
+use gtk::{gio, glib};
 use helikodu_model::settings::{Id3Version, LogDetail};
 
 use super::{Context, page_body};
+use crate::backend::BackendError;
+use crate::backend::services::BackupsInfo;
 use crate::dialogs::common::{
     bind_segmented, bytes, compact_button, copy_text, dialog_window, divider, dropdown, note,
     on_selected, row, segmented, switch_row, tilde, with_note,
 };
+use crate::dialogs::maintenance;
 use crate::i18n::{fill, tr};
 use crate::widgets::label;
 
@@ -108,44 +113,133 @@ fn database(context: &Rc<Context>) -> gtk::Box {
     text.set_valign(gtk::Align::Center);
     match context.services.database() {
         Some(info) => {
+            let backups = context.services.backups();
             text.append(&label(&tilde(&info.path), &["hk-mono", "hk-path"]));
-            if let Some(size) = info.size {
-                text.append(&label(&bytes(size), &["hk-t3", "hk-secondary"]));
-            }
+            let facts = label(
+                &maintenance::check_line(info.size, backups.as_ref()),
+                &["hk-t3", "hk-secondary"],
+            );
+            facts.set_widget_name("database-facts");
+            text.append(&facts);
             let open = compact_button(&tr("Open folder"));
             let path = info.path.clone();
             let weak = Rc::downgrade(context);
             open.connect_clicked(move |_| {
-                let (sender, receiver) = async_channel::bounded(1);
-                let started = helikodu_desktop::open_folder::show_in_folder_later(
-                    path.clone(),
-                    None,
-                    move |result| {
-                        let _ = sender.send_blocking(result.err().map(|e| e.to_string()));
-                    },
-                );
-                let weak = weak.clone();
-                gtk::glib::spawn_future_local(async move {
-                    let problem = match started {
-                        Ok(()) => receiver.recv().await.ok().flatten(),
-                        Err(e) => Some(e.to_string()),
-                    };
-                    if let (Some(problem), Some(context)) = (problem, weak.upgrade()) {
-                        context.toast(&problem);
-                    }
-                });
+                if let Some(context) = weak.upgrade() {
+                    show_in_folder(&context, path.clone());
+                }
             });
             text.set_hexpand(true);
             line.append(&text);
             line.append(&open);
+            list.append(&line);
+            if let Some(backups) = backups {
+                list.append(&backups_row(context, &backups, &facts, info.size));
+            }
         }
         None => {
             text.append(&label(&tr("Helikodu runs without a library."), &["hk-t3"]));
             line.append(&text);
+            list.append(&line);
         }
     }
-    list.append(&line);
     list
+}
+
+/// Shows `path` in the file manager.
+fn show_in_folder(context: &Rc<Context>, path: std::path::PathBuf) {
+    if let Some(main) = context.main.upgrade() {
+        crate::views::actions::open_folder(&main, Some(path));
+    }
+}
+
+/// "Backups": the rotation and the newest one, "Back up now" and "Restore…".
+fn backups_row(
+    context: &Rc<Context>,
+    info: &BackupsInfo,
+    facts: &gtk::Label,
+    size: Option<u64>,
+) -> gtk::Box {
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    line.add_css_class("hk-folder-row");
+    let text = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    text.set_hexpand(true);
+    text.set_valign(gtk::Align::Center);
+    text.append(&label(&tr("Backups"), &[]));
+    let status = label(&maintenance::backups_line(info), &["hk-t3", "hk-secondary"]);
+    status.set_widget_name("backups-status");
+    text.append(&status);
+    line.append(&text);
+    let back_up = compact_button(&tr("Back up now"));
+    back_up.set_widget_name("back-up-now");
+    let weak = Rc::downgrade(context);
+    let status_weak = status.downgrade();
+    let facts_weak = facts.downgrade();
+    back_up.connect_clicked(move |button| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        button.set_sensitive(false);
+        let services = context.services.clone();
+        let (weak, status_weak, facts_weak) =
+            (weak.clone(), status_weak.clone(), facts_weak.clone());
+        let button = button.downgrade();
+        glib::spawn_future_local(async move {
+            let made = gio::spawn_blocking(move || services.back_up_now())
+                .await
+                .unwrap_or_else(|_| Err(BackendError(tr("The backup could not be made."))));
+            if let Some(button) = button.upgrade() {
+                button.set_sensitive(true);
+            }
+            let Some(context) = weak.upgrade() else {
+                return;
+            };
+            match made {
+                Ok(info) => {
+                    if let Some(status) = status_weak.upgrade() {
+                        status.set_text(&maintenance::backups_line(&info));
+                    }
+                    if let Some(facts) = facts_weak.upgrade() {
+                        facts.set_text(&maintenance::check_line(size, Some(&info)));
+                    }
+                    context.toast(&tr("A backup of the library was made."));
+                }
+                Err(error) => context.toast(&error.0),
+            }
+        });
+    });
+    line.append(&back_up);
+    let restore = compact_button(&tr("Restore…"));
+    restore.set_widget_name("restore-backup");
+    let folder = info.folder.clone();
+    let weak = Rc::downgrade(context);
+    restore.connect_clicked(move |_| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let weak = weak.clone();
+        maintenance::choose_backup(&context.window, &folder, move |backup| {
+            let Some(context) = weak.upgrade() else {
+                return;
+            };
+            let services = context.services.clone();
+            let weak = weak.clone();
+            glib::spawn_future_local(async move {
+                let staged = gio::spawn_blocking(move || services.stage_restore(&backup))
+                    .await
+                    .unwrap_or_else(|_| Err(BackendError(tr("The backup could not be checked."))));
+                let Some(context) = weak.upgrade() else {
+                    return;
+                };
+                match staged {
+                    Ok(()) => maintenance::restart(&context.window),
+                    Err(error) => context.toast(&error.0),
+                }
+            });
+        });
+    });
+    line.append(&restore);
+    line
 }
 
 fn logs(context: &Rc<Context>) -> gtk::Box {
@@ -177,8 +271,30 @@ fn logs(context: &Rc<Context>) -> gtk::Box {
             });
         }
     });
-    choice.set_hexpand(true);
     line.append(&choice);
+    let space = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    space.set_hexpand(true);
+    line.append(&space);
+    let open = compact_button(&tr("Open log folder"));
+    open.set_widget_name("open-log-folder");
+    let weak = Rc::downgrade(context);
+    open.connect_clicked(move |_| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let Some(folder) = context.services.log_folder() else {
+            return;
+        };
+        let current = folder.join(helikodu_service::logging::LOG_FILE);
+        if current.is_file() {
+            show_in_folder(&context, current);
+        } else if folder.is_dir() {
+            show_in_folder(&context, folder);
+        } else {
+            context.toast(&tr("There are no logs yet."));
+        }
+    });
+    line.append(&open);
     let copy = compact_button(&tr("Copy diagnostics"));
     let weak = Rc::downgrade(context);
     copy.connect_clicked(move |button| {

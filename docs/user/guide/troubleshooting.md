@@ -42,6 +42,14 @@ Old tags written in a legacy character set (such as Windows-1251 or Shift-JIS) a
 
 If Helikodu ended abnormally twice in a row while the same track was loading or playing, it marks that track as suspect, starts paused and shows a notice. Suspect tracks are passed over in automatic playback until one of them plays to its end. Play the track yourself to try it again, and please [report the problem](../faq.md#how-do-i-report-a-bug) with the file's format (`helikodu-cli info FILE`).
 
+## Helikodu stopped unexpectedly
+
+After a crash, Helikodu says so at the next start; **Details** shows the report, with **Copy** and **Open folder**. The report is in `~/.local/state/helikodu/crashes/` and is never sent anywhere; add it to a bug report if you like.
+
+## The library is read-only or missing
+
+If the library database cannot be written (a read-only folder or drive), Helikodu shows the library but keeps no changes, and says so at the start. If the database is damaged, Helikodu replaces it with the newest good backup and sets the damaged file aside in the backups folder. If it cannot be opened at all, Helikodu plays files without a library and tells you why.
+
 ## Starting over
 
 Close Helikodu and delete `~/.config/helikodu/settings.toml` to return to the default settings. Deleting `~/.local/state/helikodu/session.json` starts with an empty queue. See [Where Helikodu keeps its files](files.md).

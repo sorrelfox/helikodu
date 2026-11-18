@@ -13,9 +13,9 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 pub use helikodu_model::audio::{
     BackendSelection, DeviceId, DeviceInfo, DeviceKey, DeviceSelection, OutputBackendKind,
@@ -108,6 +108,38 @@ pub struct DatabaseInfo {
     pub path: PathBuf,
     /// Its size in bytes.
     pub size: Option<u64>,
+}
+
+/// The backups of the library database, for Settings › Advanced.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BackupsInfo {
+    /// The backups folder.
+    pub folder: PathBuf,
+    /// How many backups are kept.
+    pub kept: usize,
+    /// Whether one is made by itself every day.
+    pub daily: bool,
+    /// When the newest backup was made.
+    pub latest: Option<SystemTime>,
+    /// When the database was last checked, and what was found wrong, if anything.
+    pub check: Option<(SystemTime, Option<String>)>,
+    /// Whether a backup waits to be put back at the next start.
+    pub restore_pending: bool,
+    /// Whether the database can only be read.
+    pub read_only: bool,
+}
+
+/// A crash report not shown yet.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CrashNotice {
+    /// The report file.
+    pub path: PathBuf,
+    /// The folder of the reports.
+    pub folder: PathBuf,
+    /// The panic message.
+    pub summary: String,
+    /// The whole report.
+    pub text: String,
 }
 
 /// A tag field the editor shows in its form.
@@ -662,6 +694,42 @@ pub trait Services: fmt::Debug + Send + Sync {
         let _ = track;
         None
     }
+
+    /// The backups of the library database; `None` without a library.
+    fn backups(&self) -> Option<BackupsInfo> {
+        None
+    }
+
+    /// Makes a backup now. Blocking.
+    fn back_up_now(&self) -> Result<BackupsInfo, BackendError> {
+        Err(no_files())
+    }
+
+    /// Checks the backup at `backup` and stages it to be put back at the next
+    /// start. Blocking.
+    fn stage_restore(&self, backup: &Path) -> Result<(), BackendError> {
+        let _ = backup;
+        Err(no_files())
+    }
+
+    /// The folder of the log files.
+    fn log_folder(&self) -> Option<PathBuf> {
+        None
+    }
+
+    /// What the window should say once it is shown: about the library database,
+    /// as translated sentences.
+    fn start_notices(&self) -> Vec<String> {
+        Vec::new()
+    }
+
+    /// The newest crash report not shown yet.
+    fn unseen_crash_report(&self) -> Option<CrashNotice> {
+        None
+    }
+
+    /// Records that the crash reports were shown.
+    fn mark_crash_reports_seen(&self) {}
 }
 
 /// The error of a file operation without a library.

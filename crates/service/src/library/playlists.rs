@@ -264,7 +264,7 @@ impl PlaylistFinder {
             .unwrap_or_else(PoisonError::into_inner)
             .clone();
         if let Err(error) = self.library.import_found_playlists(&settings) {
-            eprintln!("helikodu: cannot pick up the playlist files: {error}");
+            log::warn!("cannot pick up the playlist files: {error}");
         }
     }
 }

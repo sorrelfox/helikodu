@@ -135,6 +135,18 @@ pub(crate) fn size(bytes: u64) -> String {
     gtk::glib::format_size(bytes).to_string()
 }
 
+/// `time` in local time, as the desktop's locale writes a date and a time.
+pub(crate) fn local_time(time: std::time::SystemTime) -> String {
+    let seconds = time
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    gtk::glib::DateTime::from_unix_local(i64::try_from(seconds).unwrap_or(0))
+        .ok()
+        .and_then(|t| t.format("%x %H:%M").ok())
+        .map(|t| t.to_string())
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

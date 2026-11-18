@@ -309,7 +309,7 @@ impl AlbumPage {
             let mut state = store.load();
             state.panes.details_width = u32::try_from(width).unwrap_or(260);
             if let Err(error) = store.save(&state) {
-                eprintln!("helikodu: cannot save the window state: {error}");
+                log::warn!("cannot save the window state: {error}");
             }
         });
     }

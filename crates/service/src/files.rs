@@ -107,6 +107,40 @@ pub fn write_atomic(path: &Path, contents: &[u8]) -> io::Result<()> {
     Ok(())
 }
 
+/// Removes the temporary files [`write_atomic`] left beside `path` when the
+/// program was killed while it wrote: those at least a minute old, so that a
+/// write in progress in another process is not disturbed.
+pub fn remove_stale_temporaries(path: &Path) {
+    let (Some(folder), Some(name)) = (path.parent(), path.file_name()) else {
+        return;
+    };
+    let mut prefix = OsString::from(".");
+    prefix.push(name);
+    prefix.push(".");
+    let Some(prefix) = prefix.to_str() else {
+        return;
+    };
+    let Ok(entries) = fs::read_dir(folder) else {
+        return;
+    };
+    let now = std::time::SystemTime::now();
+    for entry in entries.filter_map(Result::ok) {
+        let file_name = entry.file_name();
+        let Some(file_name) = file_name.to_str() else {
+            continue;
+        };
+        let old = entry
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|at| now.duration_since(at).ok())
+            .is_some_and(|age| age >= std::time::Duration::from_secs(60));
+        if old && file_name.starts_with(prefix) && file_name.ends_with(".tmp") {
+            let _ = fs::remove_file(entry.path());
+        }
+    }
+}
+
 /// Reads the file at `path`, or `None` when there is none.
 pub(crate) fn read_if_exists(path: &Path) -> io::Result<Option<Vec<u8>>> {
     match fs::read(path) {

@@ -75,6 +75,11 @@ pub enum DbError {
     #[error("the library database is open read-only")]
     ReadOnly,
 
+    /// The database file, its folder or the medium cannot be written, so the
+    /// database can only be opened read-only.
+    #[error("the library database cannot be written: the file or its folder is read-only")]
+    NotWritable,
+
     /// The writer thread has stopped: the database was closed, or the thread panicked.
     #[error("the database writer has stopped")]
     WriterStopped,
@@ -108,6 +113,50 @@ pub enum DbError {
         #[source]
         source: std::io::Error,
     },
+}
+
+impl DbError {
+    /// Whether SQLite found the database file damaged or not a database at all.
+    pub fn is_damaged_database(&self) -> bool {
+        let sqlite = match self {
+            Self::Sqlite(e) | Self::Migration { source: e, .. } => e,
+            Self::BatchFailed(e) => e.as_ref(),
+            _ => return false,
+        };
+        matches!(
+            sqlite.0.sqlite_error_code(),
+            Some(rusqlite::ErrorCode::DatabaseCorrupt | rusqlite::ErrorCode::NotADatabase)
+        )
+    }
+
+    /// Whether the database could not be written because the file, its folder or
+    /// the medium is read-only, or the file could not be opened for writing.
+    pub fn is_read_only_medium(&self) -> bool {
+        let sqlite = match self {
+            Self::Sqlite(e) | Self::Migration { source: e, .. } => e,
+            Self::BatchFailed(e) => e.as_ref(),
+            Self::ReadOnly | Self::NotWritable => return true,
+            _ => return false,
+        };
+        matches!(
+            sqlite.0.sqlite_error_code(),
+            Some(
+                rusqlite::ErrorCode::ReadOnly
+                    | rusqlite::ErrorCode::CannotOpen
+                    | rusqlite::ErrorCode::PermissionDenied
+            )
+        )
+    }
+
+    /// Whether the disk was full.
+    pub fn is_disk_full(&self) -> bool {
+        let sqlite = match self {
+            Self::Sqlite(e) | Self::Migration { source: e, .. } => e,
+            Self::BatchFailed(e) => e.as_ref(),
+            _ => return false,
+        };
+        sqlite.0.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull)
+    }
 }
 
 impl From<rusqlite::Error> for DbError {

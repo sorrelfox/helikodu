@@ -292,7 +292,7 @@ pub(crate) fn install_gate(window: &gtk::Window, backend: &Backend, playback: &R
                 if yes {
                     match remember(&backend, &key) {
                         Ok(()) => backend.send_ungated(request),
-                        Err(e) => eprintln!("helikodu: cannot keep the answer: {e}"),
+                        Err(e) => log::warn!("cannot keep the answer: {e}"),
                     }
                 }
             },
@@ -353,7 +353,7 @@ pub(crate) fn guard_change(
     ask(parent, device, volume, &now, move |yes| {
         if yes {
             if let Err(e) = remember(&backend, &key) {
-                eprintln!("helikodu: cannot keep the answer: {e}");
+                log::warn!("cannot keep the answer: {e}");
             }
             apply();
         } else {

@@ -152,6 +152,7 @@ impl SettingsStore {
     /// fail: problems with the file are reported by [`load_notice`](Self::load_notice).
     pub fn open(path: impl Into<PathBuf>, bus: EventBus<Event>) -> Self {
         let path = path.into();
+        crate::files::remove_stale_temporaries(&path);
         let (settings, notice) = load(&path);
         let newer = match &notice {
             Some(LoadNotice::Newer { version }) => Some(*version),
@@ -376,6 +377,7 @@ impl UiStateStore {
 
     /// The saved state, or the defaults.
     pub fn load(&self) -> UiState {
+        crate::files::remove_stale_temporaries(&self.path);
         read_if_exists(&self.path)
             .ok()
             .flatten()

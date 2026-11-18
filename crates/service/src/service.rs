@@ -29,6 +29,7 @@ use crate::bus::{EventBus, Subscription};
 use crate::clock::{SharedClock, SystemClock};
 use crate::event::{Event, SubscribeOptions, subscribe};
 use crate::files::AppDirs;
+use crate::library::backups::{BackupScheduler, StartNotice};
 use crate::library::{
     DATABASE_FILE, LibraryError, LibraryService, LibraryServiceOptions, MusicLibrary,
 };
@@ -75,6 +76,9 @@ pub struct ServiceConfig {
     /// How exclusive output takes a sound card from the sound server (see
     /// [`PlayerConfig::reservation`]); the default takes nothing.
     pub reservation: SharedReservation,
+    /// How long after the start the default library's first daily backup is
+    /// considered; `None` makes no backups by themselves.
+    pub backups_after: Option<Duration>,
 }
 
 impl ServiceConfig {
@@ -90,6 +94,7 @@ impl ServiceConfig {
             session_debounce: Duration::from_secs(1),
             shuffle_seed: None,
             reservation: SharedReservation::default(),
+            backups_after: Some(Duration::from_secs(120)),
         }
     }
 }
@@ -119,6 +124,8 @@ pub struct Service {
     waveforms: Option<WaveformService>,
     player: Player,
     library: Option<LibraryService>,
+    backups: Option<BackupScheduler>,
+    notices: Vec<StartNotice>,
     settings: Arc<SettingsStore>,
     ui_state: UiStateStore,
     bus: EventBus<Event>,
@@ -137,8 +144,28 @@ impl Service {
             bus.clone(),
         ));
         let current = settings.get();
+        crate::logging::configure(
+            current.advanced.log_detail,
+            current.library.storage.logs_mib,
+        );
+        let mut notices = Vec::new();
+        let mut backups = None;
         let music = match config.library {
-            LibraryChoice::Default => Some(MusicLibrary::open(&dirs.data.join(DATABASE_FILE))?),
+            LibraryChoice::Default => {
+                // Without its library the player still plays files; the window
+                // says why the library is missing.
+                let (opened, found) = MusicLibrary::open_at_start(&dirs.data.join(DATABASE_FILE));
+                notices = found;
+                let music = opened.ok();
+                if let (Some(music), Some(delay)) = (&music, config.backups_after)
+                    && !music.is_read_only()
+                {
+                    backups = BackupScheduler::start(music.clone(), delay)
+                        .inspect_err(|e| log::warn!("cannot start the backup schedule: {e}"))
+                        .ok();
+                }
+                music
+            }
             LibraryChoice::Open(library) => Some(library),
             LibraryChoice::None => None,
         };
@@ -215,7 +242,7 @@ impl Service {
             &player.status(),
             Some(&dirs.state),
         )
-        .inspect_err(|e| eprintln!("helikodu: cannot start the lyrics service: {e}"))
+        .inspect_err(|e| log::warn!("cannot start the lyrics service: {e}"))
         .ok();
         // Without the waveforms the seek bar stays flat.
         let waveforms = WaveformService::start(
@@ -227,7 +254,7 @@ impl Service {
             helikodu_engine::decode::DecoderRegistry::with_settings(&current.playback.decoders),
             wanted_sources(player.queue_reader(), wanted_library),
         )
-        .inspect_err(|e| eprintln!("helikodu: cannot start the waveform service: {e}"))
+        .inspect_err(|e| log::warn!("cannot start the waveform service: {e}"))
         .ok();
         Ok(Self {
             glue: Some((stop, glue)),
@@ -235,6 +262,8 @@ impl Service {
             waveforms,
             player,
             library,
+            backups,
+            notices,
             settings,
             ui_state: UiStateStore::new(dirs.state.join(UI_STATE_FILE)),
             bus,
@@ -268,6 +297,17 @@ impl Service {
     /// The library, unless the service runs without one.
     pub fn library(&self) -> Option<&LibraryService> {
         self.library.as_ref()
+    }
+
+    /// What the window should tell about the start: a library opened
+    /// read-only, a backup put back, a library that could not be opened.
+    pub fn start_notices(&self) -> &[StartNotice] {
+        &self.notices
+    }
+
+    /// Whether backups are made by themselves while the service runs.
+    pub fn makes_backups(&self) -> bool {
+        self.backups.is_some()
     }
 
     /// The settings.
@@ -358,6 +398,14 @@ fn keep_in_step(
                 groups,
                 settings: now,
             }) => {
+                if groups.contains(&SettingsGroup::Advanced)
+                    || groups.contains(&SettingsGroup::Library)
+                {
+                    crate::logging::configure(
+                        now.advanced.log_detail,
+                        now.library.storage.logs_mib,
+                    );
+                }
                 if groups.contains(&SettingsGroup::Playback) {
                     let prefs = PlayerPrefs::from_settings(&now.playback);
                     let _ = player.send(PlayerCommand::Configure(prefs));

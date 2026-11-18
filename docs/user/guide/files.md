@@ -7,6 +7,9 @@ Helikodu follows the XDG base directory rules. The folders below are the default
 | `~/.config/helikodu/settings.toml` | Your settings |
 | `~/.local/share/helikodu/library.db` | The library: tracks, albums, ratings, play counts and playlists |
 | `~/.local/share/helikodu/library.db.backup-before-copies` | A copy of the library made once, before the play counts and ratings of copies of the same file were first combined (see [Copies of the same file](settings.md#copies-of-the-same-file)). You can delete it once you are happy with the result |
+| `~/.local/share/helikodu/backups/` | Daily backups of the library (`library-YYYYMMDD-HHMMSS.db`, times in UTC), the last 7 kept; the library as it was before a backup was put back (`…-before-restore.db`); and a damaged library that was replaced (`…-damaged.db`) |
+| `~/.local/state/helikodu/logs/` | The log, when Settings › Advanced › Logs keeps one; within the size limit of Settings › Library › Storage |
+| `~/.local/state/helikodu/crashes/` | A report for each crash, the last 10 kept. Written even with **No logs** (then without log lines); never sent anywhere |
 | (in `library.db`) | The journal of the files the organizer moved, so that a run can be undone; kept for the undo limit of the settings |
 | `~/.local/state/helikodu/session.json` | The queue, position, volume, modes and output device of the last session |
 | `~/.local/state/helikodu/playing.json` | A marker that exists only while something plays; see [Troubleshooting](troubleshooting.md#helikodu-skips-a-track-it-used-to-play) |
@@ -17,7 +20,7 @@ Helikodu never copies your music files, and changes them only when you save tags
 
 ## Backing up
 
-To keep your ratings, play counts and playlists, back up `~/.local/share/helikodu/` and `~/.config/helikodu/`. Close Helikodu first, so that the database is complete on disk.
+To keep your ratings, play counts and playlists, back up `~/.local/share/helikodu/` and `~/.config/helikodu/`. Close Helikodu first, so that the database is complete on disk, or copy the newest file in `~/.local/share/helikodu/backups/`, which is always complete.
 
 ## Removing everything
 

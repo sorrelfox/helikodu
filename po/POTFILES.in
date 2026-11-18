@@ -115,3 +115,4 @@ crates/ui-gtk/src/tools/converter.rs
 crates/ui-gtk/src/tools/sync_export.rs
 crates/ui-gtk/src/tools/cover_manager.rs
 crates/ui-gtk/src/backend/service/export.rs
+crates/ui-gtk/src/dialogs/maintenance.rs

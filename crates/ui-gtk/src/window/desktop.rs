@@ -168,7 +168,7 @@ impl MainWindow {
                 let _ = events.send_blocking(Event::SessionReady(watch));
             });
         if let Err(error) = started {
-            eprintln!("helikodu: cannot start the desktop services: {error}");
+            log::warn!("cannot start the desktop services: {error}");
         }
     }
 
@@ -196,7 +196,7 @@ impl MainWindow {
                         integration.shortcuts.replace(Some(shortcuts));
                     }
                     Err(error) => {
-                        eprintln!("helikodu: no shortcuts in other applications: {error}");
+                        log::warn!("no shortcuts in other applications: {error}");
                     }
                 }
                 self.desktop_changed();
@@ -218,7 +218,7 @@ impl MainWindow {
                 self.desktop_changed();
             }
             Event::Shortcut(ShortcutEvent::Failed(error)) => {
-                eprintln!("helikodu: the shortcuts were not set up: {error}");
+                log::warn!("the shortcuts were not set up: {error}");
             }
             Event::Session(change) => self.session_changed(change),
             Event::SessionReady(watch) => {
@@ -305,7 +305,7 @@ impl MainWindow {
                 integration.tray.replace(Some(tray));
                 self.refresh_tray();
             }
-            Err(error) => eprintln!("helikodu: no tray icon: {error}"),
+            Err(error) => log::warn!("no tray icon: {error}"),
         }
     }
 

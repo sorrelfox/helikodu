@@ -34,11 +34,14 @@ use helikodu_service::player::{
     PlayerCommand, list_outputs, resolve_backend as resolve, sound_backends,
 };
 
+use helikodu_service::library::backups::StartNotice;
+
 use super::super::services::{
     BackendSelection, CoverEdit, DatabaseInfo, DeviceInfo, EditTrack, FileFacts, FolderState,
     FormatReport, HistoryStepResult, LibraryFolder, OutputBackendKind, OutputSelection, ScanStatus,
     Services, Settings, StorageUsage, TagEdit, TagField, TagStepResult, Versions, WriteResult,
 };
+use super::super::services::{BackupsInfo, CrashNotice};
 use super::super::services::{
     CancelToken, FileProgress, FileRunId, FileRunSummary, FoundFile, MissingFile, MoveRequest,
     OrganizeOptions, PlannedMove, RelinkOutcome, RunReport, SavedPattern, VerifyReport,
@@ -129,7 +132,7 @@ pub(super) fn follow_folders(service: &Service, initial_scan: bool) {
             library: settings.library.clone(),
             initial_scan,
         }) {
-            eprintln!("helikodu: cannot watch the library folders: {e}");
+            log::warn!("cannot watch the library folders: {e}");
         }
     } else {
         library.stop_watching();
@@ -674,7 +677,9 @@ impl Services for ServiceServices {
                     .cache
                     .join(helikodu_service::waveforms::WAVEFORM_FOLDER),
             ),
-            logs: None,
+            logs: helikodu_service::logging::usage(
+                &dirs.state.join(helikodu_service::logging::LOG_FOLDER),
+            ),
             undo: None,
         }
     }
@@ -1185,6 +1190,105 @@ impl Services for ServiceServices {
             .library()
             .track_flags(TrackId::new(track.0))
             .ok()
+    }
+
+    fn backups(&self) -> Option<BackupsInfo> {
+        let music = self.service.library()?.library();
+        let backups = music.backups();
+        let check = backups.last_check();
+        Some(BackupsInfo {
+            folder: backups.folder().to_path_buf(),
+            kept: backups.kept(),
+            daily: self.service.makes_backups(),
+            latest: backups.latest().map(|b| b.made),
+            check: check.map(|c| (c.at, c.problem)),
+            restore_pending: music.pending_restore().is_some(),
+            read_only: music.is_read_only(),
+        })
+    }
+
+    fn back_up_now(&self) -> Result<BackupsInfo, BackendError> {
+        let library = self
+            .service
+            .library()
+            .ok_or_else(|| BackendError(tr("Helikodu runs without a library.")))?;
+        library.library().back_up_now().map_err(|e| {
+            BackendError(fill(
+                &tr("The backup could not be made: {}"),
+                &[&e.to_string()],
+            ))
+        })?;
+        self.backups()
+            .ok_or_else(|| BackendError(tr("Helikodu runs without a library.")))
+    }
+
+    fn stage_restore(&self, backup: &Path) -> Result<(), BackendError> {
+        let library = self
+            .service
+            .library()
+            .ok_or_else(|| BackendError(tr("Helikodu runs without a library.")))?;
+        library.library().stage_restore(backup).map_err(|e| {
+            BackendError(fill(
+                &tr("This backup cannot be put back: {}"),
+                &[&e.to_string()],
+            ))
+        })
+    }
+
+    fn log_folder(&self) -> Option<PathBuf> {
+        Some(
+            self.service
+                .dirs()
+                .state
+                .join(helikodu_service::logging::LOG_FOLDER),
+        )
+    }
+
+    fn start_notices(&self) -> Vec<String> {
+        self.service
+            .start_notices()
+            .iter()
+            .map(|notice| match notice {
+                StartNotice::ReadOnly(why) => fill(
+                    &tr("The library can only be read, so changes are not kept: {}"),
+                    &[why],
+                ),
+                StartNotice::Restored { .. } => tr(
+                    "The backup was put back. The library as it was before is kept in the backups folder.",
+                ),
+                StartNotice::RestoreFailed(why) => fill(
+                    &tr("The backup could not be put back, so the library is as it was: {}"),
+                    &[why],
+                ),
+                StartNotice::Recovered { made } => fill(
+                    &tr("The library database was damaged and was replaced with the backup from {}."),
+                    &[&crate::format::local_time(*made)],
+                ),
+                StartNotice::Unavailable(why) => fill(
+                    &tr("The library could not be opened, so Helikodu runs without it: {}"),
+                    &[why],
+                ),
+                _ => String::new(),
+            })
+            .filter(|text| !text.is_empty())
+            .collect()
+    }
+
+    fn unseen_crash_report(&self) -> Option<CrashNotice> {
+        let state = &self.service.dirs().state;
+        let report = helikodu_service::crash::unseen_reports(state)
+            .into_iter()
+            .next()?;
+        Some(CrashNotice {
+            text: report.text(),
+            folder: helikodu_service::crash::crash_folder(state),
+            path: report.path,
+            summary: report.summary,
+        })
+    }
+
+    fn mark_crash_reports_seen(&self) {
+        let _ = helikodu_service::crash::mark_seen(&self.service.dirs().state);
     }
 
     fn versions(&self) -> Versions {

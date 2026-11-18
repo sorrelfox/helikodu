@@ -31,7 +31,8 @@ mod widgets;
 mod window;
 
 pub use application::{
-    APP_ID, RunOptions, install_actions, prepare_display, register_resources, run,
+    APP_ID, RunOptions, install_actions, prepare_display, register_resources, request_restart,
+    restart_requested, run,
 };
 pub use window::{MainWindow, WindowStyle};
 

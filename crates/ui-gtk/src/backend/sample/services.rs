@@ -47,6 +47,8 @@ struct MemoryState {
     ratings: HashMap<TrackKey, Option<u8>>,
     lyrics: HashMap<TrackKey, String>,
     covers_removed: Vec<TrackKey>,
+    /// When "Back up now" was last used.
+    backup_made: Option<std::time::SystemTime>,
 }
 
 /// Invented settings, devices, folders and tags. See the module documentation.
@@ -91,6 +93,7 @@ impl MemoryServices {
                 ratings: HashMap::new(),
                 lyrics: HashMap::new(),
                 covers_removed: Vec::new(),
+                backup_made: None,
             }),
         }
     }
@@ -823,6 +826,31 @@ impl Services for MemoryServices {
         library.track(track)?;
         let flags = library.flags.lock().unwrap_or_else(PoisonError::into_inner);
         Some(flags.get(&track).copied().unwrap_or_default())
+    }
+
+    fn backups(&self) -> Option<super::super::services::BackupsInfo> {
+        self.library.as_ref()?;
+        let made = self.lock().backup_made;
+        Some(super::super::services::BackupsInfo {
+            folder: gtk::glib::user_data_dir().join("helikodu").join("backups"),
+            kept: 7,
+            daily: true,
+            latest: made,
+            check: made.map(|at| (at, None)),
+            restore_pending: false,
+            read_only: false,
+        })
+    }
+
+    fn back_up_now(&self) -> Result<super::super::services::BackupsInfo, BackendError> {
+        if self.library.is_none() {
+            return Err(BackendError(crate::i18n::tr(
+                "Helikodu runs without a library.",
+            )));
+        }
+        self.lock().backup_made = Some(std::time::SystemTime::now());
+        self.backups()
+            .ok_or_else(|| BackendError(crate::i18n::tr("Helikodu runs without a library.")))
     }
 
     fn versions(&self) -> Versions {

@@ -38,9 +38,10 @@ High-contrast and reduced-motion preferences of the desktop are followed as well
 - **Tags in MP3 files**: **ID3v2.4** (the default) or **ID3v2.3**, for new tags that the [tag editor](tags.md) writes into MP3 files. Choose ID3v2.3 if an old car stereo or portable player shows no tags.
 - **Very large files**: **Change tags in place for files over** a size (2 GiB by default). Smaller files are changed through a checked copy, which is safe even if the power fails; a change in place is faster for huge files but has no such safety net. The tag editor tells you before it happens.
 - **Ratings**: **Also write ratings to the tags of the files** is shown, but cannot be turned on in this version; ratings stay in the library.
-- **Library database**: where the library is stored, with **Open folder**.
+- **Library database**: where the library is stored, its size and the result of its last check, with **Open folder**.
+- **Backups**: a backup of the library is made once a day while Helikodu runs, and the last 7 are kept in `~/.local/share/helikodu/backups/`. **Back up now** makes one at once. **Restore…** puts a backup back: choose the file, confirm, and Helikodu starts again with the library as it was then. The library as it was before is kept in the backups folder.
 - **Slow drives**: **Load each track into memory before it plays**, for drives that are slow or go to sleep (up to 512 MiB per track).
-- **Logs**: **No logs**, **Normal detail** or **Full detail, for a bug report**, and **Copy diagnostics**, which puts a summary for a bug report on the clipboard. Logs stay on this computer.
+- **Logs**: **No logs** (the default), **Normal detail** or **Full detail, for a bug report**; **Open log folder**; and **Copy diagnostics**, which puts a summary for a bug report on the clipboard (versions, the output and its devices, the main settings; no file paths but the settings file's). With **No logs** nothing is written. The logs stay within the limit under Library › Storage (50 MiB by default) and stay on this computer.
 - **Developer mode**: **Show tools for testing** adds the silent and WAV-file outputs.
 - **Reset**: **Reset settings…** puts every setting back to its default. The library, playlists, ratings and play counts are kept.
 

@@ -26,7 +26,9 @@ use rusqlite::{Connection, OptionalExtension};
 pub use collation::LocaleCollation;
 pub use connection::{Location, MemoryName};
 pub use error::{DbError, SqliteError};
+pub(crate) use functions::register as register_functions;
 pub use migrations::SCHEMA_VERSION;
+pub(crate) use migrations::current_version;
 pub use path_bytes::{display_text, path_from_blob, path_to_blob};
 pub use writer::{WriteTicket, Writer};
 
@@ -126,9 +128,31 @@ impl Database {
     /// writes fail with [`DbError::ReadOnly`]. Queries may still fail if the newer schema
     /// changed what they use. The sort indexes are not rebuilt, so if they were built
     /// for another locale, sorting through them may be out of order.
+    ///
+    /// On a medium that cannot be written at all (a read-only folder or mount), the
+    /// file is opened as unchanging; what only the write-ahead log holds is then
+    /// not seen.
     pub fn open_read_only(config: &DatabaseConfig) -> Result<Self, DbError> {
-        let readers = ReadPool::open(&config.location, config.read_connections, &config.collation)?;
-        let schema_version = readers.read(migrations::current_version)?;
+        let opened = ReadPool::open(&config.location, config.read_connections, &config.collation)
+            .and_then(|readers| {
+                let version = readers.read(migrations::current_version)?;
+                Ok((readers, version))
+            });
+        let (readers, schema_version) = match opened {
+            Err(error)
+                if matches!(config.location, Location::File(_)) && error.is_read_only_medium() =>
+            {
+                let readers = ReadPool::open_as(
+                    &config.location,
+                    config.read_connections,
+                    &config.collation,
+                    Role::FrozenReader,
+                )?;
+                let version = readers.read(migrations::current_version)?;
+                (readers, version)
+            }
+            other => other?,
+        };
         Ok(Self {
             writer: None,
             readers,
@@ -179,6 +203,12 @@ impl Database {
             c.pragma_update(None, "query_only", true)?;
             copied
         })
+    }
+
+    /// Runs `run` on a reading connection outside a transaction, as a backup of
+    /// the whole database needs.
+    pub(crate) fn with_reader<T>(&self, run: impl FnOnce(&Connection) -> T) -> Result<T, DbError> {
+        self.readers.outside_transaction(|c| Ok(run(c)))
     }
 
     /// Switches the sort order to `collation` and rebuilds the indexes that use it.

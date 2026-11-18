@@ -1072,7 +1072,40 @@ fn verify_files_reports(app: &gtk::Application) {
 
 type Test = (&'static str, fn(&gtk::Application));
 
+/// Settings › Advanced: the library database with its backups, and the logs.
+fn database_backups_and_logs(app: &gtk::Application) {
+    let (window, _backend) = window(app);
+    let settings = window.open_settings("advanced");
+    wait_for("the advanced page", || {
+        window.settings_page().as_deref() == Some("advanced")
+    });
+    let status: gtk::Label = named(&settings, "backups-status");
+    assert!(
+        status.text().contains("the last 7 are kept"),
+        "{}",
+        status.text()
+    );
+    assert!(status.text().contains("none yet"), "{}", status.text());
+    let facts: gtk::Label = named(&settings, "database-facts");
+    assert!(facts.text().contains("not checked yet"), "{}", facts.text());
+    let back_up: gtk::Button = named(&settings, "back-up-now");
+    back_up.emit_clicked();
+    wait_for("the backup", || status.text().contains("latest today at"));
+    assert!(
+        facts.text().contains("no problems found"),
+        "{}",
+        facts.text()
+    );
+    assert!(back_up.is_sensitive());
+    let _: gtk::Button = named(&settings, "restore-backup");
+    let _: gtk::Button = named(&settings, "open-log-folder");
+    let _ = button(&settings, "Copy diagnostics");
+    settings.close();
+    window.destroy();
+}
+
 const TESTS: &[Test] = &[
+    ("database_backups_and_logs", database_backups_and_logs),
     ("settings_round_trip", settings_round_trip),
     ("the_full_output_confirmation", the_full_output_confirmation),
     (
