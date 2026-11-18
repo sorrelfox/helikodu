@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-18
+
+The same release candidate as 0.9.0, published in more ways: a Flatpak, an AppImage, packages for Fedora, Debian, Ubuntu and Arch Linux, and archives for any distribution. The known issues of 0.9.0 still apply, except that the Flatpak, the AppImage and the distribution packages no longer need FFmpeg 7.1.
+
 ### Added
 
 - An AppImage for x86_64 and aarch64 on the Releases page: one file that runs without installing, with its own minimal FFmpeg, GTK and the decoders for tracker modules, game music, SID tunes and game audio streams (vgmstream). `--cli` starts the command-line tool. It never looks for updates.
