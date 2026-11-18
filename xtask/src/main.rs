@@ -17,6 +17,7 @@ mod offline_audit;
 mod potfiles;
 mod stress;
 mod synth_library;
+mod translations;
 mod ui_checks;
 
 use std::env;
@@ -34,6 +35,10 @@ commands:
   check-deps      check the crate dependency rules and the unsafe-code policy
   check-potfiles  check that po/POTFILES.in lists exactly the files with
                   translatable strings
+  check-translations
+                  check the translations of po/LINGUAS: msgfmt, the template,
+                  placeholders, plural rules, nothing fuzzy or untranslated
+                  (--allow-untranslated)
   codegen         write the files generated from the design tokens (--check)
   corpus          generate the test corpus into target/corpus (--check, --strict)
   dist            write the release source tarball with vendored crates and its
@@ -54,6 +59,7 @@ fn main() -> ExitCode {
         Some("ci") => ci::run(&args[1..]),
         Some("check-deps") => check_deps::run(),
         Some("check-potfiles") => potfiles::run(&args[1..]),
+        Some("check-translations") => translations::run(&args[1..]),
         Some("codegen") => codegen::run(&args[1..]),
         Some("corpus") => corpus::run(&args[1..]),
         Some("dist") => dist::run(&args[1..]),

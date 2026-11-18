@@ -275,10 +275,12 @@ impl SettingsStore {
 /// stopping; a new sample rate policy, sample format, buffer length or volume control
 /// reopens the stream at the same position; loudness normalization ramps the gain of
 /// the audio that plays; a change of the DSP chain crossfades in. The resampler
-/// quality and the LFE option of surround downmixes apply from the next track.
+/// quality and the LFE option of surround downmixes apply from the next track; the
+/// window style and the interface language when the program starts again.
 pub fn applies(key: &str) -> Applies {
     match key {
         "dsp.resampler" | "dsp.channel_mix.include_lfe" => Applies::NextTrack,
+        "appearance.window_style" | "appearance.language" => Applies::Restart,
         _ => Applies::Live,
     }
 }
@@ -418,6 +420,7 @@ mod tests {
         assert_eq!(applies("dsp.resampler"), Applies::NextTrack);
         assert_eq!(applies("playback.seek_step_s"), Applies::Live);
         assert_eq!(applies("appearance"), Applies::Live);
+        assert_eq!(applies("appearance.language"), Applies::Restart);
     }
 
     #[test]

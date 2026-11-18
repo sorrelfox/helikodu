@@ -338,7 +338,7 @@ impl Rule {
                 let text = if stars.fract() == 0.0 {
                     format!("{stars:.0}")
                 } else {
-                    format!("{stars:.1}")
+                    crate::format::decimal(stars, 1)
                 };
                 fill(&ntr("{} star", "{} stars", stars.ceil() as usize), &[&text])
             }
@@ -394,7 +394,13 @@ fn value_text(field: &Field, value: &Value) -> Option<String> {
         // "88.2 kHz", which reads back as 88200 Hz.
         Value::Number(n) if *field == Field::SampleRate && n.thousandths() % 100_000 == 0 => {
             let hz = u32::try_from(n.thousandths() / 1000).ok()?;
-            Some(format!("{} kHz", crate::format::khz(hz)))
+            // A decimal point, as the query language reads it.
+            let khz = if hz.is_multiple_of(1000) {
+                (hz / 1000).to_string()
+            } else {
+                format!("{:.1}", f64::from(hz) / 1000.0)
+            };
+            Some(format!("{khz} kHz"))
         }
         other => {
             let printed = print_query(&Query::new(Expr::compare(

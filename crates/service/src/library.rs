@@ -35,6 +35,7 @@ mod location;
 mod playlists;
 mod query;
 mod service;
+mod sorting;
 mod source;
 
 use std::io;
@@ -241,13 +242,20 @@ impl MusicLibrary {
     /// The sort order follows the locale of the environment (`LC_ALL`, `LC_COLLATE`,
     /// `LANG`).
     pub fn open(path: &Path) -> Result<Self, LibraryError> {
+        Self::open_sorted_for(path, "")
+    }
+
+    /// Opens the library database at `path` as [`open`](Self::open) does, sorted
+    /// for the interface language `language` (the `[appearance] language`
+    /// setting; empty for the environment's locale).
+    pub fn open_sorted_for(path: &Path, language: &str) -> Result<Self, LibraryError> {
         if let Some(folder) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
             std::fs::create_dir_all(folder).map_err(|source| LibraryError::Io {
                 context: format!("cannot create {}", folder.display()),
                 source,
             })?;
         }
-        let library = Library::open(&config(path))?;
+        let library = Library::open(&config(path, language))?;
         Ok(Self {
             library: Arc::new(library),
             path: path.to_path_buf(),
@@ -257,10 +265,17 @@ impl MusicLibrary {
     /// Opens the library database at `path` if it exists. A database written by a
     /// newer version is opened read-only.
     pub fn open_existing(path: &Path) -> Result<Self, LibraryError> {
+        Self::open_existing_sorted_for(path, "")
+    }
+
+    /// Opens the library database at `path` if it exists, as
+    /// [`open_existing`](Self::open_existing) does, sorted for the interface
+    /// language `language` (empty for the environment's locale).
+    pub fn open_existing_sorted_for(path: &Path, language: &str) -> Result<Self, LibraryError> {
         if !path.is_file() {
             return Err(LibraryError::NoLibrary(path.to_path_buf()));
         }
-        let config = config(path);
+        let config = config(path, language);
         let library = match Library::open(&config) {
             Err(DbError::NewerSchema { .. }) => Library::open_read_only(&config)?,
             other => other?,
@@ -811,8 +826,10 @@ impl MusicLibrary {
     }
 }
 
-fn config(path: &Path) -> DatabaseConfig {
-    DatabaseConfig::file(path).with_collation(location::collation())
+/// How to open the database at `path`, sorted for the interface language
+/// `language` (empty for the environment's locale).
+fn config(path: &Path, language: &str) -> DatabaseConfig {
+    DatabaseConfig::file(path).with_collation(location::collation(language))
 }
 
 /// How a scan of the folders of `settings` reads them, with the worker program.

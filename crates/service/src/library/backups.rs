@@ -59,7 +59,12 @@ static BACKING_UP: Mutex<()> = Mutex::new(());
 impl MusicLibrary {
     /// Opens the library database at `path` for the application, as the
     /// [module documentation](self) describes, with what the window should say.
-    pub fn open_at_start(path: &Path) -> (Result<Self, LibraryError>, Vec<StartNotice>) {
+    /// It is sorted for the interface language `language` (the `[appearance]
+    /// language` setting; empty for the environment's locale).
+    pub fn open_at_start(
+        path: &Path,
+        language: &str,
+    ) -> (Result<Self, LibraryError>, Vec<StartNotice>) {
         let mut notices = Vec::new();
         let backups = Backups::beside(path);
         if let Some(folder) = path.parent().filter(|p| !p.as_os_str().is_empty())
@@ -87,7 +92,7 @@ impl MusicLibrary {
                 notices.push(StartNotice::RestoreFailed(error.to_string()));
             }
         }
-        let config = config(path);
+        let config = config(path, language);
         let opened = match Library::open(&config) {
             Err(error) if error.is_damaged_database() => {
                 log::error!("the library database is damaged: {error}");

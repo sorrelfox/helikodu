@@ -38,10 +38,18 @@ fn database_path_in(
     Ok(data_home.join(DATA_FOLDER).join(DATABASE_FILE))
 }
 
-/// The sort order of the environment's locale: `LC_ALL`, `LC_COLLATE` or `LANG`,
-/// the first that is set and not empty. The root order when none is, or when the
-/// locale is unknown.
-pub(super) fn collation() -> LocaleCollation {
+/// The sort order for the interface language `language` (the `[appearance]
+/// language` setting, a locale name such as `de` or `pt_BR`). When it is empty
+/// or not a locale, the order of the environment's locale: `LC_ALL`,
+/// `LC_COLLATE` or `LANG`, the first that is set and not empty. The root order
+/// when none is, or when the locale is unknown.
+pub(super) fn collation(language: &str) -> LocaleCollation {
+    let language = language.trim();
+    if !language.is_empty()
+        && let Ok(collation) = LocaleCollation::new(language)
+    {
+        return collation;
+    }
     ["LC_ALL", "LC_COLLATE", "LANG"]
         .into_iter()
         .filter_map(std::env::var_os)
@@ -74,5 +82,15 @@ mod tests {
             database_path_in(None, None),
             Err(LibraryError::NoDataFolder)
         ));
+    }
+
+    #[test]
+    fn the_chosen_language_sorts() {
+        assert_eq!(collation("de").locale(), "de");
+        assert_eq!(collation(" pt_BR ").locale(), "pt-BR");
+        assert_eq!(collation("zh_CN").locale(), "zh-CN");
+        // Empty or not a locale: the environment's.
+        let environment = collation("").locale().to_owned();
+        assert_eq!(collation("not a locale!").locale(), environment);
     }
 }

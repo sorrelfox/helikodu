@@ -92,7 +92,7 @@ fn format_text(format: Option<&VerifiedFormat>) -> String {
             let khz = if (khz - khz.round()).abs() < 0.05 {
                 format!("{}", khz.round())
             } else {
-                format!("{khz:.1}")
+                crate::format::decimal(khz, 1)
             };
             format!("{codec} {bits}/{khz}")
         }
@@ -141,9 +141,9 @@ fn sentence(report: &VerifyReport) -> String {
                 &tr(
                     "Ends {} s before the length written in the file. The end of the track may be missing.",
                 ),
-                &[&format!(
-                    "{:.1}",
-                    stated.saturating_sub(*decoded).as_secs_f64()
+                &[&crate::format::decimal(
+                    stated.saturating_sub(*decoded).as_secs_f64(),
+                    1,
                 )],
             )
         }

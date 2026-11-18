@@ -68,11 +68,12 @@ pub(crate) fn db_text(db: f32) -> String {
     if db <= SCALE_FLOOR {
         return "\u{2212}\u{221e}".to_owned();
     }
-    let text = format!("{db:.1}");
-    if text == "-0.0" {
-        return "0.0".to_owned();
+    let text = crate::format::decimal(f64::from(db), 1);
+    match text.strip_prefix('-') {
+        Some(rest) if rest.chars().all(|c| c == '0' || !c.is_ascii_digit()) => rest.to_owned(),
+        Some(rest) => format!("\u{2212}{rest}"),
+        None => text,
     }
-    text.replace('-', "\u{2212}")
 }
 
 mod imp {

@@ -912,7 +912,10 @@ fn track_entries(
         let sign = if gain < 0.0 { "\u{2212}" } else { "+" };
         add(
             tr("Gain"),
-            fill(&tr("{} dB"), &[&format!("{sign}{:.1}", gain.abs())]),
+            fill(
+                &tr("{} dB"),
+                &[&format!("{sign}{}", format::decimal(gain.abs(), 1))],
+            ),
         );
     }
     add(tr("Plays"), format::count(track.plays));

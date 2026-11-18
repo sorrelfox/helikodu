@@ -67,6 +67,8 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     crate::codegen::run(&[String::from("--check")])?;
     println!("==> translation sources");
     crate::potfiles::run(&[])?;
+    println!("==> translations");
+    crate::translations::run(&[])?;
     step(
         &root,
         "clippy",

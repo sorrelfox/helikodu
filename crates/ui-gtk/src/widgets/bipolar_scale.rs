@@ -179,11 +179,11 @@ impl Default for BipolarScale {
 /// A gain as the scale reads it: `−6.0 dB`, `+1.5 dB`, `0.0 dB`.
 pub(crate) fn decibels(value: f64) -> String {
     let text = if value > 0.0 {
-        format!("+{value:.1}")
+        format!("+{}", crate::format::decimal(value, 1))
     } else if value < 0.0 {
-        format!("−{:.1}", -value)
+        format!("−{}", crate::format::decimal(-value, 1))
     } else {
-        "0.0".into()
+        crate::format::decimal(0.0, 1)
     };
     fill(&tr("{} dB"), &[&text])
 }

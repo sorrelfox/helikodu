@@ -248,8 +248,13 @@ fn main() -> ExitCode {
             Ok(sample::backend(&sample::SampleOptions::default()))
         });
     }
+    let appearance = appearance();
+    // First, as it may start the program again in the chosen language.
+    helikodu_ui_gtk::i18n::follow_language_setting(
+        appearance.as_ref().map_or("", |a| a.language.as_str()),
+    );
     start_logging();
-    let options = options(&arguments, appearance());
+    let options = options(&arguments, appearance);
     // GApplication calls this in the primary instance only.
     let code = helikodu_ui_gtk::run(
         options,

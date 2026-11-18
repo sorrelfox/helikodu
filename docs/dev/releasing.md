@@ -5,7 +5,7 @@ Helikodu is published as GitHub Releases. Pushing a version tag (`v0.1.0`) start
 | File | What it is |
 |---|---|
 | `helikodu-<version>.tar.xz` | The source tarball, made by `cargo xtask dist`: the files of the tagged commit, every crate of `Cargo.lock` vendored into `vendor/`, and a `.cargo/config.toml` that builds from them, so it builds without network access |
-| `helikodu-<version>-x86_64-linux.tar.xz` | The programs for x86_64, built from that source tarball and installed by Meson for the prefix `/usr/local`: `bin/`, `libexec/helikodu/`, the desktop entry, the AppStream metainfo, the D-Bus service file, the icons, the translations, the manual pages and the user guide (`share/helikodu/guide/index.html`, opened by Help › User Guide), with an `INSTALL.txt` note |
+| `helikodu-<version>-x86_64-linux.tar.xz` | The programs for x86_64, built from that source tarball and installed by Meson for the prefix `/usr/local`: `bin/`, `libexec/helikodu/`, the desktop entry and the AppStream metainfo (both with their translations), the D-Bus service file, the icons, the compiled translations (`share/locale/<code>/LC_MESSAGES/helikodu.mo`, found beside the programs wherever the archive is unpacked; the workflow checks that every language of `po/LINGUAS` is there), the manual pages and the user guide (`share/helikodu/guide/index.html`, opened by Help › User Guide), with an `INSTALL.txt` note |
 | `helikodu-<version>-aarch64-linux.tar.xz` | The same for 64-bit ARM (aarch64), built on GitHub's native arm64 runner |
 | `SHA256SUMS` | The SHA-256 checksums of the three tarballs, for `sha256sum --check` |
 
@@ -88,7 +88,7 @@ Translations come in as pull requests (see [po/README.md](../../po/README.md)). 
    meson setup _build && meson compile -C _build helikodu-pot
    ```
 
-   With languages in `po/LINGUAS`, `meson compile -C _build helikodu-update-po` merges the new template into every `.po` file.
+   Meson needs every `.po` file that `po/LINGUAS` lists. `meson compile -C _build helikodu-update-po` merges the new template into every `.po` file; the messages that are new or changed then wait for their translators.
 3. **Freeze.** Announce the string freeze in the release's tracking issue, with the date it ends, at least two weeks before the planned tag. From then until the tag, no change adds or changes a user-visible string (labels, messages, tooltips, accessible names, the desktop entry and the metainfo); a string that has to change anyway is announced to translators in the same issue. Fixes that change no string go in as usual.
-4. **Import.** Merge the translation pull requests that arrive during the freeze. Check each with `msgfmt --check --statistics po/<code>.po`, and that its code is in `po/LINGUAS`.
+4. **Import.** Merge the translation pull requests that arrive during the freeze. `cargo xtask check-translations` (also part of `cargo xtask ci`) checks every language of `po/LINGUAS`: `msgfmt --check` (GNU gettext 0.24 or newer, which checks the Rust placeholders), that each file matches the current template, that nothing is fuzzy or untranslated, the placeholders msgfmt does not check, markup, and the language's plural rule. A file behind the template is updated with `msgmerge --update --backup=none po/<code>.po po/helikodu.pot`.
 5. **End.** The freeze ends with the tag; the next version starts with a new template.

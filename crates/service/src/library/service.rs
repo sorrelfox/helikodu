@@ -24,6 +24,7 @@ use helikodu_model::settings::{LibrarySettings, Settings};
 
 use super::duplicates::DuplicateApplier;
 use super::playlists::PlaylistFinder;
+use super::sorting::LanguageSorter;
 use super::{
     AlbumDetail, AlbumId, AlbumQuery, AlbumSummary, ArtistQuery, ArtistSummary, GenreQuery,
     GenreSummary, LibraryError, LibraryOverview, MusicLibrary, Paged, ScanRequest, SearchPage,
@@ -83,6 +84,10 @@ pub struct LibraryServiceOptions {
     pub thumbnail_bytes: u64,
     /// The scan worker program, when it is not beside the running program.
     pub worker_program: Option<PathBuf>,
+    /// The interface language the library was opened for (the `[appearance]
+    /// language` setting; empty for the environment's locale). When the setting
+    /// changes, the library is sorted for the new language in the background.
+    pub language: String,
 }
 
 impl Default for LibraryServiceOptions {
@@ -91,6 +96,7 @@ impl Default for LibraryServiceOptions {
             thumbnails: None,
             thumbnail_bytes: helikodu_library::DEFAULT_CACHE_BYTES,
             worker_program: None,
+            language: String::new(),
         }
     }
 }
@@ -163,6 +169,7 @@ pub struct LibraryService {
     watcher: Mutex<Option<RunningWatcher>>,
     loudness: Mutex<Option<LoudnessJob>>,
     duplicates: DuplicateApplier,
+    sorting: LanguageSorter,
     pub(super) bus: EventBus<Event>,
     worker_program: Option<PathBuf>,
     pub(super) finder: PlaylistFinder,
@@ -223,6 +230,7 @@ impl LibraryService {
         };
         let duplicates =
             DuplicateApplier::start(library.clone(), bus.clone(), options.worker_program.clone());
+        let sorting = LanguageSorter::start(library.clone(), bus.clone(), &options.language);
         let finder = PlaylistFinder::new(library.clone());
         Ok(Self {
             finder,
@@ -234,6 +242,7 @@ impl LibraryService {
             watcher: Mutex::new(None),
             loudness: Mutex::new(None),
             duplicates,
+            sorting,
             bus,
             worker_program: options.worker_program,
         })
@@ -727,6 +736,7 @@ impl LibraryService {
 impl Drop for LibraryService {
     fn drop(&mut self) {
         self.duplicates.stop();
+        self.sorting.stop();
         self.stop_loudness();
         self.cancel_scan();
         self.stop_watching();

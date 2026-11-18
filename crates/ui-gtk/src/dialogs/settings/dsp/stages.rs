@@ -15,6 +15,7 @@ use helikodu_model::settings::{
 
 use super::{Live, info_note, lead};
 use crate::dialogs::common::{bind_segmented, divider, row, segmented, switch_row};
+use crate::format::decimal;
 use crate::i18n::{fill, tr};
 use crate::widgets::{BipolarScale, label};
 
@@ -23,9 +24,9 @@ pub(crate) fn balance_words(db: f64) -> String {
     if db.abs() < 0.05 {
         tr("Centre")
     } else if db < 0.0 {
-        fill(&tr("{} dB to the left"), &[&format!("{:.1}", -db)])
+        fill(&tr("{} dB to the left"), &[&decimal(-db, 1)])
     } else {
-        fill(&tr("{} dB to the right"), &[&format!("{db:.1}")])
+        fill(&tr("{} dB to the right"), &[&decimal(db, 1)])
     }
 }
 
@@ -34,9 +35,9 @@ pub(crate) fn balance_short(db: f64) -> String {
     if db.abs() < 0.05 {
         "0".into()
     } else if db < 0.0 {
-        fill(&tr("L {}"), &[&format!("{:.1}", -db)])
+        fill(&tr("L {}"), &[&decimal(-db, 1)])
     } else {
-        fill(&tr("R {}"), &[&format!("{db:.1}")])
+        fill(&tr("R {}"), &[&decimal(db, 1)])
     }
 }
 
@@ -139,10 +140,7 @@ const PRESETS: [CrossfeedPreset; 4] = [
 ];
 
 fn crossfeed_values(hz: u32, db: f64) -> String {
-    fill(
-        &tr("{} Hz · {} dB"),
-        &[&hz.to_string(), &format!("{db:.1}")],
-    )
+    fill(&tr("{} Hz · {} dB"), &[&hz.to_string(), &decimal(db, 1)])
 }
 
 /// Applies `change` to the custom values; moving a slider chooses Custom,
@@ -223,7 +221,7 @@ pub(super) fn crossfeed(live: &Rc<Live>) -> (gtk::Widget, Rc<dyn Fn()>) {
             0.5,
         ),
         ("1 dB", "15 dB"),
-        &fill(&tr("{} dB"), &[&format!("{db:.1}")]),
+        &fill(&tr("{} dB"), &[&decimal(db, 1)]),
     );
     level.scale.set_value(db);
     level.scale.set_widget_name("crossfeed-level");
@@ -277,7 +275,7 @@ pub(super) fn crossfeed(live: &Rc<Live>) -> (gtk::Widget, Rc<dyn Fn()>) {
         let shown = level.value.clone();
         level.scale.connect_value_changed(move |scale| {
             let db = (scale.value() * 2.0).round() / 2.0;
-            shown.set_text(&fill(&tr("{} dB"), &[&format!("{db:.1}")]));
+            shown.set_text(&fill(&tr("{} dB"), &[&decimal(db, 1)]));
             if !updating.get() {
                 set_custom(&live, move |c| c.level_db = db);
             }
@@ -443,7 +441,7 @@ pub(super) fn limiter(live: &Rc<Live>) -> gtk::Widget {
         "A safety net against clipping. When a peak would go above full scale, the limiter turns the level down for a moment. The rest of the time it leaves the sound alone.",
     )));
 
-    let ms = |v: f64| fill(&tr("{} ms"), &[&format!("{v:.1}")]);
+    let ms = |v: f64| fill(&tr("{} ms"), &[&decimal(v, 1)]);
     let block = gtk::Box::new(gtk::Orientation::Vertical, 8);
     block.set_halign(gtk::Align::Start);
     block.set_size_request(420, -1);
@@ -528,10 +526,10 @@ pub(super) fn limiter(live: &Rc<Live>) -> gtk::Widget {
         match reading {
             Some(r) => {
                 meter.set_value(r.reduction_db.clamp(0.0, 6.0));
-                now_value.set_text(&fill(&tr("{} dB"), &[&format!("{:.1}", r.reduction_db)]));
+                now_value.set_text(&fill(&tr("{} dB"), &[&decimal(r.reduction_db, 1)]));
                 largest_value.set_text(&fill(
                     &tr("{} dB"),
-                    &[&format!("−{:.1}", r.largest_db.abs())],
+                    &[&format!("−{}", decimal(r.largest_db.abs(), 1))],
                 ));
                 times_value.set_text(&r.times.to_string());
             }

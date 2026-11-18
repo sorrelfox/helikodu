@@ -61,10 +61,10 @@ pub(crate) fn short_hz(hz: f64) -> String {
         let k = hz / 1000.0;
         let text = format!("{k:.2}");
         let text = text.trim_end_matches('0').trim_end_matches('.');
-        format!("{text}k")
+        format!("{}k", crate::format::localized(text.to_owned()))
     } else {
         let text = format!("{hz:.1}");
-        text.trim_end_matches('0').trim_end_matches('.').to_owned()
+        crate::format::localized(text.trim_end_matches('0').trim_end_matches('.').to_owned())
     }
 }
 
@@ -73,25 +73,24 @@ pub(crate) fn short_hz(hz: f64) -> String {
 pub(crate) fn hz_text(hz: f64) -> String {
     if hz >= 1000.0 {
         let k = format!("{:.2}", hz / 1000.0);
-        let k = k.trim_end_matches('0').trim_end_matches('.');
-        fill(&tr("{} kHz"), &[k])
+        let k = crate::format::localized(k.trim_end_matches('0').trim_end_matches('.').to_owned());
+        fill(&tr("{} kHz"), &[&k])
     } else {
         let text = format!("{hz:.1}");
-        fill(
-            &tr("{} Hz"),
-            &[text.trim_end_matches('0').trim_end_matches('.')],
-        )
+        let text =
+            crate::format::localized(text.trim_end_matches('0').trim_end_matches('.').to_owned());
+        fill(&tr("{} Hz"), &[&text])
     }
 }
 
 /// A gain with its sign, without a unit: `+4.5`, `−2.0`, `0.0`.
 pub(crate) fn signed(db: f64) -> String {
     if db > 0.0 {
-        format!("+{db:.1}")
+        format!("+{}", crate::format::decimal(db, 1))
     } else if db < 0.0 {
-        format!("−{:.1}", -db)
+        format!("−{}", crate::format::decimal(-db, 1))
     } else {
-        "0.0".into()
+        crate::format::decimal(0.0, 1)
     }
 }
 

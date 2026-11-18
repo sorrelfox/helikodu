@@ -55,7 +55,8 @@ jobs:
             -v ~/ci-cache/target:/src/target \
             -v ~/ci-cache/tools:/opt/tools \
             helikodu-ci:fedora sh -euxc '
-              dnf install -y reuse
+              # gettext: msgfmt for the translation check.
+              dnf install -y reuse gettext
               rustup toolchain install
               cargo install --locked --root /opt/tools cargo-deny
               PATH=/opt/tools/bin:$PATH cargo xtask ci

@@ -63,6 +63,12 @@ Helikodu starts in the *Integrated* window style on KDE Plasma and asks KWin not
 
 If a title bar is still drawn, a KWin rule forces it: look in **System Settings → Window Management → Window Rules** for a rule that matches Helikodu (or every window) and sets **No titlebar and frame**, and remove that property or set it to **Do Not Affect**. A rule can also hide the title bar in the *Classic* style: add **No titlebar and frame**, **Force**, **Yes** for the window class `io.github.sorrelfox.Helikodu`.
 
+## Which languages is Helikodu available in?
+
+English, German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, Russian, Ukrainian and Simplified Chinese. Helikodu uses the language of your desktop when it has a translation for it, and English otherwise; to use another one, choose it in **Settings → Appearance → Language** (it takes effect when Helikodu starts again). The rest of the window follows too, such as the buttons of file dialogs, as far as GTK has a translation of its own.
+
+Translations are welcome as pull requests on GitHub; `po/README.md` in the source code explains how.
+
 ## Where are my settings and my library?
 
 Settings are in `~/.config/helikodu/settings.toml`, the library (with ratings, play counts and playlists) in `~/.local/share/helikodu/library.db`, the last session in `~/.local/state/helikodu/`, and cover thumbnails in `~/.cache/helikodu/`. See [Where Helikodu keeps its files](guide/files.md).

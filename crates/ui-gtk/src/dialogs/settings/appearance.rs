@@ -3,8 +3,8 @@
 
 //! Settings › Appearance: colour scheme and accent (applied at once), window
 //! style (from the next start), the menu bar, striped tables, the language
-//! and notifications; the tray icon and what closing the window does, shown
-//! only where the desktop has a tray.
+//! (from the next start) and notifications; the tray icon and what closing the
+//! window does, shown only where the desktop has a tray.
 
 use std::rc::Rc;
 
@@ -14,10 +14,10 @@ use helikodu_model::settings::{Accent, ColorScheme, WindowStyle};
 use super::{Context, page_body};
 use crate::backend::services::Settings;
 use crate::dialogs::common::{
-    bind_segmented, divider, dropdown, key_caps, note, option_card, row, segmented, switch_row,
-    with_note,
+    bind_segmented, compact_button, divider, dropdown, key_caps, note, on_selected, option_card,
+    row, segmented, switch_row, with_note,
 };
-use crate::i18n::{fill, tr};
+use crate::i18n::{self, fill, tr};
 use crate::style::{AccentChoice, SchemeChoice, set_choice};
 use crate::widgets::label;
 
@@ -322,42 +322,105 @@ fn switch_setting(
     line
 }
 
+/// The languages of the Language dropdown after "Same as the desktop": English
+/// and the translations, each by its own name. The code is what
+/// `[appearance] language` stores.
+const LANGUAGES: [(&str, &str); 12] = [
+    ("en", "English"),
+    ("de", "Deutsch"),
+    ("es", "Español"),
+    ("fr", "Français"),
+    ("it", "Italiano"),
+    ("ja", "日本語"),
+    ("ko", "한국어"),
+    ("nl", "Nederlands"),
+    ("pt_BR", "Português (Brasil)"),
+    ("ru", "Русский"),
+    ("uk", "Українська"),
+    ("zh_CN", "简体中文"),
+];
+
 /// A language's own name, from a locale such as `sv_SE.UTF-8`; the locale
 /// itself for languages without a name here.
 fn language_name(locale: &str) -> String {
-    let code = locale.split(['_', '.', '@']).next().unwrap_or_default();
-    match code {
-        "" | "C" | "POSIX" | "en" => "English",
-        "de" => "Deutsch",
-        "es" => "Español",
-        "et" => "Eesti",
-        "fi" => "Suomi",
-        "fr" => "Français",
-        "it" => "Italiano",
-        "nl" => "Nederlands",
-        "pl" => "Polski",
-        "pt" => "Português",
-        "sv" => "Svenska",
-        _ => return locale.split('.').next().unwrap_or(locale).to_owned(),
+    let name = locale.split(['.', '@']).next().unwrap_or_default();
+    let (code, territory) = name.split_once('_').unwrap_or((name, ""));
+    match (code, territory) {
+        ("" | "C" | "POSIX" | "en", _) => "English",
+        ("de", _) => "Deutsch",
+        ("es", _) => "Español",
+        ("et", _) => "Eesti",
+        ("fi", _) => "Suomi",
+        ("fr", _) => "Français",
+        ("it", _) => "Italiano",
+        ("ja", _) => "日本語",
+        ("ko", _) => "한국어",
+        ("nl", _) => "Nederlands",
+        ("pl", _) => "Polski",
+        ("pt", "BR") => "Português (Brasil)",
+        ("pt", _) => "Português",
+        ("ru", _) => "Русский",
+        ("sv", _) => "Svenska",
+        ("uk", _) => "Українська",
+        ("zh", "TW" | "HK" | "MO") => "繁體中文",
+        ("zh", _) => "简体中文",
+        _ => return name.to_owned(),
     }
     .to_owned()
 }
 
+/// The language: the desktop's or a chosen one, used from the next start (the
+/// library is sorted for it at once, in the background). "Restart now" shows
+/// while the choice differs from the language Helikodu started in.
 fn language(context: &Rc<Context>) -> gtk::Box {
-    let locale = gtk::glib::language_names()
-        .first()
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-    let name = language_name(&locale);
-    let choice = dropdown(&[fill(&tr("Same as the desktop ({})"), &[&name])], 0, 320);
+    let current = context.settings().appearance.language.clone();
+    let at_start = i18n::language_at_start(&current);
+    let desktop = language_name(&i18n::desktop_language());
+    let mut names = vec![fill(&tr("Same as the desktop ({})"), &[&desktop])];
+    let mut codes = vec![String::new()];
+    for (code, name) in LANGUAGES {
+        names.push(name.to_owned());
+        codes.push(code.to_owned());
+    }
+    // A language written into the settings file by hand.
+    if !codes.contains(&current) {
+        names.push(language_name(&current));
+        codes.push(current.clone());
+    }
+    let selected = codes.iter().position(|c| *c == current).unwrap_or(0);
+    let choice = dropdown(&names, selected, 320);
+    choice.set_widget_name("language");
     choice.update_property(&[gtk::accessible::Property::Label(&tr("Language"))]);
-    let _ = context;
-    with_note(
+    let restart = compact_button(&tr("Restart now"));
+    restart.set_widget_name("language-restart");
+    restart.set_visible(current != at_start);
+    restart.connect_clicked(crate::dialogs::maintenance::restart);
+    let weak = Rc::downgrade(context);
+    let shown = restart.downgrade();
+    on_selected(&choice, move |index| {
+        let (Some(context), Some(code)) = (weak.upgrade(), codes.get(index)) else {
+            return;
+        };
+        if context.settings().appearance.language != *code
+            && context.update(|s| s.appearance.language.clone_from(code))
+            && let Some(restart) = shown.upgrade()
+        {
+            restart.set_visible(*code != at_start);
+        }
+    });
+    let column = with_note(
         &choice,
         &tr(
             "After a change, the library is sorted again for the new language. This runs in the background.",
         ),
-    )
+    );
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    let next_start = note(&tr("A new language is used when Helikodu starts again."));
+    next_start.set_valign(gtk::Align::Center);
+    line.append(&next_start);
+    line.append(&restart);
+    column.append(&line);
+    column
 }
 
 /// The Appearance page.
@@ -460,5 +523,25 @@ fn tray_rows(context: &Rc<Context>, body: &gtk::Box) {
                 close_row.set_visible(visible);
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn languages_are_named_in_their_own_language() {
+        assert_eq!(language_name("de_DE.UTF-8"), "Deutsch");
+        assert_eq!(language_name("C.UTF-8"), "English");
+        assert_eq!(language_name("pt_BR.UTF-8"), "Português (Brasil)");
+        assert_eq!(language_name("pt_PT"), "Português");
+        assert_eq!(language_name("zh_CN.UTF-8"), "简体中文");
+        assert_eq!(language_name("zh_TW"), "繁體中文");
+        assert_eq!(language_name("uk_UA.UTF-8"), "Українська");
+        assert_eq!(language_name("sr_RS@latin"), "sr_RS");
+        for (code, name) in LANGUAGES {
+            assert_eq!(language_name(code), name, "{code}");
+        }
     }
 }

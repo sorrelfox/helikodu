@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 13:25-0500\n"
+"POT-Creation-Date: 2026-11-18 14:24-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -170,14 +170,14 @@ msgstr ""
 #: crates/ui-gtk/src/views/tracks.rs:59
 #: crates/ui-gtk/src/tools/tag_preview.rs:156
 #: crates/ui-gtk/src/tools/organizer.rs:74
-#: crates/ui-gtk/src/views/history.rs:382
+#: crates/ui-gtk/src/views/history.rs:383
 #: crates/ui-gtk/src/views/category.rs:245
 #: crates/ui-gtk/src/views/category.rs:563
 #: crates/ui-gtk/src/views/smart_playlist.rs:44
 #: crates/ui-gtk/src/views/smart_playlist.rs:52
 #: crates/ui-gtk/src/views/smart_playlist.rs:1394
 #: crates/ui-gtk/src/views/smart_rules.rs:154
-#: crates/ui-gtk/src/views/smart_rules.rs:499
+#: crates/ui-gtk/src/views/smart_rules.rs:505
 msgid "Title"
 msgstr ""
 
@@ -244,12 +244,12 @@ msgstr ""
 #: crates/ui-gtk/src/views/tracks.rs:787
 #: crates/ui-gtk/src/tools/tag_preview.rs:159
 #: crates/ui-gtk/src/tools/organizer.rs:73
-#: crates/ui-gtk/src/views/history.rs:250
-#: crates/ui-gtk/src/views/history.rs:384
+#: crates/ui-gtk/src/views/history.rs:251
+#: crates/ui-gtk/src/views/history.rs:385
 #: crates/ui-gtk/src/views/smart_playlist.rs:54
 #: crates/ui-gtk/src/views/smart_playlist.rs:1398
 #: crates/ui-gtk/src/views/smart_rules.rs:157
-#: crates/ui-gtk/src/views/smart_rules.rs:505
+#: crates/ui-gtk/src/views/smart_rules.rs:511
 #: crates/ui-gtk/src/views/facet_browser.rs:51
 #: crates/ui-gtk/src/tools/cover_manager.rs:713
 msgid "Album"
@@ -306,7 +306,7 @@ msgid "More"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/album.ui:239 crates/ui-gtk/src/views/album.rs:757
-#: crates/ui-gtk/src/views/album.rs:918
+#: crates/ui-gtk/src/views/album.rs:921
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1526
 #: crates/ui-gtk/src/views/artists.rs:218 crates/ui-gtk/src/views/tracks.rs:65
 #: crates/ui-gtk/src/tools/duplicates.rs:717
@@ -315,7 +315,7 @@ msgstr ""
 msgid "Plays"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/album.ui:247 crates/ui-gtk/src/views/album.rs:924
+#: crates/ui-gtk/resources/ui/album.ui:247 crates/ui-gtk/src/views/album.rs:927
 #: crates/ui-gtk/src/widgets/rating_stars.rs:200
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:763
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:810
@@ -508,7 +508,7 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/main_window.ui:77 crates/ui-gtk/src/deck.rs:364
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:226
 #: crates/ui-gtk/src/dialogs/settings/output.rs:341
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:426
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:429
 #: crates/ui-gtk/src/play_modes.rs:264 crates/ui-gtk/src/tools/file_tools.rs:75
 #: crates/ui-gtk/src/shortcuts.rs:75 crates/ui-gtk/src/tools/converter.rs:1027
 #: crates/ui-gtk/src/tools/sync_export.rs:725
@@ -541,8 +541,8 @@ msgid "Rescan"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/main_window.ui:108
-#: crates/ui-gtk/src/window/panel.rs:347 crates/ui-gtk/src/views/history.rs:349
-#: crates/ui-gtk/src/views/history.rs:773 crates/ui-gtk/src/views/home.rs:347
+#: crates/ui-gtk/src/window/panel.rs:347 crates/ui-gtk/src/views/history.rs:350
+#: crates/ui-gtk/src/views/history.rs:774 crates/ui-gtk/src/views/home.rs:347
 msgid "History"
 msgstr ""
 
@@ -657,12 +657,12 @@ msgstr ""
 #: crates/ui-gtk/resources/ui/panel.ui:156
 #: crates/ui-gtk/src/views/now_playing.rs:234
 #: crates/ui-gtk/src/views/now_playing.rs:314
-#: crates/ui-gtk/src/play_modes.rs:302 crates/ui-gtk/src/views/history.rs:257
+#: crates/ui-gtk/src/play_modes.rs:302 crates/ui-gtk/src/views/history.rs:258
 #: crates/ui-gtk/src/mini_player.rs:212 crates/ui-gtk/src/mini_player.rs:230
 msgid "Queue"
 msgstr ""
 
-#: crates/ui-gtk/resources/ui/panel.ui:33 crates/ui-gtk/src/views/album.rs:935
+#: crates/ui-gtk/resources/ui/panel.ui:33 crates/ui-gtk/src/views/album.rs:938
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1301
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1741
 #: crates/ui-gtk/src/views/now_playing.rs:232
@@ -688,13 +688,13 @@ msgid "The queue is empty. Play an album to fill it."
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/panel.ui:201
-#: crates/ui-gtk/src/views/history.rs:370
+#: crates/ui-gtk/src/views/history.rs:371
 msgid "Save as playlist"
 msgstr ""
 
 #: crates/ui-gtk/resources/ui/panel.ui:212
 #: crates/ui-gtk/src/dialogs/settings/library.rs:600
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:499
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:502
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1319
 #: crates/ui-gtk/src/play_modes.rs:249
 msgid "Clear"
@@ -882,14 +882,22 @@ msgstr ""
 msgid "{} min"
 msgstr ""
 
-#: crates/ui-gtk/src/format.rs:87
+#. / `number`, written with a decimal point, with the locale's decimal separator.
+
+#. Translators: the decimal separator of numbers such as 44.1 kHz or −6.3 dB: "." or ",".
+#: crates/ui-gtk/src/format.rs:74
+msgctxt "decimal separator"
+msgid "."
+msgstr ""
+
+#: crates/ui-gtk/src/format.rs:110
 #, rust-format
 msgid "{} kHz / {}-bit"
 msgstr ""
 
 #. / A rate as `96 kHz`.
 
-#: crates/ui-gtk/src/format.rs:90 crates/ui-gtk/src/window/panel.rs:324
+#: crates/ui-gtk/src/format.rs:113 crates/ui-gtk/src/window/panel.rs:324
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1443
 #: crates/ui-gtk/src/popovers/output_switcher.rs:78
 #: crates/ui-gtk/src/popovers/output_switcher.rs:139
@@ -903,33 +911,34 @@ msgstr ""
 msgid "{} kHz"
 msgstr ""
 
-#: crates/ui-gtk/src/format.rs:94 crates/ui-gtk/src/dialogs/tag_editor.rs:1426
+#: crates/ui-gtk/src/format.rs:117 crates/ui-gtk/src/dialogs/tag_editor.rs:1426
 #: crates/ui-gtk/src/dialogs/settings/dsp.rs:115
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:326
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 #: crates/ui-gtk/src/tools/converter.rs:191
 msgid "Mono"
 msgstr ""
 
-#: crates/ui-gtk/src/format.rs:95 crates/ui-gtk/src/dialogs/tag_editor.rs:1427
+#: crates/ui-gtk/src/format.rs:118 crates/ui-gtk/src/dialogs/tag_editor.rs:1427
 #: crates/ui-gtk/src/dialogs/settings/dsp.rs:114
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:326
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 #: crates/ui-gtk/src/tools/converter.rs:190
 msgid "Stereo"
 msgstr ""
 
-#: crates/ui-gtk/src/format.rs:97
+#: crates/ui-gtk/src/format.rs:120
 #, rust-format
 msgid "{} channel"
 msgid_plural "{} channels"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/format.rs:105
+#: crates/ui-gtk/src/format.rs:128
 #, rust-format
 msgid "Album gain {} dB"
 msgstr ""
 
-#: crates/ui-gtk/src/format.rs:117
+#. Translators: the separator of thousands in numbers such as 1,284: "," "." or a narrow space.
+#: crates/ui-gtk/src/format.rs:141
 msgctxt "thousands separator"
 msgid ","
 msgstr ""
@@ -997,7 +1006,7 @@ msgstr ""
 #: crates/ui-gtk/src/tools/tag_preview.rs:165
 #: crates/ui-gtk/src/tools/organizer.rs:79
 #: crates/ui-gtk/src/popovers/query_completion.rs:48
-#: crates/ui-gtk/src/views/history.rs:252
+#: crates/ui-gtk/src/views/history.rs:253
 #: crates/ui-gtk/src/views/smart_rules.rs:162
 #: crates/ui-gtk/src/views/facet_browser.rs:49
 msgid "Genre"
@@ -1007,7 +1016,7 @@ msgstr ""
 msgid "Released"
 msgstr ""
 
-#: crates/ui-gtk/src/views/album.rs:496 crates/ui-gtk/src/views/album.rs:932
+#: crates/ui-gtk/src/views/album.rs:496 crates/ui-gtk/src/views/album.rs:935
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1513
 #: crates/ui-gtk/src/views/tracks.rs:68 crates/ui-gtk/src/tools/copies.rs:534
 #: crates/ui-gtk/src/tools/duplicates.rs:718
@@ -1019,7 +1028,7 @@ msgstr ""
 msgid "Added"
 msgstr ""
 
-#: crates/ui-gtk/src/views/album.rs:499 crates/ui-gtk/src/views/album.rs:944
+#: crates/ui-gtk/src/views/album.rs:499 crates/ui-gtk/src/views/album.rs:947
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1394
 #: crates/ui-gtk/src/views/folders.rs:278 crates/ui-gtk/src/tools/copies.rs:533
 #: crates/ui-gtk/src/tools/duplicates.rs:716
@@ -1028,7 +1037,7 @@ msgstr ""
 msgid "Size"
 msgstr ""
 
-#: crates/ui-gtk/src/views/album.rs:511 crates/ui-gtk/src/views/album.rs:947
+#: crates/ui-gtk/src/views/album.rs:511 crates/ui-gtk/src/views/album.rs:950
 #: crates/ui-gtk/src/window.rs:103 crates/ui-gtk/src/dialogs/tag_editor.rs:1390
 #: crates/ui-gtk/src/tools/copies.rs:531
 #: crates/ui-gtk/src/tools/duplicates.rs:714
@@ -1079,13 +1088,13 @@ msgstr ""
 #: crates/ui-gtk/src/views/tracks.rs:787
 #: crates/ui-gtk/src/tools/tag_preview.rs:157
 #: crates/ui-gtk/src/tools/organizer.rs:72
-#: crates/ui-gtk/src/views/history.rs:251
-#: crates/ui-gtk/src/views/history.rs:383
+#: crates/ui-gtk/src/views/history.rs:252
+#: crates/ui-gtk/src/views/history.rs:384
 #: crates/ui-gtk/src/views/smart_playlist.rs:45
 #: crates/ui-gtk/src/views/smart_playlist.rs:53
 #: crates/ui-gtk/src/views/smart_playlist.rs:1396
 #: crates/ui-gtk/src/views/smart_rules.rs:155
-#: crates/ui-gtk/src/views/smart_rules.rs:501
+#: crates/ui-gtk/src/views/smart_rules.rs:507
 #: crates/ui-gtk/src/views/facet_browser.rs:52
 msgid "Artist"
 msgstr ""
@@ -1141,28 +1150,28 @@ msgstr ""
 msgid "Gain"
 msgstr ""
 
-#: crates/ui-gtk/src/views/album.rs:915
+#: crates/ui-gtk/src/views/album.rs:916
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1372
 #: crates/ui-gtk/src/widgets/bipolar_scale.rs:188
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:399
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:407
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:226
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:280
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:224
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:278
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:529
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:531
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:533
-#: crates/ui-gtk/src/widgets/eq_graph.rs:411
+#: crates/ui-gtk/src/widgets/eq_graph.rs:410
 #, rust-format
 msgid "{} dB"
 msgstr ""
 
-#: crates/ui-gtk/src/views/album.rs:920
+#: crates/ui-gtk/src/views/album.rs:923
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1515
 #: crates/ui-gtk/src/views/smart_rules.rs:192
 #: crates/ui-gtk/src/views/home.rs:366
 msgid "Last played"
 msgstr ""
 
-#: crates/ui-gtk/src/views/album.rs:926
+#: crates/ui-gtk/src/views/album.rs:929
 #: crates/ui-gtk/src/views/smart_rules.rs:343
 #, rust-format
 msgid "{} star"
@@ -1170,11 +1179,11 @@ msgid_plural "{} stars"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/album.rs:935
+#: crates/ui-gtk/src/views/album.rs:938
 msgid "Yes"
 msgstr ""
 
-#: crates/ui-gtk/src/views/album.rs:939
+#: crates/ui-gtk/src/views/album.rs:942
 #: crates/ui-gtk/src/dialogs/settings/library.rs:641
 #: crates/ui-gtk/src/tools/copies.rs:500 crates/ui-gtk/src/tools/copies.rs:539
 msgid "Copies"
@@ -1240,7 +1249,7 @@ msgid "Not rated"
 msgstr ""
 
 #: crates/ui-gtk/src/widgets/waveform_seek_bar.rs:127
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:429
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:432
 msgid "Seek"
 msgstr ""
 
@@ -2176,89 +2185,97 @@ msgstr ""
 msgid "Show the menu bar"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:352
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:379
 #, rust-format
 msgid "Same as the desktop ({})"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:353
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:384
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:393
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:447
 msgid "Language"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:358
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:394
+msgid "Restart now"
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:414
 msgid ""
 "After a change, the library is sorted again for the new language. This runs "
 "in the background."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:367
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:418
+msgid "A new language is used when Helikodu starts again."
+msgstr ""
+
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:430
 msgid "Colour scheme"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:368
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:431
 msgid "Accent colour"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:369
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:432
 msgid "Window style"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:370
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:433
 #: crates/ui-gtk/src/shortcuts.rs:161
 msgid "Menu bar"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:373
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:436
 msgid "Tables"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:377
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:440
 msgid "Shade every second row"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:378
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:441
 msgid "Makes long rows easier to follow across wide tables."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:387
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:450
 msgid "Notifications"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:391
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:454
 msgid "Show a notification when the track changes"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:392
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:455
 msgid "Not shown while the Helikodu window is in front."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:411
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:474
 msgid "System tray"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:415
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:478
 msgid "Show an icon in the tray"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:416
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:479
 msgid ""
 "Click it to show or hide the window. Scroll over it to change the volume."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:427
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:490
 msgid "Keeps playing in the tray"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:427
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:490
 msgid "Quits Helikodu"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:440
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:503
 msgid "Ctrl+Q always quits."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/appearance.rs:443
+#: crates/ui-gtk/src/dialogs/settings/appearance.rs:506
 msgid "Closing the window"
 msgstr ""
 
@@ -2769,9 +2786,9 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/settings/output.rs:556
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:350
 #: crates/ui-gtk/src/window/panel/signal_path.rs:61
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:446
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:470
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:474
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:444
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:468
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:472
 #, rust-format
 msgid "{} ms"
 msgstr ""
@@ -2870,7 +2887,7 @@ msgid "Seek step"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:131
-#: crates/ui-gtk/src/views/smart_rules.rs:454
+#: crates/ui-gtk/src/views/smart_rules.rs:460
 msgid "and"
 msgstr ""
 
@@ -2901,7 +2918,7 @@ msgid "{} % of the track"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:155
-#: crates/ui-gtk/src/views/smart_rules.rs:454
+#: crates/ui-gtk/src/views/smart_rules.rs:460
 msgid "or"
 msgstr ""
 
@@ -3008,90 +3025,90 @@ msgid "Looping tunes"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:351
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:352
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:353
 #: crates/ui-gtk/src/window/panel/lyrics.rs:52
 #: crates/ui-gtk/src/tools/verify_files.rs:355
 #, rust-format
 msgid "{} s"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:361
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:364
 msgid "between tracks"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:382
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:385
 msgid "when you skip"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:408
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:411
 msgid ""
 "Tracks that follow each other on an album always join without a crossfade. "
 "Nothing is crossfaded on a bit-perfect path."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:421
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:424
 msgid "Pause and resume"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:433
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:436
 msgid "Skip to another track"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:472
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:475
 msgid "SoundFont"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:473
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:476
 msgid ""
 "None chosen: a SoundFont installed on the system is used, if there is one."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:474
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:477
 msgid ""
 "MIDI files are played with the instruments of a SoundFont (.sf2 or .sf3)."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:477
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:480
 msgid "Song lengths"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:478
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:481
 msgid "Not set: tunes play for the default length, then fade out."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:479
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:482
 msgid ""
 "Songlengths.md5 of the High Voltage SID Collection gives each tune its "
 "length."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:496
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:499
 #: crates/ui-gtk/src/tools/converter.rs:927
 msgid "Choose…"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:501
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:504
 #, rust-format
 msgid "Clear {}"
 msgstr ""
 
 #. The sentence reads "play the loop <n times>, then fade out over <time>".
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:554
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:557
 msgid "play the loop"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:559
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:562
 #, rust-format
 msgid "once"
 msgid_plural "{} times"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:565
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:568
 msgid "then fade out over"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:581
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:584
 #, rust-format
 msgid ""
 "For tracker modules and game music that repeat a part. Tunes whose length "
@@ -3362,8 +3379,8 @@ msgid "Bit depth"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1455
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:327
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:346
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:325
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:344
 #: crates/ui-gtk/src/views/smart_rules.rs:180
 #: crates/ui-gtk/src/tools/converter.rs:906
 msgid "Channels"
@@ -3432,7 +3449,7 @@ msgstr ""
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1556
 #: crates/ui-gtk/src/tools/tag_tools.rs:107
-#: crates/ui-gtk/src/views/history.rs:258
+#: crates/ui-gtk/src/views/history.rs:259
 #: crates/ui-gtk/src/tools/sync_export.rs:641
 #: crates/ui-gtk/src/tools/sync_export.rs:650
 msgid "Files"
@@ -4008,7 +4025,7 @@ msgid "edited {}"
 msgstr ""
 
 #: crates/ui-gtk/src/views/playlist.rs:184
-#: crates/ui-gtk/src/views/history.rs:253
+#: crates/ui-gtk/src/views/history.rs:254
 #: crates/ui-gtk/src/window/playlists.rs:416
 #: crates/ui-gtk/src/tools/sync_export.rs:542
 msgid "Playlist"
@@ -4268,7 +4285,7 @@ msgstr ""
 msgid "Browse by genre, artist and album"
 msgstr ""
 
-#: crates/ui-gtk/src/views/tracks.rs:213 crates/ui-gtk/src/views/history.rs:364
+#: crates/ui-gtk/src/views/tracks.rs:213 crates/ui-gtk/src/views/history.rs:365
 msgid "Filter"
 msgstr ""
 
@@ -4555,7 +4572,7 @@ msgstr ""
 
 #: crates/ui-gtk/src/views/now_playing.rs:589
 #: crates/ui-gtk/src/tools/duplicates.rs:572
-#: crates/ui-gtk/src/views/history.rs:243
+#: crates/ui-gtk/src/views/history.rs:244
 #, rust-format
 msgid "{} play"
 msgid_plural "{} plays"
@@ -4581,7 +4598,7 @@ msgid "1/5 OCTAVE · PEAK HOLD 1.5 s"
 msgstr ""
 
 #: crates/ui-gtk/src/views/now_playing.rs:712
-#: crates/ui-gtk/src/widgets/level_meter.rs:107
+#: crates/ui-gtk/src/widgets/level_meter.rs:108
 msgid "Level"
 msgstr ""
 
@@ -4804,9 +4821,9 @@ msgid "{} (auto)"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:141
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:213
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:268
-#: crates/ui-gtk/src/widgets/eq_graph.rs:81
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:211
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:266
+#: crates/ui-gtk/src/widgets/eq_graph.rs:82
 #, rust-format
 msgid "{} Hz"
 msgstr ""
@@ -4822,7 +4839,7 @@ msgid "Import AutoEQ file"
 msgstr ""
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:201
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:189
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:187
 msgid "Custom"
 msgstr ""
 
@@ -5065,27 +5082,27 @@ msgstr ""
 msgid "Processing stages"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:24
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:365
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:25
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:363
 msgid "Centre"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:26
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:27
 #, rust-format
 msgid "{} dB to the left"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:28
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:29
 #, rust-format
 msgid "{} dB to the right"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:37
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:38
 #, rust-format
 msgid "L {}"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:39
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:40
 #, rust-format
 msgid "R {}"
 msgstr ""
@@ -5095,134 +5112,134 @@ msgstr ""
 msgid "{} Hz · {} dB"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:168
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:166
 msgid ""
 "For headphones. A little of each channel is mixed into the other, as happens "
 "with loudspeakers in a room. The sound moves from inside the head towards "
 "the front."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:183
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:181
 msgid "Default"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:183
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:181
 msgid "The strongest of the three."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:184
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:182
 msgid "Chu Moy"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:184
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:182
 msgid "In the middle."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:186
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:184
 msgid "Jan Meier"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:187
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:185
 msgid "The mildest. It changes the recording least."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:189
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:187
 msgid "Set both values yourself."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:200
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:198
 msgid "Strength"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:206
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:204
 msgid "Cut-off frequency"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:219
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:217
 msgid "Level of the mixed-in channel"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:231
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:229
 msgid "Custom values"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:233
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:231
 msgid ""
 "Works on stereo tracks. Mono and surround tracks pass through unchanged."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:323
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:321
 msgid ""
 "Changes how the channels reach the device. Mono, swap and balance apply to "
 "every track. The surround setting applies to files with more channels than "
 "the device has."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:326
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 msgid "Swap left and right"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:359
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:378
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:357
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:376
 msgid "Balance"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:364
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:362
 msgid "Left"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:366
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:364
 msgid "Right"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:382
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:380
 msgid "Add the LFE channel to the mix"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:384
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:382
 msgid ""
 "Surround is mixed down after ITU-R BS.775. Off: the subwoofer channel is "
 "left out."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:402
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:400
 msgid "Surround files"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:443
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:441
 msgid ""
 "A safety net against clipping. When a peak would go above full scale, the "
 "limiter turns the level down for a moment. The rest of the time it leaves "
 "the sound alone."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:466
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:492
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:464
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:490
 msgid "Lookahead"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:479
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:477
 msgid "Longer is gentler. The sound is delayed by the same time."
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:498
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:504
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:496
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:502
 msgid "Gain reduction now"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:510
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:508
 msgid "Largest in this track"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:512
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:510
 msgid "Times limited"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:515
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:513
 msgid "Activity"
 msgstr ""
 
-#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:517
+#: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:515
 msgid ""
 "The automatic preamp of the equalizer already prevents most clipping, so the "
 "limiter rarely has to act."
@@ -5460,17 +5477,17 @@ msgstr ""
 msgid "Stops at {}"
 msgstr ""
 
-#: crates/ui-gtk/src/widgets/eq_graph.rs:391
+#: crates/ui-gtk/src/widgets/eq_graph.rs:390
 #, rust-format
 msgid "Band {}"
 msgstr ""
 
-#: crates/ui-gtk/src/widgets/eq_graph.rs:777
+#: crates/ui-gtk/src/widgets/eq_graph.rs:776
 #, rust-format
 msgid "{} · {} dB"
 msgstr ""
 
-#: crates/ui-gtk/src/widgets/eq_graph.rs:785
+#: crates/ui-gtk/src/widgets/eq_graph.rs:784
 msgid "Band"
 msgstr ""
 
@@ -7217,105 +7234,107 @@ msgstr ""
 msgid "Yesterday"
 msgstr ""
 
+#. Translators: a day in the play history, as strftime: "Saturday 15 November".
 #: crates/ui-gtk/src/views/history.rs:224
 msgid "%A %e %B"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:226
+#. Translators: a day of an earlier year, as strftime: "Saturday 15 November 2025".
+#: crates/ui-gtk/src/views/history.rs:227
 msgid "%A %e %B %Y"
-msgstr ""
-
-#: crates/ui-gtk/src/views/history.rs:255
-#, rust-format
-msgid "Search: “{}”"
 msgstr ""
 
 #: crates/ui-gtk/src/views/history.rs:256
 #, rust-format
+msgid "Search: “{}”"
+msgstr ""
+
+#: crates/ui-gtk/src/views/history.rs:257
+#, rust-format
 msgid "Folder: {}"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:359
+#: crates/ui-gtk/src/views/history.rs:360
 msgid "Period"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:368
+#: crates/ui-gtk/src/views/history.rs:369
 msgid "Filter the history"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:381
+#: crates/ui-gtk/src/views/history.rs:382
 msgid "Time"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:385
+#: crates/ui-gtk/src/views/history.rs:386
 msgid "Played from"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:386
+#: crates/ui-gtk/src/views/history.rs:387
 msgid "Listened"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:408
+#: crates/ui-gtk/src/views/history.rs:409
 msgid "Play history"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:419
+#: crates/ui-gtk/src/views/history.rs:420
 msgid "Nothing played"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:420
+#: crates/ui-gtk/src/views/history.rs:421
 msgid "Tracks you listen to are listed here by day, with where they came from."
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:576
-#: crates/ui-gtk/src/views/history.rs:644
+#: crates/ui-gtk/src/views/history.rs:577
+#: crates/ui-gtk/src/views/history.rs:645
 msgid "A track no longer in the library"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:583
-#: crates/ui-gtk/src/views/history.rs:657
+#: crates/ui-gtk/src/views/history.rs:584
+#: crates/ui-gtk/src/views/history.rs:658
 #, rust-format
 msgid "Skipped at {}"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:816
+#: crates/ui-gtk/src/views/history.rs:817
 msgid "Nothing played yet"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:818
+#: crates/ui-gtk/src/views/history.rs:819
 #, rust-format
 msgid "{} play since {}"
 msgid_plural "{} plays since {}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/history.rs:835
+#: crates/ui-gtk/src/views/history.rs:836
 #, rust-format
 msgid "{} skipped"
 msgid_plural "{} skipped"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/history.rs:857
+#: crates/ui-gtk/src/views/history.rs:858
 #, rust-format
 msgid "History, {}"
 msgstr ""
 
-#: crates/ui-gtk/src/views/history.rs:877
+#: crates/ui-gtk/src/views/history.rs:878
 #, rust-format
 msgid "Saved {} track as “{}”"
 msgid_plural "Saved {} tracks as “{}”"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/history.rs:914
+#: crates/ui-gtk/src/views/history.rs:915
 #, rust-format
 msgid "A play counts after half the track or {} minute"
 msgid_plural "A play counts after half the track or {} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/history.rs:923
+#: crates/ui-gtk/src/views/history.rs:924
 #, rust-format
 msgid "A play counts after {} % of the track or {} minute"
 msgid_plural "A play counts after {} % of the track or {} minutes"
@@ -7363,7 +7382,7 @@ msgid "Choose a year to see its albums."
 msgstr ""
 
 #: crates/ui-gtk/src/views/category.rs:196
-#: crates/ui-gtk/src/views/smart_rules.rs:491
+#: crates/ui-gtk/src/views/smart_rules.rs:497
 msgid "Newest first"
 msgstr ""
 
@@ -7644,111 +7663,111 @@ msgid_plural "{} years"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:488
+#: crates/ui-gtk/src/views/smart_rules.rs:494
 msgid "Album order"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:490
+#: crates/ui-gtk/src/views/smart_rules.rs:496
 msgid "Date added, newest first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:495
+#: crates/ui-gtk/src/views/smart_rules.rs:501
 msgid "Date added, oldest first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:496
+#: crates/ui-gtk/src/views/smart_rules.rs:502
 msgid "Oldest first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:499
+#: crates/ui-gtk/src/views/smart_rules.rs:505
 msgid "By title"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:502
+#: crates/ui-gtk/src/views/smart_rules.rs:508
 msgid "By artist"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:505
+#: crates/ui-gtk/src/views/smart_rules.rs:511
 #: crates/ui-gtk/src/tools/cover_manager.rs:703
 msgid "By album"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:507
+#: crates/ui-gtk/src/views/smart_rules.rs:513
 msgid "Year, newest first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:508
+#: crates/ui-gtk/src/views/smart_rules.rs:514
 msgid "Latest year first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:512
+#: crates/ui-gtk/src/views/smart_rules.rs:518
 msgid "Year, oldest first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:513
+#: crates/ui-gtk/src/views/smart_rules.rs:519
 msgid "Earliest year first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:517
+#: crates/ui-gtk/src/views/smart_rules.rs:523
 msgid "Rating, highest first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:518
+#: crates/ui-gtk/src/views/smart_rules.rs:524
 msgid "Highest rated first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:522
-#: crates/ui-gtk/src/views/smart_rules.rs:523
+#: crates/ui-gtk/src/views/smart_rules.rs:528
+#: crates/ui-gtk/src/views/smart_rules.rs:529
 msgid "Most played first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:527
+#: crates/ui-gtk/src/views/smart_rules.rs:533
 msgid "Last played, most recent first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:528
+#: crates/ui-gtk/src/views/smart_rules.rs:534
 msgid "Recently played first"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:532
+#: crates/ui-gtk/src/views/smart_rules.rs:538
 msgid "Random"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:533
+#: crates/ui-gtk/src/views/smart_rules.rs:539
 msgid "In random order"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:641
+#: crates/ui-gtk/src/views/smart_rules.rs:647
 msgid "In the order of the text"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:648
+#: crates/ui-gtk/src/views/smart_rules.rs:654
 #, rust-format
 msgid "at most {} track"
 msgid_plural "at most {} tracks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:651
+#: crates/ui-gtk/src/views/smart_rules.rs:657
 #, rust-format
 msgid "at most {} minute"
 msgid_plural "at most {} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:655
+#: crates/ui-gtk/src/views/smart_rules.rs:661
 #, rust-format
 msgid "at most {} hour"
 msgid_plural "at most {} hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:657
+#: crates/ui-gtk/src/views/smart_rules.rs:663
 #, rust-format
 msgid "at most {} MB"
 msgstr ""
 
-#: crates/ui-gtk/src/views/smart_rules.rs:658
+#: crates/ui-gtk/src/views/smart_rules.rs:664
 #, rust-format
 msgid "at most {} GB"
 msgstr ""
@@ -7878,16 +7897,16 @@ msgstr ""
 msgid "C"
 msgstr ""
 
-#: crates/ui-gtk/src/widgets/level_meter.rs:226
+#: crates/ui-gtk/src/widgets/level_meter.rs:227
 #, rust-format
 msgid "{}: {} dB, {}"
 msgstr ""
 
-#: crates/ui-gtk/src/widgets/level_meter.rs:253
+#: crates/ui-gtk/src/widgets/level_meter.rs:254
 msgid "CLIP"
 msgstr ""
 
-#: crates/ui-gtk/src/widgets/level_meter.rs:255
+#: crates/ui-gtk/src/widgets/level_meter.rs:256
 #, rust-format
 msgid "PEAK {} dB"
 msgstr ""

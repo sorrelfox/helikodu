@@ -8,7 +8,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use clap::Args;
+use helikodu_service::files::AppDirs;
 use helikodu_service::library::{MusicLibrary, default_database_path};
+use helikodu_service::settings::{SETTINGS_FILE, read_settings};
 use serde_json::{Map, Value, json};
 
 #[derive(Debug, Args)]
@@ -29,13 +31,33 @@ impl DatabaseArgs {
 
     /// The library, created if there is none yet.
     pub(crate) fn open(&self) -> Result<MusicLibrary> {
-        Ok(MusicLibrary::open(&self.path()?)?)
+        Ok(MusicLibrary::open_sorted_for(
+            &self.path()?,
+            &interface_language(),
+        )?)
     }
 
     /// The library, which must exist.
     pub(crate) fn open_existing(&self) -> Result<MusicLibrary> {
-        Ok(MusicLibrary::open_existing(&self.path()?)?)
+        Ok(MusicLibrary::open_existing_sorted_for(
+            &self.path()?,
+            &interface_language(),
+        )?)
     }
+}
+
+/// The interface language of the application (`[appearance] language` in its
+/// settings file; empty for the environment's locale), so that the library is
+/// sorted as the application sorts it and its sort indexes are not built again
+/// for another language.
+fn interface_language() -> String {
+    let Ok(dirs) = AppDirs::from_env() else {
+        return String::new();
+    };
+    let Ok(bytes) = std::fs::read(dirs.config.join(SETTINGS_FILE)) else {
+        return String::new();
+    };
+    read_settings(&bytes).0.appearance.language.clone()
 }
 
 /// Adds `path` to a JSON object: `"path"` as text (bytes that are not UTF-8 become

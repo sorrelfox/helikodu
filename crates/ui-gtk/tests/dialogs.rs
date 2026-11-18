@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The dialogs against the sample backend: settings that round-trip through
-//! the store, the full-output confirmation (also for requests from other
-//! programs), the tag editor with mixed values, the first run, the output
-//! switcher, Supported formats, About and Keyboard shortcuts.
+//! the store, the language choice, the full-output confirmation (also for
+//! requests from other programs), the tag editor with mixed values, the first
+//! run, the output switcher, Supported formats, About and Keyboard shortcuts.
 //!
 //! Like `widgets.rs`, this program runs only under the headless compositor:
 //!
@@ -152,6 +152,72 @@ fn settings_round_trip(app: &gtk::Application) {
         window.open_settings(page);
         wait_for(page, || window.settings_page().as_deref() == Some(page));
     }
+    settings.close();
+    window.destroy();
+}
+
+/// The strings of `dropdown`.
+fn choices(dropdown: &gtk::DropDown) -> Vec<String> {
+    let strings = dropdown.model().and_downcast::<gtk::StringList>().unwrap();
+    (0..strings.n_items())
+        .filter_map(|i| strings.string(i))
+        .map(|s| s.to_string())
+        .collect()
+}
+
+fn the_language_choice(app: &gtk::Application) {
+    let (window, backend) = window(app);
+    let services = backend.services();
+    assert_eq!(services.settings().appearance.language, "");
+    let settings = window.open_settings("appearance");
+    wait_for("the appearance page", || {
+        window.settings_page().as_deref() == Some("appearance")
+    });
+    let choice: gtk::DropDown = named(&settings, "language");
+    let names = choices(&choice);
+    assert!(names[0].starts_with("Same as the desktop ("), "{names:?}");
+    assert_eq!(
+        names[1..],
+        [
+            "English",
+            "Deutsch",
+            "Español",
+            "Français",
+            "Italiano",
+            "日本語",
+            "한국어",
+            "Nederlands",
+            "Português (Brasil)",
+            "Русский",
+            "Українська",
+            "简体中文"
+        ]
+    );
+    assert_eq!(choice.selected(), 0);
+    // "Restart now" shows while the choice differs from the language the
+    // program started in.
+    let restart: gtk::Button = named(&settings, "language-restart");
+    assert!(!restart.is_visible());
+    choice.set_selected(2);
+    assert_eq!(services.settings().appearance.language, "de");
+    assert!(restart.is_visible());
+    choice.set_selected(9);
+    assert_eq!(services.settings().appearance.language, "pt_BR");
+    choice.set_selected(0);
+    assert_eq!(services.settings().appearance.language, "");
+    assert!(!restart.is_visible());
+    settings.close();
+    spin(50);
+    // A language written into the settings file by hand is shown as it is.
+    services
+        .update_settings(&mut |s| s.appearance.language = "sv_SE".into())
+        .unwrap();
+    let settings = window.open_settings("appearance");
+    spin(50);
+    let choice: gtk::DropDown = named(&settings, "language");
+    assert_eq!(choices(&choice).last().map(String::as_str), Some("Svenska"));
+    assert_eq!(choice.selected(), 13);
+    assert!(named::<gtk::Button>(&settings, "language-restart").is_visible());
     settings.close();
     window.destroy();
 }
@@ -1276,6 +1342,7 @@ const TESTS: &[Test] = &[
     ),
     ("database_backups_and_logs", database_backups_and_logs),
     ("settings_round_trip", settings_round_trip),
+    ("the_language_choice", the_language_choice),
     ("the_full_output_confirmation", the_full_output_confirmation),
     (
         "outside_requests_pass_the_gate",

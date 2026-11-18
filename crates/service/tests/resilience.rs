@@ -325,7 +325,7 @@ fn a_library_that_cannot_be_opened_leaves_the_service_without_one() {
 fn a_staged_backup_is_put_back_at_the_next_start() {
     let root = folder("restore");
     let db = root.join(DATABASE_FILE);
-    let (library, notices) = MusicLibrary::open_at_start(&db);
+    let (library, notices) = MusicLibrary::open_at_start(&db, "");
     let library = library.unwrap();
     assert!(notices.is_empty(), "{notices:?}");
     library.create_playlist("Before").unwrap();
@@ -335,7 +335,7 @@ fn a_staged_backup_is_put_back_at_the_next_start() {
     assert!(library.pending_restore().is_some());
     drop(library);
 
-    let (library, notices) = MusicLibrary::open_at_start(&db);
+    let (library, notices) = MusicLibrary::open_at_start(&db, "");
     let library = library.unwrap();
     assert!(
         matches!(
@@ -370,7 +370,7 @@ fn a_damaged_database_is_replaced_with_a_backup_at_start() {
         let _ = fs::remove_file(format!("{}{suffix}", db.display()));
     }
     fs::write(&db, b"SQLite format 3\0 but nothing after that is right").unwrap();
-    let (library, notices) = MusicLibrary::open_at_start(&db);
+    let (library, notices) = MusicLibrary::open_at_start(&db, "");
     let library = library.unwrap();
     assert!(
         matches!(notices.as_slice(), [StartNotice::Recovered { .. }]),

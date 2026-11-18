@@ -105,7 +105,7 @@ impl Stage {
                 let (hz, db) = dsp.crossfeed.effective();
                 fill(
                     &tr("{} Hz / {} dB"),
-                    &[&hz.to_string(), &format!("{db:.1}")],
+                    &[&hz.to_string(), &crate::format::decimal(db, 1)],
                 )
             }
             Self::ChannelMix if dsp.channel_mix.enabled => {
@@ -145,7 +145,7 @@ impl Stage {
 /// `2`, `2.5`: a number with its decimals only when it has them.
 pub(crate) fn trim_number(value: f64) -> String {
     let text = format!("{value:.1}");
-    text.trim_end_matches('0').trim_end_matches('.').to_owned()
+    crate::format::localized(text.trim_end_matches('0').trim_end_matches('.').to_owned())
 }
 
 /// A change of the settings, waiting to be applied.

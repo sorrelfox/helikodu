@@ -79,6 +79,10 @@ The release candidate. This version brings everything planned for 1.0: smart pla
 - A manual page for `helikodu-scan-worker`, and the new commands in the manual page of `helikodu-cli`.
 - Ready-built programs for 64-bit ARM (aarch64) on the GitHub Releases page, beside the x86_64 build.
 
+#### Languages
+- Translations into German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, Russian, Ukrainian and Simplified Chinese.
+- **Settings ▸ Appearance ▸ Language** chooses the language of the interface, or keeps the desktop's. A new language is used from the next start (**Restart now**); the library is sorted for it at once, in the background, and `helikodu-cli` sorts the same way. Numbers are written with the language's decimal separator.
+
 ### Changed
 
 - The player deck follows the colour scheme: light in the light scheme, with its popovers, seek bar and output readout, and dark as before in the dark scheme.

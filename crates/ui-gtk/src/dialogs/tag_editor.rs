@@ -1365,9 +1365,9 @@ fn info_group(title: &str, pairs: &[(String, String, bool)]) -> gtk::Box {
 fn gain(value: Option<f64>) -> String {
     value.map_or_else(String::new, |v| {
         let text = if v < 0.0 {
-            format!("−{:.1}", -v)
+            format!("−{}", crate::format::decimal(-v, 1))
         } else {
-            format!("{v:.1}")
+            crate::format::decimal(v, 1)
         };
         fill(&tr("{} dB"), &[&text])
     })
@@ -1497,7 +1497,7 @@ fn fill_info(editor: &Rc<Editor>, index: usize) {
     info.append(&left);
     let right = gtk::Box::new(gtk::Orientation::Vertical, 22);
     right.set_hexpand(true);
-    let peak = |v: Option<f64>| v.map(|p| format!("{p:.2}")).unwrap_or_default();
+    let peak = |v: Option<f64>| v.map(|p| crate::format::decimal(p, 2)).unwrap_or_default();
     right.append(&info_group(
         &tr("Loudness"),
         &[

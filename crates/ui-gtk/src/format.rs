@@ -51,12 +51,35 @@ pub(crate) fn minutes(d: Duration) -> String {
     }
 }
 
-/// A sample rate in kHz without a needless decimal: `44.1`, `96`.
+/// A sample rate in kHz without a needless decimal, as people read it: `44.1`
+/// (`44,1` where the locale writes a decimal comma), `96`.
 pub(crate) fn khz(hz: u32) -> String {
     if hz.is_multiple_of(1000) {
         (hz / 1000).to_string()
     } else {
-        format!("{:.1}", f64::from(hz) / 1000.0)
+        decimal(f64::from(hz) / 1000.0, 1)
+    }
+}
+
+/// `value` rounded to `places` decimals with the locale's decimal separator:
+/// `44.1`, or `44,1` where the translation says so (context "decimal
+/// separator"). For numbers people read, not for text that is read back.
+pub(crate) fn decimal(value: f64, places: usize) -> String {
+    localized(format!("{value:.places$}"))
+}
+
+/// `number`, written with a decimal point, with the locale's decimal separator.
+pub(crate) fn localized(number: String) -> String {
+    // Translators: the decimal separator of numbers such as 44.1 kHz or −6.3 dB: "." or ",".
+    let separator = gettextrs::pgettext("decimal separator", ".");
+    with_separator(number, &separator)
+}
+
+fn with_separator(number: String, separator: &str) -> String {
+    if separator == "." || separator.is_empty() {
+        number
+    } else {
+        number.replacen('.', separator, 1)
     }
 }
 
@@ -103,7 +126,7 @@ pub(crate) fn badges(format: &AudioFormat, album_gain_db: Option<f64>) -> Vec<St
         let sign = if gain < 0.0 { "\u{2212}" } else { "+" };
         out.push(fill(
             &tr("Album gain {} dB"),
-            &[&format!("{sign}{:.1}", gain.abs())],
+            &[&format!("{sign}{}", decimal(gain.abs(), 1))],
         ));
     }
     out
@@ -114,6 +137,7 @@ pub(crate) fn badges(format: &AudioFormat, album_gain_db: Option<f64>) -> Vec<St
 pub(crate) fn count(n: impl TryInto<u64>) -> String {
     group(
         n.try_into().unwrap_or(u64::MAX),
+        // Translators: the separator of thousands in numbers such as 1,284: "," "." or a narrow space.
         &gettextrs::pgettext("thousands separator", ","),
     )
 }
@@ -170,6 +194,18 @@ mod tests {
             "\u{2212}3:13"
         );
         assert_eq!(minutes(Duration::from_secs(43 * 60)), "43 min");
+    }
+
+    #[test]
+    fn decimals() {
+        assert_eq!(decimal(44.1, 1), "44.1");
+        assert_eq!(decimal(-6.25, 2), "-6.25");
+        assert_eq!(decimal(3.0, 0), "3");
+        assert_eq!(with_separator("44.1".into(), ","), "44,1");
+        assert_eq!(with_separator("426.2".into(), "."), "426.2");
+        assert_eq!(with_separator("96".into(), ","), "96");
+        assert_eq!(khz(44_100), "44.1");
+        assert_eq!(khz(96_000), "96");
     }
 
     #[test]

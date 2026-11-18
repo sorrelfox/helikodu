@@ -14,7 +14,8 @@ use serde::{Deserialize, Serialize};
 /// window_style = "auto"     # auto | integrated | classic
 /// menu_bar = true           # Classic style only
 /// stripe_rows = true
-/// language = ""             # empty: the desktop's language
+/// language = ""             # empty: the desktop's; or en, de, es, fr, it, ja, ko,
+///                           # nl, pt_BR, ru, uk, zh_CN
 /// notifications = true      # when the track changes
 /// tray_icon = false         # where the desktop has a tray
 /// close_to_tray = false     # closing the window keeps playing in the tray
@@ -32,8 +33,9 @@ pub struct AppearanceSettings {
     pub menu_bar: bool,
     /// Whether every second row of a table is shaded.
     pub stripe_rows: bool,
-    /// The interface language as a locale name (`sv_SE`), or empty for the
-    /// desktop's. Changing it sorts the library again in the background.
+    /// The interface language as a locale name (`de`, `pt_BR`), or empty for
+    /// the desktop's. It is used from the next start; the library is sorted
+    /// for it, again in the background when it changes.
     pub language: String,
     /// Whether the desktop shows a notification when the track changes.
     pub notifications: bool,
@@ -135,5 +137,27 @@ mod tests {
         assert!(text.contains("accent = \"violet\""), "{text}");
         assert_eq!(toml::from_str::<Settings>(&text).unwrap(), settings);
         assert!(toml::from_str::<Settings>("[appearance]\naccent = \"pink\"\n").is_err());
+    }
+
+    #[test]
+    fn the_language_round_trips() {
+        // Without the key: the desktop's language.
+        let settings: Settings = toml::from_str("[appearance]\naccent = \"blue\"\n").unwrap();
+        assert_eq!(settings.appearance.language, "");
+        for language in [
+            "", "en", "de", "es", "fr", "it", "ja", "ko", "nl", "pt_BR", "ru", "uk", "zh_CN",
+        ] {
+            let mut settings = Settings::default();
+            settings.appearance.language = language.to_owned();
+            let text = toml::to_string(&settings).unwrap();
+            assert!(
+                text.contains(&format!("language = \"{language}\"")),
+                "{text}"
+            );
+            let read: Settings = toml::from_str(&text).unwrap();
+            assert_eq!(read.appearance.language, language);
+            assert_eq!(read, settings);
+            assert_eq!(read.validate(), Ok(()));
+        }
     }
 }

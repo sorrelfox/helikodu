@@ -309,7 +309,7 @@ impl Finder {
                 &tr("Compared {} in {} s. Nothing is removed until you say so."),
                 &[
                     &fill(&ntr("{} file", "{} files", files), &[&format::count(files)]),
-                    &format!("{:.1}", took.as_secs_f64()),
+                    &format::decimal(took.as_secs_f64(), 1),
                 ],
             ));
             this.groups.replace(groups);

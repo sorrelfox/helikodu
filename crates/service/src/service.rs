@@ -154,7 +154,10 @@ impl Service {
             LibraryChoice::Default => {
                 // Without its library the player still plays files; the window
                 // says why the library is missing.
-                let (opened, found) = MusicLibrary::open_at_start(&dirs.data.join(DATABASE_FILE));
+                let (opened, found) = MusicLibrary::open_at_start(
+                    &dirs.data.join(DATABASE_FILE),
+                    &current.appearance.language,
+                );
                 notices = found;
                 let music = opened.ok();
                 if let (Some(music), Some(delay)) = (&music, config.backups_after)
@@ -177,6 +180,7 @@ impl Service {
                     thumbnails: config.thumbnails.then(|| dirs.cache.join("thumbnails")),
                     thumbnail_bytes: u64::from(current.library.storage.covers_mib) << 20,
                     worker_program: config.worker_program,
+                    language: current.appearance.language.clone(),
                 },
             )?),
             None => None,

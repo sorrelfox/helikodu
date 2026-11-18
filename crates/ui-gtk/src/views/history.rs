@@ -219,10 +219,11 @@ fn day_title(date: &glib::DateTime, today: &glib::DateTime) -> String {
         0 => tr("Today"),
         1 => tr("Yesterday"),
         _ => {
-            // Translators: a day in the play history, as strftime: "Saturday 15 November".
             let pattern = if date.year() == today.year() {
+                // Translators: a day in the play history, as strftime: "Saturday 15 November".
                 tr("%A %e %B")
             } else {
+                // Translators: a day of an earlier year, as strftime: "Saturday 15 November 2025".
                 tr("%A %e %B %Y")
             };
             date.format(&pattern)

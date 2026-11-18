@@ -422,11 +422,8 @@ pub(crate) fn bytes(size: u64) -> String {
         value /= 1024.0;
         unit += 1;
     }
-    if unit == 0 || value >= 10.0 {
-        format!("{value:.0} {}", UNITS[unit])
-    } else {
-        format!("{value:.1} {}", UNITS[unit])
-    }
+    let places = if unit == 0 || value >= 10.0 { 0 } else { 1 };
+    format!("{} {}", crate::format::decimal(value, places), UNITS[unit])
 }
 
 /// Copies `text` to the clipboard of `widget`'s display.

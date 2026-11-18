@@ -349,7 +349,10 @@ fn length(ms: u32) -> String {
         0 => tr("Off"),
         ms if ms < 1000 => fill(&tr("{} ms"), &[&ms.to_string()]),
         ms if ms % 1000 == 0 => fill(&tr("{} s"), &[&(ms / 1000).to_string()]),
-        ms => fill(&tr("{} s"), &[&format!("{:.1}", f64::from(ms) / 1000.0)]),
+        ms => fill(
+            &tr("{} s"),
+            &[&crate::format::decimal(f64::from(ms) / 1000.0, 1)],
+        ),
     }
 }
 

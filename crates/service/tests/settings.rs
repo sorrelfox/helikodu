@@ -27,6 +27,27 @@ fn folder(test: &str) -> PathBuf {
 }
 
 #[test]
+fn the_language_is_saved_and_read_back() {
+    let path = folder("language").join("settings.toml");
+    let store = SettingsStore::open(&path, EventBus::new());
+    assert_eq!(store.get().appearance.language, "");
+    for language in ["pt_BR", "zh_CN", ""] {
+        let groups = store
+            .update(|s| s.appearance.language = language.to_owned())
+            .unwrap();
+        assert_eq!(groups, vec![SettingsGroup::Appearance]);
+        let text = fs::read_to_string(&path).unwrap();
+        assert!(
+            text.contains(&format!("language = \"{language}\"")),
+            "{text}"
+        );
+        let again = SettingsStore::open(&path, EventBus::new());
+        assert_eq!(again.load_notice(), None);
+        assert_eq!(again.get().appearance.language, language);
+    }
+}
+
+#[test]
 fn changes_are_saved_announced_and_read_back() {
     let path = folder("round_trip").join("settings.toml");
     let bus = EventBus::<Event>::new();
