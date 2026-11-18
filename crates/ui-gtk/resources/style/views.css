@@ -48,8 +48,8 @@ columnview.hk-table > listview > row > cell > .hk-cell { min-height: 30px; paddi
 columnview.hk-table > listview > row > cell:first-child > .hk-cell { padding-left: 24px; }
 columnview.hk-table > listview > row > cell:last-child > .hk-cell { padding-right: 28px; }
 columnview.hk-table > listview > row:not(:selected):not(:hover) > cell > .hk-cell.hk-alt { background-color: var(--hk-zebra); }
-.hk-cell.hk-playing label { color: var(--hk-accent-text); font-weight: 600; }
-.hk-cell.hk-playing label.hk-mono-meta { font-weight: 500; }
+.hk-cell.hk-playing, .hk-cell.hk-playing label { color: var(--hk-accent-text); font-weight: 600; }
+.hk-cell.hk-playing.hk-mono-meta, .hk-cell.hk-playing label.hk-mono-meta { font-weight: 500; }
 
 /* The hand-built tables: playlist, folder files, most played. */
 .hk-table-header.hk-playlist-row, .hk-table-header.hk-file-row {

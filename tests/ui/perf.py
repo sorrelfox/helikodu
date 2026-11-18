@@ -90,6 +90,12 @@ def measure(args, target, profile):
     return results
 
 
+def rss_without_driver(full, prefix):
+    """The RSS in MB less the resident pages of the GL driver's libraries."""
+    rss = full.get(prefix.replace("mem_", "rss_") + "_mib", 0.0)
+    return (rss - full.get(f"{prefix}.gl_driver_mib", 0.0)) * 2**20 / 1e6
+
+
 def verdict(ok):
     return "pass" if ok else "FAIL"
 
@@ -131,6 +137,22 @@ def report(results):
         v = full.get(key)
         if v is not None:
             add(what, f"{v:.0f} MiB ({v * 2**20 / 1e6:.0f} MB)", "≤ 250 MB", v <= mib_budget)
+    # Where the memory is (/proc/self/smaps_rollup): pages only this process
+    # maps and pages shared with others, the proportional set size, anonymous
+    # memory, and the graphics driver's libraries (private when no other
+    # process maps them).
+    for prefix, what in [("mem_after_startup", "after start-up"),
+                         ("mem_after_albums_scroll", "after scrolling albums"),
+                         ("mem_after_tracks_scroll", "after scrolling tracks")]:
+        if f"{prefix}.private_mib" in full:
+            add(f"Memory split {what}",
+                f"private {full[f'{prefix}.private_mib']:.0f} MiB, "
+                f"shared {full[f'{prefix}.shared_mib']:.0f} MiB, "
+                f"PSS {full[f'{prefix}.pss_mib']:.0f} MiB",
+                "", None,
+                f"anonymous {full[f'{prefix}.anon_mib']:.0f} MiB; "
+                f"GL driver libraries {full.get(f'{prefix}.gl_driver_mib', 0):.0f} MiB; "
+                f"RSS without them {rss_without_driver(full, prefix):.0f} MB")
     for view in ("albums", "tracks"):
         for mode in ("slow", "fast", "jump"):
             k = f"{view}.{mode}"

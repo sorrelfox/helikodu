@@ -827,14 +827,17 @@ pub struct Backend {
     workers: Workers,
 }
 
-/// How many threads run the library queries and load the covers.
-const WORKERS: usize = 2;
+/// How many threads run the library queries and load the covers. One: the
+/// C allocator gives each thread its own arena and keeps what a large query
+/// freed there (the 100,000-track sort, the album pages), so a second thread
+/// kept its own copy of that memory, some 10 MB, for little gain in speed.
+const WORKERS: usize = 1;
 
 type Job = Box<dyn FnOnce() + Send>;
 
-/// The threads that run library queries and load covers. A few long-lived
-/// threads rather than a pool that grows: each thread keeps its own memory
-/// arena and database cache. They end with the last backend.
+/// The threads that run library queries and load covers. Long-lived threads
+/// rather than a pool that grows: each thread keeps its own memory arena and
+/// database cache. They end with the last backend.
 #[derive(Clone)]
 struct Workers(async_channel::Sender<Job>);
 

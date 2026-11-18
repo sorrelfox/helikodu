@@ -191,8 +191,8 @@ impl AlbumsView {
         imp.open.replace(Some(Rc::new(open)));
         let model = AlbumListModel::new(backend);
         imp.grid.set_factory(Some(&self.factory(&model)));
-        imp.grid
-            .set_model(Some(&gtk::NoSelection::new(Some(model.clone()))));
+        // The grid gets its model once it is shown and knows its width (see
+        // `fit_columns`): a grid in a page not yet opened keeps no tiles.
         let weak = self.downgrade();
         imp.grid.connect_activate(move |grid, position| {
             let Some(view) = weak.upgrade() else { return };
@@ -216,23 +216,29 @@ impl AlbumsView {
         // layout, so its column limit follows what fits: the layout stays the
         // same and far fewer tiles are kept for the rows off screen.
         if let Some(adjustment) = imp.grid.hadjustment() {
-            let grid = imp.grid.downgrade();
-            adjustment.connect_page_size_notify(move |adjustment| {
-                let fits = (adjustment.page_size() as i32 / NARROWEST_COLUMN).clamp(1, MAX_COLUMNS);
-                let fits = u32::try_from(fits).unwrap_or(1);
-                if let Some(grid) = grid.upgrade()
-                    && fits != grid.max_columns()
-                {
-                    // Not while the grid is being allocated.
-                    let grid = grid.downgrade();
-                    glib::idle_add_local_once(move || {
-                        if let Some(grid) = grid.upgrade() {
-                            grid.set_max_columns(fits);
-                        }
-                    });
-                }
+            let weak = self.downgrade();
+            adjustment.connect_page_size_notify(move |_| {
+                // Not while the grid is being allocated.
+                let weak = weak.clone();
+                glib::idle_add_local_once(move || {
+                    if let Some(view) = weak.upgrade() {
+                        view.fit_columns();
+                    }
+                });
             });
         }
+        // And when shown, or now if it already is.
+        let weak = self.downgrade();
+        let fit = move || {
+            let weak = weak.clone();
+            glib::idle_add_local_once(move || {
+                if let Some(view) = weak.upgrade() {
+                    view.fit_columns();
+                }
+            });
+        };
+        fit();
+        self.connect_map(move |_| fit());
         if let Some(adjustment) = imp.grid.vadjustment() {
             let weak = self.downgrade();
             adjustment.connect_value_changed(move |_| {
@@ -251,6 +257,39 @@ impl AlbumsView {
             }
         });
         self.reload();
+    }
+
+    /// Sets the grid's column limit to the columns that fit its width, and
+    /// gives the grid its model the first time it is shown.
+    fn fit_columns(&self) {
+        let imp = self.imp();
+        let grid = &imp.grid;
+        let width = grid.hadjustment().map_or(0.0, |a| a.page_size()) as i32;
+        if width <= 0 || !grid.is_mapped() {
+            return;
+        }
+        // A tile's minimum width, margins included, once there is one.
+        let column = grid
+            .first_child()
+            .map(|tile| tile.measure(gtk::Orientation::Horizontal, -1).0)
+            .filter(|w| *w > 0)
+            .unwrap_or(NARROWEST_COLUMN);
+        let fits = u32::try_from((width / column).clamp(1, MAX_COLUMNS)).unwrap_or(1);
+        if fits != grid.max_columns() {
+            grid.set_max_columns(fits);
+        }
+        if grid.model().is_none()
+            && let Some(model) = imp.model.borrow().as_ref()
+        {
+            grid.set_model(Some(&gtk::NoSelection::new(Some(model.clone()))));
+            // Once more with the width of a real tile.
+            let weak = self.downgrade();
+            glib::idle_add_local_once(move || {
+                if let Some(view) = weak.upgrade() {
+                    view.fit_columns();
+                }
+            });
+        }
     }
 
     fn factory(&self, model: &AlbumListModel) -> gtk::SignalListItemFactory {

@@ -106,7 +106,10 @@ pub(crate) fn open(
         }
         Role::Reader => {
             connection.pragma_update(None, "query_only", true)?;
-            connection.pragma_update(None, "cache_size", -8_192)?;
+            // 2 MiB of pages per reader: the file's pages stay in the system's
+            // page cache anyway, and a reader's cache is kept for the life of
+            // the program (in the memory of a front end).
+            connection.pragma_update(None, "cache_size", -2_048)?;
         }
     }
     collation.register(&connection)?;

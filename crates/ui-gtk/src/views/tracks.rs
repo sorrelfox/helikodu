@@ -8,8 +8,9 @@
 //! resized. A header click sorts by that column (ascending, descending, off);
 //! the keys clicked before stay as further keys. Sorting and filtering run as
 //! queries in the backend, which returns the keys in the new order; the model
-//! never sorts. Cells are one label each, except the playing indicator and the
-//! rating stars, which set the rating with a click.
+//! never sorts. Cells are one drawn widget each ([`TableCell`]); the rating
+//! stars, which set the rating with a click, and the playing indicator are
+//! their only children.
 //!
 //! The same view, without its toolbar, lists the tracks of an artist.
 
@@ -278,45 +279,23 @@ impl TracksView {
             let Some(item) = item.downcast_ref::<gtk::ColumnViewCell>() else {
                 return;
             };
-            let child: gtk::Widget = match column {
+            let cell = match column {
                 TrackColumn::Rating => {
                     let stars = RatingStars::default();
                     stars.set_halign(gtk::Align::Start);
-                    stars.upcast()
+                    TableCell::new(&stars)
                 }
-                TrackColumn::Number => {
-                    let line = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-                    let indicator = PlayingIndicator::default();
-                    indicator.set_visible(false);
-                    indicator.set_hexpand(true);
-                    indicator.set_halign(gtk::Align::End);
-                    line.append(&indicator);
-                    let number = label("", &["hk-t3", "hk-numeric"]);
-                    number.set_xalign(1.0);
-                    number.set_hexpand(true);
-                    line.append(&number);
-                    line.upcast()
+                // The playing indicator is added when the row plays.
+                TrackColumn::Number => TableCell::text(1.0, &["hk-t3", "hk-numeric"]),
+                TrackColumn::Year | TrackColumn::Plays | TrackColumn::Length => {
+                    TableCell::text(1.0, &["hk-numeric", "hk-t2"])
                 }
-                _ => {
-                    let l = label("", &[]);
-                    match column {
-                        TrackColumn::Year | TrackColumn::Plays | TrackColumn::Length => {
-                            l.set_xalign(1.0);
-                            l.add_css_class("hk-numeric");
-                            l.add_css_class("hk-t2");
-                        }
-                        TrackColumn::Format => l.add_css_class("hk-mono-meta"),
-                        _ => {}
-                    }
-                    l.upcast()
-                }
+                TrackColumn::Format => TableCell::text(0.0, &["hk-mono-meta"]),
+                _ => TableCell::text(0.0, &[]),
             };
-            let cell = TableCell::new(&child);
             if let Some(view) = weak.upgrade() {
                 view.cells.borrow_mut().push(cell.downgrade());
-                if column == TrackColumn::Rating
-                    && let Some(stars) = child.downcast_ref::<RatingStars>()
-                {
+                if let Some(stars) = cell.child().and_downcast::<RatingStars>() {
                     let weak_view = Rc::downgrade(&view);
                     let weak_cell = cell.downgrade();
                     stars.set_editable(move |stars| {
@@ -366,7 +345,6 @@ impl TracksView {
     }
 
     fn show_cell(&self, cell: &TableCell, track: &TrackItem, column: TrackColumn) {
-        let Some(child) = cell.child() else { return };
         let row = track.row();
         let playing = self.playing.get() == Some(track.key());
         if playing {
@@ -374,37 +352,32 @@ impl TracksView {
         } else {
             cell.remove_css_class("hk-playing");
         }
+        let text =
+            |row: Option<&Rc<TrackRow>>| row.map(|r| cell_text(r, column)).unwrap_or_default();
         match column {
             TrackColumn::Rating => {
-                if let Some(stars) = child.downcast_ref::<RatingStars>() {
+                if let Some(stars) = cell.child().and_downcast::<RatingStars>() {
                     stars.set_rating(row.as_ref().and_then(|r| r.rating));
                     stars.set_visible(row.is_some());
                 }
             }
             TrackColumn::Number => {
-                let indicator = child.first_child();
-                let number = indicator.as_ref().and_then(gtk::Widget::next_sibling);
-                if let Some(indicator) = indicator {
+                // The indicator replaces the number of the playing row.
+                if playing && cell.child().is_none() {
+                    let indicator = PlayingIndicator::default();
+                    indicator.set_halign(gtk::Align::End);
+                    cell.set_child(&indicator);
+                }
+                if let Some(indicator) = cell.child() {
                     indicator.set_visible(playing);
                 }
-                if let Some(number) = number.and_downcast::<gtk::Label>() {
-                    number.set_visible(!playing);
-                    number.set_text(
-                        &row.as_ref()
-                            .map(|r| cell_text(r, column))
-                            .unwrap_or_default(),
-                    );
-                }
+                cell.set_text(&if playing {
+                    String::new()
+                } else {
+                    text(row.as_ref())
+                });
             }
-            _ => {
-                if let Some(text) = child.downcast_ref::<gtk::Label>() {
-                    text.set_text(
-                        &row.as_ref()
-                            .map(|r| cell_text(r, column))
-                            .unwrap_or_default(),
-                    );
-                }
-            }
+            _ => cell.set_text(&text(row.as_ref())),
         }
     }
 

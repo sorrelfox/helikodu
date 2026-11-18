@@ -9,7 +9,8 @@
 //! - the time from process start to the first frame, to the first frame with
 //!   albums in the grid, and to the main loop being idle after that;
 //! - RSS after start-up, after scrolling the album grid and after scrolling the
-//!   track table;
+//!   track table, each split into private and shared pages, anonymous memory
+//!   and the graphics driver's libraries;
 //! - frame intervals and frame work while scrolling the album grid and the
 //!   track table (slowly, fast, and jumping at random);
 //! - CPU time over a minute while stopped, paused, and playing with the window
@@ -140,6 +141,69 @@ fn rss_mib() -> f64 {
                 .and_then(|v| v.trim().trim_end_matches("kB").trim().parse::<f64>().ok())
         })
         .map_or(f64::NAN, |kb| kb / 1024.0)
+}
+
+/// Where the resident memory is, in MiB, from `/proc/self/smaps_rollup` and
+/// `/proc/self/smaps`: pages only this process maps (`Private_*`) and pages
+/// other processes map too (`Shared_*`), the proportional set size, anonymous
+/// memory (the heap, stacks and the arenas of the threads), and the resident
+/// pages of the graphics driver's libraries (Mesa, LLVM), which count as
+/// private when no other process maps them.
+fn memory_split(r: &mut Report, prefix: &str) {
+    let kib = |text: &str, key: &str| -> f64 {
+        text.lines()
+            .filter_map(|l| l.strip_prefix(key))
+            .filter_map(|v| v.trim().trim_end_matches("kB").trim().parse::<f64>().ok())
+            .sum()
+    };
+    let Ok(rollup) = std::fs::read_to_string("/proc/self/smaps_rollup") else {
+        return;
+    };
+    let private = kib(&rollup, "Private_Clean:") + kib(&rollup, "Private_Dirty:");
+    let shared = kib(&rollup, "Shared_Clean:") + kib(&rollup, "Shared_Dirty:");
+    r.number(&format!("{prefix}.private_mib"), private / 1024.0);
+    r.number(&format!("{prefix}.shared_mib"), shared / 1024.0);
+    r.number(&format!("{prefix}.pss_mib"), kib(&rollup, "Pss:") / 1024.0);
+    r.number(
+        &format!("{prefix}.anon_mib"),
+        kib(&rollup, "Anonymous:") / 1024.0,
+    );
+    // The driver's mappings: each header line names the file of the lines
+    // that follow it.
+    let Ok(smaps) = std::fs::read_to_string("/proc/self/smaps") else {
+        return;
+    };
+    let driver = [
+        "libLLVM",
+        "libgallium",
+        "_dri.so",
+        "libGLX_mesa",
+        "libEGL_mesa",
+        "libvulkan_",
+    ];
+    let (mut in_driver, mut rss) = (false, 0.0);
+    for line in smaps.lines() {
+        let header = line.split_whitespace().next().is_some_and(|f| {
+            f.contains('-') && f.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+        });
+        if header {
+            let path = line.split_whitespace().nth(5).unwrap_or("");
+            in_driver = driver.iter().any(|d| path.contains(d));
+            continue;
+        }
+        if let Some(v) = line.strip_prefix("Rss:") {
+            let v = v
+                .trim()
+                .trim_end_matches("kB")
+                .trim()
+                .parse::<f64>()
+                .unwrap_or(0.0);
+            if in_driver {
+                rss += v;
+            }
+        }
+    }
+    r.number(&format!("{prefix}.gl_driver_mib"), rss / 1024.0);
 }
 
 /// CPU time of the process and of its main thread, and the main thread's
@@ -390,6 +454,7 @@ async fn measure(
     let mut r = Report::default();
     wait(1000).await;
     r.number("rss_after_startup_mib", rss_mib());
+    memory_split(&mut r, "mem_after_startup");
     if !options.startup_only {
         // The album grid.
         let grid = descendants(window.upcast_ref())
@@ -404,6 +469,7 @@ async fn measure(
             None => r.text("albums.error", "no album grid shown"),
         }
         r.number("rss_after_albums_scroll_mib", rss_mib());
+        memory_split(&mut r, "mem_after_albums_scroll");
 
         // The track table.
         let total = backend
@@ -429,6 +495,7 @@ async fn measure(
             r.text("tracks.error", "the track table did not load in time");
         }
         r.number("rss_after_tracks_scroll_mib", rss_mib());
+        memory_split(&mut r, "mem_after_tracks_scroll");
         window.open_page("albums");
         wait(1000).await;
         r.number("rss_peak_mib", {

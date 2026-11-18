@@ -702,7 +702,9 @@ impl LibrarySource for ServiceLibrary {
             .cloned()
             .collect();
         let page = music.search(text, 0, 50).map_err(error)?;
-        let known = lock(&self.albums_of).clone();
+        // Looked up under the lock rather than copied: the map holds every
+        // track of the track table.
+        let known = lock(&self.albums_of);
         let tracks = page
             .hits
             .iter()
@@ -723,6 +725,7 @@ impl LibrarySource for ServiceLibrary {
                 }
             })
             .collect();
+        drop(known);
         Ok(SearchResults {
             artists,
             albums,
