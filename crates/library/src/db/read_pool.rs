@@ -2,6 +2,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A small pool of read-only connections for views, search and smart playlists.
+//!
+//! The connections live as long as the database, and each read runs in its own
+//! read transaction that ends with the read, so no snapshot is held between reads.
+//!
+//! An FTS5 table keeps the layout of its index (which segments hold which pages)
+//! in the connection that read it, and checks it against the database again only
+//! when a query opens the table. `PRAGMA integrity_check` checks FTS5 tables
+//! without opening them, so on a pooled connection whose last search came before
+//! the writer merged the index, it reads segments that are gone and reports
+//! "fts5: corruption found reading blob". The index itself is whole: searches,
+//! the writer and new connections see it correctly. Run an integrity check on the
+//! writer or a new connection, or query both search tables first in the same read.
 
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 

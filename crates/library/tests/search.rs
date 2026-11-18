@@ -13,7 +13,7 @@ mod support;
 
 use helikodu_library::raw::rusqlite;
 use helikodu_library::{
-    Library, MatchRank, RootId, SearchRequest, TrackChange, TrackRecord, TrackTags,
+    DatabaseConfig, Library, MatchRank, RootId, SearchRequest, TrackChange, TrackRecord, TrackTags,
 };
 use helikodu_model::library::TrackId;
 use support::{library, tagged};
@@ -346,6 +346,95 @@ fn index_follows_tag_changes_moves_and_removals() {
     assert_eq!(found(&library, "hunter"), NONE);
     assert_eq!(found(&library, "unte"), NONE);
     assert_eq!(index_rows(&library), (0, 0));
+}
+
+/// `PRAGMA integrity_check` in a read transaction that first touches both search
+/// indexes. A connection keeps the layout of an index it has read and checks it
+/// again only when a query opens the index; the integrity check alone reads with
+/// the kept layout, and after another connection has merged the index it reports
+/// pages that are gone as corrupt.
+fn reader_integrity(library: &Library) -> String {
+    library
+        .database()
+        .read(|c| {
+            c.query_row(
+                "SELECT (SELECT count(*) FROM tracks_fts WHERE rowid = 0)
+                      + (SELECT count(*) FROM tracks_tri WHERE rowid = 0)",
+                [],
+                |row| row.get::<_, i64>(0),
+            )?;
+            c.query_row("PRAGMA integrity_check", [], |row| row.get(0))
+        })
+        .unwrap()
+}
+
+#[test]
+fn repeated_tag_edits_keep_the_index_whole() {
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("search-edits-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let db = dir.join("library.db");
+    let library = Library::open(&DatabaseConfig::file(&db)).unwrap();
+    let root = library.add_root("/music").unwrap();
+    let tags = |round: usize, i: usize| {
+        tagged(
+            root,
+            &format!("/music/{i}.flac"),
+            &format!("content {i}"),
+            &format!("Nocturne x{round:03}q take {i}"),
+            &format!("Player{round:03}k"),
+            &format!("Album{round:03}w"),
+        )
+    };
+    let count = 8;
+    let ids: Vec<u64> = library
+        .upsert_tracks((0..count).map(|i| tags(0, i)).collect())
+        .unwrap()
+        .iter()
+        .map(|write| write.track.get())
+        .collect();
+
+    for round in 1..=30 {
+        for i in 0..count {
+            library.upsert_track(tags(round, i)).unwrap();
+        }
+        // Before searching: the reader still keeps the layout from the last round.
+        assert_eq!(reader_integrity(&library), "ok", "{round}");
+        let old = round - 1;
+        // Old values are gone from the word index and from the trigram index.
+        assert_eq!(found(&library, &format!("x{old:03}q")), NONE, "{round}");
+        assert_eq!(found(&library, &format!("{old:03}q")), NONE, "{round}");
+        assert_eq!(found(&library, &format!("player{old:03}k")), NONE);
+        assert_eq!(found(&library, &format!("ayer{old:03}")), NONE);
+        assert_eq!(found(&library, &format!("album{old:03}w")), NONE);
+        assert_eq!(found(&library, &format!("x{round:03}q")), ids);
+        assert_eq!(found(&library, &format!("{round:03}q")), ids);
+        assert_eq!(found(&library, &format!("player{round:03}k")), ids);
+    }
+    assert_eq!(index_rows(&library), (count, count));
+
+    // The indexes agree with themselves on the writing connection.
+    library
+        .database()
+        .writer()
+        .unwrap()
+        .write(|c| {
+            c.execute_batch(
+                "INSERT INTO tracks_fts (tracks_fts) VALUES ('integrity-check');
+                 INSERT INTO tracks_tri (tracks_tri) VALUES ('integrity-check');",
+            )
+        })
+        .unwrap();
+    // A connection opened afterwards finds the whole database in order.
+    let fresh = Library::open_read_only(&DatabaseConfig::file(&db)).unwrap();
+    let integrity: String = fresh
+        .database()
+        .read(|c| c.query_row("PRAGMA integrity_check", [], |row| row.get(0)))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+    assert_eq!(found(&fresh, "x029q"), NONE);
+    assert_eq!(found(&fresh, "x030q"), ids);
 }
 
 #[test]

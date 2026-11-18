@@ -163,8 +163,10 @@ fn pause(round: u64) -> Duration {
 }
 
 fn integrity(library: &Library) {
-    // On the writing connection: a pooled reader that saw the search index
-    // before its last merge can report a page of it as missing.
+    // On the writing connection: a pooled reader keeps the layout of a search
+    // index from its last search, and the integrity check reads with that layout
+    // without checking it again, so after the writer merged the index it reports
+    // a page that is gone as corrupt (see the read pool).
     let result: String = library
         .database()
         .writer()
