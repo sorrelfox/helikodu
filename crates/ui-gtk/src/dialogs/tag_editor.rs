@@ -1713,6 +1713,8 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
         &fill(&ntr("{} track", "{} tracks", n), &[&n.to_string()]),
         &["hk-badge", "hk-badge-plain"],
     );
+    // Short, and cut off it says nothing.
+    badge.set_ellipsize(gtk::pango::EllipsizeMode::None);
     badge.set_valign(gtk::Align::Center);
     badge.set_hexpand(true);
     badge.set_halign(gtk::Align::Start);

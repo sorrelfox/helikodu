@@ -18,7 +18,7 @@ use super::common::{copy_text, dialog_window, find_open, header_strip, note, til
 use crate::backend::Backend;
 use crate::backend::services::{Availability, DeviceSelection};
 use crate::i18n::tr;
-use crate::widgets::label;
+use crate::widgets::{label, wrapped_label};
 
 /// The name the window is known by among the toplevels.
 pub(crate) const NAME: &str = "about";
@@ -284,7 +284,7 @@ pub(crate) fn open(parent: &gtk::Window, backend: &Backend) -> gtk::Window {
         &facts.join(" · "),
         &["hk-mono", "hk-t2", "hk-secondary"],
     ));
-    text.append(&label(
+    text.append(&wrapped_label(
         &tr("A music player for Linux that works offline."),
         &["hk-t2"],
     ));
@@ -337,10 +337,12 @@ pub(crate) fn open(parent: &gtk::Window, backend: &Backend) -> gtk::Window {
     let lock = gtk::Image::from_icon_name("helikodu-lock-symbolic");
     lock.add_css_class("hk-t2");
     privacy.append(&lock);
-    privacy.append(&label(
+    let promise = wrapped_label(
         &tr("No telemetry, no update checks. Helikodu never goes online."),
         &["hk-t2"],
-    ));
+    );
+    promise.set_hexpand(true);
+    privacy.append(&promise);
     body.append(&privacy);
 
     let spacer = gtk::Box::new(gtk::Orientation::Vertical, 0);

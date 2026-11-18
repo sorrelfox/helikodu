@@ -52,6 +52,13 @@ const COLUMNS: &[(TrackColumn, bool, i32, bool)] = &[
     (TrackColumn::Length, true, 80, false),
 ];
 
+/// The padding at the sides of a column header, before it is first laid out.
+const TITLE_PADDING: i32 = 16;
+
+/// How far a header's text may reach past its column before the column
+/// widens: the letter spacing after its last letter.
+const TITLE_SLACK: i32 = 4;
+
 /// The name of a column as its header shows it.
 pub(crate) fn column_title(column: TrackColumn) -> String {
     match column {
@@ -313,7 +320,54 @@ impl TracksView {
         view.connect_edges();
         view.connect_browser();
         view.show_sort();
+        let weak = Rc::downgrade(&view);
+        view.table.connect_map(move |_| {
+            // After the first layout, when the headers' padding is known.
+            let weak = weak.clone();
+            glib::idle_add_local_once(move || {
+                if let Some(view) = weak.upgrade() {
+                    view.fit_titles();
+                }
+            });
+        });
         view
+    }
+
+    /// Widens each column whose header (in a longer language, or with its
+    /// sort mark) is wider than the column, so no header is cut off. A
+    /// header asks for its column's width, so its text is measured, plus
+    /// the header's own padding.
+    fn fit_titles(&self) {
+        if !self.table.is_mapped() {
+            return;
+        }
+        let Some(header) = self.table.first_child() else {
+            return;
+        };
+        let columns = self.table.columns();
+        let mut title = header.first_child();
+        let mut i = 0;
+        while let Some(widget) = title {
+            if let Some(c) = columns.item(i).and_downcast::<gtk::ColumnViewColumn>()
+                && c.is_visible()
+                && let Some(inner) = widget.first_child()
+            {
+                let (_, text, ..) = inner.measure(gtk::Orientation::Horizontal, -1);
+                let padding = if widget.width() > 0 {
+                    widget.width() - inner.width()
+                } else {
+                    TITLE_PADDING
+                };
+                let needed = text + padding.max(0);
+                // A few pixels over are the trailing letter spacing of the
+                // header text, not a cut-off letter.
+                if needed > c.fixed_width() + TITLE_SLACK {
+                    c.set_fixed_width(needed);
+                }
+            }
+            title = widget.next_sibling();
+            i += 1;
+        }
     }
 
     /// The first and the last shown column, in the table's order.
@@ -790,6 +844,7 @@ impl TracksView {
         };
         self.status_sort
             .set_text(&fill(&tr("Sorted by {}"), &[&names.join(", ")]));
+        self.fit_titles();
     }
 
     fn show_selection(&self) {
@@ -905,6 +960,7 @@ impl TracksView {
                 None => c.set_visible(false),
             }
         }
+        self.fit_titles();
     }
 
     /// Leaves the headers unmarked while the user has not sorted: the order is

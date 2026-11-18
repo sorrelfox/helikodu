@@ -411,6 +411,10 @@ fn main() -> ExitCode {
         println!("lyrics: skipped; run under crates/ui-gtk/tests/headless.sh");
         return ExitCode::SUCCESS;
     }
+    // Translated pictures only when asked for: the checks expect English.
+    if std::env::var_os("HELIKODU_LOCALEDIR").is_some() {
+        helikodu_ui_gtk::i18n::init();
+    }
     if gtk::init().is_err() {
         println!("lyrics: skipped, no display");
         return ExitCode::SUCCESS;

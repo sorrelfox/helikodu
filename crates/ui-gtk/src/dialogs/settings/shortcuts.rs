@@ -22,7 +22,7 @@ use crate::dialogs::common::{compact_button, key_caps};
 use crate::dialogs::shortcuts::caps;
 use crate::i18n::{fill, tr, trc};
 use crate::shortcuts::{self, Binding, Group};
-use crate::widgets::label;
+use crate::widgets::{label, wrapped_label};
 
 /// A conflict waiting for an answer: `action` wants `keys`, which `owner`
 /// has.
@@ -395,11 +395,16 @@ impl Page {
         notice.append(&icon);
         let text = gtk::Box::new(gtk::Orientation::Vertical, 1);
         text.set_hexpand(true);
-        text.append(&label(
+        // The notice is as narrow as a column: its lines wrap rather than
+        // end in an ellipsis.
+        text.append(&wrapped_label(
             &fill(&tr("{} is already in use"), &[&keys_text(&conflict.keys)]),
             &["hk-medium"],
         ));
-        text.append(&label(&conflict.owner.name, &["hk-t3", "hk-secondary"]));
+        text.append(&wrapped_label(
+            &conflict.owner.name,
+            &["hk-t3", "hk-secondary"],
+        ));
         notice.append(&text);
         let take = gtk::Button::with_label(&tr("Use it here"));
         take.add_css_class("hk-text-button");

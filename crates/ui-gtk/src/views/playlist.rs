@@ -33,7 +33,7 @@ use crate::views::actions::{self, Origin, Target};
 use crate::views::artists::button;
 use crate::views::drag::DraggedTracks;
 use crate::views::table::{TableCell, cell_at, selected_positions};
-use crate::widgets::{CoverArt, PlayingIndicator, TitleLine, label};
+use crate::widgets::{CoverArt, PlayingIndicator, TitleLine, WrapBox, label};
 
 /// "edited yesterday", from when a playlist last changed.
 fn edited(modified: Option<SystemTime>) -> Option<String> {
@@ -208,7 +208,11 @@ impl PlaylistView {
         more.add_css_class("hk-more");
         more.set_tooltip_text(Some(&tr("More")));
         more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
-        let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        // The titles give way first; the buttons continue on a second line
+        // only when even then they do not fit.
+        name.set_max_width_chars(1);
+        summary.set_max_width_chars(1);
+        let buttons = WrapBox::new(8);
         buttons.set_valign(gtk::Align::Center);
         for b in [
             play.upcast_ref::<gtk::Widget>(),

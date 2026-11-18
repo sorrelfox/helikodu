@@ -71,8 +71,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
                       </object>
                     </child>
                     <child>
-                      <object class="GtkBox">
+                      <object class="HkWrapBox">
                         <property name="spacing">8</property>
+                        <property name="row-spacing">8</property>
                         <property name="margin-top">18</property>
                         <child>
                           <object class="GtkButton" id="play">

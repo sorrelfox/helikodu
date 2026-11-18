@@ -171,6 +171,9 @@ pub(crate) fn table_header(columns: &[(String, i32, bool)]) -> gtk::Box {
     head.add_css_class("hk-tool-head");
     for (text, width, right) in columns {
         let cell = label(text, &["hk-section-label"]);
+        // A narrow column's header can end in an ellipsis in a longer
+        // language; the tooltip has it whole.
+        cell.set_tooltip_text(Some(text));
         cell.set_size_request(*width, -1);
         cell.set_hexpand(*width < 0);
         if *right {

@@ -197,6 +197,9 @@ fn main() -> ExitCode {
             }
         }
     }
+    // The pictures follow `LANGUAGE`; `HELIKODU_LOCALEDIR` names translations
+    // that are not installed.
+    helikodu_ui_gtk::i18n::init();
     if gtk::init().is_err() {
         eprintln!("views: no display; run it under tests/headless.sh");
         return ExitCode::FAILURE;

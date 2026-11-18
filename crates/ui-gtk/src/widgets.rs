@@ -24,6 +24,7 @@ pub(crate) mod signal_path_list;
 pub(crate) mod spectrum_view;
 pub(crate) mod title_line;
 pub(crate) mod waveform_seek_bar;
+pub(crate) mod wrap_box;
 
 use gtk::prelude::*;
 
@@ -37,6 +38,7 @@ pub(crate) use rating_stars::RatingStars;
 pub(crate) use signal_lamp::SignalLamp;
 pub(crate) use title_line::TitleLine;
 pub(crate) use waveform_seek_bar::WaveformSeekBar;
+pub(crate) use wrap_box::WrapBox;
 
 /// Redraws `widget` whenever the look changes, for as long as it exists.
 pub(crate) fn redraw_on_theme_change(widget: &impl IsA<gtk::Widget>) {
@@ -46,6 +48,20 @@ pub(crate) fn redraw_on_theme_change(widget: &impl IsA<gtk::Widget>) {
             widget.queue_draw();
         }
     });
+}
+
+/// A label that continues on further lines when it does not fit, for a
+/// sentence that must be read whole (a longer language would otherwise cut it
+/// off).
+pub(crate) fn wrapped_label(text: &str, classes: &[&str]) -> gtk::Label {
+    let label = gtk::Label::new(Some(text));
+    label.set_xalign(0.0);
+    label.set_wrap(true);
+    label.set_wrap_mode(gtk::pango::WrapMode::WordChar);
+    for class in classes {
+        label.add_css_class(class);
+    }
+    label
 }
 
 /// A single-line label that ellipsizes at the end.
@@ -65,6 +81,7 @@ pub(crate) fn label(text: &str, classes: &[&str]) -> gtk::Label {
 /// of `widgets` it stands for, in the order the translation puts them (see
 /// [`crate::i18n::pieces`]). Returns the labels, which can name the widgets
 /// for assistive technology.
+/// The words are never cut off: a sentence missing words cannot be read.
 pub(crate) fn sentence(
     line: &gtk::Box,
     pattern: &str,
@@ -76,6 +93,7 @@ pub(crate) fn sentence(
         match piece {
             crate::i18n::Piece::Text(text) => {
                 let words = label(&text, classes);
+                words.set_ellipsize(gtk::pango::EllipsizeMode::None);
                 line.append(&words);
                 labels.push(words);
             }

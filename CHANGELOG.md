@@ -116,6 +116,7 @@ The release candidate. This version brings everything planned for 1.0: smart pla
 ### Known issues
 
 - With a library of 100,000 tracks, memory use reaches about 264 MB after scrolling through the whole track table in the headless measurement, above the 250 MB budget (some 61 MB of it is the software GL driver's, which a GPU driver replaces). Start-up and the album grid stay under 250 MB. See `docs/dev/performance.md`.
+- In German and French, with the queue panel open in a 1440-pixel-wide window, the smart playlist page is about 40 pixels wider than the space left for it and its right edge is cut off; closing the panel or widening the window shows it whole. Some narrow column headers (Plays in the copy tables, Length in the folder table) are shortened in the longer translations; their tooltips show the whole word.
 - vgmstream (game audio streams) is off in the default build and in the ready-built programs.
 - No SoundFont is included; MIDI files play only with a SoundFont you choose or one installed on the system.
 - HES (PC Engine) game music is not played (see Changed).

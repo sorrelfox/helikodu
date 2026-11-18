@@ -34,7 +34,7 @@ use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::artists::button;
 use crate::views::table::{PlayingRows, TableCell, cell_at, selected_positions};
-use crate::widgets::{CoverArt, PlayingIndicator, label};
+use crate::widgets::{CoverArt, PlayingIndicator, WrapBox, label};
 
 /// The columns of a table: label, width (0 shares the rest), right-aligned.
 fn columns(editing: bool) -> Vec<(String, i32, bool)> {
@@ -89,7 +89,7 @@ pub(crate) struct SmartPlaylistView {
     summary: gtk::Label,
     edit: gtk::Button,
     stack: gtk::Stack,
-    chips: gtk::Box,
+    chips: WrapBox,
     order: gtk::Label,
     view: Table,
     status_left: gtk::Label,
@@ -232,7 +232,11 @@ impl SmartPlaylistView {
         more.add_css_class("hk-more");
         more.set_tooltip_text(Some(&tr("More")));
         more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
-        let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        // The titles give way first; the buttons continue on a second line
+        // only when even then they do not fit.
+        name.set_max_width_chars(1);
+        summary.set_max_width_chars(1);
+        let buttons = WrapBox::new(8);
         buttons.set_valign(gtk::Align::Center);
         for b in [
             play.upcast_ref::<gtk::Widget>(),
@@ -249,11 +253,14 @@ impl SmartPlaylistView {
         let viewing = gtk::Box::new(gtk::Orientation::Vertical, 0);
         let rule_line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
         rule_line.add_css_class("hk-rule-line");
-        let chips = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        // The chips continue on further lines when they do not fit.
+        let chips = WrapBox::new(6);
+        chips.set_valign(gtk::Align::Center);
         rule_line.append(&chips);
         let order = label("", &["hk-t3"]);
         order.set_margin_start(6);
         order.set_hexpand(true);
+        order.set_max_width_chars(1);
         rule_line.append(&order);
         rule_line.append(&live());
         viewing.append(&rule_line);

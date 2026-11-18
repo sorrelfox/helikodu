@@ -332,7 +332,10 @@ impl NowPlayingView {
         signal.add_css_class("hk-np-signal");
         let head = gtk::Box::new(gtk::Orientation::Vertical, 4);
         head.set_valign(gtk::Align::Center);
-        head.append(&label(&tr("Signal path"), &["hk-section-label"]));
+        let heading = label(&tr("Signal path"), &["hk-section-label"]);
+        // Wider than the lamp's line in some languages; never cut off.
+        heading.set_ellipsize(gtk::pango::EllipsizeMode::None);
+        head.append(&heading);
         let lamp_line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
         let lamp = SignalLamp::default();
         lamp.set_valign(gtk::Align::Center);

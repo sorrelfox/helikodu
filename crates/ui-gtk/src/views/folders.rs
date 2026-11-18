@@ -27,7 +27,7 @@ use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
 use crate::views::artists::button;
 use crate::widgets::empty_state::empty_state;
-use crate::widgets::{PlayingIndicator, label};
+use crate::widgets::{PlayingIndicator, WrapBox, label};
 
 mod imp {
     use super::*;
@@ -177,6 +177,8 @@ impl FoldersView {
         let pane = gtk::Box::new(gtk::Orientation::Vertical, 0);
         pane.add_css_class("hk-list-pane");
         pane.set_size_request(300, -1);
+        // Spare room goes to the folder's page, not to the tree.
+        pane.set_hexpand(false);
         let head = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         head.add_css_class("hk-pane-header");
         let heading = label(&tr("Folders"), &["hk-view-title"]);
@@ -263,10 +265,18 @@ impl FoldersView {
         let add_to_library = button(&tr("Add to library"), Some("folder-new-symbolic"), false);
         add_to_library.set_visible(false);
         let open = button(&tr("Open in file manager"), None, false);
+        // The titles give way first; the buttons continue on a second line
+        // only when even then they do not fit.
+        for l in [&parent, &name, &summary] {
+            l.set_max_width_chars(1);
+        }
+        let buttons = WrapBox::new(8);
+        buttons.set_valign(gtk::Align::Center);
         for b in [&play, &enqueue, &add_to_library, &open] {
             b.set_valign(gtk::Align::Center);
-            header.append(b);
+            buttons.append(b);
         }
+        header.append(&buttons);
         page.append(&header);
         let table_header = gtk::Box::new(gtk::Orientation::Horizontal, 16);
         table_header.add_css_class("hk-table-header");

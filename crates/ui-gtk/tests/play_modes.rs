@@ -384,13 +384,27 @@ fn menu_labels(menu: &gio::MenuModel, out: &mut Vec<String>) {
     }
 }
 
-/// The submenu of `menu` (or of one of its sections) labelled `label`.
+/// The submenu of `menu` (or of one of its sections) labelled `label`, in the
+/// program's language; a `{}` in `label` matches the rest of the label.
 fn submenu_of(menu: &gio::MenuModel, label: &str) -> Option<gio::MenuModel> {
+    // The label in the program's language; a `{}` stands for the mode's name.
+    let translated = gettextrs::gettext(label);
+    let (start, whole) = match translated.split_once("{}") {
+        Some((start, _)) => (start.to_owned(), false),
+        None => (translated, true),
+    };
     for i in 0..menu.n_items() {
         let name = menu
             .item_attribute_value(i, gio::MENU_ATTRIBUTE_LABEL, None)
             .and_then(|v| v.get::<String>());
-        if name.as_deref() == Some(label) {
+        let matches = name.as_deref().is_some_and(|n| {
+            if whole {
+                n == start
+            } else {
+                n.starts_with(&start)
+            }
+        });
+        if matches {
             return menu.item_link(i, gio::MENU_LINK_SUBMENU);
         }
         if let Some(found) = menu
@@ -610,10 +624,10 @@ fn play_mode_screenshots(app: &gtk::Application) {
         popover.popdown();
         popover.unparent();
         for (label, name) in [
-            ("Shuffle: Albums", "shuffle"),
-            ("Repeat: This track", "repeat"),
-            ("Stop after: This album", "stop-after"),
-            ("Play only: Everything", "play-only"),
+            ("Shuffle: {}", "shuffle"),
+            ("Repeat: {}", "repeat"),
+            ("Stop after: {}", "stop-after"),
+            ("Play only: {}", "play-only"),
             ("Loop a section", "loop"),
             ("Queue", "queue"),
         ] {
@@ -661,6 +675,10 @@ fn main() -> ExitCode {
     if std::env::var_os("HELIKODU_GTK_TESTS").is_none() {
         println!("play_modes: skipped; run under crates/ui-gtk/tests/headless.sh");
         return ExitCode::SUCCESS;
+    }
+    // Translated pictures only when asked for: the checks expect English.
+    if std::env::var_os("HELIKODU_LOCALEDIR").is_some() {
+        helikodu_ui_gtk::i18n::init();
     }
     if gtk::init().is_err() {
         println!("play_modes: skipped, no display");

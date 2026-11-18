@@ -375,7 +375,7 @@ fn settings_search(app: &gtk::Application) {
     let entry = descendants(settings.upcast_ref())
         .into_iter()
         .filter_map(|w| w.downcast::<gtk::SearchEntry>().ok())
-        .find(|e| e.placeholder_text().as_deref() == Some("Search settings"))
+        .find(|e| e.placeholder_text().as_deref() == Some(&gettextrs::gettext("Search settings")))
         .unwrap();
     assert!(entry.is_sensitive());
     entry.set_text("tags");
@@ -457,7 +457,9 @@ fn desktop_screenshots(app: &gtk::Application) {
         let entry = descendants(settings.upcast_ref())
             .into_iter()
             .filter_map(|w| w.downcast::<gtk::SearchEntry>().ok())
-            .find(|e| e.placeholder_text().as_deref() == Some("Search settings"))
+            .find(|e| {
+                e.placeholder_text().as_deref() == Some(&gettextrs::gettext("Search settings"))
+            })
             .unwrap();
         entry.set_text("tags");
         shot(&settings, &format!("settings-search-{suffix}"));
@@ -483,6 +485,10 @@ fn main() -> ExitCode {
     if std::env::var_os("HELIKODU_GTK_TESTS").is_none() {
         println!("desktop: skipped; run under crates/ui-gtk/tests/headless.sh");
         return ExitCode::SUCCESS;
+    }
+    // Translated pictures only when asked for: the checks expect English.
+    if std::env::var_os("HELIKODU_LOCALEDIR").is_some() {
+        helikodu_ui_gtk::i18n::init();
     }
     if gtk::init().is_err() {
         println!("desktop: skipped, no display");

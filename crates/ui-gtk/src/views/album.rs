@@ -121,6 +121,7 @@ mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             CoverArt::ensure_type();
+            crate::widgets::WrapBox::ensure_type();
             klass.bind_template();
         }
 

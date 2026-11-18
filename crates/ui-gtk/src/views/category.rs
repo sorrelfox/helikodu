@@ -229,6 +229,12 @@ impl CategoryView {
         let summary = label("", &["hk-t3"]);
         titles.append(&summary);
         header.append(&titles);
+        // The titles give way first; the buttons continue on a second line
+        // only when even then they do not fit.
+        name.set_max_width_chars(1);
+        summary.set_max_width_chars(1);
+        let buttons = crate::widgets::WrapBox::new(8);
+        buttons.set_valign(gtk::Align::End);
         let play = crate::views::artists::button(
             &tr("Play all"),
             Some("media-playback-start-symbolic"),
@@ -255,8 +261,9 @@ impl CategoryView {
             sort_button.upcast_ref(),
         ] {
             w.set_valign(gtk::Align::End);
-            header.append(w);
+            buttons.append(w);
         }
+        header.append(&buttons);
         page.append(&header);
         let albums = AlbumsView::default();
         albums.bind(backend, playback, covers, open_album);

@@ -30,7 +30,7 @@ use crate::views::genres::list_pane;
 use crate::views::tracks::TracksView;
 use crate::widgets::avatar::Avatar;
 use crate::widgets::empty_state::empty_state;
-use crate::widgets::{TitleLine, label};
+use crate::widgets::{TitleLine, WrapBox, label};
 
 type Open = Box<dyn Fn(ArtistKey)>;
 type OpenAlbum = Rc<dyn Fn(AlbumKey)>;
@@ -172,7 +172,8 @@ impl ArtistsView {
         let photo_menu = gio::Menu::new();
         more_menu.append_section(None, &photo_menu);
         crate::widgets::menu_names::set_menu_later(&more, &more_menu);
-        let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        // Continues on a second line when the page is too narrow for it.
+        let buttons = WrapBox::new(8);
         buttons.set_valign(gtk::Align::Center);
         buttons.append(&play);
         buttons.append(&shuffle);

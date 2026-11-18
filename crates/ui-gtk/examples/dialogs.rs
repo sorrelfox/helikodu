@@ -473,6 +473,9 @@ fn main() -> ExitCode {
         eprintln!("cannot create {}: {error}", out.display());
         return ExitCode::FAILURE;
     }
+    // The pictures follow `LANGUAGE`; `HELIKODU_LOCALEDIR` names translations
+    // that are not installed.
+    helikodu_ui_gtk::i18n::init();
     if gtk::init().is_err() {
         eprintln!("no display; run under crates/ui-gtk/tests/headless.sh");
         return ExitCode::FAILURE;
