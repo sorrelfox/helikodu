@@ -14,7 +14,7 @@ use helikodu_service::library::tag_tools::{
 
 use crate::backend::TrackKey;
 use crate::backend::services::TagField;
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 
 /// New values for each track, field by field.
 pub(crate) type ToolValues = BTreeMap<TrackKey, BTreeMap<TagField, Vec<String>>>;
@@ -280,7 +280,7 @@ fn text_column(field: &TagField) -> Column {
     );
     (
         if *field == TagField::Track {
-            tr("Track")
+            trc("track number", "Track")
         } else {
             field_name(field)
         },
@@ -379,7 +379,13 @@ fn from_names(tracks: &[ToolTrack], options: &Options) -> Preview {
         });
     }
     preview.summary = fill(
-        &tr("{} of {} file names fit the pattern · values in grey are already in the tags"),
+        &ntr(
+            // Translators: {0} is the number of file names that fit, which
+            // chooses the form, {1} the number of all files.
+            "{} of {} file names fits the pattern · values in grey are already in the tags",
+            "{} of {} file names fit the pattern · values in grey are already in the tags",
+            fit,
+        ),
         &[&fit.to_string(), &tracks.len().to_string()],
     );
     preview

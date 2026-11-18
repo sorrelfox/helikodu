@@ -74,7 +74,15 @@ impl MainWindow {
                     let (file, reason) = &step.problems[0];
                     window.toast(
                         &fill(
-                            &tr("{} of {} files kept their tags. {}: {}"),
+                            &ntr(
+                                // Translators: {0} is the number of files that
+                                // could not be changed back, which chooses the
+                                // form, {1} the number of all files, {2} the first
+                                // of them, {3} why.
+                                "{} of {} files kept its tags. {}: {}",
+                                "{} of {} files kept their tags. {}: {}",
+                                step.problems.len(),
+                            ),
                             &[
                                 &step.problems.len().to_string(),
                                 &step.files.to_string(),
@@ -116,7 +124,15 @@ impl MainWindow {
                     let (file, reason) = &step.problems[0];
                     window.toast(
                         &fill(
-                            &tr("{} of {} files kept their tags. {}: {}"),
+                            &ntr(
+                                // Translators: {0} is the number of files that
+                                // could not be changed back, which chooses the
+                                // form, {1} the number of all files, {2} the first
+                                // of them, {3} why.
+                                "{} of {} files kept its tags. {}: {}",
+                                "{} of {} files kept their tags. {}: {}",
+                                step.problems.len(),
+                            ),
                             &[
                                 &step.problems.len().to_string(),
                                 &step.files.to_string(),

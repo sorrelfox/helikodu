@@ -20,7 +20,7 @@ use gtk::{gdk, glib};
 use super::Context;
 use crate::dialogs::common::{compact_button, key_caps};
 use crate::dialogs::shortcuts::caps;
-use crate::i18n::{fill, tr};
+use crate::i18n::{fill, tr, trc};
 use crate::shortcuts::{self, Binding, Group};
 use crate::widgets::label;
 
@@ -286,7 +286,11 @@ impl Page {
             dot.add_css_class("hk-changed-dot");
             dot.set_valign(gtk::Align::Center);
             dot.set_margin_end(6);
-            dot.update_property(&[gtk::accessible::Property::Label(&tr("Changed"))]);
+            dot.update_property(&[gtk::accessible::Property::Label(&trc(
+                // Translators: the name a screen reader gives the dot beside a
+                // shortcut that differs from the default.
+                "shortcut", "Changed",
+            ))]);
             row.append(&dot);
         }
         let caps_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);

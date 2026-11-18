@@ -22,7 +22,7 @@ use crate::backend::{
     Backend, FolderListing, FolderRow, FolderState, PlayerRequest, TrackKey, TrackRow,
 };
 use crate::format;
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
 use crate::views::artists::button;
@@ -102,7 +102,8 @@ fn computer_places() -> Vec<(FolderRow, bool)> {
         state: FolderState::Watched,
         path,
     };
-    let mut places = vec![(place(glib::home_dir(), tr("Home")), false)];
+    // Translators: the user's home folder, the first place in Folders.
+    let mut places = vec![(place(glib::home_dir(), trc("home folder", "Home")), false)];
     let user = glib::user_name();
     let mut drives: Vec<PathBuf> = [
         PathBuf::from("/run/media").join(&user),

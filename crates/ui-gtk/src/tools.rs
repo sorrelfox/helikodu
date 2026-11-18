@@ -32,7 +32,12 @@ pub(crate) fn naming_problem(error: &PatternError) -> String {
     let problem = match &error.problem {
         PatternProblem::Empty => tr("The pattern is empty."),
         PatternProblem::UnclosedField => tr("A field is not closed with }."),
-        PatternProblem::EmptyField => tr("{} names no field."),
+        PatternProblem::EmptyField => fill(
+            // Translators: {} stands for an empty pair of braces typed in the
+            // pattern; it is shown as "{}".
+            &tr("{} names no field."),
+            &["{}"],
+        ),
         PatternProblem::UnknownField(name) => fill(&tr("There is no field called {}."), &[name]),
         PatternProblem::UnclosedBracket => tr("A [ is not closed with ]."),
         PatternProblem::UnexpectedClose(c) => fill(&tr("{} closes nothing."), &[&c.to_string()]),

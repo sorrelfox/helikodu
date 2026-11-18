@@ -23,8 +23,8 @@ use gtk::prelude::*;
 use gtk::{gdk, gio, glib};
 
 use super::tool_window::{
-    ADDED, CHECK, FORMAT, Frame, GAP, PLAYS, SIZE, cell, date, entry_format, footer, frame,
-    path_cell, primary_button, shown_path, side_row, table_header,
+    ADDED, FORMAT, Frame, GAP, PLAYS, SIZE, cell, check_headers, check_width, date, entry_format,
+    footer, frame, path_cell, primary_button, shown_path, side_row, table_header,
 };
 use super::trash;
 use crate::backend::services::{
@@ -617,7 +617,7 @@ fn row_widget(finder: &std::rc::Weak<Finder>) -> gtk::Box {
     let file = gtk::Box::new(gtk::Orientation::Horizontal, GAP);
     file.set_vexpand(true);
     let check_cell = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    check_cell.set_size_request(CHECK, -1);
+    check_cell.set_size_request(check_width(), -1);
     let check = gtk::CheckButton::new();
     check.set_valign(gtk::Align::Center);
     let weak = finder.clone();
@@ -709,8 +709,9 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
     )));
     toolbar.append(&mark);
     column.append(&toolbar);
+    let [_, remove] = check_headers();
     column.append(&table_header(&[
-        (tr("Remove"), CHECK, false),
+        (remove, check_width(), false),
         (tr("File"), -1, false),
         (tr("Format"), FORMAT, false),
         (tr("Size"), SIZE, true),

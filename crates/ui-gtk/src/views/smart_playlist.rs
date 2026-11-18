@@ -28,7 +28,7 @@ use crate::backend::{
 };
 use crate::dialogs::common::dropdown;
 use crate::format;
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{Piece, fill, ntr, pieces, tr};
 use crate::models::{CoverCache, TrackItem};
 use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
@@ -275,17 +275,26 @@ impl SmartPlaylistView {
         let pane = gtk::Box::new(gtk::Orientation::Vertical, 8);
         pane.add_css_class("hk-rules-pane");
         let match_line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        match_line.append(&label(&tr("Match"), &[]));
         let match_any = dropdown(&[tr("all"), tr("any")], 0, 72);
-        match_any.update_property(&[gtk::accessible::Property::Label(&tr("Match"))]);
-        match_line.append(&match_any);
-        match_line.append(&label(&tr("of these rules"), &[]));
+        match_any.update_property(&[gtk::accessible::Property::Label(&tr(
+            // Translators: the name a screen reader gives the "all"/"any"
+            // dropdown of "Match {} of these rules".
+            "Which rules must match",
+        ))]);
+        // Translators: the first line of the smart playlist editor; {} is a
+        // dropdown with "all" or "any".
+        for piece in pieces(&tr("Match {} of these rules"), 1) {
+            match piece {
+                Piece::Text(text) => match_line.append(&label(&text, &[])),
+                Piece::Slot(_) => match_line.append(&match_any),
+            }
+        }
         pane.append(&match_line);
         let rules_box = gtk::Box::new(gtk::Orientation::Vertical, 8);
         pane.append(&rules_box);
         pane.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         let limit_line = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        let limit_on = gtk::CheckButton::with_label(&tr("Limit to"));
+        let limit_on = gtk::CheckButton::new();
         limit_line.append(&limit_on);
         let limit_amount = gtk::Entry::new();
         limit_amount.add_css_class("hk-input");
@@ -294,19 +303,35 @@ impl SmartPlaylistView {
         limit_amount.set_size_request(56, -1);
         limit_amount.set_input_purpose(gtk::InputPurpose::Digits);
         limit_amount.update_property(&[gtk::accessible::Property::Label(&tr("Limit"))]);
-        limit_line.append(&limit_amount);
         let units: Vec<String> = UNITS.iter().map(|u| unit_label(*u)).collect();
         let limit_unit = dropdown(&units, 0, 92);
         limit_unit.update_property(&[gtk::accessible::Property::Label(&tr("Limit unit"))]);
-        limit_line.append(&limit_unit);
-        limit_line.append(&label(&tr("sorted by"), &[]));
         let mut order_names: Vec<String> = orders().into_iter().map(|(n, _, _)| n).collect();
         order_names.push(tr("As written in the text"));
         let sort = dropdown(&order_names, 0, 0);
         sort.set_hexpand(true);
         sort.set_halign(gtk::Align::Fill);
         sort.update_property(&[gtk::accessible::Property::Label(&tr("Order"))]);
-        limit_line.append(&sort);
+        let limit_widgets: [gtk::Widget; 3] = [
+            limit_amount.clone().upcast(),
+            limit_unit.clone().upcast(),
+            sort.clone().upcast(),
+        ];
+        // Translators: the limit line of the smart playlist editor. The text
+        // before the first placeholder is the label of a check box at the
+        // start of the line; {0} is a box for a number, {1} the unit (tracks,
+        // minutes, hours, MB, GB), {2} the order (Random, Date added, newest
+        // first, …). Reorder them with {0}, {1} and {2} as needed.
+        for (n, piece) in pieces(&tr("Limit to {} {} sorted by {}"), 3)
+            .into_iter()
+            .enumerate()
+        {
+            match piece {
+                Piece::Text(text) if n == 0 => limit_on.set_label(Some(&text)),
+                Piece::Text(text) => limit_line.append(&label(&text, &[])),
+                Piece::Slot(i) => limit_line.append(&limit_widgets[i]),
+            }
+        }
         pane.append(&limit_line);
         let readout = gtk::Box::new(gtk::Orientation::Vertical, 8);
         readout.add_css_class("hk-query-readout");
@@ -931,10 +956,18 @@ impl SmartPlaylistView {
                             view.rules_changed(false, true);
                         }
                     });
-                    head.append(&kind);
-                    let words = label(&tr("of these"), &[]);
-                    words.set_hexpand(true);
-                    head.append(&words);
+                    // Translators: the first line of a group of rules in the
+                    // smart playlist editor; {} is a dropdown with "all" or
+                    // "any".
+                    for piece in pieces(&tr("{} of these"), 1) {
+                        match piece {
+                            Piece::Text(text) => head.append(&label(&text, &[])),
+                            Piece::Slot(_) => head.append(&kind),
+                        }
+                    }
+                    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                    spacer.set_hexpand(true);
+                    head.append(&spacer);
                     head.append(&self.remove_button(n, None));
                     self.rules_box.append(&head);
                     let inner = gtk::Box::new(gtk::Orientation::Vertical, 8);

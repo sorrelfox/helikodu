@@ -20,7 +20,7 @@ use crate::dialogs::common::{
     OWN_LABEL, bind_segmented, bytes, compact_button, divider, dropdown, note, on_selected, row,
     segmented, switch_row, tilde, with_note,
 };
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 use crate::widgets::{icon_button, label};
 use helikodu_model::settings::DuplicateScan;
 
@@ -69,7 +69,8 @@ fn folder_tag(state: FolderState) -> String {
         FolderState::Watched => tr("Watched"),
         FolderState::Polled(minutes) => fill(&tr("Every {} min"), &[&minutes.to_string()]),
         FolderState::Manual => tr("Manual"),
-        FolderState::NotConnected => tr("Not connected"),
+        // Translators: a library folder on a drive that is not connected.
+        FolderState::NotConnected => trc("folder", "Not connected"),
     }
     .to_uppercase()
 }

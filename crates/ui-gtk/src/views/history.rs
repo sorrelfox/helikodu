@@ -820,7 +820,10 @@ impl HistoryView {
                 &[
                     &format::count(plays),
                     &local(first)
-                        .and_then(|d| d.format("%e %b %Y").ok())
+                        // Translators: the date of the first play, as strftime:
+                        // "18 Nov 2026"; keep the % codes, change their order
+                        // and punctuation as your language writes a date.
+                        .and_then(|d| d.format(&tr("%e %b %Y")).ok())
                         .map(|s| s.trim().to_owned())
                         .unwrap_or_default(),
                 ],

@@ -705,7 +705,12 @@ fn analyzer_page() -> (gtk::Box, SpectrumView, LevelMeter) {
     };
     page.append(&header(
         &tr("Spectrum"),
-        &tr("1/5 OCTAVE · PEAK HOLD 1.5 s"),
+        &crate::i18n::fill(
+            // Translators: a short caption over the spectrum, in capitals; {}
+            // is "1.5" written with your decimal separator.
+            &tr("1/5 OCTAVE · PEAK HOLD {} s"),
+            &[&crate::format::decimal(1.5, 1)],
+        ),
     ));
     let spectrum = SpectrumView::default();
     page.append(&spectrum);

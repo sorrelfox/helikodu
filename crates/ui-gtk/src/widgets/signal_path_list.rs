@@ -158,9 +158,9 @@ pub(crate) fn rows(path: Option<&SignalPath>, device: &str) -> Vec<PathRow> {
         settings,
     };
     let Some(path) = path else {
-        let mut rows: Vec<PathRow> = NAMES
-            .iter()
-            .map(|(name, settings)| row(tr(name), (String::new(), Node::Hollow), *settings))
+        let mut rows: Vec<PathRow> = names()
+            .into_iter()
+            .map(|(name, settings)| row(name, (String::new(), Node::Hollow), settings))
             .collect();
         rows[0].node = Node::End;
         let last = rows.len() - 1;
@@ -230,22 +230,29 @@ pub(crate) fn rows(path: Option<&SignalPath>, device: &str) -> Vec<PathRow> {
     ]
 }
 
-/// The stage names, untranslated, and the settings each row opens.
-const NAMES: [(&str, &[&str]); 10] = [
-    ("Source", &[]),
-    ("Loudness", &["app.preferences-loudness", "app.preferences"]),
-    ("Resampler", &["app.preferences-output", "app.preferences"]),
-    ("Equalizer", &["app.preferences-dsp", "app.preferences"]),
-    ("Crossfeed", &["app.preferences-dsp", "app.preferences"]),
-    ("Channel mix", &["app.preferences-dsp", "app.preferences"]),
-    ("Limiter", &["app.preferences-dsp", "app.preferences"]),
-    ("Volume", &["app.preferences-output", "app.preferences"]),
-    (
-        "Output format",
-        &["app.preferences-output", "app.preferences"],
-    ),
-    ("Device", &["app.preferences-output", "app.preferences"]),
-];
+/// The number of rows.
+const ROWS: usize = 10;
+
+/// The stage names and the settings each row opens.
+fn names() -> [(String, &'static [&'static str]); ROWS] {
+    const DSP: &[&str] = &["app.preferences-dsp", "app.preferences"];
+    const OUTPUT: &[&str] = &["app.preferences-output", "app.preferences"];
+    [
+        (tr("Source"), &[]),
+        (
+            tr("Loudness"),
+            &["app.preferences-loudness", "app.preferences"],
+        ),
+        (tr("Resampler"), OUTPUT),
+        (tr("Equalizer"), DSP),
+        (tr("Crossfeed"), DSP),
+        (tr("Channel mix"), DSP),
+        (tr("Limiter"), DSP),
+        (tr("Volume"), OUTPUT),
+        (tr("Output format"), OUTPUT),
+        (tr("Device"), OUTPUT),
+    ]
+}
 
 /// The state label of the lamp, as the deck and the tab show it (upper case
 /// comes from the stylesheet): `Bit-perfect`, `Bit-perfect, 24-bit` where
@@ -450,7 +457,7 @@ impl SignalPathList {
         list.set_selection_mode(gtk::SelectionMode::None);
         list.add_css_class("hk-path-list");
         list.update_property(&[gtk::accessible::Property::Label(&tr("Signal path"))]);
-        let count = NAMES.len();
+        let count = ROWS;
         let rows = (0..count)
             .map(|i| {
                 let row = gtk::ListBoxRow::new();

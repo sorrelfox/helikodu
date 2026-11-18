@@ -19,7 +19,7 @@ use gtk::prelude::*;
 
 use crate::backend::{Backend, PlayerRequest, SleepWhen};
 use crate::dialogs::common::{bind_segmented, segmented};
-use crate::i18n::{fill, tr};
+use crate::i18n::{fill, tr, trc};
 use crate::playback::{Playback, PlayerView};
 use crate::style::tokens::metric::sleep_timer as metric;
 use crate::widgets::label;
@@ -94,7 +94,12 @@ impl SleepPopover {
 
         let body = gtk::Box::new(gtk::Orientation::Vertical, 8);
         body.add_css_class("hk-sleep-body");
-        body.append(&label(&tr("Stop after"), &["hk-section-label"]));
+        body.append(&label(
+            // Translators: the heading of the sleep timer's choices: after a time,
+            // or at the end of the track.
+            &trc("sleep timer", "Stop after"),
+            &["hk-section-label"],
+        ));
         let grid = gtk::Grid::new();
         grid.set_row_spacing(metric::CHOICE_GAP as u32);
         grid.set_column_spacing(metric::CHOICE_GAP as u32);
@@ -154,11 +159,17 @@ impl SleepPopover {
         let running = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         running.set_hexpand(true);
         let left = label("", &["hk-sleep-left", "hk-mono"]);
-        let left_word = label(&tr("left"), &["hk-sleep-left-word", "hk-mono"]);
-        left_word.set_hexpand(true);
-        left_word.set_xalign(0.0);
-        running.append(&left);
-        running.append(&left_word);
+        crate::widgets::sentence(
+            &running,
+            // Translators: the time left of the sleep timer; {} is the time
+            // ("12:30"), shown larger.
+            &tr("{} left"),
+            &[left.upcast_ref()],
+            &["hk-sleep-left-word", "hk-mono"],
+        );
+        let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        spacer.set_hexpand(true);
+        running.append(&spacer);
         running.set_valign(gtk::Align::Center);
         let extend = gtk::Button::with_label(&tr("+10 min"));
         extend.add_css_class("hk-btn");

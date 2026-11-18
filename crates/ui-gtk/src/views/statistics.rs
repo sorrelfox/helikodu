@@ -19,7 +19,7 @@ use gtk::prelude::*;
 
 use crate::backend::{AlbumKey, ArtistKey, Backend, LibraryStats, StatisticsSince};
 use crate::format;
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, ntrc, tr, trc};
 use crate::models::CoverCache;
 use crate::views::facet_browser::codec_name;
 use crate::widgets::{CoverArt, label};
@@ -379,7 +379,12 @@ impl StatisticsView {
     }
 
     fn formats(self: &Rc<Self>, stats: &LibraryStats) -> gtk::Box {
-        let section = section(&tr("Formats"), &tr("tracks"));
+        let section = section(
+            &tr("Formats"),
+            // Translators: the caption over the numbers of a column of
+            // statistics: these are numbers of tracks.
+            &trc("statistics column", "tracks"),
+        );
         let rows = format_rows(&stats.formats);
         let largest = rows.iter().map(|r| r.tracks).max().unwrap_or(0);
         for row in rows {
@@ -397,7 +402,7 @@ impl StatisticsView {
     }
 
     fn quality(self: &Rc<Self>, stats: &LibraryStats) -> gtk::Box {
-        let section = section(&tr("Quality"), &tr("tracks"));
+        let section = section(&tr("Quality"), &trc("statistics column", "tracks"));
         let rows = quality_rows(stats);
         let largest = rows.iter().map(|r| r.1).max().unwrap_or(0);
         for ((name, tracks), query) in rows.into_iter().zip(QUALITY_QUERIES) {
@@ -451,7 +456,12 @@ impl StatisticsView {
     }
 
     fn top_artists(self: &Rc<Self>, stats: &LibraryStats) -> gtk::Box {
-        let section = section(&tr("Most played artists"), &tr("plays"));
+        let section = section(
+            &tr("Most played artists"),
+            // Translators: the caption over the numbers of a column of
+            // statistics: these are numbers of plays.
+            &trc("statistics column", "plays"),
+        );
         let most = stats.top_artists.first().map_or(0, |a| a.plays);
         for (rank, artist) in stats.top_artists.iter().enumerate() {
             let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
@@ -492,7 +502,10 @@ impl StatisticsView {
     }
 
     fn top_albums(self: &Rc<Self>, stats: &LibraryStats) -> gtk::Box {
-        let section = section(&tr("Most played albums"), &tr("plays"));
+        let section = section(
+            &tr("Most played albums"),
+            &trc("statistics column", "plays"),
+        );
         for album in &stats.top_albums {
             let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
             let cover = CoverArt::new(22, 3.0);
@@ -572,13 +585,16 @@ fn tiles(stats: &LibraryStats) -> gtk::Box {
     } else {
         Duration::ZERO
     };
-    let folders = fill(
-        &ntr("in {} folder", "in {} folders", stats.folders),
-        &[&format::count(stats.folders)],
-    );
     let drives = fill(
+        // Translators: part of "in 12 folders and 2 drives".
         &ntr("{} drive", "{} drives", stats.drives),
         &[&format::count(stats.drives)],
+    );
+    let place = fill(
+        // Translators: under the size of the library: {0} is a number of
+        // folders, {1} a number of drives ("{} drive" or "{} drives").
+        &ntr("in {} folder and {}", "in {} folders and {}", stats.folders),
+        &[&format::count(stats.folders), &drives],
     );
     for (title, figure, caption) in [
         (
@@ -618,11 +634,7 @@ fn tiles(stats: &LibraryStats) -> gtk::Box {
             long_duration(stats.duration),
             fill(&tr("{} a track on average"), &[&short_duration(average)]),
         ),
-        (
-            tr("Size"),
-            binary_size(stats.size),
-            fill(&tr("{} and {}"), &[&folders, &drives]),
-        ),
+        (tr("Size"), binary_size(stats.size), place),
     ] {
         let tile = gtk::Box::new(gtk::Orientation::Vertical, 2);
         tile.add_css_class("hk-stat");
@@ -645,9 +657,19 @@ fn listening(stats: &LibraryStats) -> gtk::Box {
     row.set_homogeneous(true);
     row.set_margin_top(10);
     for (figure, caption) in [
-        (format::count(stats.plays), tr("plays")),
+        (
+            format::count(stats.plays),
+            // Translators: under a number of plays this year; the number is
+            // shown above, larger.
+            ntrc("statistics caption", "play", "plays", stats.plays as usize),
+        ),
         (long_duration(stats.listened), tr("listened")),
-        (format::count(stats.skips), tr("skips")),
+        (
+            format::count(stats.skips),
+            // Translators: under a number of skips this year; the number is
+            // shown above, larger.
+            ntrc("statistics caption", "skip", "skips", stats.skips as usize),
+        ),
         (
             format!("{} %", percent(stats.never_played, stats.tracks)),
             tr("never played"),

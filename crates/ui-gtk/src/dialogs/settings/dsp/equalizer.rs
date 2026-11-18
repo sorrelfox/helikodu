@@ -80,11 +80,31 @@ fn preset_gains(octaves: &[f64], bands: usize) -> Vec<f64> {
     }
 }
 
+/// The translated name of a built-in preset.
+fn preset_name(preset: &BuiltInPreset) -> String {
+    match preset.id {
+        "flat" => tr("Flat"),
+        "bass-boost" => tr("Bass boost"),
+        "bass-cut" => tr("Bass cut"),
+        "treble-boost" => tr("Treble boost"),
+        "treble-cut" => tr("Treble cut"),
+        "loudness" => tr("Loudness"),
+        "vocal" => tr("Vocal"),
+        "rock" => tr("Rock"),
+        "pop" => tr("Pop"),
+        "jazz" => tr("Jazz"),
+        "classical" => tr("Classical"),
+        "electronic" => tr("Electronic"),
+        "acoustic" => tr("Acoustic"),
+        _ => preset.name.to_owned(),
+    }
+}
+
 /// The entries of the preset list: the built-in presets, then the user's.
 fn preset_entries(eq: &EqualizerSettings) -> Vec<(String, Vec<f64>)> {
     BuiltInPreset::ALL
         .iter()
-        .map(|p| (tr(p.name), p.octaves.to_vec()))
+        .map(|p| (preset_name(p), p.octaves.to_vec()))
         .chain(eq.presets.iter().map(|p| (p.name.clone(), p.bands.clone())))
         .collect()
 }
@@ -466,20 +486,15 @@ fn remove_children(container: &gtk::Box) {
 fn table_header(count: &gtk::Label, columns: &[gtk::SizeGroup; 6]) -> gtk::Box {
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     head.add_css_class("hk-filter-head");
-    let cells: [(&str, i32); 6] = [
-        ("", 24),
-        ("#", 18),
-        ("Type", 150),
-        ("Frequency", 130),
-        ("Gain", 110),
-        ("Q", 70),
+    let cells: [(String, i32); 6] = [
+        (String::new(), 24),
+        ("#".to_owned(), 18),
+        (tr("Type"), 150),
+        (tr("Frequency"), 130),
+        (tr("Gain"), 110),
+        (tr("Q"), 70),
     ];
     for (i, (text, width)) in cells.into_iter().enumerate() {
-        let text = if text.is_empty() || text == "#" {
-            text.to_owned()
-        } else {
-            tr(text)
-        };
         let cell = label(&text, &["hk-micro-label"]);
         cell.set_size_request(width, -1);
         columns[i].add_widget(&cell);

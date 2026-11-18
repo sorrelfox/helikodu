@@ -20,7 +20,7 @@ use crate::dialogs::common::{
     with_note,
 };
 use crate::dialogs::decoder_files::{self, DecoderFile};
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 use crate::widgets::label;
 
 /// A dropdown over `values` showing `text` for each; a stored value that is
@@ -136,9 +136,7 @@ fn seek_step(context: &Rc<Context>) -> gtk::Box {
 fn count_play(context: &Rc<Context>) -> gtk::Box {
     let settings = context.settings();
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    // The sentence reads "after <share> or <time>, whichever comes first".
-    line.append(&label(&tr("after"), &["hk-t2"]));
-    line.append(&value_dropdown(
+    let share = value_dropdown(
         context,
         &[25, 50, 75, 100],
         settings.playback.play_count_percent,
@@ -151,17 +149,24 @@ fn count_play(context: &Rc<Context>) -> gtk::Box {
         },
         170,
         |s, v| s.playback.play_count_percent = v,
-    ));
-    line.append(&label(&tr("or"), &["hk-t2"]));
-    line.append(&value_dropdown(
+    );
+    let time = value_dropdown(
         context,
         &[1, 2, 4, 5, 10],
         settings.playback.play_count_minutes,
         minutes,
         140,
         |s, v| s.playback.play_count_minutes = v,
-    ));
-    line.append(&label(&tr("whichever comes first"), &["hk-t2"]));
+    );
+    crate::widgets::sentence(
+        &line,
+        // Translators: when a play counts. {0} is a dropdown with a share of
+        // the track ("half the track"), {1} one with a time ("4 minutes");
+        // reorder them with {0} and {1} as needed.
+        &tr("after {} or {} whichever comes first"),
+        &[share.upcast_ref(), time.upcast_ref()],
+        &["hk-t2"],
+    );
     with_note(
         &line,
         &tr("Only time actually heard is counted. Seeking forward does not add to it."),
@@ -429,9 +434,13 @@ fn fades(context: &Rc<Context>) -> gtk::Box {
         (tr("Stop"), "stop-fade", transitions.stop_fade_ms, |s, v| {
             s.playback.transitions.stop_fade_ms = v
         }),
-        (tr("Seek"), "seek-fade", transitions.seek_fade_ms, |s, v| {
-            s.playback.transitions.seek_fade_ms = v
-        }),
+        (
+            // Translators: the heading of the fade used when seeking within a track.
+            trc("fade", "Seek"),
+            "seek-fade",
+            transitions.seek_fade_ms,
+            |s, v| s.playback.transitions.seek_fade_ms = v,
+        ),
         (
             tr("Skip to another track"),
             "skip-fade",
@@ -553,8 +562,6 @@ fn decoder_file(context: &Rc<Context>, which: DecoderFile) -> gtk::Box {
 fn looping(context: &Rc<Context>) -> gtk::Box {
     let decoders = context.settings().playback.decoders.clone();
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    // The sentence reads "play the loop <n times>, then fade out over <time>".
-    line.append(&label(&tr("play the loop"), &["hk-t2"]));
     let loops = value_dropdown(
         context,
         &[1, 2, 3, 4, 5],
@@ -564,8 +571,6 @@ fn looping(context: &Rc<Context>) -> gtk::Box {
         |s, n| s.playback.decoders.loops = n,
     );
     loops.set_widget_name("loops");
-    line.append(&loops);
-    line.append(&label(&tr("then fade out over"), &["hk-t2"]));
     let fade = value_dropdown(
         context,
         &[0, 3000, 5000, 8000, 10_000, 15_000],
@@ -575,7 +580,15 @@ fn looping(context: &Rc<Context>) -> gtk::Box {
         |s, ms| s.playback.decoders.fade_ms = ms,
     );
     fade.set_widget_name("loop-fade");
-    line.append(&fade);
+    crate::widgets::sentence(
+        &line,
+        // Translators: how a looping tune ends. {0} is a dropdown with how
+        // often ("once", "2 times"), {1} one with a time ("5 s"); reorder
+        // them with {0} and {1} as needed.
+        &tr("play the loop {} then fade out over {}"),
+        &[loops.upcast_ref(), fade.upcast_ref()],
+        &["hk-t2"],
+    );
     let default = decoders.default_length_s;
     with_note(
         &line,

@@ -402,15 +402,25 @@ impl Verify {
             tr("Choose what to check and press Verify. A check changes nothing.")
         } else {
             fill(
-                &tr("Every file was decoded from start to end. {} fine, {} and {}."),
+                // Translators: the summary of a check of files; {0}, {1} and
+                // {2} are the three sentences that follow ("12 are
+                // fine.", …): put them together as your language joins
+                // sentences.
+                &tr("Every file was decoded from start to end. {} {} {}"),
                 &[
-                    &fill(&ntr("{} is", "{} are", clean), &[&format::count(clean)]),
                     &fill(
-                        &ntr("{} has problems", "{} have problems", problems),
+                        // Translators: a number of files that decoded without a problem.
+                        &ntr("{} is fine.", "{} are fine.", clean),
+                        &[&format::count(clean)],
+                    ),
+                    &fill(
+                        // Translators: a number of files that decoded with problems.
+                        &ntr("{} has problems.", "{} have problems.", problems),
                         &[&format::count(problems)],
                     ),
                     &fill(
-                        &ntr("{} could not be read", "{} could not be read", unreadable),
+                        // Translators: a number of files that could not be read.
+                        &ntr("{} could not be read.", "{} could not be read.", unreadable),
                         &[&format::count(unreadable)],
                     ),
                 ],

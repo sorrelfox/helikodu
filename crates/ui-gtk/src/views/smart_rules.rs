@@ -19,7 +19,7 @@ use helikodu_model::query::{
 };
 use helikodu_service::library::{parse_query, print_query};
 
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 
 /// How a rule compares its field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -55,34 +55,76 @@ impl Cond {
         }
     }
 
-    /// Its words, as the dropdown and the rule line show them.
+    /// Its words, as the condition dropdown shows them.
     pub(crate) fn label(self) -> String {
-        tr(match self {
-            Self::Contains => "contains",
-            Self::Is => "is",
-            Self::IsNot => "is not",
-            Self::NotContains => "does not contain",
-            Self::Matches => "matches",
-            Self::AtLeast => "is at least",
-            Self::AtMost => "is at most",
-            Self::MoreThan => "is more than",
-            Self::LessThan => "is less than",
-            Self::InLast => "in the last",
-            Self::NotInLast => "not in the last",
-            Self::Before => "is before",
-            Self::After => "is after",
-            Self::Present => "is set",
-            Self::Absent => "is not set",
-        })
+        match self {
+            // Translators: the conditions of a smart playlist's rule, in the
+            // dropdown between the field and the value: "Title [contains] …".
+            Self::Contains => trc("rule condition", "contains"),
+            Self::Is => trc("rule condition", "is"),
+            Self::IsNot => trc("rule condition", "is not"),
+            Self::NotContains => trc("rule condition", "does not contain"),
+            Self::Matches => trc("rule condition", "matches"),
+            Self::AtLeast => trc("rule condition", "is at least"),
+            Self::AtMost => trc("rule condition", "is at most"),
+            Self::MoreThan => trc("rule condition", "is more than"),
+            Self::LessThan => trc("rule condition", "is less than"),
+            Self::InLast => trc("rule condition", "in the last"),
+            Self::NotInLast => trc("rule condition", "not in the last"),
+            Self::Before => trc("rule condition", "is before"),
+            Self::After => trc("rule condition", "is after"),
+            Self::Present => trc("rule condition", "is set"),
+            Self::Absent => trc("rule condition", "is not set"),
+        }
     }
 
     /// Its words for `field`: a codec or container "is" what it contains,
     /// as `codec:flac` finds every FLAC file.
     pub(crate) fn label_for(self, field: &Field) -> String {
         match (field, self) {
-            (Field::Codec | Field::Container, Self::Contains) => tr("is"),
-            (Field::Codec | Field::Container, Self::Is) => tr("is exactly"),
+            // Translators: a condition of a codec or container rule; it finds
+            // every file of this kind (FLAC, MP3, …).
+            (Field::Codec | Field::Container, Self::Contains) => trc("codec rule condition", "is"),
+            (Field::Codec | Field::Container, Self::Is) => {
+                // Translators: a condition of a codec or container rule; it finds
+                // only files whose codec has exactly this name.
+                trc("codec rule condition", "is exactly")
+            }
             _ => self.label(),
+        }
+    }
+
+    /// The rule line's sentence for this condition on `field`: `{0}` is
+    /// the field, `{1}` the value (none for "is set" and "is not set").
+    fn pattern(self, field: &Field) -> String {
+        match (field, self) {
+            // Translators: a sentence of the rule line of a smart playlist:
+            // {0} is the field (Codec or Container), {1} the value (FLAC or
+            // DSD). It finds every file of this kind; reorder with {0} and {1}
+            // as needed.
+            (Field::Codec | Field::Container, Self::Contains) => trc("codec rule", "{} is {}"),
+            // Translators: as above, but it finds only files whose codec has
+            // exactly this name.
+            (Field::Codec | Field::Container, Self::Is) => trc("codec rule", "{} is exactly {}"),
+            // Translators: the sentences of the rule line of a smart playlist
+            // (context "smart rule"): {0} is the field (Title, Rating, Added,
+            // …), {1} the value (Unrated, 12 months, …); reorder them with {0}
+            // and {1} as needed.
+            (_, Self::Contains) => trc("smart rule", "{} contains {}"),
+            (_, Self::Is) => trc("smart rule", "{} is {}"),
+            (_, Self::IsNot) => trc("smart rule", "{} is not {}"),
+            (_, Self::NotContains) => trc("smart rule", "{} does not contain {}"),
+            (_, Self::Matches) => trc("smart rule", "{} matches {}"),
+            (_, Self::AtLeast) => trc("smart rule", "{} is at least {}"),
+            (_, Self::AtMost) => trc("smart rule", "{} is at most {}"),
+            (_, Self::MoreThan) => trc("smart rule", "{} is more than {}"),
+            (_, Self::LessThan) => trc("smart rule", "{} is less than {}"),
+            (_, Self::InLast) => trc("smart rule", "{} in the last {}"),
+            (_, Self::NotInLast) => trc("smart rule", "{} not in the last {}"),
+            (_, Self::Before) => trc("smart rule", "{} is before {}"),
+            (_, Self::After) => trc("smart rule", "{} is after {}"),
+            (_, Self::Present) => trc("smart rule", "{} is set"),
+            (_, Self::Absent) => trc("smart rule", "{} is not set"),
         }
     }
 
@@ -310,18 +352,14 @@ impl Rule {
 
     /// The rule in words, for the rule line: "Rating is Unrated".
     pub(crate) fn sentence(&self) -> String {
-        if !self.cond.takes_value() {
-            return format!(
-                "{} {}",
-                field_words(&self.field),
-                self.cond.label_for(&self.field)
-            );
-        }
-        format!(
-            "{} {} {}",
-            field_words(&self.field),
-            self.cond.label_for(&self.field),
-            self.value_words()
+        self.sentence_with(self.value_words())
+    }
+
+    /// The rule's sentence with `value` in words as its value.
+    fn sentence_with(&self, value: String) -> String {
+        fill(
+            &self.cond.pattern(&self.field),
+            &[&field_words(&self.field), &value],
         )
     }
 
@@ -457,30 +495,35 @@ impl Node {
         match self {
             Self::Rule(rule) => rule.sentence(),
             Self::Group { any, rules } => {
-                let joiner = if *any { tr("or") } else { tr("and") };
                 let same = rules
                     .windows(2)
                     .all(|w| w[0].field == w[1].field && w[0].cond == w[1].cond)
                     && rules.first().is_some_and(|r| r.cond.takes_value());
                 match rules.first() {
                     Some(first) if same => {
-                        let values: Vec<String> = rules.iter().map(Rule::value_words).collect();
-                        format!(
-                            "{} {} {}",
-                            field_words(&first.field),
-                            first.cond.label_for(&first.field),
-                            values.join(&format!(" {joiner} "))
-                        )
+                        let values = rules.iter().map(Rule::value_words);
+                        first.sentence_with(join(*any, values))
                     }
-                    _ => rules
-                        .iter()
-                        .map(Rule::sentence)
-                        .collect::<Vec<_>>()
-                        .join(&format!(" {joiner} ")),
+                    _ => join(*any, rules.iter().map(Rule::sentence)),
                 }
             }
         }
     }
+}
+
+/// `parts` joined with "or" when `any`, else with "and": "FLAC or DSD".
+fn join(any: bool, parts: impl Iterator<Item = String>) -> String {
+    let pattern = if any {
+        // Translators: joins the values or the rules of a group of a smart
+        // playlist's rules, "FLAC or DSD", "Rating is 5 stars or Plays is more
+        // than 10"; for three, it joins the first two joined ones with the third.
+        trc("smart rule", "{} or {}")
+    } else {
+        trc("smart rule", "{} and {}")
+    };
+    parts
+        .reduce(|joined, next| fill(&pattern, &[&joined, &next]))
+        .unwrap_or_default()
 }
 
 /// The orders the order dropdown offers: its words, the words of the rule
@@ -554,15 +597,17 @@ pub(crate) const UNITS: &[LimitUnit] = &[
     LimitUnit::Megabytes,
 ];
 
-/// The name of a limit unit in the unit dropdown.
+/// The name of a limit unit in the unit dropdown, after the amount.
 pub(crate) fn unit_label(unit: LimitUnit) -> String {
-    tr(match unit {
-        LimitUnit::Tracks => "tracks",
-        LimitUnit::Minutes => "minutes",
-        LimitUnit::Hours => "hours",
-        LimitUnit::Megabytes => "MB",
-        LimitUnit::Gigabytes => "GB",
-    })
+    match unit {
+        // Translators: units of the limit of a smart playlist, "Limit to [25]
+        // [tracks]"; the number is typed into a box before them.
+        LimitUnit::Tracks => trc("limit unit", "tracks"),
+        LimitUnit::Minutes => trc("limit unit", "minutes"),
+        LimitUnit::Hours => trc("limit unit", "hours"),
+        LimitUnit::Megabytes => trc("limit unit", "MB"),
+        LimitUnit::Gigabytes => trc("limit unit", "GB"),
+    }
 }
 
 /// The rules of a smart playlist as the builder shows them.
@@ -741,5 +786,16 @@ mod tests {
             ]
         );
         assert_eq!(built.order_words(), "Newest first · at most 100 tracks");
+        let other = rules("has:genre -has:composer codec=flac (artist:a OR genre:b)").unwrap();
+        let chips: Vec<String> = other.nodes.iter().map(Node::sentence).collect();
+        assert_eq!(
+            chips,
+            [
+                "Genre is set",
+                "Composer is not set",
+                "Codec is exactly FLAC",
+                "Artist contains a or Genre contains b",
+            ]
+        );
     }
 }

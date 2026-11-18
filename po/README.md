@@ -23,6 +23,10 @@ A release ships only complete translations: no message may be untranslated or ma
 
 **Placeholders.** `{}` stands for something Helikodu fills in: a number, a name, a time. A translation keeps every one of them. To put them in another order, number them from 0, as in Rust: `{0}` is the first `{}` of the English text, `{1}` the second, and so on. For example, a translation of `"{} of {}"` (as in "3 of 12") that names the total first writes `"{1} … {0}"`. A translation uses either `{}` only or numbers only, and with numbers each one from `{0}` up appears at least once.
 
+**Placeholders for controls.** In some messages a `{}` stands for a control, such as a dropdown, in the middle of a sentence: `"Match {} of these rules"` shows the words around a dropdown with "all" and "any". Move the `{}` (or `{0}`, `{1}`, …) to where the control belongs in your sentence; the text between them becomes the labels around the controls. The comment of each such message says what its controls are.
+
+**Context.** A message with a context (`msgctxt`, such as `home folder` for "Home") is an English word that means something else elsewhere; translate it for the meaning its context and comment give.
+
 **Names in braces**, such as `{skip}`, are words the user types (here in the patterns of the tag tools): keep them as they are.
 
 **Plural forms** follow the `Plural-Forms` line of the header, which must be the rule of your language (your editor fills it in). A form that is used for one number only, such as the German singular, may say the number in words and leave out its `{}`: `"once"`/`"{} times"` can be `"einmal"`/`"{}-mal"`.

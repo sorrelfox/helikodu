@@ -21,8 +21,8 @@ use gtk::glib;
 use gtk::prelude::*;
 
 use super::tool_window::{
-    ADDED, CHECK, FORMAT, GAP, SIZE, cell, date, footer, path_cell, primary_button, shown_path,
-    table_header,
+    ADDED, FORMAT, GAP, SIZE, cell, check_headers, check_width, date, footer, path_cell,
+    primary_button, shown_path, table_header,
 };
 use super::trash;
 use crate::backend::services::{CopyFile, CopyGroup, FileId};
@@ -249,7 +249,7 @@ impl Copies {
         let path = shown_path(&file.path);
 
         let main_cell = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        main_cell.set_size_request(CHECK, -1);
+        main_cell.set_size_request(check_width(), -1);
         let radio = gtk::CheckButton::new();
         if let Some(first) = first_radio.as_ref() {
             radio.set_group(Some(first));
@@ -279,7 +279,7 @@ impl Copies {
         line.append(&main_cell);
 
         let tick_cell = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        tick_cell.set_size_request(CHECK, -1);
+        tick_cell.set_size_request(check_width(), -1);
         let tick = gtk::CheckButton::new();
         tick.set_widget_name("trash-tick");
         let can = removable(file);
@@ -525,9 +525,10 @@ pub(crate) fn open(main: &MainWindow, track: TrackKey) -> Option<gtk::Window> {
         Some(&tr("Files with the same bytes, tags included")),
     );
     column.append(&header);
+    let [main, remove] = check_headers();
     column.append(&table_header(&[
-        (tr("Main"), CHECK, false),
-        (tr("Remove"), CHECK, false),
+        (main, check_width(), false),
+        (remove, check_width(), false),
         (tr("File"), -1, false),
         (tr("Format"), FORMAT, false),
         (tr("Size"), SIZE, true),

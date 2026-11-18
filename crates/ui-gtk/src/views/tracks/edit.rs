@@ -424,7 +424,15 @@ impl TracksView {
                         if let Some(first) = failed.first() {
                             window.toast(
                                 &fill(
-                                    &tr("{} of {} files could not be saved. {}: {}"),
+                                    &ntr(
+                                        // Translators: {0} is the number of files
+                                        // that failed, which chooses the form, {1}
+                                        // the number of all files, {2} the first
+                                        // file that failed, {3} why.
+                                        "{} of {} files could not be saved. {}: {}",
+                                        "{} of {} files could not be saved. {}: {}",
+                                        failed.len(),
+                                    ),
                                     &[
                                         &failed.len().to_string(),
                                         &n.to_string(),

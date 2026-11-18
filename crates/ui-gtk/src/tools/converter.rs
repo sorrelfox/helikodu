@@ -954,8 +954,6 @@ pub(crate) fn open_with(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Opt
     let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     spacer.set_hexpand(true);
     third.append(&spacer);
-    let work_label = label(&tr("Work on"), &["hk-t2"]);
-    third.append(&work_label);
     let worker_names: Vec<String> = WORKERS
         .iter()
         .map(|&n| {
@@ -974,10 +972,19 @@ pub(crate) fn open_with(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Opt
         160,
     );
     workers.set_widget_name("workers");
-    workers.update_relation(&[gtk::accessible::Relation::LabelledBy(&[
-        work_label.upcast_ref()
-    ])]);
-    third.append(&workers);
+    let work_labels = crate::widgets::sentence(
+        &third,
+        // Translators: {} is a dropdown with "2 files at a time" and so on.
+        &tr("Work on {}"),
+        &[workers.upcast_ref()],
+        &["hk-t2"],
+    );
+    let work_labels: Vec<gtk::Accessible> = work_labels.into_iter().map(|l| l.upcast()).collect();
+    if !work_labels.is_empty() {
+        workers.update_relation(&[gtk::accessible::Relation::LabelledBy(
+            &work_labels.iter().collect::<Vec<_>>(),
+        )]);
+    }
     options.append(&third);
     options.append(&pattern_note);
     column.append(&options);

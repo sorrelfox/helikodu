@@ -257,9 +257,11 @@ fn loudness_data(context: &Rc<Context>) -> gtk::Box {
                 };
                 count.set_text(&fill(
                     &ntr(
-                        "{} of {} track has ReplayGain or R128 values",
+                        // Translators: {0} is the number of tracks with values,
+                        // which chooses the form, {1} the number of all tracks.
+                        "{} of {} tracks has ReplayGain or R128 values",
                         "{} of {} tracks have ReplayGain or R128 values",
-                        coverage.tracks,
+                        coverage.with_values,
                     ),
                     &[
                         &group_digits(coverage.with_values),

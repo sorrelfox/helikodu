@@ -28,7 +28,7 @@ use gtk::{gdk, gio, glib};
 use super::common::{bytes, compact_button, dialog_window, note, tilde};
 use crate::backend::services::{CoverEdit, EditTrack, TagEdit, TagField, WriteResult};
 use crate::backend::{Backend, ThumbnailState, TrackKey};
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 use crate::tools::tag_preview::{Tool, ToolTrack, ToolValues};
 use crate::tools::tag_tools;
 use crate::widgets::{CoverArt, RatingStars, icon_button, label};
@@ -44,7 +44,8 @@ fn field_title(field: &TagField) -> String {
         TagField::Artist => tr("Artist"),
         TagField::AlbumArtist => tr("Album artist"),
         TagField::Album => tr("Album"),
-        TagField::Track | TagField::TrackTotal => tr("Track"),
+        // Translators: the field of the track number, "Track [3] of [12]".
+        TagField::Track | TagField::TrackTotal => trc("track number", "Track"),
         TagField::Disc | TagField::DiscTotal => tr("Disc"),
         TagField::Year => tr("Year"),
         TagField::Genre => tr("Genre"),
@@ -233,6 +234,9 @@ impl FieldInput {
                 )));
                 entry.add_css_class("hk-keep");
             } else if matches!(self.start, Shared::Mixed(_)) {
+                // Translators: shown in an empty field whose files hold
+                // different values, which are kept unless something is typed;
+                // translate the word, the angle brackets may stay.
                 entry.set_placeholder_text(Some(&tr("<keep>")));
             }
         }
@@ -613,7 +617,13 @@ impl Editor {
         if let Some(main) = &main {
             main.toast(
                 &fill(
-                    &tr("{} of {} files could not be saved"),
+                    &ntr(
+                        // Translators: {0} is the number of files that failed,
+                        // which chooses the form, {1} the number of all files.
+                        "{} of {} files could not be saved",
+                        "{} of {} files could not be saved",
+                        failed.len(),
+                    ),
                     &[&failed.len().to_string(), &results.len().to_string()],
                 ),
                 true,
@@ -1205,7 +1215,11 @@ fn drop_area(editor: &Rc<Editor>, sensitive: bool) -> gtk::Box {
 fn keep_cover(editor: &Rc<Editor>, sensitive: bool) -> gtk::Box {
     let column = gtk::Box::new(gtk::Orientation::Vertical, 8);
     column.add_css_class("hk-keep-cover");
-    column.append(&label(&tr("Keep the cover"), &["hk-section-label"]));
+    column.append(&label(
+        // Translators: the heading of the section that saves the cover.
+        &trc("heading", "Keep the cover"),
+        &["hk-section-label"],
+    ));
     type Choice = (String, String, bool, fn(&Editor, bool));
     let choices: [Choice; 2] = [
         (

@@ -18,7 +18,7 @@ use crate::backend::services::DuplicateEntry;
 use crate::dialogs::common::{dialog_window, header_strip, tilde};
 use crate::widgets::label;
 
-/// The width of the Remove and Main columns.
+/// The width of the Remove and Main columns in English; see [`check_width`].
 pub(crate) const CHECK: i32 = 52;
 /// The width of the Format column.
 pub(crate) const FORMAT: i32 = 96;
@@ -30,6 +30,39 @@ pub(crate) const PLAYS: i32 = 40;
 pub(crate) const ADDED: i32 = 86;
 /// The gap between the columns.
 pub(crate) const GAP: i32 = 14;
+
+/// The width of the Remove and Main columns: 52 px, or what their headers
+/// need in a language where they are longer, so that the check marks stay
+/// under their headers.
+pub(crate) fn check_width() -> i32 {
+    thread_local! {
+        static WIDTH: std::cell::OnceCell<i32> = const { std::cell::OnceCell::new() };
+    }
+    WIDTH.with(|width| {
+        *width.get_or_init(|| {
+            check_headers()
+                .iter()
+                .map(|text| {
+                    let cell = label(text, &["hk-section-label"]);
+                    cell.set_ellipsize(gtk::pango::EllipsizeMode::None);
+                    cell.measure(gtk::Orientation::Horizontal, -1).1
+                })
+                .fold(CHECK, i32::max)
+        })
+    })
+}
+
+/// The headers of the Remove and Main columns.
+pub(crate) fn check_headers() -> [String; 2] {
+    [
+        // Translators: a narrow column header of the identical copies: the
+        // copy that is kept and plays.
+        crate::i18n::trc("column", "Main"),
+        // Translators: a narrow column header of the duplicate tables: the
+        // copies to move to the trash.
+        crate::i18n::trc("column", "Remove"),
+    ]
+}
 
 /// The parts of a tool window that the tool fills.
 pub(crate) struct Frame {

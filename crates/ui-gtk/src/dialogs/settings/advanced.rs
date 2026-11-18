@@ -54,7 +54,6 @@ fn id3(context: &Rc<Context>) -> gtk::Box {
 
 fn large_files(context: &Rc<Context>) -> gtk::Box {
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    line.append(&label(&tr("Change tags in place for files over"), &[]));
     let current = context.settings().advanced.in_place_tag_write_above_mib;
     let mut options = vec![512u32, 1024, 2048, 4096, 8192];
     if !options.contains(&current) {
@@ -64,16 +63,18 @@ fn large_files(context: &Rc<Context>) -> gtk::Box {
     let items: Vec<String> = options.iter().map(|&m| bytes(u64::from(m) << 20)).collect();
     let index = options.iter().position(|&m| m == current).unwrap_or(0);
     let choice = dropdown(&items, index, 104);
-    choice.update_property(&[gtk::accessible::Property::Label(&tr(
-        "Change tags in place for files over",
-    ))]);
+    // Translators: {} is a dropdown with file sizes ("1 GB").
+    let pattern = tr("Change tags in place for files over {}");
+    choice.update_property(&[gtk::accessible::Property::Label(
+        crate::i18n::fill(&pattern, &[""]).trim(),
+    )]);
     let weak = Rc::downgrade(context);
     on_selected(&choice, move |i| {
         if let (Some(context), Some(&mib)) = (weak.upgrade(), options.get(i)) {
             context.update(|s| s.advanced.in_place_tag_write_above_mib = mib);
         }
     });
-    line.append(&choice);
+    crate::widgets::sentence(&line, &pattern, &[choice.upcast_ref()], &[]);
     with_note(
         &line,
         &tr(

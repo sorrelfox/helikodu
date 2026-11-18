@@ -155,7 +155,9 @@ pub(crate) fn last_played_text(when: Option<SystemTime>) -> String {
         .map_or(0, |d| d.as_secs());
     glib::DateTime::from_unix_local(i64::try_from(seconds).unwrap_or(0))
         .ok()
-        .and_then(|date| date.format("%b %Y").ok())
+        // Translators: the month an album was played last, as strftime:
+        // "Nov 2026"; keep the % codes, change their order as needed.
+        .and_then(|date| date.format(&tr("%b %Y")).ok())
         .map(|s| s.to_string())
         .unwrap_or_default()
 }

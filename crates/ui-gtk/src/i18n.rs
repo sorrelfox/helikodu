@@ -224,6 +224,81 @@ pub(crate) fn ntr(singular: &str, plural: &str, n: usize) -> String {
     gettextrs::ngettext(singular, plural, u32::try_from(n).unwrap_or(u32::MAX))
 }
 
+/// The translation of `text` in `context`, for an English text that means
+/// different things in different places ("Home" the page and "Home" the
+/// folder): each context is a message of its own.
+pub(crate) fn trc(context: &str, text: &str) -> String {
+    gettextrs::pgettext(context, text)
+}
+
+/// The translation of `singular` or `plural` for `n` in `context`.
+pub(crate) fn ntrc(context: &str, singular: &str, plural: &str, n: usize) -> String {
+    gettextrs::npgettext(
+        context,
+        singular,
+        plural,
+        u32::try_from(n).unwrap_or(u32::MAX),
+    )
+}
+
+/// A piece of a translated pattern that places widgets in a sentence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Piece {
+    /// Text between the widgets, without the spaces around it.
+    Text(String),
+    /// The place of the widget with this number (from 0).
+    Slot(usize),
+}
+
+/// A translated pattern with `slots` placeholders for widgets, cut into the
+/// texts and the widget places in the order the translation puts them:
+/// "Match {} of these rules" gives "Match", the dropdown, "of these rules".
+/// `{}` takes the next widget, `{0}`, `{1}`, … name them, as in [`fill`].
+/// Every widget appears once: a second place for one is left out, and a widget
+/// the translation forgot comes at the end, so that none goes missing.
+pub(crate) fn pieces(pattern: &str, slots: usize) -> Vec<Piece> {
+    let mut out = Vec::new();
+    let mut placed = vec![false; slots];
+    let mut next = 0;
+    let mut text = String::new();
+    let mut rest = pattern;
+    let flush = |text: &mut String, out: &mut Vec<Piece>| {
+        let trimmed = text.trim();
+        if !trimmed.is_empty() {
+            out.push(Piece::Text(trimmed.to_owned()));
+        }
+        text.clear();
+    };
+    while let Some(at) = rest.find('{') {
+        text.push_str(&rest[..at]);
+        let after = &rest[at + 1..];
+        let digits = after.bytes().take_while(u8::is_ascii_digit).count();
+        if after.as_bytes().get(digits) != Some(&b'}') {
+            text.push('{');
+            rest = after;
+            continue;
+        }
+        let slot = if digits == 0 {
+            next += 1;
+            Some(next - 1)
+        } else {
+            after[..digits].parse::<usize>().ok()
+        };
+        rest = &after[digits + 1..];
+        if let Some(slot) = slot.filter(|&s| s < slots && !placed[s]) {
+            placed[slot] = true;
+            flush(&mut text, &mut out);
+            out.push(Piece::Slot(slot));
+        }
+    }
+    text.push_str(rest);
+    flush(&mut text, &mut out);
+    for (slot, _) in placed.iter().enumerate().filter(|(_, p)| !**p) {
+        out.push(Piece::Slot(slot));
+    }
+    out
+}
+
 /// Fills the placeholders of a translated pattern. Translators see the whole
 /// sentence with its placeholders.
 ///
@@ -283,6 +358,50 @@ mod tests {
         // Numbers without a value give nothing.
         assert_eq!(fill("[{2}|{3}]", &["a", "b"]), "[|]");
         assert_eq!(fill("[{99999999999999999999999}]", &["a"]), "[]");
+    }
+
+    #[test]
+    fn contexts_fall_back_to_the_english_text() {
+        // Without a translation, the text itself, in the form for the number.
+        // (Passed through variables, so that xgettext does not take these
+        // test calls for messages.)
+        let (context, text, plural) = ("test context", "play", "plays");
+        assert_eq!(trc(context, text), "play");
+        assert_eq!(ntrc(context, text, plural, 1), "play");
+        assert_eq!(ntrc(context, text, plural, 7), "plays");
+    }
+
+    #[test]
+    fn patterns_place_widgets() {
+        use Piece::{Slot, Text};
+        let text = |t: &str| Text(t.to_owned());
+        assert_eq!(
+            pieces("Match {} of these rules", 1),
+            [text("Match"), Slot(0), text("of these rules")]
+        );
+        assert_eq!(pieces("{} of these", 1), [Slot(0), text("of these")]);
+        assert_eq!(
+            pieces("Limit to {} {} sorted by {}", 3),
+            [
+                text("Limit to"),
+                Slot(0),
+                Slot(1),
+                text("sorted by"),
+                Slot(2)
+            ]
+        );
+        assert_eq!(
+            pieces("{2} で並べ {0} {1} まで", 3),
+            [Slot(2), text("で並べ"), Slot(0), Slot(1), text("まで")]
+        );
+        // A widget left out comes at the end; a second place and a number
+        // without a widget are dropped; other braces are text.
+        assert_eq!(
+            pieces("a {1} b", 2),
+            [text("a"), Slot(1), text("b"), Slot(0)]
+        );
+        assert_eq!(pieces("{0} {0} {5} {x}", 1), [Slot(0), text("{x}")]);
+        assert_eq!(pieces("", 1), [Slot(0)]);
     }
 
     #[test]

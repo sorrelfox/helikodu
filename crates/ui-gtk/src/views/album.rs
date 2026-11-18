@@ -21,7 +21,7 @@ use crate::backend::{
     AlbumDetail, AlbumKey, Backend, MediaKind, PlayerRequest, TrackFacts, TrackKey, TrackRow,
 };
 use crate::format;
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 use crate::models::CoverCache;
 use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
@@ -889,13 +889,13 @@ fn track_entries(
     }
     match (track.disc.filter(|_| several_discs), track.number) {
         (Some(disc), Some(number)) => add(
-            tr("Track"),
+            trc("track number", "Track"),
             fill(
                 &tr("Disc {}, track {}"),
                 &[&disc.to_string(), &number.to_string()],
             ),
         ),
-        (_, Some(number)) => add(tr("Track"), number.to_string()),
+        (_, Some(number)) => add(trc("track number", "Track"), number.to_string()),
         _ => {}
     }
     if let Some(duration) = track.duration {

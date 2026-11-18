@@ -26,7 +26,7 @@ use gtk::{gdk, gio, glib};
 
 use crate::backend::{Backend, PlayerRequest, PlaylistKey, PlaylistRow, TrackKey, TrackRow};
 use crate::format;
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 use crate::models::{CoverCache, TrackItem};
 use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Origin, Target};
@@ -538,7 +538,8 @@ impl PlaylistView {
         if let Some(l) = length.downcast_ref::<gtk::Label>() {
             l.set_size_request(if grouped { 64 } else { 48 }, -1);
             if row.missing {
-                l.set_text(&tr("Missing"));
+                // Translators: in place of the length of a track whose file is missing.
+                l.set_text(&trc("track", "Missing"));
             } else {
                 l.set_text(&row.duration.map(format::duration).unwrap_or_default());
             }

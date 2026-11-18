@@ -26,7 +26,7 @@ use crate::backend::{
     AlbumKey, ArtistKey, BackendError, LibrarySource, PinKey, PlaylistKey, PlaylistRow,
     PlaylistType, Query,
 };
-use crate::i18n::{fill, ntr, tr};
+use crate::i18n::{fill, ntr, tr, trc};
 
 /// The rules a new smart playlist starts with: what came in lately.
 const NEW_RULES: &str = "added<1m sort:added desc";
@@ -370,10 +370,16 @@ impl MainWindow {
             match result {
                 Ok(()) => {
                     window.load_pins();
-                    let text = if on {
-                        tr("Pinned to the sidebar")
-                    } else {
-                        tr("Unpinned")
+                    let text = match (key, on) {
+                        // Translators: a short message after pinning or
+                        // unpinning an album, an artist or a playlist (the
+                        // context says which).
+                        (PinKey::Album(_), true) => trc("album", "Pinned to the sidebar"),
+                        (PinKey::Artist(_), true) => trc("artist", "Pinned to the sidebar"),
+                        (PinKey::Playlist(_), true) => trc("playlist", "Pinned to the sidebar"),
+                        (PinKey::Album(_), false) => trc("album", "Unpinned"),
+                        (PinKey::Artist(_), false) => trc("artist", "Unpinned"),
+                        (PinKey::Playlist(_), false) => trc("playlist", "Unpinned"),
                     };
                     let undo = window.downgrade();
                     window.toast_undo(&text, move || {
@@ -445,11 +451,15 @@ impl MainWindow {
             window.playlists_changed(None);
             match result {
                 Ok(()) => {
-                    let name = folder
-                        .and_then(|f| window.playlist_row(f))
-                        .map_or_else(|| tr("the top level"), |f| f.name);
+                    let text = match folder.and_then(|f| window.playlist_row(f)) {
+                        // Translators: a playlist was moved into a folder; {}
+                        // is the folder's name.
+                        Some(f) => fill(&tr("Moved to {}"), &[&f.name]),
+                        // Translators: a playlist was moved out of its folders.
+                        None => tr("Moved to the top level"),
+                    };
                     let undo = window.downgrade();
-                    window.toast_undo(&fill(&tr("Moved to {}"), &[&name]), move || {
+                    window.toast_undo(&text, move || {
                         if let Some(window) = undo.upgrade() {
                             window.move_playlist_to(key, before);
                         }

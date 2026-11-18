@@ -422,12 +422,15 @@ impl Sync {
                 );
                 if let Some(summary) = job.and_then(|j| j.finished.clone()) {
                     text = fill(
-                        &tr("Synced: {} · {}"),
+                        &ntr(
+                            // Translators: after a sync: {0} is the number of
+                            // files written, {1} their size ("1.2 GB").
+                            "Synced: {} file · {}",
+                            "Synced: {} files · {}",
+                            summary.written,
+                        ),
                         &[
-                            &fill(
-                                &ntr("{} file", "{} files", summary.written),
-                                &[&format::count(summary.written)],
-                            ),
+                            &format::count(summary.written),
                             &format::size(summary.bytes),
                         ],
                     );

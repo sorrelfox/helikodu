@@ -81,7 +81,7 @@ The tarball holds the files Git tracks, plus untracked files that are not ignore
 
 Translations come in as pull requests (see [po/README.md](../../po/README.md)). Before a release the user-visible strings are frozen, so that translators work on text that no longer changes.
 
-1. **Sources complete.** `cargo xtask check-potfiles` (also part of `cargo xtask ci`) checks that `po/POTFILES.in` lists exactly the files with translatable strings: every Rust file that calls `tr(` or `ntr(` and every GtkBuilder file with `translatable="yes"`, plus the desktop entry and the metainfo. Add a new file there in the change that adds its first string.
+1. **Sources complete.** `cargo xtask check-potfiles` (also part of `cargo xtask ci`) checks that `po/POTFILES.in` lists exactly the files with translatable strings: every Rust file that calls `tr(`, `ntr(`, `trc(` or `ntrc(` and every GtkBuilder file with `translatable="yes"`, plus the desktop entry and the metainfo. Add a new file there in the change that adds its first string. It also fails on a call of these helpers whose messages are not string literals (such as `tr(name)` or `tr(match …)`), because xgettext extracts literals only: pass each text to the helper as a literal, and use `trc(context, text)` for an English text that means two different things.
 2. **Template.** Regenerate `po/helikodu.pot` and commit it:
 
    ```sh

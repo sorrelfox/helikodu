@@ -60,6 +60,31 @@ pub(crate) fn label(text: &str, classes: &[&str]) -> gtk::Label {
     label
 }
 
+/// Fills `line` with a translated sentence that holds widgets: the texts of
+/// `pattern` become labels with `classes`, and each placeholder the widget
+/// of `widgets` it stands for, in the order the translation puts them (see
+/// [`crate::i18n::pieces`]). Returns the labels, which can name the widgets
+/// for assistive technology.
+pub(crate) fn sentence(
+    line: &gtk::Box,
+    pattern: &str,
+    widgets: &[&gtk::Widget],
+    classes: &[&str],
+) -> Vec<gtk::Label> {
+    let mut labels = Vec::new();
+    for piece in crate::i18n::pieces(pattern, widgets.len()) {
+        match piece {
+            crate::i18n::Piece::Text(text) => {
+                let words = label(&text, classes);
+                line.append(&words);
+                labels.push(words);
+            }
+            crate::i18n::Piece::Slot(i) => line.append(widgets[i]),
+        }
+    }
+    labels
+}
+
 /// Removes every row of `list` and leaves its other children, such as a
 /// context menu open on it (removing that would fail, again and again).
 pub(crate) fn remove_rows(list: &gtk::ListBox) {

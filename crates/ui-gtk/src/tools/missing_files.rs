@@ -265,24 +265,36 @@ impl Missing {
             .iter()
             .filter(|f| found.contains_key(&f.file) && ticked.contains(&f.file))
             .count();
-        let place = match self.folder.borrow().as_ref() {
-            Some(folder) => fill(&tr("found in {}"), &[&tilde(folder)]),
-            None => tr("found in the library folders"),
-        };
+        let not_found_text = fill(
+            &ntr("{} not found", "{} not found", not_found),
+            &[&format::count(not_found)],
+        );
         self.summary.set_text(&if self.looking.get() {
             tr("Looking for the files…")
         } else {
-            fill(
-                &tr("{} {}, matched by size and content · {}"),
-                &[
-                    &format::count(found_count),
-                    &place,
-                    &fill(
-                        &ntr("{} not found", "{} not found", not_found),
-                        &[&format::count(not_found)],
+            match self.folder.borrow().as_ref() {
+                Some(folder) => fill(
+                    &ntr(
+                        // Translators: the summary of the missing files: {0} is a
+                        // number of files, {1} the folder searched, {2} "{} not
+                        // found".
+                        "{} found in {}, matched by size and content · {}",
+                        "{} found in {}, matched by size and content · {}",
+                        found_count,
                     ),
-                ],
-            )
+                    &[&format::count(found_count), &tilde(folder), &not_found_text],
+                ),
+                None => fill(
+                    &ntr(
+                        // Translators: the summary of the missing files: {0} is a
+                        // number of files, {1} "{} not found".
+                        "{} found in the library folders, matched by size and content · {}",
+                        "{} found in the library folders, matched by size and content · {}",
+                        found_count,
+                    ),
+                    &[&format::count(found_count), &not_found_text],
+                ),
+            }
         });
         self.remove.set_label(&fill(
             &ntr(
@@ -562,8 +574,15 @@ impl Missing {
             }
         }
         item.set_accessible_label(&fill(
-            &tr("{}, missing for {}, {}"),
-            &[&title, &age_text, &found_text],
+            &ntr(
+                // Translators: the name a screen reader gives a missing file: {0}
+                // is its title, {1} a number of days, {2} where it was found, or
+                // "Not found".
+                "{}, missing for {} day, {}",
+                "{}, missing for {} days, {}",
+                age as usize,
+            ),
+            &[&title, &format::count(age), &found_text],
         ));
     }
 }

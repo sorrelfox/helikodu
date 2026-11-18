@@ -5,9 +5,15 @@
 # helikodu-pot and helikodu-update-po targets. Every language listed needs its
 # <code>.po file: the setup fails without it. The template marks messages with
 # placeholders `rust-format`, so `msgfmt --check` checks them as Rust format
-# strings (see README.md).
+# strings (see README.md). `trc` and `ntrc` take a message context first.
 i18n.gettext(
   meson.project_name(),
   preset: 'glib',
-  args: ['--from-code=UTF-8', '--keyword=tr', '--keyword=ntr:1,2'],
+  args: [
+    '--from-code=UTF-8',
+    '--keyword=tr',
+    '--keyword=ntr:1,2',
+    '--keyword=trc:1c,2',
+    '--keyword=ntrc:1c,2,3',
+  ],
 )
