@@ -5,9 +5,9 @@
 //!
 //! Writes `helikodu-<version>.tar.xz` into `target/dist/` (or `--out DIR`): the
 //! files Git tracks (plus untracked files that are not ignored, so a tarball can
-//! be tried before a commit), the crates of `Cargo.lock` vendored into
-//! `vendor/` with `cargo vendor`, and a `.cargo/config.toml` that builds from
-//! them, so the tarball builds without network access. Beside it go
+//! be tried before a commit) without the website, the crates of `Cargo.lock`
+//! vendored into `vendor/` with `cargo vendor`, and a `.cargo/config.toml` that
+//! builds from them, so the tarball builds without network access. Beside it go
 //! `helikodu-<version>.tar.xz.sha256` and `release-notes.md`, the changelog
 //! section of the version (or of `[Unreleased]` when there is none yet).
 //!
@@ -192,12 +192,14 @@ fn source_files(root: &Path) -> Result<Vec<PathBuf>> {
 }
 
 /// Whether a path Git lists belongs in the tarball: build folders never do,
-/// even where they are not ignored.
+/// even where they are not ignored, and neither does the website (`docs/site`):
+/// no build uses it, and its screenshots are megabytes that do not compress.
 fn shipped(path: &str) -> bool {
     let parts: Vec<&str> = path.split('/').collect();
     let build_dir = |part: &&str| matches!(*part, "target" | "_build" | "builddir");
     !(parts.first().is_some_and(build_dir)
-        || (parts.first() == Some(&"spikes") && parts.get(2).is_some_and(build_dir)))
+        || (parts.first() == Some(&"spikes") && parts.get(2).is_some_and(build_dir))
+        || parts.starts_with(&["docs", "site"]))
 }
 
 fn copy_entry(from: &Path, to: &Path) -> Result<()> {
@@ -354,5 +356,14 @@ mod tests {
         assert!(!shipped("target/debug/helikodu"));
         assert!(!shipped("spikes/decoding/target/debug/x"));
         assert!(!shipped("_build/build.ninja"));
+    }
+
+    #[test]
+    fn the_website_is_not_shipped() {
+        assert!(!shipped("docs/site/build.py"));
+        assert!(!shipped("docs/site/assets/shots/albums-dark.webp"));
+        assert!(shipped("docs/site.md"));
+        assert!(shipped("docs/user/build-guide.py"));
+        assert!(shipped("crates/ui-gtk/examples/site_shots.rs"));
     }
 }

@@ -4,7 +4,7 @@ Helikodu is published as GitHub Releases. Pushing a version tag (`v0.1.0`) start
 
 | File | What it is |
 |---|---|
-| `helikodu-<version>.tar.xz` | The source tarball, made by `cargo xtask dist`: the files of the tagged commit, every crate of `Cargo.lock` vendored into `vendor/`, and a `.cargo/config.toml` that builds from them, so it builds without network access |
+| `helikodu-<version>.tar.xz` | The source tarball, made by `cargo xtask dist`: the files of the tagged commit (without the website, `docs/site`, which no build uses), every crate of `Cargo.lock` vendored into `vendor/`, and a `.cargo/config.toml` that builds from them, so it builds without network access |
 | `helikodu-<version>-x86_64-linux.tar.xz` | The programs for x86_64, built from that source tarball and installed by Meson for the prefix `/usr/local`: `bin/`, `libexec/helikodu/`, the desktop entry and the AppStream metainfo (both with their translations), the D-Bus service file, the icons, the compiled translations (`share/locale/<code>/LC_MESSAGES/helikodu.mo`, found beside the programs wherever the archive is unpacked; the workflow checks that every language of `po/LINGUAS` is there), the manual pages and the user guide (`share/helikodu/guide/index.html`, opened by Help › User Guide), with an `INSTALL.txt` note |
 | `helikodu-<version>-aarch64-linux.tar.xz` | The same for 64-bit ARM (aarch64), built on GitHub's native arm64 runner |
 | `SHA256SUMS` | The SHA-256 checksums of the three tarballs, for `sha256sum --check` |
@@ -75,7 +75,7 @@ cargo xtask dist --tag v0.1.0      # the same, with the release checks above
 cargo xtask dist --out DIR         # write into DIR instead of target/dist
 ```
 
-The tarball holds the files Git tracks, plus untracked files that are not ignored (so it can be tried before a commit; with `--tag` the tree must be clean). Build folders (`target/`, `spikes/*/target/`, `_build/`) are never included. `release-notes.md` is the version's changelog section, or the `[Unreleased]` section while there is none. The command needs Git, GNU tar and xz, and the crates of `Cargo.lock` in Cargo's cache or a network connection for `cargo vendor`.
+The tarball holds the files Git tracks, plus untracked files that are not ignored (so it can be tried before a commit; with `--tag` the tree must be clean). Build folders (`target/`, `spikes/*/target/`, `_build/`) and the website (`docs/site/`, mostly screenshots) are never included. `release-notes.md` is the version's changelog section, or the `[Unreleased]` section while there is none. The command needs Git, GNU tar and xz, and the crates of `Cargo.lock` in Cargo's cache or a network connection for `cargo vendor`.
 
 ## Translations
 
