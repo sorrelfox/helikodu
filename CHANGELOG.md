@@ -33,6 +33,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Tags can be edited in the Tracks table: F2 edits a cell, for all selected rows at once.
 - The tag editor's Cover tab takes a dropped picture, saves the front cover as a file, and can also put a new cover as `cover.jpg` in the album folder.
 - Ratings can also be written into the files (**Settings → Advanced**, off by default).
+- Album page: a selected track shows its own facts (composer, format, gain, plays, last played, lyrics, copies, size, file and more) below the album's details; **Open folder** then opens the track's folder.
 
 ### Changed
 
@@ -42,6 +43,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - With a colour scheme chosen in Helikodu that differs from the desktop's, text no longer takes the desktop theme's colours: sidebar entries, titles and other labels were light on light (or dark on dark) under themes such as Breeze, mostly while the window did not have the focus.
 - Tags without a field of their own (`MOOD`, `BPM`, `GROUPING`, `LABEL`, `COMMENT` and others) are stored when files are scanned, so `tag:NAME` queries find them, and shuffling by grouping uses the `GROUPING` tag.
+- The album page's **Details** column no longer grows wider than its 260 px when a sentence in it is long: its text wraps. Its width can be dragged at its left border, and is kept for all album and audiobook pages between runs.
 
 ## [0.2.0] - 2026-11-18
 

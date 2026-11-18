@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Composers, years, media kinds, resume positions and chapters over the
-//! service's library.
+//! Composers, years, media kinds, resume positions, chapters and the facts of
+//! one track over the service's library.
 
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use helikodu_model::library::TrackId;
 use helikodu_service::library::{
@@ -13,7 +13,9 @@ use helikodu_service::library::{
     YearSpan, read_file_info,
 };
 
-use super::super::{ArtistRow, BackendError, ChapterRow, MediaKind, TrackKey, YearRange, YearRow};
+use super::super::{
+    ArtistRow, BackendError, ChapterRow, MediaKind, TrackFacts, TrackKey, YearRange, YearRow,
+};
 use super::{artist_row, error, person};
 use crate::i18n::tr;
 
@@ -139,6 +141,50 @@ pub(super) fn chapters(
             length: s.length,
         })
         .collect())
+}
+
+/// What the album page shows about `track` beyond its row. Reads the file for
+/// its loudness tags; a file that cannot be read leaves them out.
+pub(super) fn track_facts(
+    music: &MusicLibrary,
+    track: TrackKey,
+) -> Result<Option<TrackFacts>, BackendError> {
+    let id = TrackId::new(track.0);
+    let Some(stored) = music.track_details(id).map_err(error)? else {
+        return Ok(None);
+    };
+    let info = music.track_info(id).ok().flatten();
+    let stats = info
+        .as_ref()
+        .and_then(|i| i.library.as_ref())
+        .map(|e| &e.stats);
+    Ok(Some(TrackFacts {
+        composers: info
+            .as_ref()
+            .map(|i| i.tags.composers.join(", "))
+            .unwrap_or_default(),
+        last_played: stats.and_then(|s| s.last_played).and_then(date_time),
+        added: date(stored.added_at),
+        file_size: (stored.file_size > 0).then_some(stored.file_size),
+        track_gain_db: info
+            .as_ref()
+            .and_then(|i| i.loudness.as_ref())
+            .and_then(|l| l.track_gain_db),
+        has_lyrics: stored.has_lyrics,
+    }))
+}
+
+fn local(time: SystemTime) -> Option<gtk::glib::DateTime> {
+    let seconds = time.duration_since(SystemTime::UNIX_EPOCH).ok()?.as_secs();
+    gtk::glib::DateTime::from_unix_local(i64::try_from(seconds).ok()?).ok()
+}
+
+fn date(time: SystemTime) -> Option<String> {
+    local(time)?.format("%x").ok().map(|s| s.to_string())
+}
+
+fn date_time(time: SystemTime) -> Option<String> {
+    local(time)?.format("%x %X").ok().map(|s| s.to_string())
 }
 
 /// The title and length of a file outside the library, read from the file.

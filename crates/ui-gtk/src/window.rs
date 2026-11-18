@@ -846,6 +846,17 @@ impl MainWindow {
         self.imp().album.borrow().as_ref()?.selected_title()
     }
 
+    /// What the album page shows about the selected track, line by line.
+    #[doc(hidden)]
+    pub fn album_track_section(&self) -> Vec<String> {
+        self.imp()
+            .album
+            .borrow()
+            .as_ref()
+            .map(AlbumPage::track_section_texts)
+            .unwrap_or_default()
+    }
+
     /// Goes back in the view history.
     #[doc(hidden)]
     pub fn go_back(&self) {

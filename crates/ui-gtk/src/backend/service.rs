@@ -63,8 +63,8 @@ use super::{
     LibrarySource, MediaKind, NowPlaying, OutputInfo, PinKey, PinRow, PlaybackState, PlayerControl,
     PlayerRequest, PlaylistCleanup, PlaylistKey, PlaylistRow, PlaylistType, QueueSnapshot, Repeat,
     SavedSearchKey, SavedSearchRow, SearchResults, SignalState, SmartTrack, ThumbnailState,
-    TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort, UiStateAccess, Update,
-    YearRow,
+    TrackColumn, TrackFacts, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort, UiStateAccess,
+    Update, YearRow,
 };
 use crate::i18n::{fill, tr};
 
@@ -1428,6 +1428,10 @@ impl LibrarySource for ServiceLibrary {
 
     fn chapters(&self, track: TrackKey) -> Result<Vec<ChapterRow>, BackendError> {
         browse::chapters(self.library()?, track)
+    }
+
+    fn track_facts(&self, track: TrackKey) -> Result<Option<TrackFacts>, BackendError> {
+        browse::track_facts(self.library()?, track)
     }
 
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {

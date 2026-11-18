@@ -638,6 +638,151 @@ fn album_tracks_play_on_double_click(app: &gtk::Application) {
     window.destroy();
 }
 
+/// The album page's details column, once a page is shown.
+fn album_details(window: &MainWindow) -> gtk::Widget {
+    descendants(window.upcast_ref())
+        .into_iter()
+        .find(|w| w.has_css_class("hk-details") && w.is_mapped())
+        .expect("the details column")
+}
+
+/// The album page's details column takes the width kept in the window state,
+/// its grip lies across its border and changes the width, and the next window
+/// takes the new width again. Its text wraps within the width.
+fn album_details_width_is_kept(app: &gtk::Application) {
+    let backend = sample::backend(&sample::SampleOptions {
+        albums: 300,
+        playing: None,
+    });
+    let store = backend.ui_state();
+    let mut state = store.load();
+    state.panes.details_width = 340;
+    store.save(&state).unwrap();
+    install_actions(app, &backend);
+    let open = || {
+        let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+        window.set_default_size(1440, 900);
+        window.present();
+        spin(100);
+        window.open_album(AlbumKey(1));
+        spin(300);
+        window
+    };
+    let window = open();
+    let details = album_details(&window);
+    let bounds = details.compute_bounds(&window).unwrap();
+    assert_eq!(bounds.width().round() as i32, 340, "the kept width");
+    for label in descendants(&details)
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Label>().ok())
+        .filter(|l| l.is_mapped() && !l.text().is_empty())
+    {
+        let b = label.compute_bounds(&window).unwrap();
+        assert!(
+            b.x() + b.width() <= bounds.x() + bounds.width() + 0.5,
+            "\"{}\" runs past the column",
+            label.text()
+        );
+    }
+    // The grip lies across the border: a little left of it is the grip.
+    let picked = window
+        .pick(
+            f64::from(bounds.x() - 2.0),
+            f64::from(bounds.y() + 40.0),
+            gtk::PickFlags::DEFAULT,
+        )
+        .expect("a widget at the border");
+    assert!(
+        picked.has_css_class("hk-pane-handle"),
+        "the grip is at the border, not {}",
+        picked.type_()
+    );
+    let drag = picked
+        .observe_controllers()
+        .iter::<glib::Object>()
+        .find_map(|c| c.ok()?.downcast::<gtk::GestureDrag>().ok())
+        .expect("the grip's drag gesture");
+    drag.emit_by_name::<()>("drag-begin", &[&0.0f64, &0.0f64]);
+    drag.emit_by_name::<()>("drag-update", &[&-60.0f64, &0.0f64]);
+    drag.emit_by_name::<()>("drag-end", &[&-60.0f64, &0.0f64]);
+    spin(200);
+    let width = details.compute_bounds(&window).unwrap().width().round() as i32;
+    assert_eq!(width, 400, "dragging left widens the column");
+    assert_eq!(store.load().panes.details_width, 400, "the width is kept");
+    // Dragging far right stops at the minimum.
+    drag.emit_by_name::<()>("drag-begin", &[&0.0f64, &0.0f64]);
+    drag.emit_by_name::<()>("drag-update", &[&900.0f64, &0.0f64]);
+    drag.emit_by_name::<()>("drag-end", &[&900.0f64, &0.0f64]);
+    spin(200);
+    let width = details.compute_bounds(&window).unwrap().width().round() as i32;
+    assert!((220..=230).contains(&width), "the minimum, not {width}");
+    drag.emit_by_name::<()>("drag-begin", &[&0.0f64, &0.0f64]);
+    drag.emit_by_name::<()>("drag-update", &[&-80.0f64, &0.0f64]);
+    drag.emit_by_name::<()>("drag-end", &[&-80.0f64, &0.0f64]);
+    spin(200);
+    let kept = store.load().panes.details_width;
+    window.destroy();
+    spin(100);
+    let window = open();
+    let width = album_details(&window)
+        .compute_bounds(&window)
+        .unwrap()
+        .width()
+        .round() as i32;
+    assert_eq!(
+        u32::try_from(width).unwrap(),
+        kept,
+        "the next window keeps it"
+    );
+    window.destroy();
+}
+
+/// Selecting a track on the album page shows its facts below the album's;
+/// the facts the library looks up arrive after the row's own.
+fn album_details_show_the_selected_track(app: &gtk::Application) {
+    let (window, _) = window(app);
+    window.open_album(AlbumKey(1));
+    spin(300);
+    assert!(window.album_track_section().is_empty(), "no track selected");
+    let list = descendants(window.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::ListBox>().ok())
+        .find(|l| l.has_css_class("hk-tracks") && l.is_mapped())
+        .expect("the album page's track list");
+    let rows: Vec<gtk::ListBoxRow> = (0..)
+        .map_while(|i| list.row_at_index(i))
+        .filter(gtk::ListBoxRow::is_selectable)
+        .collect();
+    list.select_row(rows.first());
+    let first = window.album_selected_track().expect("a selected track");
+    wait_for("the track's facts", 2, || {
+        window
+            .album_track_section()
+            .iter()
+            .any(|l| l.starts_with("Size: "))
+    });
+    let lines = window.album_track_section();
+    assert_eq!(
+        lines.first(),
+        Some(&first),
+        "headed by its title: {lines:?}"
+    );
+    assert!(lines.iter().any(|l| l.starts_with("Plays: ")), "{lines:?}");
+    assert!(lines.iter().any(|l| l.starts_with("File: ")), "{lines:?}");
+    list.select_row(rows.get(1));
+    let second = window.album_selected_track().expect("another track");
+    wait_for("the other track", 2, || {
+        window.album_track_section().first() == Some(&second)
+    });
+    list.unselect_all();
+    spin(50);
+    assert!(
+        window.album_track_section().is_empty(),
+        "the album alone again"
+    );
+    window.destroy();
+}
+
 /// The integrated style decorates the window itself (GTK then asks the
 /// compositor for no title bar); the classic style leaves it to the desktop.
 fn window_styles_ask_for_their_decorations(app: &gtk::Application) {
@@ -809,6 +954,11 @@ const TESTS: &[Test] = &[
     (
         "album_tracks_play_on_double_click",
         album_tracks_play_on_double_click,
+    ),
+    ("album_details_width_is_kept", album_details_width_is_kept),
+    (
+        "album_details_show_the_selected_track",
+        album_details_show_the_selected_track,
     ),
     (
         "window_styles_ask_for_their_decorations",

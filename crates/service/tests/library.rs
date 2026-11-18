@@ -366,6 +366,8 @@ fn tags_written_through_the_library() {
     assert!(report.refresh.is_some(), "the file was read again");
     let details = library.track_details(track).unwrap().unwrap();
     assert_eq!(details.tags.album.as_deref(), Some("New"));
+    assert!(details.file_size > 0, "the file's size as scanned");
+    assert!(!details.has_lyrics);
     // The stamp of the first opening no longer matches: the file is refused.
     let report = library
         .write_tags(

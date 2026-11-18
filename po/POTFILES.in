@@ -18,6 +18,7 @@ crates/ui-gtk/src/widgets/playing_indicator.rs
 crates/ui-gtk/src/widgets/rating_stars.rs
 crates/ui-gtk/src/widgets/waveform_seek_bar.rs
 crates/ui-gtk/src/window/pane_handle.rs
+crates/ui-gtk/src/widgets/side_column.rs
 crates/ui-gtk/src/window/panel.rs
 crates/ui-gtk/src/window.rs
 crates/ui-gtk/src/window/sidebar.rs

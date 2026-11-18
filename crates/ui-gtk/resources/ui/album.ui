@@ -205,9 +205,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
               </object>
             </child>
             <child>
-              <object class="GtkBox">
+              <object class="GtkBox" id="body">
                 <child>
-                  <object class="GtkBox">
+                  <object class="GtkBox" id="track_list">
                     <property name="orientation">vertical</property>
                     <property name="hexpand">True</property>
                     <property name="margin-start">24</property>
@@ -274,9 +274,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
                   </object>
                 </child>
                 <child>
-                  <object class="GtkBox">
+                  <object class="GtkBox" id="details_box">
                     <property name="orientation">vertical</property>
-                    <property name="width-request">260</property>
                     <property name="spacing">12</property>
                     <style><class name="hk-details"/></style>
                     <child>
@@ -323,7 +322,6 @@ SPDX-License-Identifier: GPL-3.0-or-later
                       <object class="GtkLabel" id="kind_text">
                         <property name="xalign">0</property>
                         <property name="wrap">True</property>
-                        <property name="max-width-chars">30</property>
                         <style><class name="hk-t3"/></style>
                       </object>
                     </child>
@@ -349,6 +347,34 @@ SPDX-License-Identifier: GPL-3.0-or-later
                               <class name="hk-btn"/>
                               <class name="small"/>
                             </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="track_section">
+                        <property name="visible">False</property>
+                        <property name="margin-top">12</property>
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">12</property>
+                        <child>
+                          <object class="GtkSeparator">
+                            <style><class name="hk-divider"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="track_heading">
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="wrap-mode">word-char</property>
+                            <property name="margin-top">4</property>
+                            <style><class name="hk-section-label"/></style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkGrid" id="track_details">
+                            <property name="column-spacing">12</property>
+                            <property name="row-spacing">10</property>
                           </object>
                         </child>
                       </object>

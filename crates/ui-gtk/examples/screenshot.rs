@@ -11,8 +11,10 @@
 //! Options: `--out DIR` (default `target/screenshots`), `--size WxH` (default
 //! 1440x900), `--accent amber|blue|green|violet`, `--style integrated|classic`,
 //! `--backdrop` to draw the window as when another window has the focus (themes
-//! colour some text differently then), and `--database PATH` to show a real
-//! library instead of the sample one. With
+//! colour some text differently then), `--details-width N` for the album
+//! page's details column, and `--database PATH` to show a real
+//! library instead of the sample one. The last picture shows the album page
+//! with a track selected. With
 //! a database the player plays its first album to the null output, so nothing
 //! is heard.
 
@@ -44,6 +46,7 @@ struct Options {
     style: WindowStyle,
     database: Option<PathBuf>,
     backdrop: bool,
+    details_width: Option<u32>,
 }
 
 fn options() -> Result<Options, String> {
@@ -55,6 +58,7 @@ fn options() -> Result<Options, String> {
         style: WindowStyle::Integrated,
         database: None,
         backdrop: false,
+        details_width: None,
     };
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -84,6 +88,9 @@ fn options() -> Result<Options, String> {
             }
             "--database" => options.database = Some(PathBuf::from(value()?)),
             "--backdrop" => options.backdrop = true,
+            "--details-width" => {
+                options.details_width = Some(value()?.parse().map_err(|_| "bad width")?);
+            }
             other => return Err(format!("unknown option {other}")),
         }
     }
@@ -117,6 +124,25 @@ fn real_backend(
             inhibit_suspend: false,
         },
     )
+}
+
+/// Selects the track at `index` on the album page shown.
+fn select_track(window: &MainWindow, index: i32) {
+    let mut pending = vec![window.clone().upcast::<gtk::Widget>()];
+    while let Some(widget) = pending.pop() {
+        if let Some(list) = widget.downcast_ref::<gtk::ListBox>()
+            && list.has_css_class("hk-tracks")
+            && list.is_mapped()
+        {
+            list.select_row(list.row_at_index(index).as_ref());
+            return;
+        }
+        let mut child = widget.first_child();
+        while let Some(c) = child {
+            child = c.next_sibling();
+            pending.push(c);
+        }
+    }
 }
 
 fn main() -> ExitCode {
@@ -175,6 +201,12 @@ fn main() -> ExitCode {
                 shuffle: false,
             });
         }
+        if let Some(width) = options.details_width {
+            let store = backend.ui_state();
+            let mut state = store.load();
+            state.panes.details_width = width;
+            let _ = store.save(&state);
+        }
         install_actions(application, &backend);
         let window = MainWindow::new(application, &backend, options.style);
         window.set_default_size(options.width, options.height);
@@ -184,6 +216,7 @@ fn main() -> ExitCode {
             ("main-light", SchemeChoice::Light, false),
             ("album-light", SchemeChoice::Light, true),
             ("album-dark", SchemeChoice::Dark, true),
+            ("album-track-dark", SchemeChoice::Dark, true),
         ];
         let out = options.out.clone();
         let prefix = if options.database.is_some() {
@@ -198,6 +231,10 @@ fn main() -> ExitCode {
                 set_choice(scheme, options.accent);
                 if album && let Some(key) = first {
                     window.open_album(key);
+                }
+                if name == "album-track-dark" {
+                    glib::timeout_future(Duration::from_millis(300)).await;
+                    select_track(&window, 3);
                 }
                 glib::timeout_future(Duration::from_millis(1200)).await;
                 if options.backdrop {

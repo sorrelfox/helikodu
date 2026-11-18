@@ -18,7 +18,7 @@ use gtk::subclass::prelude::*;
 use gtk::{CompositeTemplate, gdk, gio, glib};
 
 use crate::backend::{
-    AlbumDetail, AlbumKey, Backend, MediaKind, PlayerRequest, TrackKey, TrackRow,
+    AlbumDetail, AlbumKey, Backend, MediaKind, PlayerRequest, TrackFacts, TrackKey, TrackRow,
 };
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
@@ -26,8 +26,15 @@ use crate::models::CoverCache;
 use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
+use crate::widgets::side_column::SideColumn;
 use crate::widgets::{CoverArt, PlayingIndicator, RatingStars, TitleLine, label};
 use crate::window::MainWindow;
+
+/// The details column's default width and its limits.
+const DETAILS_WIDTH: (i32, (i32, i32)) = (260, (220, 520));
+/// How wide dragging the details column leaves the track table at least, so
+/// its columns stay readable.
+const TRACKS_MIN_WIDTH: i32 = 440;
 
 mod imp {
     use super::*;
@@ -81,6 +88,21 @@ mod imp {
         pub(super) tracks: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub(super) details: TemplateChild<gtk::Grid>,
+        #[template_child]
+        pub(super) track_section: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub(super) track_heading: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) track_details: TemplateChild<gtk::Grid>,
+        /// Counts the selections, so that facts loaded for an earlier one are
+        /// dropped.
+        pub(super) track_generation: Cell<u64>,
+        #[template_child]
+        pub(super) body: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub(super) details_box: TemplateChild<gtk::Box>,
+        /// The details column, whose width the user drags.
+        pub(super) details_column: RefCell<Option<SideColumn>>,
         pub(super) backend: RefCell<Option<Backend>>,
         pub(super) album: Cell<Option<AlbumKey>>,
         pub(super) detail: RefCell<Option<AlbumDetail>>,
@@ -113,6 +135,13 @@ mod imp {
             self.cover.set_shape(184, 8.0);
             self.cover.add_css_class("hero");
             let obj = self.obj();
+            // The details column keeps the width chosen for it; its text wraps.
+            let details_box = self.details_box.get();
+            self.body.remove(&details_box);
+            let column = SideColumn::new(&details_box, DETAILS_WIDTH.0, DETAILS_WIDTH.1);
+            column.set_beside_min(TRACKS_MIN_WIDTH);
+            self.body.append(&column);
+            self.details_column.replace(Some(column));
             for (button, shuffle) in [(self.play.get(), false), (self.shuffle.get(), true)] {
                 let weak = obj.downgrade();
                 button.connect_clicked(move |_| {
@@ -140,6 +169,12 @@ mod imp {
                         .and_then(|i| book::KINDS.get(i))
                 {
                     page.set_kind(*kind);
+                }
+            });
+            let weak = obj.downgrade();
+            self.tracks.connect_selected_rows_changed(move |_| {
+                if let Some(page) = weak.upgrade() {
+                    page.show_selected();
                 }
             });
             let weak = obj.downgrade();
@@ -247,6 +282,7 @@ impl AlbumPage {
         self.imp().backend.replace(Some(backend.clone()));
         self.imp().covers.replace(Some(covers.clone()));
         self.install_actions();
+        self.restore_details_width(backend);
         let weak = self.downgrade();
         playback.connect(move |view, change| {
             if let Some(page) = weak.upgrade()
@@ -256,6 +292,25 @@ impl AlbumPage {
                 if page.imp().playing.replace(key) != key {
                     page.show_tracks();
                 }
+            }
+        });
+    }
+
+    /// Gives the details column the width chosen in the last run, and keeps
+    /// the width the user drags to for the next. One width serves every album
+    /// and audiobook.
+    fn restore_details_width(&self, backend: &Backend) {
+        let Some(column) = self.imp().details_column.borrow().clone() else {
+            return;
+        };
+        let store = backend.ui_state();
+        let width = store.load().clamped().panes.details_width;
+        column.set_chosen_width(i32::try_from(width).unwrap_or(DETAILS_WIDTH.0));
+        column.connect_changed(move |width| {
+            let mut state = store.load();
+            state.panes.details_width = u32::try_from(width).unwrap_or(260);
+            if let Err(error) = store.save(&state) {
+                eprintln!("helikodu: cannot save the window state: {error}");
             }
         });
     }
@@ -291,12 +346,14 @@ impl AlbumPage {
                     "edit-tags" => window.open_tag_editor(tracks),
                     "restart" => page.start_again(&backend, album, tracks),
                     _ => {
-                        let path = page
-                            .imp()
-                            .detail
-                            .borrow()
-                            .as_ref()
-                            .and_then(|d| d.tracks().find_map(|t| t.path.clone()));
+                        // The selected track's folder, or else the album's.
+                        let path = page.selected_track().and_then(|t| t.path).or_else(|| {
+                            page.imp()
+                                .detail
+                                .borrow()
+                                .as_ref()
+                                .and_then(|d| d.tracks().find_map(|t| t.path.clone()))
+                        });
                         actions::open_folder(&window, path);
                     }
                 }
@@ -424,9 +481,6 @@ impl AlbumPage {
             badge.add_css_class("hk-badge");
             imp.badges.append(&badge);
         }
-        while let Some(child) = imp.details.first_child() {
-            imp.details.remove(&child);
-        }
         let mut entries: Vec<(String, String, bool)> = Vec::new();
         if is_book {
             entries.push((tr("Author"), row.artist.clone(), false));
@@ -460,22 +514,7 @@ impl AlbumPage {
             (_, Some(folder)) => entries.push((tr("Folder"), folder.clone(), true)),
             _ => {}
         }
-        for (i, (name, value, mono)) in entries.into_iter().enumerate() {
-            let name = label(&name, &["hk-t3"]);
-            name.set_size_request(72, -1);
-            name.set_valign(gtk::Align::Start);
-            let value_label = gtk::Label::new(Some(&value));
-            value_label.set_xalign(0.0);
-            value_label.set_wrap(true);
-            value_label.set_wrap_mode(gtk::pango::WrapMode::WordChar);
-            value_label.set_width_chars(20);
-            value_label.set_max_width_chars(20);
-            value_label.set_selectable(mono);
-            value_label.add_css_class(if mono { "hk-mono-meta" } else { "hk-medium" });
-            let row = i32::try_from(i).unwrap_or(0);
-            imp.details.attach(&name, 0, row, 1, 1);
-            imp.details.attach(&value_label, 1, row, 1, 1);
-        }
+        fill_grid(&imp.details, entries);
         imp.detail.replace(Some(detail));
         self.show_tracks();
         self.apply_select();
@@ -521,6 +560,11 @@ impl AlbumPage {
 
     /// The title of the selected track.
     pub(crate) fn selected_title(&self) -> Option<String> {
+        self.selected_track().map(|t| t.title)
+    }
+
+    /// The selected track.
+    fn selected_track(&self) -> Option<TrackRow> {
         let imp = self.imp();
         let index = imp
             .tracks
@@ -529,7 +573,76 @@ impl AlbumPage {
             .parse::<usize>()
             .ok()?;
         let detail = imp.detail.borrow();
-        Some(detail.as_ref()?.tracks().nth(index)?.title.clone())
+        detail.as_ref()?.tracks().nth(index).cloned()
+    }
+
+    /// Shows the selected track below the album's details: what its row
+    /// knows at once, the rest when the library has answered.
+    fn show_selected(&self) {
+        let imp = self.imp();
+        let generation = imp.track_generation.get() + 1;
+        imp.track_generation.set(generation);
+        let Some(track) = self.selected_track() else {
+            imp.track_section.set_visible(false);
+            return;
+        };
+        self.show_track(&track, None);
+        let Some(backend) = imp.backend.borrow().clone() else {
+            return;
+        };
+        let key = track.key;
+        let weak = self.downgrade();
+        glib::spawn_future_local(async move {
+            let facts = backend.query(move |library| library.track_facts(key)).await;
+            let Some(page) = weak.upgrade() else { return };
+            if page.imp().track_generation.get() == generation
+                && let Ok(Some(facts)) = facts
+            {
+                page.show_track(&track, Some(&facts));
+            }
+        });
+    }
+
+    fn show_track(&self, track: &TrackRow, facts: Option<&TrackFacts>) {
+        let imp = self.imp();
+        imp.track_heading.set_text(&track.title);
+        let several_discs = imp
+            .detail
+            .borrow()
+            .as_ref()
+            .is_some_and(|d| d.discs.len() > 1);
+        let album_artist = imp
+            .detail
+            .borrow()
+            .as_ref()
+            .map(|d| d.row.artist.clone())
+            .unwrap_or_default();
+        fill_grid(
+            &imp.track_details,
+            track_entries(track, facts, &album_artist, several_discs),
+        );
+        imp.track_section.set_visible(true);
+    }
+
+    /// The text of the selected track's section, line by line: "Name: value".
+    pub(crate) fn track_section_texts(&self) -> Vec<String> {
+        let imp = self.imp();
+        if !imp.track_section.is_visible() {
+            return Vec::new();
+        }
+        let mut texts = vec![imp.track_heading.text().to_string()];
+        let mut child = imp.track_details.first_child();
+        while let Some(name) = child {
+            let value = name.next_sibling();
+            child = value.as_ref().and_then(gtk::Widget::next_sibling);
+            if let (Some(name), Some(value)) = (
+                name.downcast_ref::<gtk::Label>(),
+                value.and_downcast::<gtk::Label>(),
+            ) {
+                texts.push(format!("{}: {}", name.text(), value.text()));
+            }
+        }
+        texts
     }
 
     fn show_tracks(&self) {
@@ -734,4 +847,105 @@ impl AlbumPage {
         let target = self.row_target(y)?;
         actions::popup(&tracks, target, Some((240.0, y)))
     }
+}
+
+/// Fills `grid` with a name and a value on each line; a value marked as a path
+/// is set in the monospace face and can be selected.
+fn fill_grid(grid: &gtk::Grid, entries: Vec<(String, String, bool)>) {
+    while let Some(child) = grid.first_child() {
+        grid.remove(&child);
+    }
+    for (i, (name, value, mono)) in entries.into_iter().enumerate() {
+        let name = label(&name, &["hk-t3"]);
+        name.set_size_request(72, -1);
+        name.set_valign(gtk::Align::Start);
+        let value_label = gtk::Label::new(Some(&value));
+        value_label.set_xalign(0.0);
+        value_label.set_wrap(true);
+        value_label.set_wrap_mode(gtk::pango::WrapMode::WordChar);
+        value_label.set_hexpand(true);
+        value_label.set_selectable(mono);
+        value_label.add_css_class(if mono { "hk-mono-meta" } else { "hk-medium" });
+        let row = i32::try_from(i).unwrap_or(0);
+        grid.attach(&name, 0, row, 1, 1);
+        grid.attach(&value_label, 1, row, 1, 1);
+    }
+}
+
+/// The lines of the selected track's section: its own facts, each only when
+/// known; the artists only when they are not the album's.
+fn track_entries(
+    track: &TrackRow,
+    facts: Option<&TrackFacts>,
+    album_artist: &str,
+    several_discs: bool,
+) -> Vec<(String, String, bool)> {
+    let mut entries: Vec<(String, String, bool)> = Vec::new();
+    let mut add = |name: String, value: String| entries.push((name, value, false));
+    if !track.artist.is_empty() && track.artist != album_artist {
+        add(tr("Artist"), track.artist.clone());
+    }
+    if let Some(composers) = facts.map(|f| &f.composers).filter(|c| !c.is_empty()) {
+        add(tr("Composer"), composers.clone());
+    }
+    match (track.disc.filter(|_| several_discs), track.number) {
+        (Some(disc), Some(number)) => add(
+            tr("Track"),
+            fill(
+                &tr("Disc {}, track {}"),
+                &[&disc.to_string(), &number.to_string()],
+            ),
+        ),
+        (_, Some(number)) => add(tr("Track"), number.to_string()),
+        _ => {}
+    }
+    if let Some(duration) = track.duration {
+        add(tr("Length"), format::duration(duration));
+    }
+    let mut format = format::badges(&track.format, None);
+    if let Some(kbps) = track.format.bitrate_kbps {
+        format.push(fill(&tr("{} kbit/s"), &[&kbps.to_string()]));
+    }
+    if !format.is_empty() {
+        add(tr("Format"), format.join(" \u{b7} "));
+    }
+    if let Some(gain) = facts.and_then(|f| f.track_gain_db) {
+        let sign = if gain < 0.0 { "\u{2212}" } else { "+" };
+        add(
+            tr("Gain"),
+            fill(&tr("{} dB"), &[&format!("{sign}{:.1}", gain.abs())]),
+        );
+    }
+    add(tr("Plays"), format::count(track.plays));
+    if let Some(last) = facts.and_then(|f| f.last_played.clone()) {
+        add(tr("Last played"), last);
+    }
+    if let Some(stars) = track.rating.filter(|s| *s > 0) {
+        add(
+            tr("Rating"),
+            fill(
+                &ntr("{} star", "{} stars", usize::from(stars)),
+                &[&stars.to_string()],
+            ),
+        );
+    }
+    if let Some(added) = facts.and_then(|f| f.added.clone()) {
+        add(tr("Added"), added);
+    }
+    if facts.is_some_and(|f| f.has_lyrics) {
+        add(tr("Lyrics"), tr("Yes"));
+    }
+    if track.copies > 0 {
+        add(
+            tr("Copies"),
+            crate::widgets::copies_badge::describe(track.copies),
+        );
+    }
+    if let Some(size) = facts.and_then(|f| f.file_size) {
+        add(tr("Size"), format::size(size));
+    }
+    if let Some(path) = &track.path {
+        entries.push((tr("File"), path.display().to_string(), true));
+    }
+    entries
 }

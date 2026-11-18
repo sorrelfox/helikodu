@@ -879,6 +879,30 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
         let _ = track;
         Ok(Vec::new())
     }
+    /// What the album page shows about `track` beyond its row; `None` when it
+    /// is not known.
+    fn track_facts(&self, track: TrackKey) -> Result<Option<TrackFacts>, BackendError> {
+        let _ = track;
+        Ok(None)
+    }
+}
+
+/// What the album page's details column shows about the selected track beyond
+/// what its row holds.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct TrackFacts {
+    /// Its composers, joined with `, `.
+    pub composers: String,
+    /// When it was last played, as a date and time.
+    pub last_played: Option<String>,
+    /// When it came into the library, as a date.
+    pub added: Option<String>,
+    /// The size of its file in bytes.
+    pub file_size: Option<u64>,
+    /// The track gain of its file's ReplayGain or R128 tags, in dB.
+    pub track_gain_db: Option<f64>,
+    /// Whether its file carries lyrics.
+    pub has_lyrics: bool,
 }
 
 /// Where a listen in the play history came from.

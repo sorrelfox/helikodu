@@ -16,6 +16,7 @@ pub(crate) mod lyric_lines;
 pub(crate) mod now_links;
 pub(crate) mod playing_indicator;
 pub(crate) mod rating_stars;
+pub(crate) mod side_column;
 pub(crate) mod signal_lamp;
 pub(crate) mod signal_path_chain;
 pub(crate) mod signal_path_list;

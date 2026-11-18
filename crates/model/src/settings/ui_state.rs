@@ -43,6 +43,7 @@ impl UiState {
             panes: PaneState {
                 sidebar_width: clamp(self.panes.sidebar_width, PaneState::SIDEBAR_WIDTH),
                 queue_width: clamp(self.panes.queue_width, PaneState::QUEUE_WIDTH),
+                details_width: clamp(self.panes.details_width, PaneState::DETAILS_WIDTH),
                 ..self.panes
             },
             ..self
@@ -90,7 +91,8 @@ impl Default for WindowState {
     }
 }
 
-/// The resizable side panes: the sidebar and the queue panel. The defaults are the
+/// The resizable side panes: the sidebar, the queue panel and the album page's
+/// details column. The defaults are the
 /// widths of the design; each has a minimum and a maximum so that the layout never
 /// breaks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -104,6 +106,8 @@ pub struct PaneState {
     pub queue_width: u32,
     /// Whether the queue panel is shown.
     pub queue_visible: bool,
+    /// The width of the details column on album and audiobook pages.
+    pub details_width: u32,
 }
 
 impl PaneState {
@@ -111,6 +115,8 @@ impl PaneState {
     pub const SIDEBAR_WIDTH: RangeInclusive<u32> = 180..=360;
     /// The allowed queue panel widths.
     pub const QUEUE_WIDTH: RangeInclusive<u32> = 260..=520;
+    /// The allowed details column widths.
+    pub const DETAILS_WIDTH: RangeInclusive<u32> = 220..=520;
 }
 
 impl Default for PaneState {
@@ -120,6 +126,7 @@ impl Default for PaneState {
             sidebar_visible: true,
             queue_width: 320,
             queue_visible: true,
+            details_width: 260,
         }
     }
 }
@@ -137,6 +144,7 @@ mod tests {
         let state = UiState::default();
         assert_eq!(state.panes.sidebar_width, 228);
         assert_eq!(state.panes.queue_width, 320);
+        assert_eq!(state.panes.details_width, 260);
         assert_eq!(state.clone().clamped(), state);
         let text = toml::to_string(&state).unwrap();
         assert_eq!(toml::from_str::<UiState>(&text).unwrap(), state);
@@ -145,11 +153,14 @@ mod tests {
     #[test]
     fn widths_are_clamped() {
         let state: UiState =
-            toml::from_str("[panes]\nsidebar_width = 5\nqueue_width = 9000\n[window]\nwidth = 1\n")
+            toml::from_str(
+            "[panes]\nsidebar_width = 5\nqueue_width = 9000\ndetails_width = 1\n[window]\nwidth = 1\n",
+        )
                 .unwrap();
         let state = state.clamped();
         assert_eq!(state.panes.sidebar_width, 180);
         assert_eq!(state.panes.queue_width, 520);
+        assert_eq!(state.panes.details_width, 220);
         assert_eq!(state.window.width, 360);
         assert!(state.panes.queue_visible);
     }

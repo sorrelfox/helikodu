@@ -1018,6 +1018,29 @@ impl LibrarySource for SampleLibrary {
             .sum())
     }
 
+    fn track_facts(&self, track: TrackKey) -> Result<Option<super::TrackFacts>, BackendError> {
+        let Some(row) = self.track(track) else {
+            return Ok(None);
+        };
+        let date = |time: std::time::SystemTime, format: &str| {
+            let seconds = time.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs();
+            let time = gtk::glib::DateTime::from_unix_local(i64::try_from(seconds).ok()?).ok()?;
+            time.format(format).ok().map(|s| s.to_string())
+        };
+        let seconds = row.duration.map_or(0, |d| d.as_secs());
+        let kbps = u64::from(row.format.bitrate_kbps.unwrap_or(900));
+        Ok(Some(super::TrackFacts {
+            composers: String::new(),
+            last_played: (row.plays > 0)
+                .then(|| date(sample_now() - Duration::from_secs(track.0 * 7_919), "%x %X"))
+                .flatten(),
+            added: row.added.and_then(|t| date(t, "%x")),
+            file_size: Some(seconds * kbps * 125),
+            track_gain_db: Some(-2.0 - (track.0 % 7) as f64 * 0.9),
+            has_lyrics: track.0.is_multiple_of(3),
+        }))
+    }
+
     fn set_album_kind(&self, album: AlbumKey, kind: super::MediaKind) -> Result<(), BackendError> {
         self.set_kind(album, kind);
         Ok(())
