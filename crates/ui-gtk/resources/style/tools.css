@@ -56,3 +56,24 @@ row:selected .hk-dup-file.hk-marked label, row.hk-dup-file.hk-marked:selected la
 .hk-trash-list > label { min-height: 22px; }
 .hk-confirm .hk-trash-files + .hk-dialog-buttons { margin-top: 18px; }
 .hk-trash-results > box { min-height: 22px; }
+
+/* ---- Convert, Sync and export, Cover manager ---------------------------- */
+
+.hk-tool-options { padding: 14px 24px 16px; }
+.hk-tool-options .hk-field-label { margin-left: 1px; }
+progressbar.hk-tool-meter > trough { min-height: 4px; border: none; border-radius: 2px; background-color: var(--hk-line2); background-image: none; box-shadow: none; }
+progressbar.hk-tool-meter > trough > progress { min-height: 4px; min-width: 0; margin: 0; border: none; border-radius: 2px; background-color: var(--hk-accent-fill); background-image: none; box-shadow: none; }
+.hk-tool-footer progressbar.hk-tool-meter { margin-right: 16px; }
+.hk-convert-row { min-height: 32px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-sync-row { min-height: 30px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-cover-row { min-height: 48px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-cover-row.hk-ticked { background-color: var(--hk-sel); }
+.hk-cover-none { border-radius: 4px; background-color: var(--hk-field); border: 1px solid var(--hk-line); color: var(--hk-t3); }
+list.hk-sync-sources { border: 1px solid var(--hk-line); border-radius: 8px; background-color: var(--hk-win); }
+list.hk-sync-sources > row { min-height: 0; padding: 0; border-bottom: 1px solid var(--hk-line); background: none; }
+list.hk-sync-sources > row:last-child { border-bottom: none; }
+.hk-sync-source { min-height: 30px; padding: 0 12px; }
+.hk-sync-source image { color: var(--hk-t2); }
+.hk-sync-figures { padding: 14px 24px 12px; border-top: 1px solid var(--hk-line); }
+.hk-sync-figure { font-size: 20px; font-weight: 600; }
+.hk-sync-caption { font-size: 12px; }

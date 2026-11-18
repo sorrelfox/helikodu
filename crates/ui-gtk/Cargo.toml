@@ -38,6 +38,12 @@ harness = false
 name = "dialogs"
 
 [[test]]
+# Convert, Sync and export and the cover manager against the sample backend; GTK
+# needs its own main function.
+name = "tools"
+harness = false
+
+[[test]]
 # The library views against the sample backend; GTK needs its own main function.
 name = "views"
 harness = false

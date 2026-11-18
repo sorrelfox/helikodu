@@ -500,6 +500,9 @@ pub trait Services: fmt::Debug + Send + Sync {
     /// How many groups each measure of the duplicate finder finds. Blocking.
     fn duplicate_counts(&self) -> Result<DuplicateCounts, BackendError>;
 
+    /// The converter, folder sync and the cover manager.
+    fn export(&self) -> Arc<dyn super::export::ExportServices>;
+
     /// The playback flags of a library track (the tag editor's Playback
     /// group); `None` when the track is not in the library. Blocking.
     fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {

@@ -52,6 +52,13 @@ pub enum Error {
         codec: String,
     },
 
+    /// This FFmpeg build has no encoder for the format.
+    #[error("no encoder for {format}")]
+    EncoderNotFound {
+        /// The format's usual name.
+        format: String,
+    },
+
     /// The decoder produced samples in a format the bridge does not convert.
     #[error("the decoder produced an unsupported sample format ({format})")]
     UnsupportedSampleFormat {

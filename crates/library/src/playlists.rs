@@ -70,6 +70,12 @@ impl PlaylistId {
     pub fn get(self) -> i64 {
         self.0
     }
+
+    /// The playlist numbered `id`, as [`get`](Self::get) gives it, for a front end
+    /// that keeps it as a plain number. A number whose row has gone finds nothing.
+    pub fn from_raw(id: i64) -> Self {
+        Self(id)
+    }
 }
 
 impl fmt::Display for PlaylistId {

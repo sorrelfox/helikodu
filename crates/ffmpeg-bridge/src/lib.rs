@@ -28,6 +28,7 @@
 
 mod decode;
 mod demux;
+mod encode;
 mod error;
 mod ffi;
 mod io;
@@ -36,6 +37,10 @@ mod runtime;
 
 pub use decode::{AudioDecoder, PcmBuffer, PcmSamples};
 pub use demux::{Disposition, MediaFile, StreamChoice, StreamInfo, StreamKind};
+pub use encode::{
+    AudioEncoder, EncodeFormat, EncodeQuality, EncoderAvailability, EncoderConfig,
+    encoder_availability, nearest_rate, supported_sample_rates,
+};
 pub use error::{AvError, AvErrorKind, Error};
 pub use metadata::{AttachedPicture, Chapter, PictureLimits, PictureSource, Tags};
 pub use runtime::{LogLevel, ffmpeg_version, set_log_level};

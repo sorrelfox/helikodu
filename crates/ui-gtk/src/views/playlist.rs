@@ -565,15 +565,42 @@ impl PlaylistView {
                 }
             });
         }
-        let weak = Rc::downgrade(self);
+        // Export offers the playlist file and a copy of its files in a folder.
+        let exports = gio::SimpleActionGroup::new();
+        for (name, to_folder) in [("file", false), ("folder", true)] {
+            let action = gio::SimpleAction::new(name, None);
+            let weak = Rc::downgrade(self);
+            action.connect_activate(move |_, _| {
+                if let (Some(view), Some(window)) =
+                    (weak.upgrade(), weak.upgrade().and_then(|v| v.window()))
+                    && let Some(key) = view.key.get()
+                {
+                    if to_folder {
+                        crate::tools::sync_export::open_with(&window, Some(key));
+                    } else {
+                        window.export_playlist(key);
+                    }
+                }
+            });
+            exports.add_action(&action);
+        }
+        export.insert_action_group("export", Some(&exports));
+        let menu = gio::Menu::new();
+        menu.append(Some(&tr("Save as a playlist file…")), Some("export.file"));
+        menu.append(
+            Some(&tr("Copy the files to a folder…")),
+            Some("export.folder"),
+        );
+        let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        popover.set_parent(export);
+        popover.set_has_arrow(false);
+        let shown = popover.downgrade();
         export.connect_clicked(move |_| {
-            if let (Some(view), Some(window)) =
-                (weak.upgrade(), weak.upgrade().and_then(|v| v.window()))
-                && let Some(key) = view.key.get()
-            {
-                window.export_playlist(key);
+            if let Some(popover) = shown.upgrade() {
+                popover.popup();
             }
         });
+        export.connect_destroy(move |_| popover.unparent());
         let group = gio::SimpleActionGroup::new();
         for name in ["rename", "delete"] {
             let action = gio::SimpleAction::new(name, None);

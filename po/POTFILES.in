@@ -102,3 +102,8 @@ crates/ui-gtk/src/views/statistics.rs
 crates/ui-gtk/src/window/narrow.rs
 crates/ui-gtk/src/deck/compact.rs
 crates/ui-gtk/src/backend/service/insights.rs
+crates/ui-gtk/src/tools.rs
+crates/ui-gtk/src/tools/converter.rs
+crates/ui-gtk/src/tools/sync_export.rs
+crates/ui-gtk/src/tools/cover_manager.rs
+crates/ui-gtk/src/backend/service/export.rs

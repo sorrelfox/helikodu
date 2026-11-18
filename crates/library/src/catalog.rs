@@ -15,7 +15,7 @@ mod browse;
 pub(crate) mod covers;
 mod fingerprint;
 mod folders;
-mod ids;
+pub(crate) mod ids;
 mod people;
 pub(crate) mod roots;
 mod track_record;

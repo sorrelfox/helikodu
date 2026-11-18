@@ -9,6 +9,7 @@
 #![warn(missing_docs)]
 
 pub mod analysis;
+pub mod convert;
 pub mod decode;
 pub mod dsp;
 pub mod output;

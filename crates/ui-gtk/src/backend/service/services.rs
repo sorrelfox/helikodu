@@ -540,6 +540,12 @@ impl ServiceServices {
 }
 
 impl Services for ServiceServices {
+    fn export(&self) -> Arc<dyn super::super::export::ExportServices> {
+        Arc::new(super::export::ServiceExport {
+            service: self.service.clone(),
+        })
+    }
+
     fn settings(&self) -> Arc<Settings> {
         self.service.settings().get()
     }

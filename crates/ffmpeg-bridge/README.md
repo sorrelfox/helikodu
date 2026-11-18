@@ -1,6 +1,6 @@
 # helikodu-ffmpeg-bridge
 
-A thin safe layer over FFmpeg: custom I/O locked to local files, probing by content, audio stream selection, decoding, seeking, metadata, chapters and attached pictures, and later the encoders used by the converter. This is one of the few crates allowed to contain `unsafe`; every `unsafe` block carries a `SAFETY:` comment.
+A thin safe layer over FFmpeg: custom I/O locked to local files, probing by content, audio stream selection, decoding, seeking, metadata, chapters and attached pictures, and the encoders used by the converter. This is one of the few crates allowed to contain `unsafe`; every `unsafe` block carries a `SAFETY:` comment.
 
 - **May depend on:** `model`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate may contain `unsafe` code. Every `unsafe` block needs a `// SAFETY:` comment that explains why it is sound.
@@ -35,6 +35,12 @@ while let Some(block) = decoder.read()? {
 ### Output format
 
 Samples come out interleaved, in the native byte order, in the format FFmpeg decodes to: 8-, 16- and 32-bit integers stay integers and keep their exact values; floating-point formats become `f32`. A 24-bit source arrives as 32-bit words with the sample in the top 24 bits (`StreamInfo::bits_per_sample` says 24). Channel layouts are converted to the model's WAVE-order `ChannelLayout`; layouts with positions the model does not name have only a channel count.
+
+## Encoding
+
+`AudioEncoder::create(file, &EncoderConfig)` writes one audio file for the converter: `write_f32` / `write_i32` take interleaved PCM in WAVE order, `finish` flushes the encoder, writes the trailer, syncs the file and returns its size. `EncodeFormat` is a fixed list (Opus in Ogg, Vorbis in Ogg, MP3, AAC and ALAC in MP4 `.m4a`, FLAC, WAV 16/24-bit), each with its encoders (`libopus` before `opus`, `libfdk_aac` before `aac`) and the one muxer that writes it; `encoder_availability` and `supported_sample_rates` say what the running FFmpeg can do. Lossless output of integer input is exact; encoder delay and padding are written so that decoders trim them.
+
+The output is as locked down as the input: the caller opens the file, FFmpeg gets custom write I/O and no file name, the format context refuses every nested open (`io_open`) and carries `protocol_whitelist=file`, which is checked after it is set, and no muxer that opens other files (`hls`, `segment`, `tee`, `image2`, …) can be chosen. Options the encoder or muxer did not take are an error.
 
 ## Offline locks
 

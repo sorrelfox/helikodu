@@ -116,7 +116,7 @@ rubato = "=5.1.0"
 rusqlite = { version = "0.43", default-features = false, features = ["cache", "collation", "functions"] }
 # Lowers the scheduling priority of the loudness scanner's threads (setpriority on
 # the thread id). No default features beyond `std`: no networking, no file-system API.
-rustix = { version = "1.1", default-features = false, features = ["std", "process", "thread"] }
+rustix = { version = "1.1", default-features = false, features = ["std", "fs", "process", "thread"] }
 seccompiler = "0.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

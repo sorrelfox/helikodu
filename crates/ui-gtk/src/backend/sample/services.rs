@@ -205,6 +205,12 @@ fn sample_devices(backend: OutputBackendKind) -> Vec<DeviceInfo> {
 }
 
 impl Services for MemoryServices {
+    fn export(&self) -> Arc<dyn super::super::export::ExportServices> {
+        Arc::new(super::export::SampleExport {
+            library: self.library.clone(),
+        })
+    }
+
     fn settings(&self) -> Arc<Settings> {
         self.lock().settings.clone()
     }

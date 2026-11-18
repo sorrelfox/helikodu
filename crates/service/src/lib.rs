@@ -11,6 +11,8 @@
 
 pub mod bus;
 pub mod clock;
+pub mod convert;
+pub mod cover_manager;
 mod event;
 pub mod files;
 pub mod formats;

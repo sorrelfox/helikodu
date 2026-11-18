@@ -123,6 +123,18 @@ SPDX-License-Identifier: GPL-3.0-or-later
           <attribute name="label" translatable="yes">Find Duplicates…</attribute>
           <attribute name="action">app.find-duplicates</attribute>
         </item>
+        <item>
+          <attribute name="label" translatable="yes">Convert…</attribute>
+          <attribute name="action">app.convert</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Sync and Export…</attribute>
+          <attribute name="action">app.sync-export</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Cover Manager…</attribute>
+          <attribute name="action">app.cover-manager</attribute>
+        </item>
       </submenu>
       <submenu>
         <attribute name="label" translatable="yes">Help</attribute>

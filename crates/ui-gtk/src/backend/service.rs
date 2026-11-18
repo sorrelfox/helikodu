@@ -13,6 +13,7 @@
 //! full-output gate.
 
 mod browse;
+mod export;
 mod history;
 mod insights;
 mod lyrics;

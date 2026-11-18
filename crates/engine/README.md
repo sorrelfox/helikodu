@@ -246,6 +246,8 @@ Not done yet in the transport:
 
 ## Analysis
 
+`src/convert.rs` converts a source for the converter: `transcode` decodes it through the registry (CUE sections and DSD included), downmixes with `MixMatrix` when the target has fewer channels, resamples with the playback resampler when the target rate differs (Opus always at 48 kHz) and encodes through the bridge's `AudioEncoder`; lossless targets of integer sources that need neither stay exact.
+
 `src/analysis.rs` and `src/analysis/` measure whole sources away from playback. The loudness scanner (`analysis::loudness`) follows EBU R128 and ITU-R BS.1770-4 with the `ebur128` crate: K-weighting, 400 ms gating blocks with an absolute gate at −70 LUFS and a relative gate at −10 LU, loudness range from 3 s blocks (EBU Tech 3342), channel weights of 1.0 for the fronts and 1.41 for the surrounds, the LFE left out, mono counted as dual mono, and true peak by 4× oversampling.
 
 ```rust

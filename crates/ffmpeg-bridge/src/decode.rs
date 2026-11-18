@@ -10,4 +10,5 @@ mod owned;
 mod pcm;
 
 pub use audio_decoder::AudioDecoder;
+pub(crate) use owned::{CodecContext, Frame, Packet};
 pub use pcm::{PcmBuffer, PcmSamples};

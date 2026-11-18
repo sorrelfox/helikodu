@@ -13,6 +13,7 @@ This guide describes the current version. Helikodu is young: some menu entries a
 7. [Equalizer and sound processing](dsp.md)
 8. [Playlists and ratings](playlists-and-ratings.md)
 9. [Editing tags](tags.md)
+9. [Converting, syncing and covers](converting-and-sync.md)
 10. [Settings](settings.md)
 11. [Keyboard shortcuts](keyboard-shortcuts.md)
 12. [The command line](command-line.md)

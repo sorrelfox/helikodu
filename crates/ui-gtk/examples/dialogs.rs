@@ -7,7 +7,9 @@
 //! About; and DSP and EQ with each editor (`--dsp` renders only those and the
 //! pages with sound-processing controls); and the copies (`--copies` renders
 //! only those): Settings › Library, the track table with its badges, the
-//! copies window with its confirmation and results, and Find duplicates.
+//! copies window with its confirmation and results, and Find duplicates;
+//! and the converter, Sync and export and the cover manager (`--tools`
+//! renders only those).
 //! `--backdrop` draws every window as when another window has the focus
 //! (themes colour some text differently then). Run it headless:
 //!
@@ -387,10 +389,42 @@ fn shoot_copies(application: &gtk::Application, dir: &Path, suffix: &str) {
     main.close();
 }
 
+fn shoot_tools(application: &gtk::Application, dir: &Path, suffix: &str) {
+    let options = sample::SampleOptions {
+        albums: 40,
+        playing: None,
+    };
+    let backend = sample::backend(&options);
+    let main = window(application, &backend);
+    for (action, name) in [
+        ("convert", "converter"),
+        ("sync-export", "sync-export"),
+        ("cover-manager", "cover-manager"),
+    ] {
+        gio::prelude::ActionGroupExt::activate_action(application, action, None);
+        spin(500);
+        if let Some(tool) = toplevel(name) {
+            save(&tool, dir, &format!("{name}{suffix}"));
+            if name == "converter"
+                && let Some(convert) = named::<gtk::Button>(&tool, "convert")
+            {
+                convert.emit_clicked();
+                spin(500);
+                save(&tool, dir, &format!("{name}-done{suffix}"));
+                convert.emit_clicked();
+                spin(300);
+            }
+            tool.close();
+        }
+    }
+    main.close();
+}
+
 fn main() -> ExitCode {
     let mut out = PathBuf::from("target/screenshots");
     let dsp_only = std::env::args().any(|a| a == "--dsp");
     let copies_only = std::env::args().any(|a| a == "--copies");
+    let tools_only = std::env::args().any(|a| a == "--tools");
     BACKDROP.store(
         std::env::args().any(|a| a == "--backdrop"),
         Ordering::Relaxed,
@@ -419,6 +453,14 @@ fn main() -> ExitCode {
     application.connect_activate(move |application| {
         let _hold = application.hold();
         set_choice(SchemeChoice::Dark, AccentChoice::Amber);
+        if tools_only {
+            shoot_tools(application, &out, "");
+            set_choice(SchemeChoice::Light, AccentChoice::Amber);
+            spin(200);
+            shoot_tools(application, &out, ".light");
+            application.quit();
+            return;
+        }
         if copies_only {
             shoot_copies(application, &out, "");
             set_choice(SchemeChoice::Light, AccentChoice::Amber);

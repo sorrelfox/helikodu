@@ -10,6 +10,7 @@
 
 mod browse;
 mod copies;
+mod export;
 mod history;
 mod insights;
 mod lyrics;

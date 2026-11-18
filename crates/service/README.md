@@ -20,6 +20,8 @@ The Cargo features `pipewire`, `alsa` and `dsd` (all on by default) pass on to t
 | `player.rs`, `player/` | The player service |
 | `library.rs`, `library/` | `MusicLibrary` (blocking, typed queries) and `LibraryService` (worker thread, thumbnails, scans, watcher) |
 | `jobs.rs`, `jobs/` | Background jobs: the loudness scanner (`jobs::loudness`) |
+| `convert.rs`, `convert/` | The converter and folder sync: presets, naming patterns (`convert::naming`, self-contained), the plan of a conversion, `ConvertJob` (several files at a time, written under a temporary name and renamed when complete, tags and cover copied), sync destinations with their manifest `.helikodu-sync.json`, and `export.toml` (`ExportStore`) |
+| `cover_manager.rs` | The cover manager: albums by where their covers are, pictures found in album folders, and putting a picture into the files or beside them |
 
 ## Player
 

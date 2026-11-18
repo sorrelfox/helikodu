@@ -10,6 +10,7 @@
 
 mod codec_probe;
 mod decoding;
+mod encoding;
 mod gapless;
 mod lockdown;
 mod media;

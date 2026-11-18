@@ -11,6 +11,7 @@
 
 mod catalog;
 mod copies;
+mod cover_facts;
 mod covers;
 mod db;
 mod details;
@@ -46,6 +47,7 @@ pub use copies::{
     BACKUP_SUFFIX, CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId,
     KeepRule, MainCopyError, MatchBy, TrashOutcome, TrashRefusal, backup_path,
 };
+pub use cover_facts::AlbumCoverFacts;
 pub use covers::{
     ArtworkOptions, ArtworkPool, CoverLocator, CoverReadError, DEFAULT_CACHE_BYTES, Removed,
     Thumbnail, ThumbnailCache, ThumbnailCacheOptions, ThumbnailEvent, ThumbnailSize, read_cover,
@@ -112,6 +114,8 @@ pub mod tag_editing {
     pub use helikodu_meta::covers::{CoverLimits, read_embedded_covers};
     /// A rating as tags hold it: 0 to 10 half stars.
     pub use helikodu_meta::tags::Rating as TagRating;
+    /// Writes changes into one file, read back and checked before it replaces it.
+    pub use helikodu_meta::tags::writing::write_tags;
     pub use helikodu_meta::tags::writing::{
         BatchItem, BatchProgress, BatchReport, CoverChange, EditStamp, EditableFile, FieldChange,
         FieldKey, Id3Version, InPlaceReason, SelectionView, Shared, SkippedChange, TagChanges,
@@ -124,6 +128,14 @@ pub mod tag_editing {
 /// Lyrics from a track's tags or from a file beside it: the types of `meta`'s
 /// lyrics reader, so that front ends need not depend on `meta`.
 pub use helikodu_meta::lyrics;
+
+/// Pictures as files hold them: their limits, format and size, and the embedded
+/// pictures of a file, for the cover manager.
+pub mod pictures {
+    pub use helikodu_meta::covers::{
+        CoverLimits, PictureFormat, PictureInfo, probe_picture, read_embedded_covers,
+    };
+}
 
 /// Direct SQL access to the database, below [`Library`].
 ///

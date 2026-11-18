@@ -13,6 +13,7 @@
 //! service's interface changes, only `service.rs` follows it.
 
 pub mod browse;
+pub mod export;
 pub mod insights;
 pub mod sample;
 pub mod service;
