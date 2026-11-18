@@ -24,7 +24,7 @@ Shows the front cover of the files. **Choose image…** takes a JPEG or PNG pict
 
 ## Lyrics
 
-The lyrics of one track; with several tracks selected, open the editor for one track to change them. Lines that start with a time, such as `[01:23.45]`, are shown in step with the music. **Clear** removes them.
+The lyrics of one track; with several tracks selected, open the editor for one track to change them. Lines that start with a time, such as `[01:23.45]`, are kept as they are; the lyrics panel that shows them in step with the music comes in a later version. **Clear** removes them.
 
 ## File info
 

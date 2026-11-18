@@ -69,6 +69,15 @@ SPDX-License-Identifier: CC0-1.0
   <content_rating type="oars-1.1"/>
   <translation type="gettext">helikodu</translation>
 
-  <!-- No release yet. -->
-  <releases/>
+  <releases>
+    <release version="0.1.0" date="2026-11-18" type="development">
+      <description>
+        <p>
+          The first alpha: a music library with albums, artists, genres, folders,
+          tracks, search and playlists, gapless and bit-perfect playback with
+          ReplayGain, a tag editor, and desktop integration through MPRIS.
+        </p>
+      </description>
+    </release>
+  </releases>
 </component>

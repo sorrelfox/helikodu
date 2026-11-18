@@ -72,18 +72,29 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     let out = out.unwrap_or_else(|| root.join("target").join("ui-checks"));
     fs::create_dir_all(&out).with_context(|| format!("cannot create {}", out.display()))?;
 
-    // The programs.
+    // The programs. With --example arguments Cargo builds only the examples, so
+    // the binaries are built in a step of their own.
     status(
         Command::new(crate::cargo())
             .args([
                 "build",
                 "--release",
+                "--bins",
                 "-p",
                 "helikodu",
                 "-p",
                 "helikodu-cli",
                 "-p",
                 "helikodu-scan-worker",
+            ])
+            .current_dir(&root),
+        "cargo build (programs)",
+    )?;
+    status(
+        Command::new(crate::cargo())
+            .args([
+                "build",
+                "--release",
                 "-p",
                 "helikodu-ui-gtk",
                 "--example",
