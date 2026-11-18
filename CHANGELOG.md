@@ -73,6 +73,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - With a colour scheme chosen in Helikodu that differs from the desktop's, text no longer takes the desktop theme's colours: sidebar entries, titles and other labels were light on light (or dark on dark) under themes such as Breeze, mostly while the window did not have the focus.
 - Tags without a field of their own (`MOOD`, `BPM`, `GROUPING`, `LABEL`, `COMMENT` and others) are stored when files are scanned, so `tag:NAME` queries find them, and shuffling by grouping uses the `GROUPING` tag.
 - The album page's **Details** column no longer grows wider than its 260 px when a sentence in it is long: its text wraps. Its width can be dragged at its left border, and is kept for all album and audiobook pages between runs.
+- Album covers in the album grids (Albums, Genres and others) no longer stay placeholders when the grid gains a column, as when the window or a pane gets wider: the tiles that move into view load their covers.
+- Home's Most played and the mini player's queue mark the playing track too: the row in the accent, with the playing indicator in place of its number, moving while playing. Home's tiles ring the playing album when playback changes, not only when the page is filled.
+- While a text field has the focus, Ctrl+Shift+Z and Ctrl+Y redo in the field instead of redoing a playlist or tag edit, as Ctrl+Z and Ctrl+A already did; shortcuts changed in the settings are lifted the same way.
+- The Keyboard shortcuts window (Ctrl+?) lists the keys of every action from the settings, so Undo, Redo and Select all no longer read "Not set" when it was opened from a text field.
 
 ## [0.2.0] - 2026-11-18
 

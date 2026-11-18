@@ -240,6 +240,9 @@ impl SearchView {
         let smart_save = save_button(&tr("Save as smart playlist"), None);
         // Offered by the smart playlists, when they are there.
         smart_save.set_action_name(Some("win.new-smart-playlist"));
+        // The action takes the query text; give it one from the start so that
+        // the button's target always has the action's parameter type.
+        smart_save.set_action_target_value(Some(&"".to_variant()));
         head.append(&smart_save);
         query_page.append(&head);
         let notice = gtk::Box::new(gtk::Orientation::Horizontal, 10);

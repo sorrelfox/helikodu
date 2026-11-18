@@ -72,6 +72,9 @@ mod imp {
         pub(super) visibility_pass: Cell<bool>,
         /// The passes run again in a row for tiles without their place yet.
         pub(super) unplaced_passes: Cell<u32>,
+        /// A pass waits for the grid's next layout (see
+        /// `schedule_pass_after_layout`).
+        pub(super) layout_pass: Cell<bool>,
         pub(super) embedded: Cell<bool>,
     }
 
@@ -289,6 +292,10 @@ impl AlbumsView {
         let fits = u32::try_from((width / column).clamp(1, MAX_COLUMNS)).unwrap_or(1);
         if fits != grid.max_columns() {
             grid.set_max_columns(fits);
+            // The tiles move to their new columns at the next layout, and
+            // those kept below the fold come into view without being bound
+            // again.
+            self.schedule_pass_after_layout();
         }
         if grid.model().is_none()
             && let Some(model) = imp.model.borrow().as_ref()
@@ -462,6 +469,27 @@ impl AlbumsView {
         let weak = self.downgrade();
         self.imp().grid.add_tick_callback(move |_, _| {
             if let Some(view) = weak.upgrade() {
+                view.visibility_tick();
+            }
+            glib::ControlFlow::Break
+        });
+    }
+
+    /// Runs the visibility pass once the grid has been laid out again after a
+    /// change made outside a frame (the tick of the next frame runs before
+    /// its layout, so the pass waits for the frame after).
+    fn schedule_pass_after_layout(&self) {
+        if self.imp().layout_pass.replace(true) {
+            return;
+        }
+        let weak = self.downgrade();
+        let waited = Cell::new(false);
+        self.imp().grid.add_tick_callback(move |_, _| {
+            if !waited.replace(true) {
+                return glib::ControlFlow::Continue;
+            }
+            if let Some(view) = weak.upgrade() {
+                view.imp().layout_pass.set(false);
                 view.visibility_tick();
             }
             glib::ControlFlow::Break

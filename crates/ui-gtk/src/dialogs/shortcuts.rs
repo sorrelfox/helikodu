@@ -4,9 +4,10 @@
 //! Keyboard shortcuts (Ctrl+?): every action that has a shortcut, in two
 //! columns of groups as on the Shortcuts settings page: Playback at the left,
 //! Library and lists and then Window at the right. Each row names the action
-//! and shows its keys as key caps, or "Not set". The keys are read from the
-//! application when the window opens, so they are the ones that work. A
-//! filter at the top narrows the rows by the action's name or its keys.
+//! and shows its keys as key caps, or "Not set". The keys are the ones the
+//! settings give when the window opens (the application's while a text field
+//! has lifted some of them, as it does for Ctrl+Z). A filter at the top
+//! narrows the rows by the action's name or its keys.
 
 use std::rc::Rc;
 
@@ -17,6 +18,7 @@ use super::common::{dialog_window, find_open, header_strip, key_caps};
 use crate::i18n::tr;
 use crate::shortcuts::Group;
 use crate::widgets::label;
+use helikodu_model::settings::ShortcutSettings;
 
 /// The name the window is known by among the toplevels.
 pub(crate) const NAME: &str = "shortcuts";
@@ -61,9 +63,21 @@ pub(crate) fn caps(accelerator: &str) -> Vec<String> {
     caps
 }
 
-/// The accelerators of `action` in `application`. Space, which plays and
-/// pauses, is a shortcut of the main window rather than an accelerator.
-fn accelerators(application: Option<&gtk::Application>, action: &str) -> Vec<String> {
+/// The keys of `action`: those the settings give it, or without them the
+/// accelerators in `application`. Space, which plays and pauses, is a shortcut
+/// of the main window rather than an accelerator.
+fn accelerators(
+    settings: Option<&ShortcutSettings>,
+    application: Option<&gtk::Application>,
+    action: &str,
+) -> Vec<String> {
+    if let Some(settings) = settings
+        && let Some(binding) = crate::shortcuts::bindings()
+            .into_iter()
+            .find(|b| b.action == action)
+    {
+        return crate::shortcuts::keys(&binding, settings);
+    }
     let mut accels: Vec<String> = application
         .map(|a| {
             a.accels_for_action(action)
@@ -130,6 +144,12 @@ pub(crate) fn open(parent: &gtk::Window) -> gtk::Window {
         false,
     );
     let application = parent.application();
+    // A text field with the focus lifts some keys from the application for
+    // itself; the settings know them all.
+    let settings = parent
+        .downcast_ref::<crate::window::MainWindow>()
+        .and_then(crate::window::MainWindow::backend)
+        .map(|b| b.services().settings().shortcuts.clone());
     let body = gtk::Box::new(gtk::Orientation::Vertical, 0);
     let (header, _) = header_strip(&window, &tr("Keyboard shortcuts"), None);
     body.append(&header);
@@ -166,7 +186,10 @@ pub(crate) fn open(parent: &gtk::Window) -> gtk::Window {
         column.append(&head);
         heads.push((group, head));
         for (_, action, name) in actions().into_iter().filter(|(g, _, _)| *g == group) {
-            let (widget, words) = row(&name, &accelerators(application.as_ref(), action));
+            let (widget, words) = row(
+                &name,
+                &accelerators(settings.as_ref(), application.as_ref(), action),
+            );
             column.append(&widget);
             rows.push(Row {
                 widget,

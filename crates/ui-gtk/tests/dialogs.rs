@@ -369,6 +369,38 @@ fn formats_and_about(app: &gtk::Application) {
     window.destroy();
 }
 
+/// The keys the actions had before they could be changed in the settings.
+const KEPT_SHORTCUTS: &[(&str, &str)] = &[
+    ("app.next", "<Control>Right"),
+    ("app.previous", "<Control>Left"),
+    ("app.seek-forward", "<Control><Shift>Right"),
+    ("app.seek-back", "<Control><Shift>Left"),
+    ("app.quit", "<Control>q"),
+    ("app.preferences", "<Control>comma"),
+    ("app.shortcuts", "<Control>question"),
+    ("app.mini-player", "<Control><Shift>m"),
+    ("win.volume-up", "<Control>Up"),
+    ("win.volume-down", "<Control>Down"),
+    ("win.toggle-sidebar", "F9"),
+    ("win.now-playing", "F11"),
+    ("win.show-menubar", "<Control>m"),
+    ("win.cycle-pane", "F6"),
+    ("win.back", "<Alt>Left"),
+    ("win.forward", "<Alt>Right"),
+    ("win.jump-to-playing", "<Control>j"),
+    ("win.search", "<Control>f"),
+    ("win.track-properties", "<Alt>Return"),
+    ("win.track-copies", "<Alt>c"),
+    ("win.undo", "<Control>z"),
+    ("win.redo", "<Control><Shift>z"),
+    ("win.redo", "<Control>y"),
+    ("win.select-all", "<Control>a"),
+    ("app.new-playlist", "<Control>n"),
+    ("app.loop-start", "<Control>bracketleft"),
+    ("app.loop-end", "<Control>bracketright"),
+    ("app.loop-clear", "<Control>backslash"),
+];
+
 fn keyboard_shortcuts(app: &gtk::Application) {
     let (window, _) = window(app);
     assert_eq!(
@@ -378,6 +410,31 @@ fn keyboard_shortcuts(app: &gtk::Application) {
             .collect::<Vec<_>>(),
         ["<Control>question"]
     );
+    // Every action that had keys before they could be changed still has them.
+    let has = |action: &str, accel: &str| {
+        app.accels_for_action(action)
+            .iter()
+            .any(|a| gtk::accelerator_parse(a.as_str()) == gtk::accelerator_parse(accel))
+    };
+    for (action, accel) in KEPT_SHORTCUTS {
+        assert!(has(action, accel), "{action} has {accel}");
+    }
+    // A text field keeps select all, undo and redo for itself while it has
+    // the focus; the window still lists them.
+    let text = descendants(window.upcast_ref())
+        .into_iter()
+        .find_map(|w| w.downcast::<gtk::Text>().ok().filter(|t| t.is_mapped()))
+        .expect("a text field");
+    gtk::prelude::GtkWindowExt::set_focus(&window, Some(&text));
+    spin(50);
+    for (action, accel) in [
+        ("win.undo", "<Control>z"),
+        ("win.redo", "<Control><Shift>z"),
+        ("win.redo", "<Control>y"),
+        ("win.select-all", "<Control>a"),
+    ] {
+        assert!(!has(action, accel), "{accel} goes to the text field");
+    }
     gio::prelude::ActionGroupExt::activate_action(app, "shortcuts", None);
     wait_for("Keyboard shortcuts", || toplevel("shortcuts").is_some());
     let dialog = toplevel("shortcuts").unwrap();
@@ -414,7 +471,23 @@ fn keyboard_shortcuts(app: &gtk::Application) {
     let shown = texts(&dialog);
     assert!(shown.iter().any(|t| t == "Sidebar"));
     assert!(!shown.iter().any(|t| t == "Next track"), "{shown:?}");
+    filter.set_text("ctrl+y");
+    spin(400);
+    let shown = texts(&dialog);
+    assert!(shown.iter().any(|t| t == "Redo"), "{shown:?}");
+    filter.set_text("undo");
+    spin(400);
+    let shown = texts(&dialog);
+    assert!(
+        shown.iter().any(|t| t == "Z") && !shown.iter().any(|t| t == "Not set"),
+        "Undo keeps Ctrl+Z: {shown:?}"
+    );
     dialog.close();
+    gtk::prelude::GtkWindowExt::set_focus(&window, None::<&gtk::Widget>);
+    spin(50);
+    for (action, accel) in KEPT_SHORTCUTS {
+        assert!(has(action, accel), "{action} has {accel} again");
+    }
     window.destroy();
 }
 

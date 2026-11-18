@@ -605,6 +605,15 @@ impl MainWindow {
         self.mini_player().map(|m| m.window().clone())
     }
 
+    /// The rows marked as playing in the mini player and whether each playing
+    /// indicator moves (for tests).
+    #[doc(hidden)]
+    pub fn mini_player_playing_marks(&self) -> (usize, Vec<bool>) {
+        self.mini_player_window().map_or((0, Vec::new()), |w| {
+            super::pages::playing_marks_in(w.upcast())
+        })
+    }
+
     /// Opens or closes the mini player's drawer at `tab` (for tests).
     #[doc(hidden)]
     pub fn set_mini_player_drawer(&self, open: bool, tab: &str) {

@@ -23,15 +23,15 @@ use gtk::{gdk, glib};
 
 use crate::backend::{
     AlbumFilter, AlbumKey, AlbumQuery, AlbumRow, AlbumScope, AlbumSort, Backend, BackendError,
-    LibrarySource, PlayerRequest, TrackColumn, TrackQuery, TrackRow, TrackSort,
+    LibrarySource, PlayerRequest, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackSort,
 };
 use crate::format;
 use crate::i18n::{fill, tr};
 use crate::models::{AlbumItem, CoverCache};
-use crate::playback::Playback;
+use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
 use crate::views::album_tile::AlbumTile;
-use crate::widgets::{CoverArt, label};
+use crate::widgets::{CoverArt, PlayingIndicator, label};
 
 /// How many tiles a row holds at most.
 const TILES: usize = 12;
@@ -295,6 +295,8 @@ pub(crate) struct HomeView {
     loading: Cell<bool>,
     stale: Cell<bool>,
     playing: Cell<Option<AlbumKey>>,
+    /// The tracks whose Most played rows show as playing.
+    playing_tracks: Cell<PlayingKeys>,
 }
 
 impl std::fmt::Debug for HomeView {
@@ -391,6 +393,7 @@ impl HomeView {
             loading: Cell::new(false),
             stale: Cell::new(true),
             playing: Cell::new(None),
+            playing_tracks: Cell::new(PlayingKeys::default()),
         });
         let weak = Rc::downgrade(&view);
         show_all.connect_clicked(move |_| {
@@ -417,10 +420,18 @@ impl HomeView {
         });
         let weak = Rc::downgrade(&view);
         playback.connect(move |player, change| {
-            if let Some(view) = weak.upgrade()
-                && change == crate::playback::Change::Track
-            {
-                view.playing.set(player.album());
+            let Some(view) = weak.upgrade() else { return };
+            match change {
+                Change::Track => {
+                    view.playing.set(player.album());
+                    view.mark_tiles();
+                }
+                Change::Playing
+                    if view.playing_tracks.replace(player.playing) != player.playing =>
+                {
+                    view.mark_most_played();
+                }
+                _ => {}
             }
         });
         view
@@ -491,11 +502,54 @@ impl HomeView {
         for (rank, track) in data.most_played.iter().enumerate() {
             self.most.append(&most_played_row(rank + 1, track, top));
         }
+        self.mark_most_played();
         crate::widgets::remove_rows(&self.rediscover);
         for (album, when) in &data.rediscover {
             self.rediscover.append(&self.rediscover_row(album, *when));
         }
         self.data.replace(data);
+    }
+
+    /// Rings the tiles of the playing album.
+    fn mark_tiles(&self) {
+        let playing = self.playing.get();
+        for row in [&self.added, &self.played] {
+            for child in children(row) {
+                if let Some(tile) = child.downcast_ref::<AlbumTile>() {
+                    tile.cover()
+                        .set_playing(tile.key().is_some() && tile.key() == playing);
+                }
+            }
+        }
+    }
+
+    /// Marks the Most played row of the playing track: the playing-row look,
+    /// with the indicator in place of the rank.
+    fn mark_most_played(&self) {
+        let playing = self.playing_tracks.get();
+        let mut child = self.most.first_child();
+        while let Some(widget) = child {
+            child = widget.next_sibling();
+            let Some(row) = widget.downcast_ref::<gtk::ListBoxRow>() else {
+                continue;
+            };
+            let on = row
+                .widget_name()
+                .parse::<u64>()
+                .is_ok_and(|key| playing.contains(TrackKey(key)));
+            if on {
+                row.add_css_class("hk-playing");
+            } else {
+                row.remove_css_class("hk-playing");
+            }
+            if let Some(lead) = row
+                .child()
+                .and_then(|line| line.first_child())
+                .and_downcast::<gtk::Stack>()
+            {
+                lead.set_visible_child_name(if on { "playing" } else { "rank" });
+            }
+        }
     }
 
     fn tile(self: &Rc<Self>, album: &AlbumRow) -> gtk::Widget {
@@ -635,10 +689,21 @@ fn two_part_markup(first: &str, second: &str) -> String {
 
 fn most_played_row(rank: usize, track: &TrackRow, top: u32) -> gtk::ListBoxRow {
     let row = gtk::ListBoxRow::new();
+    row.set_widget_name(&track.key.0.to_string());
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    // The rank, or the playing indicator in its place.
+    let lead = gtk::Stack::new();
+    lead.set_hhomogeneous(true);
+    lead.set_vhomogeneous(true);
     let number = label(&rank.to_string(), &["hk-t3", "hk-numeric", "hk-home-rank"]);
     number.set_xalign(1.0);
-    line.append(&number);
+    lead.add_named(&number, Some("rank"));
+    let indicator = PlayingIndicator::default();
+    indicator.set_halign(gtk::Align::End);
+    indicator.set_valign(gtk::Align::Center);
+    lead.add_named(&indicator, Some("playing"));
+    lead.set_visible_child_name("rank");
+    line.append(&lead);
     let text = gtk::Label::new(None);
     text.set_xalign(0.0);
     text.set_hexpand(true);

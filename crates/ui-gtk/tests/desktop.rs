@@ -117,7 +117,7 @@ fn accels(app: &gtk::Application, action: &str) -> Vec<String> {
 }
 
 fn home(app: &gtk::Application) {
-    let (window, _) = window(app);
+    let (window, backend) = window(app);
     window.open_page("home");
     assert_eq!(window.visible_view().as_deref(), Some("home"));
     wait_for("Home", || {
@@ -132,6 +132,25 @@ fn home(app: &gtk::Application) {
     assert!(played <= added, "{played} played tiles");
     assert!(most.len() <= 5 && rediscover.len() <= 5);
     println!("  most played: {most:?}\n  rediscover: {rediscover:?}");
+    // Playing a Most played row marks it: the indicator in place of the
+    // rank, moving while playing and still while paused.
+    let list = descendants(window.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::ListBox>().ok())
+        // Rediscover opens on a single click; Most played plays on a double one.
+        .find(|l| {
+            l.has_css_class("hk-home-list") && l.is_mapped() && !l.activates_on_single_click()
+        })
+        .expect("the Most played list");
+    let first = list.row_at_index(0).expect("a Most played row");
+    list.emit_by_name::<()>("row-activated", &[&first]);
+    wait_for("the Most played mark", || {
+        window.playing_marks(false) == (1, vec![true])
+    });
+    backend.send(PlayerRequest::PlayPause);
+    wait_for("the paused mark", || {
+        window.playing_marks(false) == (1, vec![false])
+    });
     // "History" opens the play history; Home stays selected.
     gio::prelude::ActionGroupExt::activate_action(&window, "show-history", None);
     spin(50);
@@ -165,6 +184,11 @@ fn mini_player(app: &gtk::Application) {
     assert!(note.contains("upcoming"), "{note}");
     assert!(rows.len() > 2, "{rows:?}");
     assert!(mini.height() > 400, "the drawer opens under the player");
+    assert_eq!(
+        window.mini_player_playing_marks(),
+        (1, vec![true]),
+        "the playing row of the queue is marked"
+    );
     // The drawer is remembered.
     let state = backend.ui_state().load().mini_player;
     assert!(state.drawer);

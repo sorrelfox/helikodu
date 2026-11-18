@@ -272,12 +272,11 @@ impl MainWindow {
         entry.add_controller(keys);
     }
 
-    /// Ctrl+A and Ctrl+Z belong to a text field while it has the focus: the
-    /// window's shortcuts for them are lifted until it loses it. (Space is a
-    /// shortcut of the window that yields to the focused widget anyway.)
+    /// Ctrl+A, Ctrl+Z and the redo keys belong to a text field while it has
+    /// the focus: the window's shortcuts for them are lifted until it loses
+    /// it. (Space is a shortcut of the window that yields to the focused
+    /// widget anyway.)
     fn guard_text_fields(&self) {
-        const KEYS: &[(&str, &str)] =
-            &[("win.select-all", "<Control>a"), ("win.undo", "<Control>z")];
         self.connect_focus_widget_notify(|window| {
             let Some(application) = window.application() else {
                 return;
@@ -289,20 +288,7 @@ impl MainWindow {
                 .backend()
                 .map(|b| b.services().settings().shortcuts.clone())
                 .unwrap_or_default();
-            for (action, key) in KEYS {
-                let accels = application.accels_for_action(action);
-                let has = accels.iter().any(|a| a == key);
-                if typing && has {
-                    let rest: Vec<&str> = accels
-                        .iter()
-                        .map(|a| a.as_str())
-                        .filter(|a| a != key)
-                        .collect();
-                    application.set_accels_for_action(action, &rest);
-                } else if !typing {
-                    crate::shortcuts::apply_action(&application, action, &settings);
-                }
-            }
+            crate::shortcuts::guard_text_keys(&application, &settings, typing);
         });
     }
 
@@ -1505,31 +1491,7 @@ impl MainWindow {
                 None => return (0, Vec::new()),
             }
         };
-        let mut rows = 0;
-        let mut positions = std::collections::HashSet::new();
-        let mut moving = Vec::new();
-        let mut stack = vec![root];
-        while let Some(widget) = stack.pop() {
-            if !widget.is_mapped() {
-                continue;
-            }
-            if let Some(indicator) = widget.downcast_ref::<crate::widgets::PlayingIndicator>() {
-                moving.push(indicator.is_moving());
-            }
-            if widget.has_css_class("hk-playing") {
-                if let Some(cell) = widget.downcast_ref::<crate::views::table::TableCell>() {
-                    positions.insert(cell.position());
-                } else if widget.is::<gtk::ListBoxRow>() {
-                    rows += 1;
-                }
-            }
-            let mut child = widget.first_child();
-            while let Some(c) = child {
-                child = c.next_sibling();
-                stack.push(c);
-            }
-        }
-        (rows + positions.len(), moving)
+        playing_marks_in(root)
     }
 
     /// For each table cell of the visible view that shows a copies badge: the
@@ -1720,4 +1682,35 @@ fn add_shortcut_hint(entry: &gtk::SearchEntry) {
         .sync_create()
         .build();
     header.set_center_widget(Some(&overlay));
+}
+
+/// The rows marked as playing under `root` and whether each playing indicator
+/// moves (for tests). A table row counts once, however many of its cells are
+/// marked.
+pub(crate) fn playing_marks_in(root: gtk::Widget) -> (usize, Vec<bool>) {
+    let mut rows = 0;
+    let mut positions = std::collections::HashSet::new();
+    let mut moving = Vec::new();
+    let mut stack = vec![root];
+    while let Some(widget) = stack.pop() {
+        if !widget.is_mapped() {
+            continue;
+        }
+        if let Some(indicator) = widget.downcast_ref::<crate::widgets::PlayingIndicator>() {
+            moving.push(indicator.is_moving());
+        }
+        if widget.has_css_class("hk-playing") {
+            if let Some(cell) = widget.downcast_ref::<crate::views::table::TableCell>() {
+                positions.insert(cell.position());
+            } else if widget.is::<gtk::ListBoxRow>() {
+                rows += 1;
+            }
+        }
+        let mut child = widget.first_child();
+        while let Some(c) = child {
+            child = c.next_sibling();
+            stack.push(c);
+        }
+    }
+    (rows + positions.len(), moving)
 }

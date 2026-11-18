@@ -28,7 +28,7 @@ use crate::models::CoverCache;
 use crate::models::lyrics::{LyricsChange, LyricsModel};
 use crate::playback::{Change, Playback, PlayerView};
 use crate::widgets::lyric_lines::{LinesStyle, LyricLines};
-use crate::widgets::{CoverArt, SignalLamp, WaveformSeekBar, icon_button, label};
+use crate::widgets::{CoverArt, PlayingIndicator, SignalLamp, WaveformSeekBar, icon_button, label};
 use crate::window::MainWindow;
 
 /// The name the window is known by among the toplevels.
@@ -695,12 +695,21 @@ fn queue_row(track: &TrackRow, current: bool) -> gtk::ListBoxRow {
     } else {
         fill(&tr("{} · {}"), &[&track.title, &track.artist])
     };
-    let lead = gtk::Label::new(Some(
-        &track.number.map(|n| n.to_string()).unwrap_or_default(),
-    ));
-    lead.add_css_class("hk-queue-lead");
-    lead.set_xalign(0.5);
-    line.append(&lead);
+    if current {
+        // The playing row, as in the queue panel: the indicator in the lead
+        // box, accent text.
+        row.add_css_class("hk-playing");
+        let lead = PlayingIndicator::default();
+        lead.add_css_class("hk-queue-lead");
+        line.append(&lead);
+    } else {
+        let lead = gtk::Label::new(Some(
+            &track.number.map(|n| n.to_string()).unwrap_or_default(),
+        ));
+        lead.add_css_class("hk-queue-lead");
+        lead.set_xalign(0.5);
+        line.append(&lead);
+    }
     let title = label(&text, &[]);
     title.set_hexpand(true);
     line.append(&title);

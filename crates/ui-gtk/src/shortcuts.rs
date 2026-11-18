@@ -254,14 +254,38 @@ pub(crate) fn apply(application: &gtk::Application, settings: &ShortcutSettings)
     }
 }
 
-/// Gives `application` the keys of `action` in effect under `settings`.
-pub(crate) fn apply_action(
+/// The keys a text field keeps for itself while it has the focus: select
+/// all, undo and redo.
+const TEXT_KEYS: [&str; 4] = [
+    "<Control>a",
+    "<Control>z",
+    "<Control><Shift>z",
+    "<Control>y",
+];
+
+/// Lifts the keys of [`TEXT_KEYS`] from the actions that have them while a
+/// text field has the focus (`typing`), and gives them back after.
+pub(crate) fn guard_text_keys(
     application: &gtk::Application,
-    action: &str,
     settings: &ShortcutSettings,
+    typing: bool,
 ) {
-    if let Some(binding) = bindings().into_iter().find(|b| b.action == action) {
-        apply_one(application, &binding, settings);
+    let text: Vec<String> = TEXT_KEYS.into_iter().map(normalize).collect();
+    for binding in bindings() {
+        let keys = keys(&binding, settings);
+        if !keys.iter().any(|k| text.contains(k)) {
+            continue;
+        }
+        if typing {
+            let rest: Vec<&str> = keys
+                .iter()
+                .map(String::as_str)
+                .filter(|k| *k != SPACE && !text.iter().any(|t| t == k))
+                .collect();
+            application.set_accels_for_action(binding.action, &rest);
+        } else {
+            apply_one(application, &binding, settings);
+        }
     }
 }
 
