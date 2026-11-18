@@ -115,6 +115,9 @@ jobs:
             -v ~/ci-cache/target:/src/target \
             helikodu-ci:fedora sh -euxc '
               rustup toolchain install
+              # Test files a cached earlier audit wrote inside its user namespace
+              # belong to an unmapped user and cannot be written again.
+              rm -rf target/tmp
               cargo xtask offline-audit
             '
 
