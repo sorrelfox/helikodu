@@ -9,6 +9,7 @@
 
 pub mod covers;
 pub mod cue;
+pub mod playlists;
 pub mod tags;
 pub mod worker;
 

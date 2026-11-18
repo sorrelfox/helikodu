@@ -106,6 +106,37 @@ if let Some(cover) = find_cover(path, &options) {
 
 **Hostile pictures.** A picture over the byte limit is not copied. Decoding checks the byte size, sniffs the format, parses the header and checks the declared width × height against the pixel limit before any pixel buffer exists; the `image` crate's own allocation limit applies while decoding. Only JPEG, PNG and WebP are decoded, by memory-safe Rust decoders; malformed or truncated input is an error, never a panic. `fuzz/` has a target for the decoder.
 
+## Playlists
+
+```rust
+use helikodu_meta::playlists::{ParseOptions, PlaylistKind, WriteOptions, read_playlist, write_playlist};
+
+let parsed = read_playlist(path, &ParseOptions::default())?;   // kind from the extension, else sniffed
+for entry in &parsed.playlist.entries {
+    println!("{:?} {:?}", entry.location, entry.hints.title);
+}
+let written = write_playlist(&parsed.playlist, PlaylistKind::M3u8, &WriteOptions::default());
+```
+
+| Type | What it is |
+|---|---|
+| `PlaylistFormat` | The seam a format plugs into: `parse` (bytes and `ParseOptions` → `ParsedPlaylist`) and `write` (`Playlist` and `WriteOptions` → `WrittenPlaylist`). `M3u`, `M3u8`, `Pls` and `Xspf` implement it, one file each in `src/playlists/` |
+| `PlaylistKind` | The formats; `format`, `from_path` (by extension), `sniff` (XML is XSPF, `[playlist]` is PLS, anything else M3U), `is_playlist_path`. M3U8 is the default for writing |
+| `read_playlist`, `parse_playlist`, `write_playlist` | Read a file (relative entries resolve against its folder), parse bytes, write bytes |
+| `Playlist`, `PlaylistEntry` | The title and the entries; an entry's `EntryLocation`, its `undecoded_path` (see charsets), its `EntryHints` (title, artist, album, length, track number) and its line |
+| `EntryLocation` | `Local` (a path as bytes), `Foreign` (a drive letter, a network share, or a path rooted at the current drive, with `/` separators) or `Remote` (a URL; kept, never fetched) |
+| `ParseOptions`, `PlaylistLimits` | The playlist's folder, the legacy charset the user chose, and the bounds: 16 MiB per file, 100 000 entries, 32 KiB per line |
+| `WriteOptions`, `PathStyle` | Relative paths (to the playlist's folder, when they share more than the root) or absolute ones |
+| `PlaylistWarning`, `WriteWarning` | What was skipped or repaired, with its line; what a format could not carry |
+
+**Reading.** M3U: one location per line, blank lines and `#` comments skipped; `#EXTINF:<seconds>[ attributes],<artist> - <title>`, `#EXTART:` and `#EXTALB:` describe the next entry, `#PLAYLIST:` names the playlist, `#EXTM3U` is optional. PLS: the `[playlist]` section's `File<n>`, `Title<n>` (split like `#EXTINF`), `Length<n>` and `NumberOfEntries`, in any case and in the order of the numbers. XSPF (`quick-xml`): `playlist/title` and each track's `location` (the first local one), `title`, `creator`, `album`, `duration` and `trackNum`, with namespace prefixes and case ignored. The parsers are tolerant (LF, CRLF or CR; malformed lines and elements skipped with a line-numbered warning, at most 256 warnings) and bounded, and never panic. XSPF expands only the predefined entities and character references, never a document type's entities, nests at most 64 levels, and keeps the tracks before malformed XML. `fuzz/` has a target for each parser.
+
+**Locations.** A URL with a scheme of two letters or more is `Remote`; a `file:` URL on this host is percent-decoded into bytes, and on another host it is a network share. A drive letter, a leading `\\`, or `\` as the only separator marks a Windows path: `\` becomes `/`, and a path with a drive or a share, or rooted at the current drive, is `Foreign`. Other paths are `Local`: relative ones are joined to the playlist's folder, and `.` and `..` resolve lexically. Entries naming other playlists (M3U, M3U8, PLS, XSPF, JSPF, ASX, WPL) are skipped with a warning, not followed, so nested and looping playlists end at once.
+
+**Charsets.** A byte order mark decides (UTF-8, UTF-16); then UTF-16 without a mark. M3U8 and XSPF are UTF-8: bytes that are not are replaced in the text, and an M3U8 path keeps its bytes. M3U and PLS are UTF-8 when valid, and otherwise in the charset the user chose (`ParseOptions::legacy_charset`) or the one `chardetng` guesses from the whole file; a path's decoded form is the location and its original bytes are `undecoded_path`, since old collections may still have names in that charset.
+
+**Writing.** M3U and M3U8 with `#EXTM3U`, `#PLAYLIST:`, `#EXTINF` and `#EXTALB`; PLS version 2; XSPF in UTF-8. M3U and PLS write a path's own bytes; M3U8 writes a path that is not UTF-8 as decoded text and warns that it may not resolve; XSPF percent-encodes every byte outside the unreserved set in `file:` URIs (or relative references), so any name survives. A path holding a line break cannot be written to M3U or PLS and is left out with a warning; a name starting with `#` is written as `./#…`.
+
 ## Scan workers
 
 The `worker` module is the protocol between the library scanner and the `helikodu-scan-worker` processes, which read one file at a time so that a decoder that crashes or hangs on a broken file cannot take the application down.
@@ -126,3 +157,5 @@ The integration tests in `tests/cue/` write sheets shaped like those found in th
 The integration tests in `tests/tags/` generate their media at test time in Cargo's temporary directory: a WAV file written by the tests, encoded with the `ffmpeg` tool with `-metadata`, then edited with lofty where a test needs frames FFmpeg cannot write (`POPM`, `UFID`, `TMCL`, `TIPL`, multi-valued fields, Latin-1 frames holding cp1251, Shift-JIS and GBK bytes). A test whose tool or encoder is missing prints `SKIPPED:` and passes.
 
 The integration tests in `tests/covers/` encode pictures with the `image` crate and write hostile ones byte by byte (a PNG header claiming 100000 × 100000 pixels, a JPEG claiming 65535 × 65535, a 4096 × 4096 PNG of a few kilobytes against a smaller limit, truncated and corrupted JPEG, PNG and WebP). Audio files get their pictures from the `ffmpeg` tool (`-disposition attached_pic` for MP3, FLAC and M4A; `-attach` for Matroska) or from lofty (several `APIC` types, two FLAC `PICTURE` blocks, an Opus `METADATA_BLOCK_PICTURE`, APEv2 cover items in WavPack). Folder tests build album folders with disc subfolders, mixed-case names and non-UTF-8 names.
+
+The integration tests in `tests/playlists/` write playlist files shaped like those other players write (Windows M3U with a byte order mark, CRLF and backslashes, drive letters and network shares; cp1251 M3U read with a guessed and a chosen charset, and the same bytes as M3U8; UTF-16 M3U; relative, absolute and `file://` entries; URLs kept and never fetched; playlists naming each other; files over the size, entry and line limits; a VLC XSPF) and write and read back every format with relative and absolute paths, including a name that is not UTF-8.

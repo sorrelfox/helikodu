@@ -18,9 +18,13 @@ use crate::catalog::{
     AlbumDetail, AlbumId, AlbumQuery, AlbumSummary, ArtistQuery, ArtistSummary, GenreQuery,
     GenreSummary, Paged, RootState, TrackQuery, TrackSummary,
 };
-use crate::catalog::{CoverInfo, CoverLocation};
+use crate::catalog::{CoverInfo, CoverLocation, Page};
 use crate::db::unix_time::{to_millis, to_unix_seconds};
 use crate::db::{Database, DatabaseConfig, DbError, LocaleCollation};
+use crate::playlists::{
+    self, ExportOptions, ExportReport, ImportOptions, ImportReport, PlaylistError, PlaylistId,
+    PlaylistItem, PlaylistSummary,
+};
 use crate::scan::{self, CancelToken, ScanError, ScanEvent, ScanOptions, ScanSummary};
 use crate::search::{self, SearchRequest, SearchResults};
 use crate::stats::{
@@ -304,6 +308,204 @@ impl Library {
         } else {
             Err(DbError::UnknownRoot(root))
         }
+    }
+
+    // --- Playlists --------------------------------------------------------------------
+
+    /// Creates an empty static playlist named `name`, after the others.
+    pub fn create_playlist(&self, name: &str) -> Result<PlaylistId, PlaylistError> {
+        let name = playlists::check_name(name)?;
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::create(c, &name, now))
+    }
+
+    /// Renames `playlist`.
+    pub fn rename_playlist(&self, playlist: PlaylistId, name: &str) -> Result<(), PlaylistError> {
+        let name = playlists::check_name(name)?;
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::rename(c, playlist, &name, now))
+    }
+
+    /// Deletes `playlist` with its items.
+    pub fn delete_playlist(&self, playlist: PlaylistId) -> Result<(), PlaylistError> {
+        self.playlist_write(move |c| playlists::delete(c, playlist))
+    }
+
+    /// Copies the static playlist `playlist` into a new one named `name`.
+    pub fn duplicate_playlist(
+        &self,
+        playlist: PlaylistId,
+        name: &str,
+    ) -> Result<PlaylistId, PlaylistError> {
+        let name = playlists::check_name(name)?;
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::duplicate(c, playlist, &name, now))
+    }
+
+    /// Adds `tracks` at the end of the static playlist `playlist`, and returns the
+    /// position of the first. Fails, adding nothing, if a track is not in the library.
+    pub fn add_to_playlist(
+        &self,
+        playlist: PlaylistId,
+        tracks: Vec<TrackId>,
+    ) -> Result<usize, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::append_tracks(c, playlist, &tracks, now))
+    }
+
+    /// Inserts `tracks` at `position` (at most the playlist's length) of the static
+    /// playlist `playlist`. Fails, adding nothing, if a track is not in the library.
+    pub fn insert_into_playlist(
+        &self,
+        playlist: PlaylistId,
+        position: usize,
+        tracks: Vec<TrackId>,
+    ) -> Result<(), PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::insert_tracks(c, playlist, position, &tracks, now))
+    }
+
+    /// Moves the items at `positions` of the static playlist `playlist`, keeping their
+    /// order, so that they stand together before the item now at `to` (or at the end
+    /// when `to` is the playlist's length), as when dragging a selection. Returns the
+    /// new position of the first.
+    pub fn move_playlist_items(
+        &self,
+        playlist: PlaylistId,
+        positions: Vec<usize>,
+        to: usize,
+    ) -> Result<usize, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::move_items(c, playlist, &positions, to, now))
+    }
+
+    /// Removes the items at `positions` from the static playlist `playlist`. Returns how
+    /// many were removed.
+    pub fn remove_from_playlist(
+        &self,
+        playlist: PlaylistId,
+        positions: Vec<usize>,
+    ) -> Result<usize, PlaylistError> {
+        let now = to_unix_seconds(SystemTime::now());
+        self.playlist_write(move |c| playlists::remove_items(c, playlist, &positions, now))
+    }
+
+    /// One page of the static playlists, in the order they were created.
+    pub fn playlists(&self, page: Page) -> Result<crate::Paged<PlaylistSummary>, DbError> {
+        self.db.read(|c| playlists::playlists(c, page))
+    }
+
+    /// The static playlist `playlist`, if there is one.
+    pub fn playlist(&self, playlist: PlaylistId) -> Result<Option<PlaylistSummary>, DbError> {
+        self.db.read(|c| playlists::playlist(c, playlist))
+    }
+
+    /// One page of the items of the static playlist `playlist`, in order. An item whose
+    /// track is not in the library is [`ItemContent::Dead`](crate::ItemContent::Dead).
+    pub fn playlist_items(
+        &self,
+        playlist: PlaylistId,
+        page: Page,
+    ) -> Result<crate::Paged<PlaylistItem>, PlaylistError> {
+        self.db
+            .read(|c| playlists::item_page(c, playlist, page))
+            .map_err(PlaylistError::from_job)
+    }
+
+    /// The dead items of the static playlist `playlist`, in order.
+    pub fn dead_playlist_items(
+        &self,
+        playlist: PlaylistId,
+    ) -> Result<Vec<PlaylistItem>, PlaylistError> {
+        self.db
+            .read(|c| playlists::dead_items(c, playlist))
+            .map_err(PlaylistError::from_job)
+    }
+
+    /// Imports the playlist file at `path` (M3U, M3U8, PLS or XSPF, by its extension or
+    /// its contents) as a new static playlist, after the others.
+    ///
+    /// Each entry is matched to a track of the library by its path, then by the end of
+    /// its path, then by its title, artist and length. An entry that matches nothing is
+    /// kept as a dead item; a URL is kept as an unsupported dead item and never
+    /// fetched; an entry naming another playlist is skipped, not followed. The
+    /// playlist is written in one transaction.
+    pub fn import_playlist(
+        &self,
+        path: &Path,
+        options: &ImportOptions,
+    ) -> Result<ImportReport, PlaylistError> {
+        use helikodu_meta::playlists::{ParseOptions, read_playlist};
+        let parsed = read_playlist(
+            path,
+            &ParseOptions {
+                base_dir: None,
+                legacy_charset: options.legacy_charset.clone(),
+                limits: options.limits,
+            },
+        )?;
+        let name = playlists::imported_name(
+            options.name.as_deref(),
+            parsed.playlist.title.as_deref(),
+            path,
+        );
+        // Matching reads the library on a reader, so the writer is not held up.
+        let (items, mut report) = self
+            .db
+            .read(|c| playlists::match_entries(c, &parsed, name.clone()))?;
+        let now = to_unix_seconds(SystemTime::now());
+        report.playlist =
+            self.playlist_write(move |c| playlists::insert_imported(c, &name, &items, now))?;
+        Ok(report)
+    }
+
+    /// Exports the static playlist `playlist` into the file at `path`, replacing it
+    /// atomically: a crash leaves the old file or the new one.
+    pub fn export_playlist(
+        &self,
+        playlist: PlaylistId,
+        path: &Path,
+        options: ExportOptions,
+    ) -> Result<ExportReport, PlaylistError> {
+        use helikodu_meta::playlists::{WriteOptions, write_playlist};
+        let (contents, dead) = self
+            .db
+            .read(|c| playlists::export_rows(c, playlist, options.skip_dead))
+            .map_err(PlaylistError::from_job)?;
+        let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_owned());
+        let written = write_playlist(
+            &contents,
+            options.kind,
+            &WriteOptions {
+                path_style: options.path_style,
+                base_dir: absolute.parent().map(Path::to_owned),
+            },
+        );
+        playlists::write_atomically(path, &written.bytes).map_err(|source| {
+            PlaylistError::Write {
+                path: path.to_owned(),
+                source,
+            }
+        })?;
+        let left_out = written
+            .warnings
+            .iter()
+            .filter(|w| w.kind == helikodu_meta::playlists::WriteWarningKind::Unrepresentable)
+            .count();
+        Ok(ExportReport {
+            entries: contents.entries.len().saturating_sub(left_out),
+            dead,
+            warnings: written.warnings,
+        })
+    }
+
+    /// Runs a playlist edit on the writer; a refusal rolls it back.
+    fn playlist_write<T, F>(&self, job: F) -> Result<T, PlaylistError>
+    where
+        T: Send + 'static,
+        F: FnOnce(&rusqlite::Connection) -> rusqlite::Result<T> + Send + 'static,
+    {
+        self.write(job).map_err(PlaylistError::from_job)
     }
 
     // --- Scanning ------------------------------------------------------------------

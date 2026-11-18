@@ -37,3 +37,24 @@ path = "fuzz_targets/cover_decode.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "playlist_m3u"
+path = "fuzz_targets/playlist_m3u.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "playlist_pls"
+path = "fuzz_targets/playlist_pls.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "playlist_xspf"
+path = "fuzz_targets/playlist_xspf.rs"
+test = false
+doc = false
+bench = false

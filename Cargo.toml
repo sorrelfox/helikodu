@@ -59,6 +59,9 @@ notify = { version = "8.2.2", default-features = false }
 pipewire = { version = "=0.10.1", features = ["v1_2_0"] }
 # Property tests (development only). No default features: no forking or regex strategies.
 proptest = { version = "1.11", default-features = false, features = ["std"] }
+# XML reading for XSPF playlists. No default features: UTF-8 only (other charsets are
+# decoded before parsing) and no async or serde support.
+quick-xml = { version = "0.42", default-features = false }
 # The `regexp()` SQL function behind the query language's `~` operator.
 regex = "1.12"
 # Resource limits (address space, core dumps) that scan workers set on themselves.

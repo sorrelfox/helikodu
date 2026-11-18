@@ -14,6 +14,7 @@ mod covers;
 mod db;
 mod details;
 mod library;
+mod playlists;
 mod scan;
 mod search;
 mod stats;
@@ -46,6 +47,10 @@ pub use helikodu_meta::covers::CoverHash;
 /// A cover found by a scan worker, as a [`TrackCovers`] holds it.
 pub use helikodu_meta::worker::{CoverOrigin, CoverReport};
 pub use library::Library;
+pub use playlists::{
+    DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions, ImportReport, ItemContent,
+    PlaylistError, PlaylistId, PlaylistItem, PlaylistItemId, PlaylistSummary,
+};
 pub use scan::{
     CancelToken, ExcludeRule, FailureKind, FileFailure, ScanError, ScanEvent, ScanHandle,
     ScanOptions, ScanSummary, SymlinkPolicy, WORKER_PROGRAM, WorkerOptions, find_worker_program,
