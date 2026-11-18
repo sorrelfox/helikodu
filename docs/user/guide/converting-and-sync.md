@@ -34,7 +34,7 @@ The default, `{albumartist}/{album}/[{disc}-]{track} {title}`, gives `Mari Kask/
 
 **Sync and Export…** keeps a folder (a phone, a memory stick, another player) in step with chosen playlists and searches.
 
-- **Destinations** on the left; **New destination** asks for the folder. A destination whose drive is not connected says so.
+- **Destinations** on the left; **New destination** asks for the folder (before the first one, the window shows **Add destination…**); Cancel leaves everything as it was. A destination whose drive is not connected says so.
 - **Copy these**: tick playlists, playlist folders, smart playlists and saved searches. **Add an album, an artist or a search…** takes a search such as `album:"Tidewater Rooms"` or `artist:Okto`.
 - **Files**: convert lossless files to a preset (the others are copied), copy every file as it is, or convert everything to a preset.
 - **Write each playlist as an .m3u8 file** puts the chosen playlists and searches into a `Playlists` folder on the destination, so the other player finds them.

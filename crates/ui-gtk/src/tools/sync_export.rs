@@ -28,6 +28,7 @@ use crate::backend::{Backend, PlaylistKey, PlaylistType, SavedSearchRow};
 use crate::dialogs::common::{compact_button, dropdown, find_open, on_selected};
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
+use crate::widgets::empty_state::empty_state;
 use crate::widgets::label;
 use crate::window::MainWindow;
 
@@ -73,6 +74,10 @@ struct Sync {
     check: gtk::Button,
     primary: gtk::Button,
     stop: gtk::Button,
+    /// The options, figures, table and footer of a destination.
+    content: gtk::Box,
+    /// What the window shows while there is no destination.
+    empty: gtk::Box,
     filling: Cell<bool>,
     generation: Cell<u64>,
 }
@@ -152,17 +157,16 @@ impl Sync {
             row.update_property(&[gtk::accessible::Property::Label(&d.name)]);
             self.list.append(&row);
         }
-        let new_row = gtk::ListBoxRow::new();
-        new_row.set_widget_name("new-destination");
-        let content = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        content.append(&gtk::Image::from_icon_name("list-add-symbolic"));
-        content.append(&label(&tr("New destination"), &["hk-t2"]));
-        new_row.set_child(Some(&content));
-        new_row.update_property(&[gtk::accessible::Property::Label(&tr("New destination"))]);
-        self.list.append(&new_row);
-        let index = i32::try_from(self.chosen.get()).unwrap_or(0);
+        let has = !self.state.borrow().destinations.is_empty();
+        self.content.set_visible(has);
+        self.empty.set_visible(!has);
         self.filling.set(true);
-        self.list.select_row(self.list.row_at_index(index).as_ref());
+        if has {
+            let index = i32::try_from(self.chosen.get()).unwrap_or(0);
+            self.list.select_row(self.list.row_at_index(index).as_ref());
+        } else {
+            self.list.unselect_all();
+        }
         self.filling.set(false);
     }
 
@@ -471,34 +475,41 @@ impl Sync {
         }
     }
 
+    /// Asks for the folder of a new destination and adds it. Only a click on
+    /// "New destination" or "Add destination…" (or Enter on one) asks; Cancel
+    /// leaves everything as it was and asks nothing more.
     fn new_destination(self: &Rc<Self>) {
-        let dialog = gtk::FileDialog::builder()
-            .title(tr("Choose the folder to sync to"))
-            .modal(true)
-            .build();
         let weak = Rc::downgrade(self);
-        dialog.select_folder(Some(&self.window), gio::Cancellable::NONE, move |file| {
-            let Some(this) = weak.upgrade() else { return };
-            let Ok(Some(path)) = file.map(|f| f.path()) else {
-                this.fill_destinations();
-                return;
-            };
-            {
-                let mut state = this.state.borrow_mut();
-                let name = path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| tr("Destination"));
-                let id = state.new_destination_id();
-                let mut d = SyncDestination::new(id, name, path);
-                d.preset = state.converter.preset.clone();
-                state.destinations.push(d);
-                this.chosen.set(state.destinations.len() - 1);
-            }
-            let _ = this.export.save_state(&this.state.borrow());
-            this.fill_destinations();
-            this.show();
-        });
+        crate::chooser::select_folder(
+            &self.window,
+            &tr("Choose the folder to sync to"),
+            None,
+            None,
+            move |path| {
+                let (Some(this), Some(path)) = (weak.upgrade(), path) else {
+                    return;
+                };
+                this.add_destination(path);
+            },
+        );
+    }
+
+    fn add_destination(self: &Rc<Self>, path: std::path::PathBuf) {
+        {
+            let mut state = self.state.borrow_mut();
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| tr("Destination"));
+            let id = state.new_destination_id();
+            let mut d = SyncDestination::new(id, name, path);
+            d.preset = state.converter.preset.clone();
+            state.destinations.push(d);
+            self.chosen.set(state.destinations.len() - 1);
+        }
+        let _ = self.export.save_state(&self.state.borrow());
+        self.fill_destinations();
+        self.show();
     }
 }
 
@@ -573,7 +584,39 @@ pub(crate) fn open_with(main: &MainWindow, playlist: Option<PlaylistKey>) -> Opt
     frame.side_note.set_text(&tr(
         "Copies go one way: from the library to the destination.",
     ));
-    let column = frame.main.clone();
+    // "New destination" is a button under the destinations, not a row of
+    // their list: selecting rows, the arrow keys and the focus coming back
+    // to the window never ask for a folder.
+    let new_destination = gtk::Button::new();
+    new_destination.set_widget_name("new-destination");
+    new_destination.add_css_class("hk-side-add");
+    let new_line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    new_line.append(&gtk::Image::from_icon_name("list-add-symbolic"));
+    new_line.append(&gtk::Label::new(Some(&tr("New destination"))));
+    new_destination.set_child(Some(&new_line));
+    new_destination.update_property(&[gtk::accessible::Property::Label(&tr("New destination"))]);
+    new_destination.set_margin_start(8);
+    new_destination.set_margin_end(8);
+    new_destination.set_vexpand(true);
+    new_destination.set_valign(gtk::Align::Start);
+    frame.list.set_vexpand(false);
+    if let Some(side) = frame.list.parent().and_downcast::<gtk::Box>() {
+        side.insert_child_after(&new_destination, Some(&frame.list));
+    }
+
+    let add_destination = primary_button(&tr("Add destination…"));
+    add_destination.set_widget_name("add-destination");
+    let empty = empty_state(
+        "folder-symbolic",
+        &tr("No destinations yet"),
+        &tr("Add a folder, a phone or a memory stick to keep in step with your playlists."),
+        std::slice::from_ref(&add_destination),
+    );
+    empty.set_visible(false);
+    frame.main.append(&empty);
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    column.set_vexpand(true);
+    frame.main.append(&column);
 
     // What goes there, and how.
     let top = gtk::Box::new(gtk::Orientation::Horizontal, 24);
@@ -734,6 +777,8 @@ pub(crate) fn open_with(main: &MainWindow, playlist: Option<PlaylistKey>) -> Opt
         check: check.clone(),
         primary: primary.clone(),
         stop: stop.clone(),
+        content: column,
+        empty,
         filling: Cell::new(false),
         generation: Cell::new(0),
     });
@@ -746,22 +791,17 @@ pub(crate) fn open_with(main: &MainWindow, playlist: Option<PlaylistKey>) -> Opt
         if this.filling.get() {
             return;
         }
-        if row.widget_name() == "new-destination" {
-            // It acts when activated (below), not when the arrow keys or
-            // the window's first focus select it.
-            return;
-        }
         this.chosen.set(usize::try_from(row.index()).unwrap_or(0));
         this.show();
     });
-    let weak = Rc::downgrade(&sync);
-    frame.list.connect_row_activated(move |_, row| {
-        if let Some(this) = weak.upgrade()
-            && row.widget_name() == "new-destination"
-        {
-            this.new_destination();
-        }
-    });
+    for button in [&new_destination, &add_destination] {
+        let weak = Rc::downgrade(&sync);
+        button.connect_clicked(move |_| {
+            if let Some(this) = weak.upgrade() {
+                this.new_destination();
+            }
+        });
+    }
     let weak = Rc::downgrade(&sync);
     sources.connect_row_activated(move |_, row| {
         if let Some(this) = weak.upgrade()

@@ -11,6 +11,8 @@
 
 mod application;
 pub mod backend;
+#[doc(hidden)]
+pub mod chooser;
 mod deck;
 mod dialogs;
 mod format;

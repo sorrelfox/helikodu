@@ -26,19 +26,17 @@ use helikodu_model::settings::DuplicateScan;
 
 /// Asks for a folder with the desktop's folder chooser and calls `chosen`.
 pub(crate) fn choose_folder(parent: &gtk::Window, chosen: impl FnOnce(PathBuf) + 'static) {
-    let dialog = gtk::FileDialog::builder()
-        .title(tr("Add a music folder"))
-        .accept_label(tr("Add"))
-        .modal(true)
-        .build();
-    dialog.set_initial_folder(Some(&gio::File::for_path(glib::home_dir())));
-    dialog.select_folder(Some(parent), gio::Cancellable::NONE, move |result| {
-        if let Ok(path) = result.map(|f| f.path())
-            && let Some(path) = path
-        {
-            chosen(path);
-        }
-    });
+    crate::chooser::select_folder(
+        parent,
+        &tr("Add a music folder"),
+        Some(&tr("Add")),
+        Some(&glib::home_dir()),
+        move |path| {
+            if let Some(path) = path {
+                chosen(path);
+            }
+        },
+    );
 }
 
 /// The line under a folder's path: how it is kept current and its tracks.

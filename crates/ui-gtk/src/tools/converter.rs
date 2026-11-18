@@ -1188,19 +1188,19 @@ pub(crate) fn open_with(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Opt
     let weak = Rc::downgrade(&converter);
     choose.connect_clicked(move |_| {
         let Some(this) = weak.upgrade() else { return };
-        let dialog = gtk::FileDialog::builder()
-            .title(tr("Save the converted files in"))
-            .modal(true)
-            .build();
-        if let Some(path) = this.folder_path() {
-            dialog.set_initial_folder(Some(&gio::File::for_path(path)));
-        }
         let weak = Rc::downgrade(&this);
-        dialog.select_folder(Some(&this.window), gio::Cancellable::NONE, move |file| {
-            if let (Some(this), Ok(Some(path))) = (weak.upgrade(), file.map(|f| f.path())) {
-                this.folder.set_text(&shown_path(&path));
-            }
-        });
+        let start = this.folder_path();
+        crate::chooser::select_folder(
+            &this.window,
+            &tr("Save the converted files in"),
+            None,
+            start.as_deref(),
+            move |path| {
+                if let (Some(this), Some(path)) = (weak.upgrade(), path) {
+                    this.folder.set_text(&shown_path(&path));
+                }
+            },
+        );
     });
     let weak = Rc::downgrade(&converter);
     primary.connect_clicked(move |_| {

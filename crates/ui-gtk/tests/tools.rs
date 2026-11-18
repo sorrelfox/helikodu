@@ -25,6 +25,7 @@ use std::time::{Duration, Instant};
 use gtk::prelude::*;
 use gtk::{gio, glib};
 use helikodu_ui_gtk::backend::sample;
+use helikodu_ui_gtk::chooser;
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
 
@@ -184,6 +185,111 @@ fn sync_shows_the_plan(app: &gtk::Application) {
     main.destroy();
 }
 
+/// A stand-in for the desktop's folder chooser that counts the requests and
+/// answers each with `answer` on the next turn of the main loop, as the
+/// portal does.
+fn counting_chooser(answer: Option<std::path::PathBuf>) -> Rc<Cell<u32>> {
+    let asked = Rc::new(Cell::new(0u32));
+    let a = asked.clone();
+    chooser::replace_folder_chooser(Some(Rc::new(
+        move |_title: &str, reply: chooser::FolderReply| {
+            a.set(a.get() + 1);
+            let answer = answer.clone();
+            glib::idle_add_local_once(move || reply(answer));
+        },
+    )));
+    asked
+}
+
+/// Sync and export with no destination shows an empty state and asks for no
+/// folder by itself. The chooser opens once for each click on "Add
+/// destination…" or "New destination"; Cancel changes nothing and does not
+/// open it again, not even when the focus comes back to the window.
+fn sync_cancel_asks_once(app: &gtk::Application) {
+    let backend = sample::backend(&sample::SampleOptions {
+        albums: 4,
+        playing: None,
+    });
+    let export = backend.services().export();
+    let kept = export.state();
+    let mut empty = kept.clone();
+    empty.destinations.clear();
+    export.save_state(&empty).unwrap();
+    let asked = counting_chooser(None);
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        install_actions(app, &backend);
+        let main = MainWindow::new(app, &backend, WindowStyle::Integrated);
+        main.present();
+        spin(100);
+        let tool = open_tool(app, "sync-export", "sync-export");
+        spin(300);
+        assert_eq!(asked.get(), 0, "opening the window asks for no folder");
+        let add: gtk::Button = named(&tool, "add-destination");
+        assert!(add.is_mapped(), "the empty state offers Add destination");
+        let list = tool_list(&tool);
+        assert!(list.selected_row().is_none());
+
+        // Cancel: asked once, nothing added, not asked again.
+        add.emit_clicked();
+        // A second click while the chooser is open does not stack another.
+        add.emit_clicked();
+        spin(300);
+        assert_eq!(asked.get(), 1, "one chooser for one click");
+        assert!(
+            export.state().destinations.is_empty(),
+            "Cancel adds nothing"
+        );
+        assert!(add.is_mapped());
+        // The focus coming back to the window, and the keys over the list.
+        tool.present();
+        add.grab_focus();
+        list.child_focus(gtk::DirectionType::TabForward);
+        spin(300);
+        assert_eq!(asked.get(), 1, "Cancel does not open the chooser again");
+
+        // "New destination" asks once too; Escape answers like Cancel.
+        let new: gtk::Button = named(&tool, "new-destination");
+        new.emit_clicked();
+        spin(300);
+        assert_eq!(asked.get(), 2);
+        assert!(export.state().destinations.is_empty());
+
+        // A chosen folder becomes a destination, shown at once.
+        let folder = glib::home_dir().join("Music");
+        let picked = counting_chooser(Some(folder));
+        new.emit_clicked();
+        wait_for("the destination", || {
+            !export.state().destinations.is_empty()
+        });
+        spin(200);
+        assert_eq!(picked.get(), 1);
+        assert!(
+            !add.is_mapped(),
+            "the empty state gives way to the destination"
+        );
+        assert!(list.selected_row().is_some());
+        tool.close();
+        main.destroy();
+    }));
+    chooser::replace_folder_chooser(None);
+    export.save_state(&kept).unwrap();
+    if let Err(panic) = result {
+        std::panic::resume_unwind(panic);
+    }
+}
+
+/// The list of the left pane of a tool window.
+fn tool_list(tool: &gtk::Window) -> gtk::ListBox {
+    descendants(tool.upcast_ref())
+        .into_iter()
+        .find_map(|w| {
+            w.downcast::<gtk::ListBox>()
+                .ok()
+                .filter(|l| l.has_css_class("hk-list"))
+        })
+        .unwrap()
+}
+
 /// The cover manager counts each group and ticks albums for its action.
 fn covers_group_and_tick(app: &gtk::Application) {
     let main = window(app);
@@ -216,6 +322,7 @@ type Test = (&'static str, fn(&gtk::Application));
 const TESTS: &[Test] = &[
     ("the_converter_converts", the_converter_converts),
     ("sync_shows_the_plan", sync_shows_the_plan),
+    ("sync_cancel_asks_once", sync_cancel_asks_once),
     ("covers_group_and_tick", covers_group_and_tick),
 ];
 

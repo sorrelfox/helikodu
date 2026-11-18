@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use gtk::glib;
 use gtk::prelude::*;
-use gtk::{gio, glib};
 
 use crate::backend::services::{FileRunId, RunReport, Services};
 use crate::dialogs::common::compact_button;
@@ -135,15 +135,9 @@ pub(crate) fn choose_folder(
     start: Option<&Path>,
     chosen: impl FnOnce(PathBuf) + 'static,
 ) {
-    let dialog = gtk::FileDialog::builder()
-        .title(title)
-        .accept_label(accept)
-        .modal(true)
-        .build();
     let start = start.map_or_else(glib::home_dir, Path::to_path_buf);
-    dialog.set_initial_folder(Some(&gio::File::for_path(start)));
-    dialog.select_folder(Some(parent), gio::Cancellable::NONE, move |result| {
-        if let Ok(Some(path)) = result.map(|f| f.path()) {
+    crate::chooser::select_folder(parent, title, Some(accept), Some(&start), move |path| {
+        if let Some(path) = path {
             chosen(path);
         }
     });
