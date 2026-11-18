@@ -190,7 +190,17 @@ impl Worker {
         let until = output.writer.frames_written();
         // An action scheduled earlier for a later position would hold the cut back
         // until there: cut there instead.
-        let cut = from.max(at).max(output.writer.scheduled_until()).min(until);
+        let mut cut = from.max(at).max(output.writer.scheduled_until()).min(until);
+        if cut < until {
+            // The device side may have taken the frames at the cut already: then the
+            // cut comes where it stands, and playback goes on from what was heard
+            // there.
+            let action = DeviceAction::Discard { until, hold: false };
+            if let Some(applies) = output.writer.schedule_where(cut, action) {
+                cut = applies.min(until);
+            }
+            self.timeline.skip(cut, until);
+        }
         let mut frames = if cut == from {
             frames
         } else {
@@ -200,12 +210,6 @@ impl Worker {
             && frames >= end
         {
             frames = start;
-        }
-        if cut < until {
-            let _ = output
-                .writer
-                .schedule(cut, DeviceAction::Discard { until, hold: false });
-            self.timeline.skip(cut, until);
         }
         // What follows the heard item in the buffer goes; the next item stays next.
         let follower = self.timeline.follower().map(|s| s.item.id);

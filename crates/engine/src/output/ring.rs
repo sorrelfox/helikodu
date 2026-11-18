@@ -44,6 +44,9 @@ const ACTION_QUEUE: usize = 64;
 const DOP_MARKERS: [u8; 2] = [0x05, 0xFA];
 /// The DSD idle pattern, the byte of DSD silence.
 const DSD_IDLE: u8 = 0x69;
+/// In [`StreamShared::claimed`]: an action has been scheduled since the device side
+/// last claimed frames.
+const NEW_ACTION: u64 = 1 << 63;
 
 /// State and counters shared by a stream's handle, its writer and its device side.
 #[derive(Debug)]
@@ -68,6 +71,11 @@ pub(crate) struct StreamShared {
     silent: AtomicBool,
     /// The ring position of the first frame the last fade out silenced completely.
     silent_since: AtomicU64,
+    /// The ring position up to which the device side takes frames before it looks
+    /// at the scheduled actions again, plus [`NEW_ACTION`] once the writer has
+    /// scheduled one since. Tells the writer where an action scheduled now applies
+    /// at the earliest.
+    claimed: AtomicU64,
     /// The software volume the device side follows.
     volume: SharedVolume,
 }
@@ -234,6 +242,7 @@ pub(crate) fn ring_tapped(
         actions_applied: AtomicU64::new(0),
         silent: AtomicBool::new(false),
         silent_since: AtomicU64::new(0),
+        claimed: AtomicU64::new(0),
         volume: volume.clone(),
     });
     let writer = SampleWriter {
@@ -241,6 +250,7 @@ pub(crate) fn ring_tapped(
         actions: actions_in,
         scheduled: 0,
         scheduled_until: 0,
+        discarded_until: 0,
         shared: shared.clone(),
     };
     let reader = SampleReader {
@@ -277,6 +287,8 @@ pub struct SampleWriter {
     scheduled: u64,
     /// The latest ring position an action was scheduled at.
     scheduled_until: u64,
+    /// The latest ring position a [`DeviceAction::Discard`] drops up to.
+    discarded_until: u64,
     shared: Arc<StreamShared>,
 }
 
@@ -376,7 +388,25 @@ impl SampleWriter {
         }
         self.scheduled += 1;
         self.scheduled_until = self.scheduled_until.max(at);
+        if let DeviceAction::Discard { until, .. } = action {
+            self.discarded_until = self.discarded_until.max(until);
+        }
         true
+    }
+
+    /// Like [`schedule`](Self::schedule), and returns the ring position at which the
+    /// device side will apply `action`: `at`, or later when the device has taken
+    /// the frame at `at` already, or an action scheduled before holds it back.
+    /// `None` when too many actions are waiting.
+    pub fn schedule_where(&mut self, at: u64, action: DeviceAction) -> Option<u64> {
+        let before = self.scheduled_until.max(self.discarded_until);
+        if !self.schedule(at, action) {
+            return None;
+        }
+        // The device side takes the frames it has claimed before it looks at the
+        // actions again; from now on it looks before it claims more.
+        let claimed = self.shared.claimed.fetch_or(NEW_ACTION, Ordering::AcqRel) & !NEW_ACTION;
+        Some(at.max(before).max(claimed))
     }
 
     /// The latest ring position an action has been scheduled at. Actions apply in
@@ -544,6 +574,10 @@ impl SampleReader {
             if frames == 0 {
                 break;
             }
+            if !self.claim(frames) {
+                // An action came: look at it first.
+                continue;
+            }
             let block = &mut out[done * channels..(done + frames) * channels];
             // Integers that nothing changes go to the encoder as they are. DoP
             // frames are checked one by one instead.
@@ -597,6 +631,24 @@ impl SampleReader {
             .frames_delivered
             .fetch_add(done as u64, Ordering::Relaxed);
         done
+    }
+
+    /// Claims the next `frames` frames for taking, so that an action scheduled from
+    /// now on applies after them at the earliest. Fails, claiming nothing, when an
+    /// action has been scheduled since the last claim: it may apply within them.
+    fn claim(&mut self, frames: usize) -> bool {
+        let end = self.taken + frames as u64;
+        let claimed = &self.shared.claimed;
+        let mut current = claimed.load(Ordering::Acquire);
+        loop {
+            let fresh = current & NEW_ACTION == 0;
+            let next = if fresh { end } else { self.taken };
+            match claimed.compare_exchange_weak(current, next, Ordering::AcqRel, Ordering::Acquire)
+            {
+                Ok(_) => return fresh,
+                Err(actual) => current = actual,
+            }
+        }
     }
 
     /// Applies the actions whose position has been reached.
@@ -953,6 +1005,30 @@ mod tests {
         assert_eq!(timing.frames_delivered, 50);
         assert_eq!(timing.underruns, 0);
         assert_eq!(timing.queued_frames(), 50);
+    }
+
+    #[test]
+    fn an_action_says_where_it_applies() {
+        let (mut writer, mut reader, shared) = stereo_ring(20);
+        writer.write(&[0.5; 2 * 400]);
+        // Ahead of the device side: where it was asked for.
+        assert_eq!(
+            writer.schedule_where(30, DeviceAction::AlwaysDither(false)),
+            Some(30)
+        );
+        let mut out = [0.0; 2 * 100];
+        assert_eq!(reader.read(&mut out), 100);
+        // Behind it: where the device side stands, and that is where it applies.
+        let until = writer.frames_written();
+        let action = DeviceAction::Discard { until, hold: false };
+        assert_eq!(writer.schedule_where(50, action), Some(100));
+        // Another one waits behind the discard.
+        assert_eq!(
+            writer.schedule_where(60, DeviceAction::AlwaysDither(false)),
+            Some(until)
+        );
+        assert_eq!(reader.read(&mut out), 0);
+        assert_eq!(shared.timing().frames_discarded, 300);
     }
 
     #[test]
