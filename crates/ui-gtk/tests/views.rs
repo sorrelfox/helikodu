@@ -991,6 +991,170 @@ fn the_copies_badge_follows_the_title(app: &gtk::Application) {
     window.destroy();
 }
 
+/// The content box of each shown cell of the track table's rows, by
+/// column: `(column, row, left, right)`, and the rating cells whose stars
+/// are hidden.
+fn track_cells(window: &MainWindow) -> (Vec<(String, usize, f32, f32)>, usize) {
+    let mut cells = Vec::new();
+    let mut hidden_stars = 0;
+    let rows: Vec<gtk::Widget> = descendants(window.upcast_ref())
+        .into_iter()
+        .filter(|w| {
+            w.css_name() == "row"
+                && w.parent().is_some_and(|p| p.css_name() == "listview")
+                && w.is_mapped()
+        })
+        .collect();
+    for (r, row) in rows.iter().enumerate() {
+        let mut child = row.first_child();
+        while let Some(cell) = child {
+            child = cell.next_sibling();
+            let Some(inner) = cell.first_child().filter(|_| cell.is_visible()) else {
+                continue;
+            };
+            #[allow(deprecated)]
+            let padding = inner.style_context().padding();
+            let x = cell.compute_bounds(window).unwrap().x();
+            let left = x + f32::from(padding.left());
+            let right = x + cell.width() as f32 - f32::from(padding.right());
+            let name = inner.widget_name().to_string();
+            if name == "rating" && !inner.first_child().is_some_and(|s| s.is_visible()) {
+                hidden_stars += 1;
+            }
+            cells.push((name, r, left, right));
+        }
+    }
+    (cells, hidden_stars)
+}
+
+/// Every cell of a column has the column's place, whatever the row: after
+/// columns are shown and moved, rows are recycled while scrolling, a track
+/// plays and rows with copies come and go. The first and last columns keep
+/// the padding of the table's edges, and every row shows its rating.
+fn track_cells_line_up_in_columns(app: &gtk::Application) {
+    let (window, backend) = window(app);
+    window.open_page("tracks");
+    wait_for("the first rows", 2, || window.track_table_stats().1 > 0);
+    let (view, table) = {
+        let all = descendants(window.upcast_ref());
+        let view = all
+            .iter()
+            .find(|w| w.has_css_class("hk-tracks-view"))
+            .unwrap()
+            .clone();
+        let table = all
+            .iter()
+            .find_map(|w| w.downcast_ref::<gtk::ColumnView>().cloned())
+            .unwrap();
+        (view, table)
+    };
+    let keys = window.track_keys(20);
+    backend.send(PlayerRequest::PlayTracks {
+        tracks: vec![keys[3]],
+        start: 0,
+        title: String::new(),
+        shuffle: false,
+    });
+    wait_for("playback", 2, || window.is_playing());
+    // Columns shown after the rows were made, and one moved first.
+    for column in ["added", "genre", "plays"] {
+        view.activate_action(&format!("columns.{column}"), None)
+            .unwrap();
+        spin(50);
+    }
+    let columns = table.columns();
+    let year = (0..columns.n_items())
+        .filter_map(|i| columns.item(i).and_downcast::<gtk::ColumnViewColumn>())
+        .find(|c| c.id().as_deref() == Some("year"))
+        .unwrap();
+    table.insert_column(0, &year);
+    spin(100);
+    // Taller, so new rows are made beside the recycled ones.
+    window.set_default_size(1440, 1100);
+    let adjustment = window.track_table_adjustment().unwrap();
+    for step in 0..40 {
+        let value = if step == 30 {
+            0.0
+        } else {
+            adjustment.value() + 30.0 * f64::from(step % 7 + 1)
+        };
+        adjustment.set_value(value);
+        spin(40);
+        if step < 30 && step % 10 != 9 {
+            continue;
+        }
+        spin(100);
+        let (cells, hidden_stars) = track_cells(&window);
+        assert!(cells.len() > 100, "cells found: {}", cells.len());
+        assert_eq!(hidden_stars, 0, "every row shows its rating");
+        let place = |name: &str| {
+            cells
+                .iter()
+                .find(|(n, _, _, _)| n == name)
+                .map(|&(_, _, l, r)| (l, r))
+                .unwrap()
+        };
+        for (name, row, left, right) in &cells {
+            assert_eq!(
+                (*left, *right),
+                place(name),
+                "the {name} cell of row {row} has its column's place"
+            );
+        }
+        let first = cells.iter().map(|c| c.2).fold(f32::MAX, f32::min);
+        let last = cells.iter().map(|c| c.3).fold(f32::MIN, f32::max);
+        let (year_left, _) = place("year");
+        assert_eq!(year_left, first, "the first column is year");
+        let x0 = table.compute_bounds(&window).unwrap().x();
+        assert_eq!(first - x0, 24.0, "the first column's padding");
+        let (_, length_right) = place("length");
+        assert_eq!(length_right, last, "the last column is length");
+    }
+    window.destroy();
+}
+
+/// A context menu is as tall as its items, with no empty space below them:
+/// the artist photo menu has one item ("Set artist photo…") when the artist
+/// has no photo of their own. The menu scrollbar's least height used to be
+/// taller than one item.
+fn short_menus_have_no_empty_space(app: &gtk::Application) {
+    let (window, _) = window(app);
+    for items in [1, 2] {
+        let section = gio::Menu::new();
+        for i in 0..items {
+            section.append(Some(&format!("Item {i}")), Some("win.none"));
+        }
+        let popover = gtk::PopoverMenu::from_model(Some(&section));
+        popover.add_css_class("hk-context-menu");
+        popover.set_has_arrow(false);
+        popover.set_parent(&window);
+        popover.popup();
+        wait_for("the menu", 2, || popover.is_mapped());
+        spin(100);
+        let all = descendants(popover.upcast_ref());
+        let scroller = all
+            .iter()
+            .find(|w| w.css_name() == "scrolledwindow")
+            .unwrap();
+        let shown: Vec<&gtk::Widget> = all
+            .iter()
+            .filter(|w| w.css_name() == "modelbutton" && w.is_mapped())
+            .collect();
+        assert_eq!(shown.len(), items);
+        let first = shown[0].compute_bounds(scroller).unwrap();
+        let last = shown[items - 1].compute_bounds(scroller).unwrap();
+        assert_eq!(
+            (first.y(), last.y() + last.height()),
+            (0.0, scroller.height() as f32),
+            "{items} items fill the menu, with no space after them"
+        );
+        popover.popdown();
+        popover.unparent();
+        spin(50);
+    }
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 fn history_lists_listens_by_day(app: &gtk::Application) {
@@ -1008,6 +1172,14 @@ fn history_lists_listens_by_day(app: &gtk::Application) {
 }
 
 const TESTS: &[Test] = &[
+    (
+        "short_menus_have_no_empty_space",
+        short_menus_have_no_empty_space,
+    ),
+    (
+        "track_cells_line_up_in_columns",
+        track_cells_line_up_in_columns,
+    ),
     (
         "the_playing_track_is_marked_in_every_list",
         the_playing_track_is_marked_in_every_list,

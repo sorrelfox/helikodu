@@ -74,7 +74,7 @@ pub(crate) fn header_strip(
     title: &str,
     note: Option<&str>,
 ) -> (gtk::WindowHandle, gtk::Box) {
-    let strip = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    let strip = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     strip.add_css_class("hk-strip");
     let heading = label(title, &["hk-title"]);
     heading.set_hexpand(true);

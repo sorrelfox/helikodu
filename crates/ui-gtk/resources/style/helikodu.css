@@ -251,6 +251,11 @@ popover.menu > contents { min-width: 0; margin: 0; padding: 6px 0 6px 6px; borde
    screen scrolls with its scrollbar in that gutter, not over the items. */
 popover.menu > contents > scrolledwindow > viewport > stack { margin-right: 6px; }
 popover.menu > contents > scrolledwindow > scrollbar.vertical slider { min-width: 4px; }
+/* The menu's slider is shorter than one item, and does not ease to its
+   size: the scrollbar's minimum height is the least height of the menu, and
+   with the 30 px slider a menu of one item showed empty space below it. */
+popover.menu > contents > scrolledwindow > scrollbar.vertical slider,
+popover.menu > contents > scrolledwindow > scrollbar.overlay-indicator.vertical:not(.dragging):not(.hovering) slider { min-height: 12px; transition: none; }
 popover.menu > contents > scrolledwindow > scrollbar.overlay-indicator.vertical:not(.dragging):not(.hovering) slider { min-width: 2px; }
 popover.menu.hk-main-menu > contents { min-width: 260px; }
 popover.menu.hk-play-menu > contents { min-width: 280px; }

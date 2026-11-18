@@ -317,7 +317,18 @@ pub(crate) fn open(parent: &gtk::Window, backend: &Backend) -> gtk::Window {
     formats_line.append(&formats_label);
     formats_line.append(&gtk::Image::from_icon_name("go-next-symbolic"));
     formats.set_child(Some(&formats_line));
-    formats.set_action_name(Some("app.formats"));
+    // About is modal: a window opened beside it would take no clicks while
+    // it stays open, hidden behind the larger Supported formats. It closes
+    // first.
+    let weak = window.downgrade();
+    formats.connect_clicked(move |_| {
+        let Some(about) = weak.upgrade() else { return };
+        let application = about.application();
+        about.close();
+        if let Some(application) = application {
+            application.activate_action("formats", None);
+        }
+    });
     list.append(&formats);
     body.append(&list);
 

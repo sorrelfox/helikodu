@@ -79,6 +79,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Tracks table: after a column was shown (such as **Added** or **Genre**), most rows put the wide padding of the table's edge on that column instead of on the first and last columns, so the text of the last columns stood a little off from the rows made later.
+- Supported formats opened from About could not be closed with its close button while About, hidden behind it, was still open. About now closes first.
+- A menu with one item, such as the artist photo menu, no longer shows empty space below the item.
 - A library database on a read-only file was opened as if it could be written; changes then failed one by one. It now opens read-only and says so.
 - File moves of the organizer that a crash cut short are now settled at the next start.
 - The lyrics offsets file is now written atomically (synced before it replaces the old one), and temporary files of settings saves cut short are cleared.

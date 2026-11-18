@@ -45,8 +45,8 @@ columnview.hk-table > listview > row:hover { background-color: var(--hk-hover); 
 columnview.hk-table > listview > row:selected { background-color: var(--hk-sel); color: var(--hk-t1); }
 columnview.hk-table > listview > row > cell { padding: 0; }
 columnview.hk-table > listview > row > cell > .hk-cell { min-height: 30px; padding: 0 8px; }
-columnview.hk-table > listview > row > cell:first-child > .hk-cell { padding-left: 24px; }
-columnview.hk-table > listview > row > cell:last-child > .hk-cell { padding-right: 28px; }
+columnview.hk-table > listview > row > cell > .hk-cell.hk-first { padding-left: 24px; }
+columnview.hk-table > listview > row > cell > .hk-cell.hk-last { padding-right: 28px; }
 columnview.hk-table > listview > row:not(:selected):not(:hover) > cell > .hk-cell.hk-alt { background-color: var(--hk-zebra); }
 .hk-cell.hk-playing, .hk-cell.hk-playing label { color: var(--hk-accent-text); font-weight: 600; }
 .hk-cell.hk-playing.hk-mono-meta, .hk-cell.hk-playing label.hk-mono-meta { font-weight: 500; }

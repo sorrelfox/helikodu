@@ -311,9 +311,61 @@ impl TracksView {
         columns_button.set_menu_model(Some(&view.columns_menu()));
         crate::widgets::menu_names::name_menus(&columns_button);
         view.connect(playback);
+        view.connect_edges();
         view.connect_browser();
         view.show_sort();
         view
+    }
+
+    /// The first and the last shown column, in the table's order.
+    fn edge_columns(&self) -> (Option<TrackColumn>, Option<TrackColumn>) {
+        let columns = self.table.columns();
+        let shown: Vec<TrackColumn> = (0..columns.n_items())
+            .filter_map(|i| columns.item(i).and_downcast::<gtk::ColumnViewColumn>())
+            .filter(gtk::ColumnViewColumn::is_visible)
+            .filter_map(|c| {
+                self.columns
+                    .iter()
+                    .find(|(_, own)| *own == c)
+                    .map(|(column, _)| *column)
+            })
+            .collect();
+        (shown.first().copied(), shown.last().copied())
+    }
+
+    /// Keeps the cells of the first and the last shown column marked as the
+    /// columns are shown, hidden and moved.
+    fn connect_edges(self: &Rc<Self>) {
+        let mark = {
+            let weak = Rc::downgrade(self);
+            move || {
+                let Some(view) = weak.upgrade() else { return };
+                let (first, last) = view.edge_columns();
+                for cell in view
+                    .cells
+                    .borrow()
+                    .iter()
+                    .filter_map(glib::WeakRef::upgrade)
+                {
+                    let column = view
+                        .columns
+                        .iter()
+                        .find(|(c, _)| cell.widget_name() == column_id(*c))
+                        .map(|(c, _)| *c);
+                    cell.set_edges(
+                        column.is_some() && column == first,
+                        column.is_some() && column == last,
+                    );
+                }
+            }
+        };
+        for (_, c) in &self.columns {
+            let mark = mark.clone();
+            c.connect_visible_notify(move |_| mark());
+        }
+        self.table
+            .columns()
+            .connect_items_changed(move |_, _, _, _| mark());
     }
 
     fn connect_browser(self: &Rc<Self>) {
@@ -409,6 +461,8 @@ impl TracksView {
             };
             cell.set_widget_name(column_id(column));
             if let Some(view) = weak.upgrade() {
+                let (first, last) = view.edge_columns();
+                cell.set_edges(first == Some(column), last == Some(column));
                 view.cells.borrow_mut().push(cell.downgrade());
                 view.playing.add(&cell);
                 if let Some(stars) = cell.child().and_downcast::<RatingStars>() {

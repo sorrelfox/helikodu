@@ -314,6 +314,20 @@ impl TableCell {
         }
     }
 
+    /// Marks the cell as in the first or the last shown column, for the
+    /// padding at the table's edges. Not `:first-child` and `:last-child`:
+    /// GTK appends the cells of a column shown later to the rows made before,
+    /// so their order in a row need not be the columns' order.
+    pub(crate) fn set_edges(&self, first: bool, last: bool) {
+        for (class, on) in [("hk-first", first), ("hk-last", last)] {
+            if on {
+                self.add_css_class(class);
+            } else {
+                self.remove_css_class(class);
+            }
+        }
+    }
+
     /// Shows the row at `position`; odd positions get the stripe.
     pub(crate) fn set_position(&self, position: Option<u32>) {
         self.imp().position.set(position);

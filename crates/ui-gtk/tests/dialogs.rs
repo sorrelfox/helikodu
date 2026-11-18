@@ -1104,7 +1104,176 @@ fn database_backups_and_logs(app: &gtk::Application) {
     window.destroy();
 }
 
+/// A pointer moved and clicked through the headless compositor (mutter's
+/// remote desktop), so a click goes the way of a real one: to the window the
+/// compositor lets it reach.
+struct Pointer {
+    bus: gio::DBusConnection,
+    session: String,
+}
+
+impl Pointer {
+    /// None under a compositor without mutter's remote desktop.
+    fn new() -> Option<Self> {
+        let bus = gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>).ok()?;
+        let reply = bus
+            .call_sync(
+                Some("org.gnome.Mutter.RemoteDesktop"),
+                "/org/gnome/Mutter/RemoteDesktop",
+                "org.gnome.Mutter.RemoteDesktop",
+                "CreateSession",
+                None,
+                None,
+                gio::DBusCallFlags::NONE,
+                2000,
+                None::<&gio::Cancellable>,
+            )
+            .ok()?;
+        let (session,): (glib::variant::ObjectPath,) = reply.get()?;
+        let pointer = Self {
+            bus,
+            session: session.as_str().to_owned(),
+        };
+        pointer.call("Start", None)?;
+        Some(pointer)
+    }
+
+    fn call(&self, method: &str, args: Option<&glib::Variant>) -> Option<()> {
+        self.bus
+            .call_sync(
+                Some("org.gnome.Mutter.RemoteDesktop"),
+                &self.session,
+                "org.gnome.Mutter.RemoteDesktop.Session",
+                method,
+                args,
+                None,
+                gio::DBusCallFlags::NONE,
+                2000,
+                None::<&gio::Cancellable>,
+            )
+            .ok()
+            .map(|_| ())
+    }
+
+    /// Moves the pointer over the middle of `widget` and clicks it; false
+    /// when the pointer cannot reach its window.
+    fn click(&self, widget: &impl IsA<gtk::Widget>) -> bool {
+        let widget = widget.as_ref();
+        let root = widget.root().unwrap();
+        let root = root.upcast_ref::<gtk::Widget>();
+        let at = Rc::new(std::cell::Cell::new(None::<(f64, f64)>));
+        let motion = gtk::EventControllerMotion::new();
+        motion.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let seen = at.clone();
+        motion.connect_motion(move |_, x, y| seen.set(Some((x, y))));
+        root.add_controller(motion.clone());
+        let bounds = widget.compute_bounds(root).unwrap();
+        let target = (
+            f64::from(bounds.x() + bounds.width() / 2.0),
+            f64::from(bounds.y() + bounds.height() / 2.0),
+        );
+        // From the top left corner of the screen towards its middle, where
+        // the windows are, until the window sees the pointer.
+        self.call(
+            "NotifyPointerMotionRelative",
+            Some(&(-4000.0_f64, -4000.0_f64).to_variant()),
+        );
+        spin(30);
+        for _ in 0..80 {
+            let (dx, dy) = at
+                .get()
+                .map_or((32.0, 18.0), |(x, y)| (target.0 - x, target.1 - y));
+            if dx.abs() < 1.0 && dy.abs() < 1.0 {
+                break;
+            }
+            self.call("NotifyPointerMotionRelative", Some(&(dx, dy).to_variant()));
+            spin(30);
+        }
+        root.remove_controller(&motion);
+        let reached = at
+            .get()
+            .is_some_and(|(x, y)| (x - target.0).abs() < 2.0 && (y - target.1).abs() < 2.0);
+        if reached {
+            // BTN_LEFT, pressed and released.
+            self.call("NotifyPointerButton", Some(&(272_i32, true).to_variant()));
+            spin(30);
+            self.call("NotifyPointerButton", Some(&(272_i32, false).to_variant()));
+            spin(200);
+        }
+        reached
+    }
+}
+
+impl Drop for Pointer {
+    fn drop(&mut self) {
+        self.call("Stop", None);
+    }
+}
+
+/// The close button of the header strip of `window`.
+fn close_button(window: &gtk::Window) -> gtk::Widget {
+    descendants(window.upcast_ref())
+        .into_iter()
+        .find(|w| w.is::<gtk::Button>() && w.tooltip_text().as_deref() == Some("Close"))
+        .unwrap()
+}
+
+/// The close button in each window's header closes it when clicked as a
+/// user clicks: Supported formats (from the Help menu and from About),
+/// About, Keyboard shortcuts, Settings and a tool window. Only under mutter,
+/// which can move the pointer.
+fn close_buttons_close_their_windows(app: &gtk::Application) {
+    let Some(pointer) = Pointer::new() else {
+        println!("close buttons: skipped, the compositor cannot move the pointer");
+        return;
+    };
+    let (window, _) = window(app);
+    for (action, name) in [
+        ("formats", "formats"),
+        ("about", "about"),
+        ("shortcuts", "shortcuts"),
+        ("preferences", "settings"),
+        ("convert", "converter"),
+    ] {
+        app.activate_action(action, None);
+        wait_for(name, || toplevel(name).is_some());
+        spin(300);
+        let shown = toplevel(name).unwrap();
+        assert!(
+            pointer.click(&close_button(&shown)),
+            "the pointer reaches {name}"
+        );
+        wait_for(&format!("{name} to close"), || toplevel(name).is_none());
+    }
+    // From About, which is modal: About closes first, or Supported formats
+    // would take no clicks.
+    app.activate_action("about", None);
+    wait_for("About", || toplevel("about").is_some());
+    spin(300);
+    let link = descendants(toplevel("about").unwrap().upcast_ref())
+        .into_iter()
+        .find(|w| w.has_css_class("hk-about-link"))
+        .unwrap();
+    link.downcast::<gtk::Button>().unwrap().emit_clicked();
+    wait_for("Supported formats", || toplevel("formats").is_some());
+    spin(300);
+    assert!(toplevel("about").is_none(), "About closes");
+    let formats = toplevel("formats").unwrap();
+    assert!(
+        pointer.click(&close_button(&formats)),
+        "the pointer reaches Supported formats"
+    );
+    wait_for("Supported formats to close", || {
+        toplevel("formats").is_none()
+    });
+    window.destroy();
+}
+
 const TESTS: &[Test] = &[
+    (
+        "close_buttons_close_their_windows",
+        close_buttons_close_their_windows,
+    ),
     ("database_backups_and_logs", database_backups_and_logs),
     ("settings_round_trip", settings_round_trip),
     ("the_full_output_confirmation", the_full_output_confirmation),
