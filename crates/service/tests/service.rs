@@ -213,3 +213,65 @@ fn output_and_loudness_settings_reach_the_playing_engine() {
     until(&events, transport(TransportState::Reconfiguring));
     until(&events, transport(TransportState::Playing));
 }
+
+/// A rating is announced on the bus once it is stored, with the track and the
+/// stars, so every list showing the track can update it in place.
+#[test]
+fn a_stored_rating_is_announced() {
+    use std::sync::Arc;
+
+    use helikodu_library::{DatabaseConfig, FileStamp, Library, TrackRecord, TrackTags};
+    use helikodu_service::library::LibraryEvent;
+
+    let dir = folder("rating_event");
+    let inner = Library::open(&DatabaseConfig::in_memory()).unwrap();
+    let root = inner.add_root("/nonexistent-music").unwrap();
+    let mut record = TrackRecord::new(
+        root,
+        "a.flac",
+        FileStamp {
+            size: 1000,
+            mtime_ns: Some(1),
+            inode: None,
+            quick_hash: b"a.flac".to_vec(),
+        },
+    );
+    record.tags = TrackTags {
+        title: Some("A".into()),
+        ..TrackTags::default()
+    };
+    let track = inner.upsert_track(record).unwrap().track;
+    let dirs = AppDirs::under(&dir);
+    fs::create_dir_all(&dirs.config).unwrap();
+    fs::write(
+        dirs.config.join("settings.toml"),
+        "version = 1\n[output]\nbackend = \"null\"\n",
+    )
+    .unwrap();
+    let mut config = ServiceConfig::new(dirs);
+    config.library = LibraryChoice::Open(MusicLibrary::from_library(Arc::new(inner), ":memory:"));
+    config.thumbnails = false;
+    let service = Service::start(config).unwrap();
+    let events = service.subscribe(SubscribeOptions {
+        player: false,
+        settings: false,
+        ..SubscribeOptions::all()
+    });
+    let library = service.library().unwrap();
+    for stars in [Some(4), None] {
+        let (reply, answer) = mpsc::channel();
+        library
+            .rate(track, stars, move |result| {
+                reply.send(result.is_ok()).unwrap()
+            })
+            .unwrap();
+        assert!(answer.recv_timeout(Duration::from_secs(10)).unwrap());
+        let event = until(&events, |e| {
+            matches!(e, Event::Library(LibraryEvent::RatingChanged { .. }))
+        });
+        assert_eq!(
+            event,
+            Event::Library(LibraryEvent::RatingChanged { track, stars })
+        );
+    }
+}

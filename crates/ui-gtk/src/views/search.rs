@@ -218,6 +218,22 @@ impl SearchView {
             }
         });
         self.list.add_controller(click);
+        // A track plays on a double click or Enter; an artist, an album or
+        // "Show all" opens on a single click, as a tile does.
+        self.list.set_activate_on_single_click(false);
+        let open = gtk::GestureClick::new();
+        open.set_button(gdk::BUTTON_PRIMARY);
+        let weak = Rc::downgrade(self);
+        open.connect_released(move |_, presses, _, y| {
+            let Some(view) = weak.upgrade() else { return };
+            if presses == 1
+                && let Some(row) = view.list.row_at_y(y as i32)
+                && !matches!(view.entry(&row), None | Some(Entry::Track(_)))
+            {
+                view.activate(&row);
+            }
+        });
+        self.list.add_controller(open);
         let weak = Rc::downgrade(self);
         DraggedTracks::source(&self.list, move |_, y| {
             let view = weak.upgrade()?;

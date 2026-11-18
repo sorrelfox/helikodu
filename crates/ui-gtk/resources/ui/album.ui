@@ -216,7 +216,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
                     </child>
                     <child>
                       <object class="GtkListBox" id="tracks">
-                        <property name="selection-mode">none</property>
+                        <property name="selection-mode">single</property>
+                        <property name="activate-on-single-click">false</property>
                         <property name="margin-top">6</property>
                         <accessibility>
                           <property name="label" translatable="yes">Tracks</property>

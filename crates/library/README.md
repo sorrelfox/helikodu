@@ -15,6 +15,8 @@ The SQLite schema and its migrations, the scan coordinator and file watcher, the
 | Statistics | `record_listen` (a `Listen` judged by `PlayRules`), `stats`, `set_rating` (`Option<Rating>`), `rate_track` (whole stars, written into the file too when `TagWriteSettings::write_ratings_to_tags` is on; `RatingOutcome`, `RateError`), `set_resume_position`, `history` (`HistoryQuery`) |
 | Tag edits | `write_tags` (`BatchItem`s from `meta`, re-exported with the rest of the tag editor's types in the module `tag_editing`, `TagWriteSettings`, the `ScanOptions` of the workers, progress and a `CancelToken` → `TagWriteReport`: each file's result and the re-read), `refresh_files` (re-read files whose tags changed); `TagWriteSettings::from_settings` takes the `[advanced]` settings |
 | Search | `search` (`SearchRequest` → `SearchResults`; tracks of masked library folders are left out unless `include_masked`), `rebuild_search_index` |
+| Query language | `parse_query` (strict: the first `SyntaxError` with its byte range, `SyntaxErrorKind` and an example), `parse_query_lenient` (a `ParsedQuery`: a plain search of the words when the text cannot be read, and the error), `print_query`; `query_tracks` (a `QueryRequest`: the tree of `helikodu_model::query`, a `Page`, `include_masked` and the seed of `sort:random` → `Paged<TrackSummary>`), `query_track_ids`, `query_count`. Errors are `QueryError` |
+| Saved searches | `saved_searches` (`SavedSearch`: id, name, query text and tree, position, times), `saved_search`, `save_search`, `rename_saved_search`, `set_saved_search_query`, `delete_saved_search`, `move_saved_search` (`SavedSearchId`) |
 | Covers | `album_cover`, `track_cover` (`CoverInfo`), `cover_locations` (`CoverLocation`s), `cover_hashes`; `AlbumSummary::cover`. `ThumbnailCache` and `ArtworkPool` make and keep the thumbnails (`ThumbnailSize`, `Thumbnail`, `ThumbnailEvent`) |
 | Scanning | `scan` (`ScanOptions`, an optional `Sender<ScanEvent>`, a `CancelToken` → `ScanSummary`), `unreadable_files`; `ScanHandle::spawn` runs a scan on its own thread |
 | Details | `track_details` (a `TrackDetails`: path, tags, audio properties, kind, added and missing times), `track_source` (a `TrackSource`: the file and, for a CUE sheet track or a chapter, its span as a `SourceSection`, exact to the frame; `MediaSource::from` it), `roots`, `totals` (`LibraryTotals`), `most_played` (`PlayedTrack`s); `read_file_details` reads a file's tags, audio properties and loudness values in this process (`src/details.rs`) |
@@ -52,7 +54,7 @@ Migrations 5 and 6 clear the modification time of every file that was read, so t
 
 ### Schema
 
-Version 8 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fingerprint.sql`, `0004_search_support.sql`, `0005_album_model.sql`, `0006_covers.sql`, `0007_static_playlists.sql`, `0008_loudness_measurements.sql`):
+Version 9 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fingerprint.sql`, `0004_search_support.sql`, `0005_album_model.sql`, `0006_covers.sql`, `0007_static_playlists.sql`, `0008_loudness_measurements.sql`, `0009_saved_searches.sql`):
 
 | Area | Tables |
 |---|---|
@@ -60,7 +62,7 @@ Version 8 (`0001_library_schema.sql`, `0002_search_index.sql`, `0003_identity_fi
 | Tracks and identity | `identities`, `tracks`, `track_tags` |
 | Catalogue | `albums`, `album_people`, `people`, `track_people`, `genres`, `track_genres`, `covers` |
 | Use | `stats`, `history`, `analysis`, `loudness` |
-| Playlists and state | `playlists`, `playlist_items`, `session`, `undo_journal`, `db_meta` |
+| Playlists and state | `playlists`, `playlist_items`, `saved_searches`, `session`, `undo_journal`, `db_meta` |
 | Search | `tracks_fts` (words), `tracks_tri` (trigrams) |
 
 - **Paths are bytes.** `roots.path`, `dirs.path`, `dirs.cover_path`, `files.name`, `covers.source_path` and `playlist_items.missing_ref` are BLOBs holding the bytes the kernel returned. `path_to_blob` and `path_from_blob` convert between them and `Path` without going through `String`. The `*_text` columns beside them hold `display_text`, which is for display and search only. Uniqueness and lookups use the bytes. Every table is `STRICT`, so a path stored as TEXT by mistake is an error.
@@ -135,7 +137,28 @@ A track's statistics, rating and history belong to its identity (`identities`), 
 - A term of three characters or more is looked up in `tracks_tri` (a substring of the title, artists or album in any script, including Chinese, Japanese, Korean and Thai) and in `tracks_fts` (a word prefix in any indexed column: also album artist, genre, composer and path). FTS5 syntax in the query is plain text.
 - A term of one or two characters is too short for trigrams. It is found by scanning the folded title, artists, album and genre columns with `instr()`.
 - Results are ranked by how the whole query matches the title, an artist or the album: exactly, as a prefix, at the start of a word, inside a word, and last the tracks that only match term by term (`MatchRank`). Within a rank they are in the locale order of `title_sort`.
-- The query language is not part of this yet; it will compile to the same indexes.
+- Plain text in the query language is matched the same way, term by term.
+
+### The query language
+
+`src/query/` reads query text into the tree of `helikodu_model::query`, writes the tree back, and compiles it to SQL. Search, saved searches and smart playlists share it.
+
+```text
+query    := or_expr, with "sort:" keys and "limit:" anywhere at the top level
+or_expr  := and_expr ( ("OR" | "|") and_expr )*
+and_expr := unary ( ["AND" | "&"] unary )*          -- juxtaposition is AND
+unary    := ("NOT" | "-" | "!") unary | "(" or_expr ")" | term
+term     := field op value | "has:" name | "is:" name | text
+op       := ":" | "=" | "!=" | "<" | "<=" | ">" | ">=" | "~"
+```
+
+- **Fields** (`Field::named`, with other spellings such as `length` for `duration`): text (`title`, `artist`, `albumartist`, `album`, `composer`, `performer`, `conductor`, `lyricist`, `genre`, `work`, `movement`, `discsubtitle`, `releasetype`, `codec`, `container`, `path`, `folder`, `filename`, and any other tag as `tag:NAME`), `kind` (`music`, `audiobook`, `podcast`, `video`), numbers (`year`, `originalyear`, `track`, `disc`, `movementno`, `samplerate` in Hz or `96k`, `bitdepth`, `channels`, `bitrate` in kbit/s, `trackgain`, `albumgain`, `plays`, `skips`), `rating` in stars with half stars, lengths (`duration`, `resume`: `30`, `30s`, `4min`, `3:30`, `1500ms`), `size` (`700kB`, `10MB`, `1.5GB`), and times (`added`, `modified`, `lastplayed`, `firstplayed`, `lastskipped`).
+- **Values.** Ranges `a..b` after `:` or `=`. Times take calendar dates (`2024`, `2024-05`, `2024-05-01`, in local time) and ages (`12h`, `30d`, `2w`, `6m`, `1y`): `added<30d` is less than 30 days ago, `lastplayed>1y` more than a year ago. Text in quotes takes `\"` and `\\`; other backslashes are kept, so regular expressions need no doubling. A regular expression may hold parentheses without quotes.
+- `has:` tests for a value of any field, lyrics or a cover (`-has:rating` is unrated); `is:` for `lossless`, `hires`, `compilation` and `loved`. `sort:` takes fields and `random`, each with `asc` or `desc`, separated by commas; tracks without a value come last. `limit:` takes tracks, `min`, `h`, `MB` or `GB`: a limit by time or size keeps the sorted tracks until the next would pass it.
+- **Errors and the fallback.** `parse_query` reports the first problem with the byte range that fails: an unknown field, a value that does not fit, an operator the field does not take, open quotes or parentheses, `OR` without an operand, an invalid regular expression. `parse_query_lenient` searches for the words instead and keeps the error for the interface to underline.
+- **Round trip.** The parser returns trees in canonical form (`Expr::normalized`); for every such tree whose comparisons fit (`Comparison::check`), `parse_query(&print_query(&tree))` gives it back. `print_query` writes canonical names and units, and quotes text only where it must.
+- **SQL.** Every value is a bound parameter; only names the compiler chooses are written into the SQL text. Plain text matches as plain search does (trigram and word index, or a scan below three characters). Text fields compare folded text (`hk_fold`): `title:` uses the trigram index from three characters, people, genres and albums are matched in their own small tables and then looked up by index; `~` calls `regexp()` on the text as written. Every condition is true or false, never NULL, so a track without a value fails a comparison and passes its negation (`-year:1975` finds the tracks without a year). `plays` and `skips` count 0 without statistics.
+- **Saved searches** (`0009_saved_searches.sql`) keep the printed query text, so that a later version reads it with its own parser; text it cannot read becomes a plain search with its error. Positions are 0, 1, 2, … without gaps.
 
 ## The scanner
 
@@ -245,11 +268,32 @@ A collation comparison costs about 12 times a byte comparison. Through the index
 
 The ICU4X data is compiled into the binary. In a stripped release build, `icu_collator` with the collation data of every locale adds about 1.3 MB, and `icu_normalizer` (which it needs anyway, and which `fold` uses) about 0.14 MB.
 
+`benches/query.rs` measures `Library::query_tracks` (parsing, compiling, the first page of 50 and the total) over 100 000 generated tracks with genres, codecs, hi-res albums, statistics for two in three tracks and times added over three years. Median of seven runs, Zen 5, release build, system SQLite 3.53: every query meets the 100 ms budget.
+
+| Query | Matches | Time |
+|---|---|---|
+| `love` (plain text) | 20 908 | 39 ms |
+| `genre:jazz` | 28 570 | 25 ms |
+| `artist:love`, `title:night` | 7 400, 7 362 | 14 ms |
+| `title:ni` (two characters, scan) | 7 362 | 18 ms |
+| `year:1970..1979 rating>=4` | 2 278 | 12 ms |
+| `genre:jazz -genre:fusion added<30d` | 394 | 27 ms |
+| `codec:flac samplerate>=88200 sort:added desc limit:50` | 50 | 9 ms |
+| `title~"^(love\|night)" OR duration<70s` | 9 809 | 25 ms |
+| `plays=0`, `-has:rating`, `is:hires` | 33 333, 50 000, 5 710 | 33–36 ms |
+| `rating>=4 sort:rating desc`, `lastplayed>1y sort:lastplayed` | 13 634, 39 668 | 31–33 ms |
+| `added<30d sort:added desc` | 2 740 | 8 ms |
+| `sort:random limit:2h` | 29 | 26 ms |
+| `sort:artist,year desc` (every track) | 100 000 | 39 ms |
+| `(genre:rock OR genre:pop) year>=2000 bitrate<320 sort:title` | 0 | 40 ms |
+
 ```sh
 cargo bench -p helikodu-library --bench collation            # 100 000 titles
 cargo bench -p helikodu-library --bench collation -- 500000
 cargo bench -p helikodu-library --bench search               # 100 000 tracks, every query
 cargo bench -p helikodu-library --bench search -- 500000 a 我的心   # 500 000 tracks, chosen queries
+cargo bench -p helikodu-library --bench query                # 100 000 tracks, every query
+cargo bench -p helikodu-library --bench query -- 500000 'genre:jazz'
 ```
 
 `benches/scan.rs` measures a full scan of a library made by `cargo xtask synth-library` (one-second FLAC files in artist, album and disc folders, about 2.5 % of them with names that are not UTF-8), into a database file, with release builds of the library and the worker. It generates the library under `target/scan-bench/` and deletes it afterwards.
@@ -300,6 +344,8 @@ cargo test -p helikodu-library --features bundled-sqlite
 
 - `tests/database.rs`: migrating an empty database, reopening, refusing a newer schema and opening it read-only, a failing migration that leaves nothing behind, file names that are not UTF-8, the locale order in English, Swedish, German and Estonian, and the rebuild of the sort indexes when the locale changes.
 - `tests/search.rs`: search through `Library` in Latin with diacritics, Cyrillic, Greek, Chinese, Japanese (kana and kanji), Thai and Korean, with queries of one to four characters; short queries; every term must match; FTS5 syntax as plain text; genre, composer, album artist and path through the word index; ranking and paging; the indexes after tag changes, moves and removals, and after a rebuild; `regexp()`; tracks of masked library folders left out.
+- `tests/query_syntax.rs`: the query language's text form: the documented examples, precedence and grouping, values in each field's units, error kinds and byte ranges (also after text in other scripts), examples that parse, the plain-text fallback, canonical printing; property tests that print generated trees (every field, operator and value kind, ranges, nested groups, awkward text) and parse them back unchanged, and that arbitrary text either parses and round-trips or fails inside itself.
+- `tests/query_results.rs`: compiled queries against a generated library of 240 tracks: every field with every operator it takes, on values the library holds, parts, other cases and accents, short and missing values, compared with the same comparison evaluated in Rust; `has:` and `is:`; regular expressions; boolean logic and missing values; plain text against plain search; sorting with missing values last, `sort:random` with seeds, limits by tracks, time and size with paging; hostile values (SQL, FTS5 syntax, placeholders) that stay data; trees that do not fit refused; quick filters; saved searches created, renamed, changed, moved and deleted, with text a later version wrote. The unit tests in `src/query/` cover the value spellings, the calendar arithmetic and that values are bound, never written into the SQL.
 - `tests/stats.rs`: plays, skips and partial listens; ratings from 0 to 10 and not rated; the rating from the tags taken once; statistics after a watched move, after a file that disappears and reappears elsewhere, and after a track that leaves and comes back; a re-encoded file; CUE tracks; the history and its filters; resume positions.
 - `tests/loudness.rs`: measurements stored and read back apart from the tag values, replaced when measured again; a changed file making its measurement stale and its album unmeasured, and a restamp making it current again; the unmeasured tracks in album order with their album sizes; selections of tracks and albums, with missing files left out; the coverage counts.
 - `tests/track_source.rs`: the file and span of a whole-file track and of two CUE sheet tracks, an unknown track, and album, person and genre ids rebuilt from their numbers.

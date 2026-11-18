@@ -54,7 +54,8 @@ fn album_row(row: &Row<'_>) -> rusqlite::Result<AlbumSummary> {
 }
 
 /// Whether the track `t` is in a lossless format, by its codec.
-const LOSSLESS: &str = "(lower(t.codec) IN ('flac', 'alac', 'ape', 'wavpack', 'tta', 'tak')
+pub(crate) const LOSSLESS: &str =
+    "(lower(t.codec) IN ('flac', 'alac', 'ape', 'wavpack', 'tta', 'tak')
     OR lower(t.codec) LIKE 'pcm%' OR lower(t.codec) LIKE 'dsd%')";
 
 /// The condition of `quality` on the albums `a`.

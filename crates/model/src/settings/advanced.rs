@@ -14,7 +14,7 @@ use super::{SettingsError, check_range};
 /// id3_version = "2.4"                 # 2.3 | 2.4, for new ID3 tags in MP3 files
 /// in_place_tag_write_above_mib = 2048 # larger files get their tags changed in place
 /// write_ratings_to_tags = false
-/// log_detail = "normal"               # normal | full
+/// log_detail = "off"                  # off | normal | full (debug builds: normal)
 /// developer_mode = false
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,7 +40,7 @@ impl Default for AdvancedSettings {
             id3_version: Id3Version::V2_4,
             in_place_tag_write_above_mib: 2048,
             write_ratings_to_tags: false,
-            log_detail: LogDetail::Normal,
+            log_detail: LogDetail::default(),
             developer_mode: false,
         }
     }
@@ -75,14 +75,28 @@ pub enum Id3Version {
 }
 
 /// How much the log records.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+///
+/// Release builds keep no log by default; debug builds record the normal
+/// detail.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum LogDetail {
+    /// No log: nothing is written to disk.
+    Off,
     /// Warnings and the main events.
-    #[default]
     Normal,
     /// Everything, for a bug report.
     Full,
+}
+
+impl Default for LogDetail {
+    fn default() -> Self {
+        if cfg!(debug_assertions) {
+            Self::Normal
+        } else {
+            Self::Off
+        }
+    }
 }
 
 #[cfg(test)]
@@ -107,5 +121,20 @@ mod tests {
         assert_eq!(toml::from_str::<Settings>(&text).unwrap(), settings);
         settings.advanced.in_place_tag_write_above_mib = 0;
         assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn no_logs_round_trips() {
+        let mut settings = Settings::default();
+        settings.advanced.log_detail = LogDetail::Off;
+        let text = toml::to_string(&settings).unwrap();
+        assert!(text.contains("log_detail = \"off\""), "{text}");
+        assert_eq!(toml::from_str::<Settings>(&text).unwrap(), settings);
+        let expected = if cfg!(debug_assertions) {
+            LogDetail::Normal
+        } else {
+            LogDetail::Off
+        };
+        assert_eq!(LogDetail::default(), expected);
     }
 }

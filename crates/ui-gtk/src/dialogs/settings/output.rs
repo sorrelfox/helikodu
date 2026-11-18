@@ -3,8 +3,9 @@
 
 //! Settings › Audio output: the backend, the device (updated on hot-plug when
 //! the page is shown again), shared or exclusive use, and the format, volume,
-//! buffer and warm-up settings. Resampler quality, DSD files and the release
-//! of an exclusive device come in a later version and are shown insensitive.
+//! buffer and warm-up settings, the resampler quality, how DSD files reach
+//! the device (converted to PCM, or DoP where the device and the path allow),
+//! and when an exclusive device is released.
 //!
 //! A change that would play at a fixed full volume on a device the user has
 //! not confirmed asks first (the full-output confirmation).
@@ -15,7 +16,9 @@ use std::rc::Rc;
 use gtk::prelude::*;
 use gtk::{gio, glib};
 use helikodu_model::audio::SampleRate;
-use helikodu_model::settings::{DeviceLostPolicy, OutputFormat, SampleRatePolicy, VolumeControl};
+use helikodu_model::settings::{
+    DeviceLostPolicy, DsdOutput, OutputFormat, ResamplerQuality, SampleRatePolicy, VolumeControl,
+};
 
 use super::{Context, page_body};
 use crate::backend::services::{
@@ -406,9 +409,34 @@ fn grid(context: &Rc<Context>) -> gtk::Grid {
     });
     grid.attach(&cell(&tr("Sample format"), &format), 1, 0, 1, 1);
 
-    // Resampler quality: a later version.
-    let resampler = dropdown(&[tr("High")], 0, -1);
-    resampler.set_sensitive(false);
+    // Resampler quality.
+    let mut qualities = vec![
+        ResamplerQuality::High,
+        ResamplerQuality::Medium,
+        ResamplerQuality::Fast,
+    ];
+    let stored = context.settings().dsp.resampler;
+    if !qualities.contains(&stored) {
+        qualities.push(stored);
+    }
+    let items: Vec<String> = qualities
+        .iter()
+        .map(|q| match q {
+            ResamplerQuality::Fast => tr("Fast"),
+            ResamplerQuality::Medium => tr("Medium"),
+            ResamplerQuality::High => tr("High"),
+            ResamplerQuality::Maximum => tr("Maximum"),
+        })
+        .collect();
+    let index = qualities.iter().position(|q| *q == stored).unwrap_or(0);
+    let resampler = dropdown(&items, index, -1);
+    resampler.set_widget_name("resampler");
+    let weak = Rc::downgrade(context);
+    on_selected(&resampler, move |i| {
+        if let (Some(context), Some(&quality)) = (weak.upgrade(), qualities.get(i)) {
+            context.update(|s| s.dsp.resampler = quality);
+        }
+    });
     grid.attach(&cell(&tr("Resampler quality"), &resampler), 2, 0, 1, 1);
 
     // Volume control.
@@ -464,9 +492,25 @@ fn grid(context: &Rc<Context>) -> gtk::Grid {
     });
     grid.attach(&cell(&tr("Volume control"), &volume), 0, 1, 1, 1);
 
-    // DSD files: a later version.
-    let dsd = dropdown(&[tr("Convert to PCM")], 0, -1);
-    dsd.set_sensitive(false);
+    // DSD files.
+    let dsd = dropdown(
+        &[tr("Convert to PCM"), tr("DoP when the device can")],
+        usize::from(output.dsd == DsdOutput::Dop),
+        -1,
+    );
+    dsd.set_widget_name("dsd-output");
+    let weak = Rc::downgrade(context);
+    on_selected(&dsd, move |i| {
+        if let Some(context) = weak.upgrade() {
+            context.update(|s| {
+                s.output.dsd = if i == 1 {
+                    DsdOutput::Dop
+                } else {
+                    DsdOutput::Pcm
+                };
+            });
+        }
+    });
     grid.attach(&cell(&tr("DSD files"), &dsd), 1, 1, 1, 1);
 
     // If the device disappears.
@@ -575,9 +619,34 @@ fn grid(context: &Rc<Context>) -> gtk::Grid {
     preroll.set_halign(gtk::Align::Start);
     grid.attach(&warm_cell, 1, 2, 1, 1);
 
-    // Release of an exclusive device: a later version.
-    let release = dropdown(&[tr("On stop and after a 30 s pause")], 0, -1);
-    release.set_sensitive(false);
+    // Release of an exclusive device: after a pause of so many seconds, or
+    // only on stop (0).
+    let mut pauses: Vec<u32> = vec![30, 0];
+    if !pauses.contains(&output.exclusive_release_s) {
+        pauses.insert(0, output.exclusive_release_s);
+    }
+    let items: Vec<String> = pauses
+        .iter()
+        .map(|&s| {
+            if s == 0 {
+                tr("On stop only")
+            } else {
+                fill(&tr("On stop and after a {} s pause"), &[&s.to_string()])
+            }
+        })
+        .collect();
+    let index = pauses
+        .iter()
+        .position(|s| *s == output.exclusive_release_s)
+        .unwrap_or(0);
+    let release = dropdown(&items, index, -1);
+    release.set_widget_name("exclusive-release");
+    let weak = Rc::downgrade(context);
+    on_selected(&release, move |i| {
+        if let (Some(context), Some(&seconds)) = (weak.upgrade(), pauses.get(i)) {
+            context.update(|s| s.output.exclusive_release_s = seconds);
+        }
+    });
     grid.attach(&cell(&tr("Release the device"), &release), 2, 2, 1, 1);
     grid
 }

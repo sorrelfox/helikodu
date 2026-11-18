@@ -274,6 +274,12 @@ impl TrackListModel {
         }
     }
 
+    /// Fetches the row of `item` again, as after an edit; the row it has stays
+    /// until the new one comes and `loaded` is emitted.
+    pub(crate) fn refetch(&self, item: &TrackItem) {
+        self.imp().fetcher.request(item);
+    }
+
     /// How many batches were fetched (for tests).
     pub(crate) fn fetches(&self) -> u64 {
         self.imp().fetcher.fetches.get()

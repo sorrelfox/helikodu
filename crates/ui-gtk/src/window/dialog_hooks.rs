@@ -56,6 +56,14 @@ impl MainWindow {
                 window.toast(&message, error);
             }
         });
+        if let Some(sidebar) = self.imp().sidebar.borrow().as_ref() {
+            crate::dialogs::loudness_footer::attach(
+                self,
+                &sidebar.root,
+                backend.services(),
+                playback,
+            );
+        }
         first_run::show_if_needed(self);
     }
 
@@ -98,11 +106,26 @@ impl MainWindow {
             "playback" => settings::Page::Playback,
             "output" => settings::Page::Output,
             "loudness" => settings::Page::Loudness,
+            "dsp" => settings::Page::Dsp,
             "appearance" => settings::Page::Appearance,
             "advanced" => settings::Page::Advanced,
             _ => settings::Page::Library,
         };
         settings::open(self, Some(page))
+    }
+
+    /// Opens Settings › DSP and EQ at the editor of `stage` (`equalizer`,
+    /// `crossfeed`, `channel-mix` or `limiter`).
+    #[doc(hidden)]
+    pub fn open_dsp_stage(&self, stage: &str) -> gtk::Window {
+        use crate::dialogs::settings::dsp::{Stage, open_stage};
+        let stage = match stage {
+            "crossfeed" => Stage::Crossfeed,
+            "channel-mix" => Stage::ChannelMix,
+            "limiter" => Stage::Limiter,
+            _ => Stage::Equalizer,
+        };
+        open_stage(self, stage)
     }
 
     /// The page shown in the Settings window, if it is open.

@@ -220,3 +220,42 @@ button.hk-about-link {
   background-color: var(--hk-win); background-image: none; box-shadow: none; color: var(--hk-t1);
 }
 button.hk-about-link:hover { background-color: var(--hk-hover); }
+
+/* ---- 8. DSP and EQ ------------------------------------------------------ */
+
+.hk-stage-box { border-radius: 8px; border: 1px solid var(--hk-line); }
+.hk-stage-box.on { border-color: var(--hk-line2); }
+.hk-stage-box.selected { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); }
+.hk-stage-box.fixed { padding: 9px 12px 10px; }
+button.hk-stage-select {
+  min-height: 0; padding: 9px 12px 10px; border: none; border-radius: 7px;
+  background: none; background-image: none; box-shadow: none; color: var(--hk-t1);
+}
+button.hk-stage-select:hover { background-color: var(--hk-hover); }
+.hk-stage-box.selected button.hk-stage-select:hover { background: none; }
+.hk-stage-name { font-weight: 500; color: var(--hk-t2); }
+.hk-stage-box.on .hk-stage-name { font-weight: 600; color: var(--hk-t1); }
+.hk-stage-joint { min-height: 1px; background-color: var(--hk-line2); }
+
+.hk-filter-head { min-height: 28px; padding: 0 4px; border-bottom: 1px solid var(--hk-line); }
+.hk-filter-row { min-height: 30px; padding: 0 4px; }
+.hk-filter-row.hk-dim, .hk-filter-row.hk-dim entry, .hk-filter-row.hk-dim dropdown > button { color: var(--hk-t3); }
+entry.hk-eq-cell { min-height: 26px; padding: 0 6px; border-radius: 6px; }
+entry.hk-eq-cell:focus-within { background-color: var(--hk-field); box-shadow: inset 0 0 0 1px var(--hk-line2); }
+dropdown.hk-eq-kind > button { min-height: 26px; padding: 0 6px; border-color: transparent; background-color: transparent; }
+dropdown.hk-eq-kind > button:hover { background-color: var(--hk-hover); }
+button.hk-small-icon { min-width: 24px; min-height: 24px; color: var(--hk-t3); }
+
+.hk-dsp-readout { background-color: var(--hk-glass-bg); color: var(--hk-glass-t1); }
+.hk-dsp-readout .hk-signal.processed { color: var(--hk-signal-processed-text); }
+.hk-dsp-readout .hk-signal.bit-perfect { color: var(--hk-signal-bit-perfect-text); }
+.hk-dsp-path { font-size: 12px; font-weight: 600; }
+.hk-dsp-readout .hk-micro-label { color: var(--hk-glass-t3); }
+.hk-dsp-readout levelbar.hk-meter > trough { background-color: var(--hk-glass-line2); }
+.hk-dsp-readout levelbar.hk-meter > trough > block.filled { background-color: var(--hk-glass-meter-fill); }
+.hk-measure-bar { min-width: 110px; }
+menubutton.hk-menu-btn > button {
+  min-height: 28px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--hk-line);
+  background: none; background-image: none; box-shadow: none; color: var(--hk-t2);
+}
+menubutton.hk-menu-btn > button:hover { background-color: var(--hk-hover); }

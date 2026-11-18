@@ -4,18 +4,21 @@
 //! Supported formats: what this computer can play, read from the decoders of
 //! this build when the window opens. The decoders at the left filter the
 //! table; a text filter and All, Available and Missing narrow it further.
-//! Status is an icon and words, never colour alone. "Copy as text" puts the
-//! table on the clipboard for bug reports.
+//! Status is an icon and words, never colour alone. MIDI files that need a
+//! SoundFont say so, with "Choose SoundFont…". "Copy as text" puts the table
+//! on the clipboard for bug reports.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use gtk::glib;
 use gtk::prelude::*;
 
 use super::common::{bind_segmented, copy_text, dialog_window, find_open, header_strip, segmented};
+use super::decoder_files::{self, DecoderFile};
 use crate::backend::services::{
-    Availability, Decoder, DecoderStatus, FamilyStatus, FormatFamily, FormatReport,
+    Availability, Decoder, DecoderStatus, FamilyStatus, FormatFamily, FormatReport, Services,
 };
 use crate::i18n::{fill, ntr, tr};
 use crate::widgets::label;
@@ -53,7 +56,9 @@ fn missing_reason(decoder: Decoder) -> String {
 }
 
 fn decoder_line(status: &DecoderStatus) -> String {
-    if available(status.availability) {
+    if status.availability == Availability::NeedsSoundFont {
+        tr("needs a SoundFont")
+    } else if available(status.availability) {
         match &status.version {
             Some(version) => fill(&tr("{} · built in"), &[version]),
             None => tr("built in"),
@@ -77,6 +82,8 @@ pub(crate) fn as_text(report: &FormatReport) -> String {
     for family in &report.families {
         let state = if available(family.availability) {
             tr("Available")
+        } else if family.availability == Availability::NeedsSoundFont {
+            tr("Needs a SoundFont")
         } else {
             tr("Not available")
         };
@@ -146,8 +153,11 @@ fn status_cell(family: &FamilyStatus) -> gtk::Box {
     let cell = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     cell.set_size_request(150, -1);
     let ok = available(family.availability);
+    let needs = family.availability == Availability::NeedsSoundFont;
     let icon = gtk::Image::from_icon_name(if ok {
         "helikodu-check-symbolic"
+    } else if needs {
+        "dialog-warning-symbolic"
     } else {
         "action-unavailable-symbolic"
     });
@@ -155,6 +165,8 @@ fn status_cell(family: &FamilyStatus) -> gtk::Box {
     cell.append(&icon);
     let text = if ok {
         label(&tr("Available"), &["hk-t2"])
+    } else if needs {
+        label(&tr("Needs a SoundFont"), &["hk-strong"])
     } else {
         label(&tr("Not available"), &["hk-strong"])
     };
@@ -162,7 +174,11 @@ fn status_cell(family: &FamilyStatus) -> gtk::Box {
     cell
 }
 
-fn family_row(family: &FamilyStatus) -> gtk::ListBoxRow {
+fn family_row(
+    family: &FamilyStatus,
+    window: &gtk::Window,
+    services: Option<&Arc<dyn Services>>,
+) -> gtk::ListBoxRow {
     let row = gtk::ListBoxRow::new();
     row.set_activatable(false);
     let column = gtk::Box::new(gtk::Orientation::Vertical, 4);
@@ -182,7 +198,55 @@ fn family_row(family: &FamilyStatus) -> gtk::ListBoxRow {
     line.append(&decoder);
     line.append(&status_cell(family));
     column.append(&line);
-    if !available(family.availability) {
+    if family.availability == Availability::NeedsSoundFont {
+        let second = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        let reason = label(
+            &tr("No SoundFont is chosen, and none is installed on this computer."),
+            &["hk-t2", "hk-secondary"],
+        );
+        reason.set_margin_start(160);
+        reason.set_wrap(true);
+        reason.set_hexpand(true);
+        second.append(&reason);
+        if let Some(services) = services {
+            let choose = super::common::compact_button(&tr("Choose SoundFont…"));
+            choose.set_widget_name("choose-soundfont");
+            let services = services.clone();
+            let window = window.downgrade();
+            let (weak_line, weak_second) = (line.downgrade(), second.downgrade());
+            let mut chosen = family.clone();
+            chosen.availability = Availability::Available;
+            choose.connect_clicked(move |_| {
+                let Some(window) = window.upgrade() else {
+                    return;
+                };
+                let (weak_line, weak_second) = (weak_line.clone(), weak_second.clone());
+                let chosen = chosen.clone();
+                decoder_files::choose(
+                    &window,
+                    services.clone(),
+                    DecoderFile::SoundFont,
+                    move |result| {
+                        if result.is_err() {
+                            return;
+                        }
+                        // MIDI files play now: the row says so.
+                        if let Some(line) = weak_line.upgrade() {
+                            if let Some(old) = line.last_child() {
+                                line.remove(&old);
+                            }
+                            line.append(&status_cell(&chosen));
+                        }
+                        if let Some(second) = weak_second.upgrade() {
+                            second.set_visible(false);
+                        }
+                    },
+                );
+            });
+            second.append(&choose);
+        }
+        column.append(&second);
+    } else if !available(family.availability) {
         let reason = label(&missing_reason(family.decoder), &["hk-t2", "hk-secondary"]);
         reason.set_margin_start(160);
         reason.set_wrap(true);
@@ -263,6 +327,8 @@ pub(crate) fn open(parent: &gtk::Window, report: FormatReport) -> gtk::Window {
             &decoder_line(status),
             Some(if ok {
                 ("helikodu-check-symbolic", false)
+            } else if status.availability == Availability::NeedsSoundFont {
+                ("dialog-warning-symbolic", true)
             } else {
                 ("action-unavailable-symbolic", true)
             }),
@@ -339,9 +405,13 @@ pub(crate) fn open(parent: &gtk::Window, report: FormatReport) -> gtk::Window {
     table.add_css_class("hk-format-table");
     table.set_selection_mode(gtk::SelectionMode::None);
     table.update_property(&[gtk::accessible::Property::Label(&tr("Format families"))]);
+    let services = parent
+        .downcast_ref::<crate::window::MainWindow>()
+        .and_then(crate::window::MainWindow::backend)
+        .map(|backend| backend.services());
     let mut rows = Vec::new();
     for family in &report.families {
-        let row = family_row(family);
+        let row = family_row(family, &window, services.as_ref());
         table.append(&row);
         rows.push((family.clone(), row));
     }

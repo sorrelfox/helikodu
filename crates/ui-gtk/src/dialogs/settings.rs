@@ -6,12 +6,13 @@
 //! applies its change at once; a value the store refuses is named in a notice
 //! under the header and the control returns to the stored value.
 //!
-//! Pages for later versions (DSP and EQ, Shortcuts) are listed but not
-//! sensitive; controls for later versions on the other pages are shown
-//! insensitive or left out.
+//! Pages for later versions (Shortcuts) are listed but not sensitive;
+//! controls for later versions on the other pages are shown insensitive or
+//! left out.
 
 mod advanced;
 mod appearance;
+pub(crate) mod dsp;
 pub(crate) mod library;
 mod loudness;
 mod output;
@@ -46,7 +47,7 @@ pub(crate) enum Page {
     Output,
     /// Loudness normalization.
     Loudness,
-    /// DSP and EQ (a later version).
+    /// The DSP chain and its editors.
     Dsp,
     /// Colours, window style, language, notifications.
     Appearance,
@@ -95,7 +96,7 @@ impl Page {
     }
 
     fn available(self) -> bool {
-        !matches!(self, Self::Dsp | Self::Shortcuts)
+        !matches!(self, Self::Shortcuts)
     }
 }
 
@@ -175,7 +176,8 @@ fn build_page(page: Page, context: &Rc<Context>) -> gtk::Widget {
         Page::Loudness => loudness::page(context),
         Page::Appearance => appearance::page(context),
         Page::Advanced => advanced::page(context),
-        Page::Dsp | Page::Shortcuts => gtk::Box::new(gtk::Orientation::Vertical, 0).upcast(),
+        Page::Dsp => dsp::page(context),
+        Page::Shortcuts => gtk::Box::new(gtk::Orientation::Vertical, 0).upcast(),
     }
 }
 

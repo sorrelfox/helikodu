@@ -24,6 +24,9 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
+pub use helikodu_model::player::{
+    PlaybackStats, SignalLamp, SignalPath, SignalStage, StageKind, StageState,
+};
 pub use helikodu_model::settings::UiState;
 
 /// Identifies an album for as long as the backend runs.
@@ -711,6 +714,42 @@ pub struct OutputInfo {
     pub bits: Option<u16>,
 }
 
+impl SignalState {
+    /// The lamp of a reported path: bit-perfect, or processed in any other way
+    /// (gain, DSP, resampling, dither, fewer bits, a sound server's mixing).
+    pub fn of(path: &SignalPath) -> Self {
+        match path.lamp {
+            SignalLamp::BitPerfect => Self::BitPerfect,
+            SignalLamp::LosslessProcessed | SignalLamp::Resampled | SignalLamp::Lossy => {
+                Self::Processed {
+                    dsp: path.dsp_active(),
+                }
+            }
+        }
+    }
+}
+
+/// The bits that reach the device: the source's on a bit-perfect path (24-bit
+/// audio in 32-bit words is 24-bit), otherwise those of the format the device
+/// was opened with.
+pub fn output_bits(path: &SignalPath) -> u32 {
+    if path.lamp == SignalLamp::BitPerfect {
+        path.source.bits
+    } else {
+        path.device.format.format.bits()
+    }
+}
+
+impl OutputInfo {
+    /// Follows the path the engine reported: its lamp, and the rate and bits
+    /// of the format the device was opened with.
+    pub fn follow(&mut self, path: &SignalPath) {
+        self.signal = SignalState::of(path);
+        self.sample_rate = Some(path.device.format.rate.hz());
+        self.bits = u16::try_from(output_bits(path)).ok();
+    }
+}
+
 /// The track that plays.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NowPlaying {
@@ -792,8 +831,23 @@ pub enum Update {
     },
     /// The library changed: lists should be fetched again.
     LibraryChanged,
+    /// A track's rating was stored (whole stars, or none): the rows showing it
+    /// change in place.
+    RatingChanged {
+        /// The track.
+        track: TrackKey,
+        /// Its stars.
+        stars: Option<u8>,
+    },
     /// A library scan made progress or ended.
     Scan(services::ScanStatus),
+    /// The signal path of what is heard, as the engine reported it; `None`
+    /// when nothing is heard.
+    SignalPath(Option<Box<SignalPath>>),
+    /// The output's counters, a few times a second while playing.
+    Stats(PlaybackStats),
+    /// A loudness measurement made progress or ended.
+    Loudness(services::LoudnessStatus),
     /// Another program asked the player for this (MPRIS `Play`, `PlayPause`,
     /// `OpenUri`). It is sent with [`Backend::send`], so it passes the same gate
     /// as the window's own requests.

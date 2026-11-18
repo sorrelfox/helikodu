@@ -25,6 +25,7 @@
 
 mod info;
 mod location;
+mod query;
 mod service;
 mod source;
 
@@ -44,6 +45,10 @@ use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
 
 pub use self::info::{LibraryEntry, TagOrigin, TrackInfo, read_file_info};
 pub use self::location::{DATA_FOLDER, DATABASE_FILE, default_database_path};
+pub use self::query::{
+    ParsedQuery, QueryError, SavedSearchEntry, SyntaxError, SyntaxErrorKind, parse_query,
+    parse_query_lenient, print_query,
+};
 pub use self::service::{
     LibraryEvent, LibraryService, LibraryServiceOptions, QueueItemInfo, WatchSettings,
 };
@@ -71,6 +76,7 @@ pub use helikodu_library::{
     AlbumMeasurement, CancelToken, LoudnessCoverage, LoudnessSelection, LoudnessTarget,
     MeasuredLoudness, StoredLoudness,
 };
+pub use helikodu_library::{SavedSearch, SavedSearchId};
 
 /// Why a library operation failed.
 #[derive(Debug, thiserror::Error)]
@@ -97,6 +103,9 @@ pub enum LibraryError {
     /// A playlist could not be read, changed, imported or exported.
     #[error(transparent)]
     Playlist(#[from] PlaylistError),
+    /// A query could not run, or a saved search could not be changed.
+    #[error(transparent)]
+    Query(#[from] QueryError),
     /// A scan was asked for without folders, and the library has none.
     #[error("the library has no folders yet; name the folders to scan")]
     NoFolders,

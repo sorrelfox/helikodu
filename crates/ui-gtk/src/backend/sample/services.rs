@@ -18,6 +18,7 @@ use super::super::services::{
     LibraryFolder, OutputBackendKind, OutputMode, OutputSelection, ScanStatus, Services, Settings,
     StorageUsage, TagEdit, TagField, Versions, WriteResult,
 };
+use super::super::services::{LimiterReading, LoudnessCoverage, LoudnessScope, LoudnessStatus};
 use super::super::{BackendError, OutputInfo, SignalState, TrackKey, Update};
 use super::SampleLibrary;
 
@@ -475,17 +476,23 @@ impl Services for MemoryServices {
     }
 
     fn formats(&self) -> FormatReport {
-        let built = [Decoder::Ffmpeg, Decoder::Dsd];
+        let built = [Decoder::Ffmpeg, Decoder::Dsd, Decoder::Rustysynth];
+        let soundfont = self.lock().settings.playback.decoders.soundfont.is_some();
+        let availability = |decoder: Decoder| {
+            if !built.contains(&decoder) {
+                Availability::NotBuilt
+            } else if decoder == Decoder::Rustysynth && !soundfont {
+                Availability::NeedsSoundFont
+            } else {
+                Availability::Available
+            }
+        };
         FormatReport {
             decoders: Decoder::ALL
                 .iter()
                 .map(|&decoder| DecoderStatus {
                     decoder,
-                    availability: if built.contains(&decoder) {
-                        Availability::Available
-                    } else {
-                        Availability::NotBuilt
-                    },
+                    availability: availability(decoder),
                     version: match decoder {
                         Decoder::Ffmpeg => Some("9.0.2".into()),
                         _ => None,
@@ -504,15 +511,58 @@ impl Services for MemoryServices {
                     FamilyStatus {
                         family,
                         decoder,
-                        availability: if built.contains(&decoder) {
-                            Availability::Available
-                        } else {
-                            Availability::NotBuilt
-                        },
+                        availability: availability(decoder),
                     }
                 })
                 .collect(),
         }
+    }
+
+    fn loudness_coverage(&self) -> Option<LoudnessCoverage> {
+        let tracks = self
+            .library
+            .as_ref()
+            .map_or(0, |l| l.albums.iter().map(|a| a.tracks.len()).sum());
+        Some(LoudnessCoverage {
+            tracks,
+            with_values: tracks - tracks / 12,
+        })
+    }
+
+    fn measure_loudness(&self, scope: LoudnessScope) -> Result<(), BackendError> {
+        let total = match scope {
+            LoudnessScope::Tracks(keys) => keys.len(),
+            LoudnessScope::Rest => self
+                .loudness_coverage()
+                .map_or(0, |c| c.tracks - c.with_values),
+        };
+        self.emit(Update::Loudness(LoudnessStatus {
+            total: Some(total),
+            done: total / 3,
+            ..LoudnessStatus::default()
+        }));
+        self.emit(Update::Loudness(LoudnessStatus {
+            total: Some(total),
+            done: total,
+            finished: true,
+            ..LoudnessStatus::default()
+        }));
+        self.emit(Update::LibraryChanged);
+        Ok(())
+    }
+
+    fn stop_loudness(&self) {}
+
+    fn is_measuring_loudness(&self) -> bool {
+        false
+    }
+
+    fn limiter_activity(&self) -> Option<LimiterReading> {
+        Some(LimiterReading {
+            reduction_db: 0.0,
+            largest_db: 1.8,
+            times: 3,
+        })
     }
 
     fn versions(&self) -> Versions {

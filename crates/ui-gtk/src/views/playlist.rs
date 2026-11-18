@@ -720,6 +720,25 @@ impl PlaylistView {
             }
         }
         let selected = selected_positions(&self.selection);
+        // The same entries again (after an edit): their rows change in place,
+        // so the list keeps its scroll position.
+        let same = self.store.n_items() as usize == rows.len()
+            && self
+                .rows
+                .borrow()
+                .iter()
+                .map(|r| r.key)
+                .eq(rows.iter().map(|r| r.key));
+        if same {
+            for (i, r) in rows.iter().enumerate() {
+                if let Some(item) = self.store.item(i as u32).and_downcast::<TrackItem>() {
+                    item.fill(Rc::new(r.clone()));
+                }
+            }
+            self.rows.replace(rows);
+            self.show_status();
+            return;
+        }
         let items: Vec<TrackItem> = rows
             .iter()
             .enumerate()
@@ -733,6 +752,28 @@ impl PlaylistView {
             }
         }
         self.show_status();
+    }
+
+    /// Keeps a changed rating in the rows of `keys`, in place.
+    pub(crate) fn ratings_changed(&self, keys: &[TrackKey], stars: Option<u8>) {
+        for row in self
+            .rows
+            .borrow_mut()
+            .iter_mut()
+            .filter(|r| keys.contains(&r.key))
+        {
+            row.rating = stars;
+        }
+        for i in 0..self.store.n_items() {
+            if let Some(item) = self.store.item(i).and_downcast::<TrackItem>()
+                && keys.contains(&item.key())
+                && let Some(row) = item.row()
+            {
+                let mut row = (*row).clone();
+                row.rating = stars;
+                item.fill(Rc::new(row));
+            }
+        }
     }
 
     fn redraw(&self) {

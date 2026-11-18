@@ -682,7 +682,13 @@ impl TracksView {
                 format::count(keys.len())
             };
             view.count.set_text(&count);
-            view.model.set_keys(keys);
+            if *view.model.keys() == keys[..] {
+                // The same tracks (after an edit): the rows shown are fetched
+                // again in place, so the table keeps its scroll position.
+                view.refresh_rows();
+            } else {
+                view.model.set_keys(keys);
+            }
             view.show_selection();
         });
     }
@@ -709,13 +715,14 @@ impl TracksView {
             });
     }
 
+    /// Sets the rating of `item`: shown at once, while the library stores it
+    /// (and announces it to the other lists); put back if that fails.
     fn rate(&self, item: &TrackItem, stars: Option<u8>) {
         let key = item.key();
-        let Some(mut row) = item.row().map(|r| (*r).clone()) else {
+        let Some(before) = item.row().map(|r| r.rating) else {
             return;
         };
-        row.rating = stars;
-        self.model.update_row(row.clone());
+        self.ratings_changed(&[key], stars);
         let backend = self.backend.clone();
         let root = self.root.downgrade();
         glib::spawn_future_local(async move {
@@ -725,12 +732,13 @@ impl TracksView {
                     .and_then(|r| r.root())
                     .and_downcast::<crate::window::MainWindow>()
             {
+                window.ratings_changed(&[key], before);
                 window.toast(&error.0, true);
             }
         });
     }
 
-    /// Shows a changed rating in the rows that are loaded.
+    /// Shows a changed rating in the rows of `keys`, in place.
     pub(crate) fn ratings_changed(&self, keys: &[TrackKey], stars: Option<u8>) {
         for key in keys {
             if let Some(row) = self.model.cached(*key) {
@@ -739,6 +747,7 @@ impl TracksView {
                 self.model.update_row(row);
             }
         }
+        // The items shown keep their own rows; the cells of a row share one.
         self.cells
             .borrow()
             .iter()
@@ -746,11 +755,52 @@ impl TracksView {
             .for_each(|cell| {
                 if let Some(item) = cell.item()
                     && keys.contains(&item.key())
-                    && let Some(row) = self.model.cached(item.key())
+                    && let Some(row) = item.row()
+                    && row.rating != stars
                 {
-                    item.fill(row);
+                    let mut row = (*row).clone();
+                    row.rating = stars;
+                    item.fill(Rc::new(row));
                 }
             });
+    }
+
+    /// The rating stars of the row at `position`, if it is shown.
+    fn stars_at(&self, position: u32) -> Option<RatingStars> {
+        self.cells
+            .borrow()
+            .iter()
+            .filter_map(glib::WeakRef::upgrade)
+            .filter(|c| c.position() == Some(position))
+            .find_map(|c| c.child().and_downcast::<RatingStars>())
+    }
+
+    /// Rates the row at `position` with its stars, as a click would (for tests).
+    pub(crate) fn demo_rate(&self, position: u32, stars: Option<u8>) -> bool {
+        self.stars_at(position).map(|s| s.choose(stars)).is_some()
+    }
+
+    /// The rating the row at `position` shows, if it is shown (for tests).
+    pub(crate) fn shown_rating(&self, position: u32) -> Option<Option<u8>> {
+        self.stars_at(position).map(|s| s.rating())
+    }
+
+    /// Fetches the rows shown again, keeping them on screen until they come.
+    fn refresh_rows(&self) {
+        let mut seen = Vec::new();
+        for cell in self
+            .cells
+            .borrow()
+            .iter()
+            .filter_map(glib::WeakRef::upgrade)
+        {
+            if let Some(item) = cell.item()
+                && !seen.contains(&item)
+            {
+                self.model.refetch(&item);
+                seen.push(item);
+            }
+        }
     }
 
     /// Selects `count` rows from `start`.

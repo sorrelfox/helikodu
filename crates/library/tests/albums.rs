@@ -495,6 +495,58 @@ fn two_copies_of_one_album_in_two_folders_are_split() {
     assert_eq!(albums[0].disc_count, 2);
 }
 
+/// An artist page over a library that holds a second copy of its folders
+/// (`Music/Media.localized/Music/…` beside `Music/…`): each copy is an album
+/// and each file a track, once, though the artist is credited as both track
+/// artist and album artist.
+#[test]
+fn an_artist_lists_each_copy_once() {
+    let (library, root) = library();
+    add(
+        &library,
+        root,
+        &[
+            T::new(
+                "/music/Alstroemeria Records/Lovelight/02.mp3",
+                "Bad Apple!!",
+                "Alstroemeria Records",
+                "Lovelight",
+            )
+            .by("Alstroemeria Records")
+            .year(2007)
+            .no(2),
+            T::new(
+                "/music/Media.localized/Music/Alstroemeria Records/Lovelight/02.mp3",
+                "Bad Apple!!",
+                "Alstroemeria Records",
+                "Lovelight",
+            )
+            .by("Alstroemeria Records")
+            .year(2007)
+            .no(2),
+        ],
+    );
+    let artist = person(&library, ArtistRole::AlbumArtist, "Alstroemeria Records");
+    assert_eq!(
+        artist,
+        person(&library, ArtistRole::Artist, "Alstroemeria Records")
+    );
+    let albums = albums_where(&library, AlbumFilter::ByArtist(artist));
+    assert_eq!(titles(&albums), ["Lovelight", "Lovelight"]);
+    assert_ne!(albums[0].id, albums[1].id);
+    assert!(albums.iter().all(|a| a.track_count == 1), "{albums:?}");
+    let tracks = library
+        .tracks(&TrackQuery {
+            filter: TrackFilter::Artist(artist, None),
+            page: Page::first(100),
+            ..TrackQuery::default()
+        })
+        .unwrap();
+    assert_eq!(tracks.total, 2);
+    assert_eq!(tracks.items.len(), 2);
+    assert_ne!(tracks.items[0].id, tracks.items[1].id);
+}
+
 #[test]
 fn musicbrainz_ids_decide() {
     let (library, root) = library();

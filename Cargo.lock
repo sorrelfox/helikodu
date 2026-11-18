@@ -1272,6 +1272,7 @@ dependencies = [
  "icu_locale_core",
  "icu_normalizer",
  "notify",
+ "proptest",
  "regex",
  "rusqlite",
  "thiserror 2.0.21",

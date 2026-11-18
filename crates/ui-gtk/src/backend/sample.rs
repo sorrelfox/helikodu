@@ -9,8 +9,10 @@
 //! folders are made up from the tracks' paths.
 
 mod services;
+mod signal;
 
 pub use services::MemoryServices;
+pub use signal::{playback_stats, signal_path};
 
 use std::cell::RefCell;
 use std::cmp::Ordering;
@@ -149,6 +151,8 @@ pub struct SampleLibrary {
     /// Each track's album and index in it, by key - 1.
     tracks: Vec<(u32, u16)>,
     ratings: Mutex<HashMap<TrackKey, Option<u8>>>,
+    /// Where a stored rating is announced, as the service announces it.
+    rated: Mutex<Option<async_channel::Sender<Update>>>,
     playlists: Mutex<Playlists>,
     roots: Vec<(PathBuf, FolderState)>,
     /// The tiles past this position stay unloaded, as while a scan runs.
@@ -337,6 +341,7 @@ impl SampleLibrary {
             artists,
             tracks: index,
             ratings: Mutex::new(HashMap::new()),
+            rated: Mutex::new(None),
             playlists: Mutex::new(Playlists::default()),
             roots,
             loaded: usize::MAX,
@@ -737,6 +742,17 @@ impl LibrarySource for SampleLibrary {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(track, stars.filter(|s| *s > 0));
+        if let Some(updates) = self
+            .rated
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_ref()
+        {
+            let _ = updates.try_send(Update::RatingChanged {
+                track,
+                stars: stars.filter(|s| *s > 0),
+            });
+        }
         Ok(())
     }
 
@@ -1044,6 +1060,13 @@ impl FakePlayer {
         self.emit(Update::NowPlaying(now));
         self.emit(Update::State(playing));
         self.emit(Update::Output(self.output(signal)));
+        if signal == SignalState::Idle {
+            self.emit(Update::SignalPath(None));
+        } else {
+            let path = signal_path(super::SignalLamp::BitPerfect);
+            self.emit(Update::SignalPath(Some(Box::new(path))));
+            self.emit(Update::Stats(playback_stats()));
+        }
         self.emit(Update::Position { elapsed, length });
     }
 
@@ -1362,8 +1385,9 @@ fn build_over(
     options: &SampleOptions,
     first_run: bool,
 ) -> (Backend, async_channel::Sender<Update>) {
-    let library = Arc::new(library);
     let (sender, receiver) = async_channel::unbounded();
+    *library.rated.lock().unwrap_or_else(PoisonError::into_inner) = Some(sender.clone());
+    let library = Arc::new(library);
     let mut services = MemoryServices::for_library(library.clone(), sender.clone());
     if first_run {
         services = services.empty();

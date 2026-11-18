@@ -211,6 +211,11 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     if go.n_items() > 0 {
         menu.append_section(None, &go);
     }
+    if matches!(target, Target::Tracks { .. } | Target::Album(_)) {
+        let loudness = gio::Menu::new();
+        loudness.append_item(&item(&tr("Measure loudness"), "win.sel-measure-loudness"));
+        menu.append_section(None, &loudness);
+    }
     if let Target::Tracks { .. } = target {
         let edit = gio::Menu::new();
         let tags = item(&tr("Edit tags…"), "win.sel-edit-tags");
@@ -493,26 +498,37 @@ fn remove(window: &MainWindow, backend: Backend, target: Target) {
     }
 }
 
-/// Sets the rating of the target's tracks.
+/// Sets the rating of the target's tracks: shown at once, while the library
+/// stores it (and announces each stored one); where that fails, the rows show
+/// what is stored again.
 fn rate(window: &MainWindow, backend: Backend, target: Target, stars: Option<u8>) {
-    let keys: Vec<TrackKey> = target.rows().iter().map(|r| r.key).collect();
+    let rows = target.rows();
+    let keys: Vec<TrackKey> = rows.iter().map(|r| r.key).collect();
+    let before: Vec<(TrackKey, Option<u8>)> = rows.iter().map(|r| (r.key, r.rating)).collect();
+    window.ratings_changed(&keys, stars);
     let weak = window.downgrade();
     glib::spawn_future_local(async move {
-        let changed = keys.clone();
         let result = backend
-            .query(move |l| {
-                for key in keys {
-                    l.set_rating(key, stars)?;
-                }
-                Ok(())
-            })
+            .query(
+                move |l| match keys.iter().try_for_each(|key| l.set_rating(*key, stars)) {
+                    Ok(()) => Ok(None),
+                    Err(error) => {
+                        let stored = l.track_rows(&keys).unwrap_or_default();
+                        Ok(Some((error, stored)))
+                    }
+                },
+            )
             .await;
-        if let Some(window) = weak.upgrade() {
-            match result {
-                Ok(()) => window.ratings_changed(&changed, stars),
-                Err(error) => window.toast(&error.0, true),
-            }
+        let Some(window) = weak.upgrade() else { return };
+        let (error, stored) = match result {
+            Ok(None) => return,
+            Ok(Some((error, rows))) => (error, rows.iter().map(|r| (r.key, r.rating)).collect()),
+            Err(error) => (error, before),
+        };
+        for (key, rating) in stored {
+            window.ratings_changed(&[key], rating);
         }
+        window.toast(&error.0, true);
     });
 }
 
@@ -616,6 +632,24 @@ pub(crate) fn install(window: &MainWindow) {
             }
         });
     });
+    let measure = simple("sel-measure-loudness", |w, b, t| {
+        let w2 = w.downgrade();
+        glib::spawn_future_local(async move {
+            let keys = t.keys(&b).await;
+            if keys.is_empty() {
+                return;
+            }
+            crate::dialogs::loudness_footer::measure_in_background(
+                b.services(),
+                crate::backend::services::LoudnessScope::Tracks(keys),
+                move |problem| {
+                    if let (Some(problem), Some(window)) = (problem, w2.upgrade()) {
+                        window.toast(&problem, true);
+                    }
+                },
+            );
+        });
+    });
     let folder = simple("sel-open-folder", |w, _, t| {
         let path = t.rows().first().and_then(|r| r.path.clone());
         open_folder(w, path);
@@ -646,6 +680,7 @@ pub(crate) fn install(window: &MainWindow) {
         go_album,
         go_artist,
         edit,
+        measure,
         folder,
         remove_entries,
         add,

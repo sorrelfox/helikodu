@@ -163,6 +163,18 @@ impl RatingStars {
         self.set_rating(self.imp().stars.get());
     }
 
+    /// The rating shown.
+    pub(crate) fn rating(&self) -> Option<u8> {
+        self.imp().stars.get()
+    }
+
+    /// Sets `stars` as a click on an editable widget would (for tests).
+    pub(crate) fn choose(&self, stars: Option<u8>) {
+        if self.imp().editable.get() {
+            self.change(stars);
+        }
+    }
+
     fn change(&self, stars: Option<u8>) {
         if self.imp().stars.get() == stars {
             return;

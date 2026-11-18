@@ -9,7 +9,7 @@ use super::fold::fold;
 const MAX_TERMS: usize = 16;
 
 /// The shortest term the trigram index can look up, in characters.
-pub(super) const TRIGRAM_MIN_CHARS: usize = 3;
+pub(crate) const TRIGRAM_MIN_CHARS: usize = 3;
 
 /// A folded query.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,19 +44,19 @@ impl Terms {
 }
 
 /// Whether `term` is long enough for the trigram index.
-pub(super) fn is_long(term: &str) -> bool {
+pub(crate) fn is_long(term: &str) -> bool {
     term.chars().nth(TRIGRAM_MIN_CHARS - 1).is_some()
 }
 
 /// `term` as an FTS5 string: in double quotes, with quotes doubled. FTS5 operators and
 /// column filters inside it are plain text.
-pub(super) fn fts_string(term: &str) -> String {
+pub(crate) fn fts_string(term: &str) -> String {
     format!("\"{}\"", term.replace('"', "\"\""))
 }
 
 /// `term` as a word-prefix query for the word index, or `None` if the word tokenizer
 /// would find no word in it (only punctuation or symbols).
-pub(super) fn word_prefix(term: &str) -> Option<String> {
+pub(crate) fn word_prefix(term: &str) -> Option<String> {
     term.chars()
         .any(char::is_alphanumeric)
         .then(|| format!("{}*", fts_string(term)))

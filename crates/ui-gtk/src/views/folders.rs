@@ -202,6 +202,7 @@ impl FoldersView {
         let files = gtk::ListBox::new();
         files.add_css_class("hk-files");
         files.set_selection_mode(gtk::SelectionMode::Multiple);
+        files.set_activate_on_single_click(false);
         files.update_property(&[gtk::accessible::Property::Label(&tr("Audio files"))]);
         let files_scroller = gtk::ScrolledWindow::new();
         files_scroller.set_hscrollbar_policy(gtk::PolicyType::Never);

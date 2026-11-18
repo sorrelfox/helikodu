@@ -9,9 +9,11 @@ pub(crate) mod bipolar_scale;
 pub(crate) mod brand_mark;
 pub(crate) mod cover_art;
 pub(crate) mod empty_state;
+pub(crate) mod eq_graph;
 pub(crate) mod playing_indicator;
 pub(crate) mod rating_stars;
 pub(crate) mod signal_lamp;
+pub(crate) mod signal_path_list;
 pub(crate) mod waveform_seek_bar;
 
 use gtk::prelude::*;
@@ -19,7 +21,9 @@ use gtk::prelude::*;
 pub(crate) use bipolar_scale::BipolarScale;
 pub(crate) use brand_mark::BrandMark;
 pub(crate) use cover_art::CoverArt;
-pub(crate) use playing_indicator::PlayingIndicator;
+pub(crate) use playing_indicator::{
+    PlayingIndicator, set_running as set_playing_indicators_running,
+};
 pub(crate) use rating_stars::RatingStars;
 pub(crate) use signal_lamp::SignalLamp;
 pub(crate) use waveform_seek_bar::WaveformSeekBar;

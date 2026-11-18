@@ -20,12 +20,15 @@ use std::time::SystemTime;
 use helikodu_model::library::TrackId;
 use helikodu_model::settings::SettingsGroup;
 use helikodu_service::Service;
-use helikodu_service::formats::{sqlite_version, supported_formats};
+use helikodu_service::formats::{sqlite_version, supported_formats_for};
+use helikodu_service::jobs::loudness::{LoudnessEvent, LoudnessRequest};
 use helikodu_service::library::tag_editing::{
     BatchItem, CoverChange, EditStamp, EditableFile, FieldKey, ReadOptions, TagChanges,
     TagField as WriterField, WriteError, load_for_editing,
 };
-use helikodu_service::library::{LibraryEvent, ScanEvent, ScanRequest, TrackInfo, WatchSettings};
+use helikodu_service::library::{
+    LibraryEvent, LoudnessSelection, ScanEvent, ScanRequest, TrackInfo, WatchSettings,
+};
 use helikodu_service::player::{
     PlayerCommand, list_outputs, resolve_backend as resolve, sound_backends,
 };
@@ -35,6 +38,7 @@ use super::super::services::{
     FormatReport, LibraryFolder, OutputBackendKind, OutputSelection, ScanStatus, Services,
     Settings, StorageUsage, TagEdit, TagField, Versions, WriteResult,
 };
+use super::super::services::{LimiterReading, LoudnessCoverage, LoudnessScope, LoudnessStatus};
 use super::super::{AudioFormat, BackendError, CoverKey, TrackKey, Update};
 use super::error;
 use crate::i18n::{fill, tr};
@@ -141,6 +145,34 @@ pub(super) fn scan_update(event: &LibraryEvent) -> Option<Update> {
         _ => return None,
     };
     Some(Update::Scan(status))
+}
+
+/// The update for a loudness measurement event, if the window shows it.
+pub(super) fn loudness_update(event: &LibraryEvent) -> Option<Update> {
+    let LibraryEvent::Loudness(event) = event else {
+        return None;
+    };
+    let status = match event {
+        LoudnessEvent::Started { tracks } => LoudnessStatus {
+            total: Some(*tracks),
+            ..LoudnessStatus::default()
+        },
+        LoudnessEvent::Progress { done, total, .. } => LoudnessStatus {
+            done: *done,
+            total: Some(*total),
+            ..LoudnessStatus::default()
+        },
+        LoudnessEvent::Stored(_) => return None,
+        LoudnessEvent::Finished(summary) => LoudnessStatus {
+            done: summary.measured + summary.failed,
+            total: Some(summary.total),
+            finished: true,
+            failed: summary.failed,
+            cancelled: summary.cancelled,
+            error: summary.error.clone(),
+        },
+    };
+    Some(Update::Loudness(status))
 }
 
 /// The fields of the form as the tag writer names them.
@@ -687,7 +719,52 @@ impl Services for ServiceServices {
     }
 
     fn formats(&self) -> FormatReport {
-        supported_formats()
+        supported_formats_for(&self.service.settings().get().playback.decoders)
+    }
+
+    fn loudness_coverage(&self) -> Option<LoudnessCoverage> {
+        let coverage = self.service.library()?.library().loudness_coverage().ok()?;
+        Some(LoudnessCoverage {
+            tracks: coverage.tracks,
+            with_values: coverage.with_values,
+        })
+    }
+
+    fn measure_loudness(&self, scope: LoudnessScope) -> Result<(), BackendError> {
+        let Some(library) = self.service.library() else {
+            return Err(BackendError(tr("Helikodu runs without a library.")));
+        };
+        let settings = self.service.settings().get();
+        let mut request = match scope {
+            LoudnessScope::Rest => LoudnessRequest::unmeasured(),
+            LoudnessScope::Tracks(keys) => LoudnessRequest::new(LoudnessSelection::Tracks(
+                keys.iter()
+                    .filter(|k| k.0 != 0)
+                    .map(|k| TrackId::new(k.0))
+                    .collect(),
+            )),
+        };
+        request.write_tags = settings.loudness.write_measured_to_tags;
+        request.library = settings.library.clone();
+        request.advanced = settings.advanced;
+        library.measure_loudness(request).map_err(error)
+    }
+
+    fn stop_loudness(&self) {
+        if let Some(library) = self.service.library() {
+            library.stop_loudness();
+        }
+    }
+
+    fn is_measuring_loudness(&self) -> bool {
+        self.service
+            .library()
+            .is_some_and(|library| library.is_measuring_loudness())
+    }
+
+    fn limiter_activity(&self) -> Option<LimiterReading> {
+        // The player does not report the limiter's activity yet.
+        None
     }
 
     fn versions(&self) -> Versions {

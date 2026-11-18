@@ -21,10 +21,11 @@ mod fold;
 pub(crate) mod index;
 mod query;
 mod rank;
-mod terms;
+pub(crate) mod terms;
 
 pub use fold::fold;
 pub(crate) use query::search;
+pub(crate) use query::term_condition;
 pub use query::{SearchHit, SearchRequest, SearchResults};
 pub use rank::MatchRank;
 pub(crate) use rank::match_rank;

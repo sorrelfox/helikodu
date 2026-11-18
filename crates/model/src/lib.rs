@@ -9,9 +9,11 @@
 #![warn(missing_docs)]
 
 pub mod audio;
+pub mod eq;
 pub mod library;
 mod path_serde;
 pub mod player;
+pub mod query;
 pub mod settings;
 mod text_form;
 

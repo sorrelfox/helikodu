@@ -17,8 +17,10 @@ use helikodu_meta::covers::CoverHash;
 use helikodu_model::library::TrackId;
 use rusqlite::types::Value;
 
+pub(crate) use albums::LOSSLESS;
 pub(crate) use albums::{album, albums};
 pub(crate) use people::{artists, genres};
+pub(crate) use tracks::{BY_ALBUM_ARTIST, COLUMNS, summary};
 pub(crate) use tracks::{track_order, tracks};
 
 use super::ids::{AlbumId, GenreId, PersonId};

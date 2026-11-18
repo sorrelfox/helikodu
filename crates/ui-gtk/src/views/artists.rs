@@ -77,6 +77,9 @@ pub(crate) struct ArtistsView {
     releases: gtk::FlowBox,
     most_played: gtk::ListBox,
     most_played_box: gtk::Box,
+    /// The Plays and Length columns: as wide as their header or their widest
+    /// value, whichever is wider, in the header and in every row.
+    figures: [gtk::SizeGroup; 2],
     tracks: Rc<TracksView>,
     backend: Backend,
     covers: Rc<CoverCache>,
@@ -194,17 +197,31 @@ impl ArtistsView {
         most_played_box.add_css_class("hk-most-played");
         let header = gtk::Box::new(gtk::Orientation::Horizontal, 16);
         header.add_css_class("hk-table-header");
-        for (text, width, expand) in [
+        let figures = [
+            gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal),
+            gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal),
+        ];
+        for (i, (text, width, expand)) in [
             (tr("Most played"), 0, true),
             (tr("Album"), 0, true),
             (tr("Plays"), 44, false),
             (tr("Length"), 44, false),
-        ] {
+        ]
+        .into_iter()
+        .enumerate()
+        {
             let l = label(&text, &["hk-section-label"]);
             l.set_hexpand(expand);
+            if expand {
+                // As in the rows, so the columns line up.
+                l.set_max_width_chars(1);
+            }
             if width > 0 {
                 l.set_size_request(width, -1);
                 l.set_xalign(1.0);
+                // The header is never cut: it sets the column's width.
+                l.set_ellipsize(gtk::pango::EllipsizeMode::None);
+                figures[i - 2].add_widget(&l);
             }
             header.append(&l);
         }
@@ -212,6 +229,7 @@ impl ArtistsView {
         let most_played = gtk::ListBox::new();
         most_played.add_css_class("hk-tracks");
         most_played.add_css_class("hk-compact");
+        most_played.set_activate_on_single_click(false);
         most_played.update_property(&[gtk::accessible::Property::Label(&tr("Most played"))]);
         most_played_box.append(&most_played);
         releases_page.append(&most_played_box);
@@ -247,6 +265,7 @@ impl ArtistsView {
             releases,
             most_played,
             most_played_box,
+            figures,
             tracks,
             backend: backend.clone(),
             covers: covers.clone(),
@@ -695,13 +714,14 @@ impl ArtistsView {
             album.set_hexpand(true);
             album.set_max_width_chars(1);
             line.append(&album);
-            for (text, width) in [
+            for (group, (text, width)) in self.figures.iter().zip([
                 (track.plays.to_string(), 44),
                 (track.duration.map(format::duration).unwrap_or_default(), 44),
-            ] {
+            ]) {
                 let l = label(&text, &["hk-t2", "hk-numeric"]);
                 l.set_xalign(1.0);
                 l.set_size_request(width, -1);
+                group.add_widget(&l);
                 line.append(&l);
             }
             row.set_child(Some(&line));

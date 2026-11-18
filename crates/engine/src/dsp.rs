@@ -31,7 +31,6 @@ mod chain;
 mod channel_mixer;
 mod crossfeed;
 mod equalizer;
-pub mod graphic;
 mod limiter;
 mod plan;
 
@@ -48,6 +47,8 @@ pub use self::crossfeed::Crossfeed;
 pub use self::equalizer::Equalizer;
 pub use self::limiter::{Limiter, LimiterActivity};
 pub use self::plan::{CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan};
+/// The graphic equalizer's bands, with overlap-corrected gains.
+pub use helikodu_model::eq::graphic;
 
 /// One stage of the DSP chain, built for a fixed rate and channel count.
 pub trait DspStage: fmt::Debug + Send {

@@ -4,13 +4,11 @@
 //! The equalizer stage: the preamp, then a cascade of biquads from the graphic or
 //! the parametric equalizer.
 
-use helikodu_model::settings::{
-    EqMode, EqualizerSettings, GRAPHIC_10_BANDS_HZ, GRAPHIC_31_BANDS_HZ,
-};
+use helikodu_model::eq;
+use helikodu_model::settings::EqualizerSettings;
 
 use super::DspStage;
 use super::biquad::{Cascade, Coefficients};
-use super::graphic::band_sections;
 use super::plan::EqualizerPlan;
 
 /// The preamp and the equalizer's filters, for one rate and channel count.
@@ -28,17 +26,7 @@ impl Equalizer {
     /// band below the Nyquist limit, a parametric one for every enabled filter that
     /// fits the rate.
     pub fn new(settings: &EqualizerSettings, rate: u32, channels: usize) -> Self {
-        let rate_hz = f64::from(rate);
-        let sections: Vec<Coefficients> = match settings.mode {
-            EqMode::Graphic10 => band_sections(&GRAPHIC_10_BANDS_HZ, &settings.graphic_10, rate_hz),
-            EqMode::Graphic31 => band_sections(&GRAPHIC_31_BANDS_HZ, &settings.graphic_31, rate_hz),
-            EqMode::Parametric => settings
-                .parametric
-                .iter()
-                .filter(|filter| filter.enabled)
-                .filter_map(|filter| Coefficients::for_filter(filter, rate_hz))
-                .collect(),
-        };
+        let sections = eq::sections(settings, f64::from(rate));
         let preamp_db = settings.effective_preamp_db();
         let preamp_db = if preamp_db.is_finite() {
             preamp_db
@@ -87,13 +75,7 @@ impl Equalizer {
     /// The magnitude of the whole equalizer's response at `frequency` Hz, in dB,
     /// preamp included.
     pub fn magnitude_db(&self, frequency: f64, rate: u32) -> f64 {
-        let rate = f64::from(rate);
-        20.0 * self.preamp.log10()
-            + self
-                .sections()
-                .iter()
-                .map(|c| c.magnitude_db(frequency, rate))
-                .sum::<f64>()
+        20.0 * self.preamp.log10() + eq::response_db(self.sections(), frequency, f64::from(rate))
     }
 }
 
@@ -119,7 +101,7 @@ impl DspStage for Equalizer {
 
 #[cfg(test)]
 mod tests {
-    use helikodu_model::settings::{FilterKind, ParametricFilter};
+    use helikodu_model::settings::{EqMode, FilterKind, GRAPHIC_31_BANDS_HZ, ParametricFilter};
 
     use super::*;
 

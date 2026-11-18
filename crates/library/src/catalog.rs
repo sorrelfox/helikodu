@@ -26,6 +26,7 @@ pub use browse::{
     ArtistQuery, ArtistRef, ArtistSummary, Disc, GenreQuery, GenreRef, GenreSummary, MAX_PAGE,
     Page, Paged, TrackFilter, TrackOrder, TrackQuery, TrackSortKey, TrackSummary,
 };
+pub(crate) use browse::{BY_ALBUM_ARTIST, COLUMNS, LOSSLESS, summary};
 pub(crate) use browse::{album, albums, artists, genres, track_order, tracks};
 pub use covers::{CoverInfo, CoverLocation};
 pub use fingerprint::TrackFingerprint;

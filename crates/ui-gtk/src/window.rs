@@ -315,6 +315,15 @@ impl MainWindow {
                     }
                     window.load_counts();
                     window.library_changed();
+                    // Edited tags show on the open album page too.
+                    if let Some(album) = window.imp().album.borrow().as_ref()
+                        && let Some(key) = album.album()
+                    {
+                        album.show_album(key);
+                    }
+                }
+                Update::RatingChanged { track, stars } => {
+                    window.ratings_changed(&[*track], *stars);
                 }
                 Update::Raise => window.present(),
                 Update::Quit => {
@@ -786,5 +795,24 @@ impl MainWindow {
             imp.sidebar_revealer.reveals_child(),
             imp.panel_revealer.reveals_child(),
         )
+    }
+
+    /// Shows the panel's Signal path tab.
+    #[doc(hidden)]
+    pub fn show_signal_path(&self) {
+        self.imp().panel.show_signal_path();
+    }
+
+    /// What the Signal path tab shows: the state, the sentence, each stage as
+    /// "stage: value [node]" and the counters.
+    #[doc(hidden)]
+    pub fn signal_path_texts(&self) -> Vec<String> {
+        self.imp().panel.signal_path_texts()
+    }
+
+    /// The output button's device and signal text.
+    #[doc(hidden)]
+    pub fn output_button_text(&self) -> (String, String) {
+        self.imp().deck.output_text()
     }
 }

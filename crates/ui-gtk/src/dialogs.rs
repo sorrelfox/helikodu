@@ -7,8 +7,10 @@
 
 pub(crate) mod about;
 pub(crate) mod common;
+pub(crate) mod decoder_files;
 pub(crate) mod first_run;
 pub(crate) mod formats;
+pub(crate) mod loudness_footer;
 pub(crate) mod settings;
 pub(crate) mod shortcuts;
 pub(crate) mod tag_editor;

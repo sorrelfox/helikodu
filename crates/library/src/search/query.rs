@@ -193,3 +193,27 @@ fn matching_condition(terms: &Terms, params: &mut Vec<Value>) -> String {
     long.extend(short);
     long.join(" AND ")
 }
+
+/// The condition on track `t` that one folded `term` matches, as plain search matches
+/// each of its terms. Its values are pushed to `params`, numbered by their position.
+/// The query language uses this for plain text.
+pub(crate) fn term_condition(term: &str, params: &mut Vec<Value>) -> String {
+    let mut push = |value: String| {
+        params.push(Value::Text(value));
+        params.len()
+    };
+    if terms::is_long(term) {
+        let n = push(terms::fts_string(term));
+        let mut set = format!("SELECT rowid FROM tracks_tri WHERE tracks_tri MATCH ?{n}");
+        if let Some(prefix) = terms::word_prefix(term) {
+            let n = push(prefix);
+            set.push_str(&format!(
+                " UNION SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ?{n}"
+            ));
+        }
+        format!("t.id IN ({set})")
+    } else {
+        let n = push(term.to_owned());
+        SHORT_TERM.replace("{n}", &n.to_string())
+    }
+}

@@ -331,18 +331,21 @@ impl Deck {
                 imp.updating.set(false);
                 self.show_volume_icon(view.volume);
             }
-            Change::Output => {
+            Change::Output | Change::Signal => {
                 let output = &view.output;
-                imp.device.set_text(&output.device);
+                // The backend's description of the device the path ends in,
+                // when it gave one, rather than its stable name.
+                let device = view
+                    .signal
+                    .as_ref()
+                    .and_then(|p| p.device.description.clone())
+                    .unwrap_or_else(|| output.device.clone());
+                imp.device.set_text(&device);
                 imp.lamp.set_state(output.signal);
-                let state = match output.signal {
-                    SignalState::Idle => Some(tr("Idle")),
-                    SignalState::BitPerfect => Some(tr("Bit-perfect")),
-                    SignalState::Processed { dsp: true } => Some(tr("DSP active")),
-                    SignalState::Processed { dsp: false } => Some(tr("Converted")),
-                    SignalState::NotConnected => Some(tr("Not connected")),
-                    SignalState::Unreported => None,
-                };
+                let state = crate::widgets::signal_path_list::state_label(
+                    output.signal,
+                    view.signal.as_deref(),
+                );
                 let lost = output.signal == SignalState::NotConnected;
                 if lost {
                     imp.device.add_css_class("hk-t2");
@@ -370,7 +373,7 @@ impl Deck {
                     SignalState::Processed { .. } => "processed",
                     _ => "idle",
                 });
-                let name = fill(&tr("Output: {}, {}"), &[&output.device, &text]);
+                let name = fill(&tr("Output: {}, {}"), &[&device, &text]);
                 imp.output
                     .update_property(&[gtk::accessible::Property::Label(&name)]);
             }
@@ -414,7 +417,7 @@ impl Deck {
                 imp.play
                     .update_property(&[gtk::accessible::Property::Description(&play_name)]);
             }
-            Change::Queue => {}
+            Change::Queue | Change::Stats => {}
         }
     }
 
@@ -430,6 +433,12 @@ impl Deck {
     pub(crate) fn adjust_volume(&self, delta: f64) {
         let volume = &self.imp().volume;
         volume.set_value(volume.value() + delta);
+    }
+
+    /// The output button's device and signal text.
+    pub(crate) fn output_text(&self) -> (String, String) {
+        let imp = self.imp();
+        (imp.device.text().into(), imp.signal.text().into())
     }
 
     /// The play button, for keyboard focus.

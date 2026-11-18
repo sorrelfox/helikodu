@@ -84,10 +84,10 @@ list.hk-files > row.hk-playing label { color: var(--hk-accent-text); font-weight
 .hk-file-name { font-size: 12px; }
 .hk-table-header.hk-file-row { padding-left: 24px; }
 
-list.hk-tracks.hk-compact > row { min-height: 34px; padding: 0 0; border-radius: 0; color: var(--hk-t1); }
+list.hk-tracks.hk-compact > row { min-height: 34px; padding: 0 6px; border-radius: 6px; color: var(--hk-t1); }
 list.hk-tracks.hk-compact > row:selected, list.hk-pane-list > row:selected { color: var(--hk-t1); }
 .hk-most-played { margin-top: 28px; }
-.hk-most-played > .hk-table-header { min-height: 30px; padding: 0; }
+.hk-most-played > .hk-table-header { min-height: 30px; padding: 0 6px; }
 
 /* ---- 3. Pages ----------------------------------------------------------- */
 

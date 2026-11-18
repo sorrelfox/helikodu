@@ -168,6 +168,21 @@ fn track_row(index: usize, track: &TrackRow, playing: bool) -> gtk::ListBoxRow {
     row
 }
 
+/// The rating stars inside `widget`.
+fn find_stars(widget: &gtk::Widget) -> Option<RatingStars> {
+    let mut child = widget.first_child();
+    while let Some(w) = child {
+        if let Some(stars) = w.downcast_ref::<RatingStars>() {
+            return Some(stars.clone());
+        }
+        if let Some(stars) = find_stars(&w) {
+            return Some(stars);
+        }
+        child = w.next_sibling();
+    }
+    None
+}
+
 impl AlbumPage {
     /// Connects the page to `backend` and follows `playback`.
     pub(crate) fn bind(&self, backend: &Backend, playback: &Rc<Playback>, covers: &Rc<CoverCache>) {
@@ -387,6 +402,7 @@ impl AlbumPage {
                 let row = gtk::ListBoxRow::new();
                 row.add_css_class("disc");
                 row.set_activatable(false);
+                row.set_selectable(false);
                 row.set_focusable(false);
                 row.set_child(Some(&label(&text, &["hk-section-label"])));
                 imp.tracks.append(&row);
@@ -395,6 +411,37 @@ impl AlbumPage {
                 imp.tracks
                     .append(&track_row(index, track, Some(track.key) == playing));
                 index += 1;
+            }
+        }
+    }
+
+    /// Shows a changed rating in the rows of `keys`, in place.
+    pub(crate) fn ratings_changed(&self, keys: &[TrackKey], stars: Option<u8>) {
+        let imp = self.imp();
+        let changed: Vec<usize> = match imp.detail.borrow_mut().as_mut() {
+            Some(detail) => detail
+                .discs
+                .iter_mut()
+                .flat_map(|d| d.tracks.iter_mut())
+                .enumerate()
+                .filter(|(_, t)| keys.contains(&t.key))
+                .map(|(i, t)| {
+                    t.rating = stars;
+                    i
+                })
+                .collect(),
+            None => return,
+        };
+        let mut index = 0;
+        while let Some(row) = imp.tracks.row_at_index(index) {
+            index += 1;
+            if row
+                .widget_name()
+                .parse::<usize>()
+                .is_ok_and(|i| changed.contains(&i))
+                && let Some(rating) = find_stars(row.upcast_ref())
+            {
+                rating.set_rating(stars);
             }
         }
     }
@@ -415,11 +462,28 @@ impl AlbumPage {
         self.imp().play.get().upcast()
     }
 
+    /// The ratings the track rows show, in order (for tests).
+    pub(crate) fn shown_ratings(&self) -> Vec<Option<u8>> {
+        let tracks = self.imp().tracks.get();
+        let mut ratings = Vec::new();
+        let mut index = 0;
+        while let Some(row) = tracks.row_at_index(index) {
+            index += 1;
+            if let Some(stars) = find_stars(row.upcast_ref()) {
+                ratings.push(stars.rating());
+            }
+        }
+        ratings
+    }
+
     /// Opens the context menu of the first track row, as a right click
     /// would (for tests and screenshots).
     pub(crate) fn demo_menu(&self) -> Option<gtk::PopoverMenu> {
         let tracks = self.imp().tracks.get();
-        let row = tracks.row_at_index(0)?;
+        // The first track, past a disc's heading.
+        let row = (0..)
+            .map_while(|i| tracks.row_at_index(i))
+            .find(|r| r.widget_name().parse::<usize>().is_ok())?;
         let bounds = row.compute_bounds(&tracks)?;
         let y = f64::from(bounds.y() + bounds.height() / 2.0);
         let target = self.row_target(y)?;

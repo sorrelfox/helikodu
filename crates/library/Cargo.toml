@@ -25,12 +25,19 @@ regex.workspace = true
 rusqlite.workspace = true
 thiserror.workspace = true
 
+[dev-dependencies]
+proptest.workspace = true
+
 [[bench]]
 name = "collation"
 harness = false
 
 [[bench]]
 name = "search"
+harness = false
+
+[[bench]]
+name = "query"
 harness = false
 
 [[bench]]

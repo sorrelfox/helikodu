@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The right panel: tabs Queue, Lyrics and Signal path. The Queue tab shows the
-//! playing track on top, then the history, the current track and what follows.
+//! playing track on top, then the history, the current track and what follows;
+//! the Signal path tab is in [`signal_path`].
+
+mod signal_path;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -61,7 +64,10 @@ mod imp {
         pub(super) summary: TemplateChild<gtk::Label>,
         #[template_child]
         pub(super) clear_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) signal_page: TemplateChild<gtk::Box>,
         pub(super) covers: RefCell<Option<Rc<CoverCache>>>,
+        pub(super) signal: RefCell<Option<Rc<signal_path::SignalPathPage>>>,
     }
 
     #[glib::object_subclass]
@@ -186,6 +192,35 @@ impl Panel {
                 panel.update(view);
             }
         });
+        // A stored rating of the playing track shows at once.
+        let weak = self.downgrade();
+        let source = Rc::downgrade(playback);
+        playback.connect_event(move |update| {
+            if let (crate::backend::Update::RatingChanged { .. }, Some(panel), Some(source)) =
+                (update, weak.upgrade(), source.upgrade())
+                && let Some(now) = source.view().now
+            {
+                panel.imp().rating.set_rating(now.track.rating);
+            }
+        });
+        let signal = signal_path::SignalPathPage::new(playback);
+        imp.signal_page.append(signal.widget());
+        imp.signal.replace(Some(signal));
+    }
+
+    /// Shows the Signal path tab.
+    pub(crate) fn show_signal_path(&self) {
+        self.imp().signal_tab.set_active(true);
+    }
+
+    /// What the Signal path tab shows, in words.
+    pub(crate) fn signal_path_texts(&self) -> Vec<String> {
+        self.imp()
+            .signal
+            .borrow()
+            .as_ref()
+            .map(|page| page.texts())
+            .unwrap_or_default()
     }
 
     /// The window controls of the end side, shown in the integrated style.

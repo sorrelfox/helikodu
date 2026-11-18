@@ -26,6 +26,9 @@ pub use service::{LibraryChoice, Service, ServiceConfig, ServiceError};
 /// Exclusive access to a sound card that another program, such as the session
 /// manager, holds. The desktop integration implements [`DeviceReservation`]
 /// and the application hands it to the engine.
+/// Reading and writing AutoEQ `ParametricEQ.txt` files for the parametric
+/// equalizer.
+pub use helikodu_engine::dsp::autoeq;
 pub use helikodu_engine::output::{
     DeviceReservation, NoReservation, ReservationError, ReservationGuard, ReservedCard,
     SharedReservation,

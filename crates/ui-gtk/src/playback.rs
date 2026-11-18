@@ -11,7 +11,8 @@ use std::time::Duration;
 use gtk::glib;
 
 use crate::backend::{
-    AlbumKey, Backend, NowPlaying, OutputInfo, PlaybackState, QueueSnapshot, Repeat, Update,
+    AlbumKey, Backend, NowPlaying, OutputInfo, PlaybackState, PlaybackStats, QueueSnapshot, Repeat,
+    SignalPath, Update,
 };
 
 /// What the player does now.
@@ -27,6 +28,10 @@ pub(crate) struct PlayerView {
     pub(crate) shuffle: bool,
     pub(crate) repeat: Repeat,
     pub(crate) stop_after: bool,
+    /// The signal path of what is heard, as the engine last reported it.
+    pub(crate) signal: Option<Rc<SignalPath>>,
+    /// The output's counters, as last reported.
+    pub(crate) stats: Option<PlaybackStats>,
 }
 
 impl PlayerView {
@@ -46,6 +51,10 @@ pub(crate) enum Change {
     Output,
     Queue,
     Modes,
+    /// The signal path.
+    Signal,
+    /// The playback counters.
+    Stats,
 }
 
 type Listener = Box<dyn Fn(&PlayerView, Change)>;
@@ -99,6 +108,8 @@ impl Playback {
             Change::Volume,
             Change::Output,
             Change::Queue,
+            Change::Signal,
+            Change::Stats,
         ] {
             listener(&view, change);
         }
@@ -113,46 +124,75 @@ impl Playback {
 
     /// Applies one update and tells the listeners.
     pub(crate) fn apply(&self, update: Update) {
-        let change = {
+        let changes: &[Change] = {
             let mut view = self.view.borrow_mut();
             match update {
                 Update::State(state) => {
                     view.state = state;
-                    Change::State
+                    crate::widgets::set_playing_indicators_running(state == PlaybackState::Playing);
+                    &[Change::State]
                 }
                 Update::NowPlaying(now) => {
                     view.length = now.as_ref().and_then(|n| n.track.duration);
                     view.elapsed = Duration::ZERO;
                     view.now = now;
-                    Change::Track
+                    &[Change::Track]
                 }
                 Update::Position { elapsed, length } => {
                     view.elapsed = elapsed;
                     if length.is_some() {
                         view.length = length;
                     }
-                    Change::Position
+                    &[Change::Position]
                 }
                 Update::Volume(volume) => {
                     view.volume = volume;
-                    Change::Volume
+                    &[Change::Volume]
                 }
                 Update::Output(output) => {
                     view.output = output;
-                    Change::Output
+                    &[Change::Output]
                 }
                 Update::Queue(queue) => {
                     view.queue = queue;
-                    Change::Queue
+                    &[Change::Queue]
                 }
                 Update::Modes { shuffle, repeat } => {
                     view.shuffle = shuffle;
                     view.repeat = repeat;
-                    Change::Modes
+                    &[Change::Modes]
                 }
                 Update::StopAfter(on) => {
                     view.stop_after = on;
-                    Change::Modes
+                    &[Change::Modes]
+                }
+                // The output button follows the path: its lamp and the format
+                // the device was opened with.
+                Update::SignalPath(Some(path)) => {
+                    view.output.follow(&path);
+                    view.signal = Some(Rc::new(*path));
+                    &[Change::Output, Change::Signal]
+                }
+                Update::SignalPath(None) => {
+                    view.signal = None;
+                    view.stats = None;
+                    &[Change::Signal, Change::Stats]
+                }
+                Update::Stats(stats) => {
+                    view.stats = Some(stats);
+                    &[Change::Stats]
+                }
+                // The playing track keeps its new rating; the listeners show it.
+                Update::RatingChanged { track, stars } => {
+                    if let Some(now) = view.now.as_mut().filter(|n| n.track.key == track) {
+                        now.track.rating = stars;
+                    }
+                    drop(view);
+                    let update = Update::RatingChanged { track, stars };
+                    for listener in self.events.borrow().iter() {
+                        listener(&update);
+                    }
+                    return;
                 }
                 other => {
                     drop(view);
@@ -164,8 +204,10 @@ impl Playback {
             }
         };
         let view = self.view();
-        for listener in self.listeners.borrow().iter() {
-            listener(&view, change);
+        for change in changes {
+            for listener in self.listeners.borrow().iter() {
+                listener(&view, *change);
+            }
         }
     }
 }

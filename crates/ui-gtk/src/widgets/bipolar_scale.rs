@@ -21,6 +21,7 @@ const TROUGH: f32 = 3.0;
 const TICK: f32 = 12.0;
 
 type Listener = Box<dyn Fn(f64)>;
+type ValueText = Box<dyn Fn(f64) -> String>;
 
 mod imp {
     use super::*;
@@ -32,6 +33,7 @@ mod imp {
         pub(super) max: Cell<f64>,
         pub(super) step: Cell<f64>,
         pub(super) listeners: RefCell<Vec<Listener>>,
+        pub(super) text: RefCell<Option<ValueText>>,
     }
 
     impl std::fmt::Debug for BipolarScale {
@@ -196,9 +198,23 @@ impl BipolarScale {
             gtk::accessible::Property::ValueMin(imp.min.get()),
             gtk::accessible::Property::ValueMax(imp.max.get()),
             gtk::accessible::Property::ValueNow(value),
-            gtk::accessible::Property::ValueText(&decibels(value)),
+            gtk::accessible::Property::ValueText(&self.value_text(value)),
         ]);
         self.queue_draw();
+    }
+
+    /// Reads values with `text` instead of in decibels, for assistive
+    /// technology.
+    pub(crate) fn set_value_text(&self, text: impl Fn(f64) -> String + 'static) {
+        self.imp().text.replace(Some(Box::new(text)));
+        self.set_value(self.imp().value.get());
+    }
+
+    fn value_text(&self, value: f64) -> String {
+        match self.imp().text.borrow().as_ref() {
+            Some(text) => text(value),
+            None => decibels(value),
+        }
     }
 
     /// Calls `listener` with each value the user sets.

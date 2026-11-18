@@ -130,7 +130,7 @@ fn solve(a: &mut [f64], b: &mut [f64], n: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use helikodu_model::settings::{BuiltInPreset, GRAPHIC_10_BANDS_HZ, GRAPHIC_31_BANDS_HZ};
+    use crate::settings::{BuiltInPreset, GRAPHIC_10_BANDS_HZ, GRAPHIC_31_BANDS_HZ};
 
     use super::*;
 

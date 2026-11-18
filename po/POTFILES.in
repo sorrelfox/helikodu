@@ -47,3 +47,5 @@ crates/ui-gtk/src/views/playlist.rs
 crates/ui-gtk/src/views/search.rs
 crates/ui-gtk/src/views/tracks.rs
 crates/ui-gtk/src/window/pages.rs
+crates/ui-gtk/src/widgets/signal_path_list.rs
+crates/ui-gtk/src/window/panel/signal_path.rs

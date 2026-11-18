@@ -16,6 +16,7 @@ mod details;
 mod library;
 mod loudness;
 mod playlists;
+mod query;
 mod scan;
 mod search;
 mod stats;
@@ -59,6 +60,10 @@ pub use loudness::{
 pub use playlists::{
     DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions, ImportReport, ItemContent,
     PlaylistError, PlaylistId, PlaylistItem, PlaylistItemId, PlaylistSummary,
+};
+pub use query::{
+    ParsedQuery, QueryError, QueryRequest, SavedSearch, SavedSearchId, SyntaxError,
+    SyntaxErrorKind, parse_query, parse_query_lenient, print_query,
 };
 pub use scan::{
     CancelToken, ExcludeRule, FailureKind, FileFailure, ScanError, ScanEvent, ScanHandle,

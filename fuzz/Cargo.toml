@@ -16,6 +16,7 @@ libfuzzer-sys = "0.4"
 helikodu-engine = { path = "../crates/engine", default-features = false }
 helikodu-extra-decoders = { path = "../crates/extra-decoders", default-features = false, features = ["openmpt", "gme", "sid", "midi"] }
 helikodu-ffmpeg-bridge = { path = "../crates/ffmpeg-bridge" }
+helikodu-library = { path = "../crates/library" }
 helikodu-meta = { path = "../crates/meta" }
 helikodu-model = { path = "../crates/model" }
 
@@ -92,6 +93,13 @@ bench = false
 [[bin]]
 name = "midi_open"
 path = "fuzz_targets/midi_open.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "query_parse"
+path = "fuzz_targets/query_parse.rs"
 test = false
 doc = false
 bench = false

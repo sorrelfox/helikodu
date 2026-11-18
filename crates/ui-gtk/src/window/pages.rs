@@ -529,7 +529,10 @@ impl MainWindow {
         if let Some(pages) = self.pages() {
             pages.tracks.ratings_changed(keys, stars);
             pages.artists.ratings_changed(keys, stars);
-            pages.playlist.reload();
+            pages.playlist.ratings_changed(keys, stars);
+        }
+        if let Some(album) = self.imp().album.borrow().as_ref() {
+            album.ratings_changed(keys, stars);
         }
     }
 
@@ -1066,6 +1069,12 @@ impl MainWindow {
         self.open_library(name);
     }
 
+    /// Opens the page of the artist `key` (for tests and screenshots).
+    #[doc(hidden)]
+    pub fn demo_open_artist(&self, key: ArtistKey) {
+        self.open_artist(key);
+    }
+
     /// How many tracks the track table holds and the batches it fetched (for tests).
     #[doc(hidden)]
     pub fn track_table_stats(&self) -> (u32, u64) {
@@ -1173,6 +1182,31 @@ impl MainWindow {
             }
             None => false,
         }
+    }
+
+    /// Rates the track table's row at `position` with its stars (for tests).
+    #[doc(hidden)]
+    pub fn demo_rate_track_row(&self, position: u32, stars: Option<u8>) -> bool {
+        self.pages()
+            .is_some_and(|p| p.tracks.demo_rate(position, stars))
+    }
+
+    /// The rating the track table's row at `position` shows, if it is shown
+    /// (for tests).
+    #[doc(hidden)]
+    pub fn track_row_rating(&self, position: u32) -> Option<Option<u8>> {
+        self.pages().and_then(|p| p.tracks.shown_rating(position))
+    }
+
+    /// The ratings the album page's track rows show (for tests).
+    #[doc(hidden)]
+    pub fn album_track_ratings(&self) -> Vec<Option<u8>> {
+        self.imp()
+            .album
+            .borrow()
+            .as_ref()
+            .map(|a| a.shown_ratings())
+            .unwrap_or_default()
     }
 
     /// The playlists in the sidebar (for tests).

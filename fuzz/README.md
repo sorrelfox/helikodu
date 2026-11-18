@@ -13,6 +13,7 @@ This folder is outside the Cargo workspace because fuzzing needs a nightly toolc
 | `playlist_m3u`, `playlist_pls`, `playlist_xspf` | `helikodu-meta`'s playlist parsers (M3U and M3U8 share a target): charset detection, parsing within the limits, writing the result back and parsing it again, checking that every local entry is an absolute path without `.` or `..` and that the entry and warning limits hold |
 | `autoeq_parse` | `helikodu-engine`'s reader of AutoEQ `ParametricEQ.txt` files: parsing, checking that every filter it returns is valid in the settings and that there are at most 64, then writing the filters back and reading them again |
 | `openmpt_open`, `gme_open`, `sid_open`, `midi_open` | The long-tail decoders of `helikodu-extra-decoders` (libopenmpt, libgme, libsidplayfp through its C++ shim, rustysynth with a SoundFont the target writes): the header probe, opening arbitrary bytes, every subsong (at most four), rendering, seeking to the middle and back to the start. The shared steps are in `fuzz_targets/song_check.rs` |
+| `query_parse` | `helikodu-library`'s query language parser: the strict parser's error spans, the round trip of what parses through the printer, and the plain-text fallback of the lenient parser |
 | `cover_decode` | `helikodu-meta`'s cover decoder: format sniffing, header probing, decoding within the size, dimension and pixel limits, and scaling into a thumbnail, checking that a decoded picture stays within the limits and agrees with its header |
 
 ```sh
@@ -27,6 +28,7 @@ cargo +nightly fuzz run openmpt_open
 cargo +nightly fuzz run gme_open
 cargo +nightly fuzz run sid_open
 cargo +nightly fuzz run midi_open
+cargo +nightly fuzz run query_parse
 ```
 
 Good seed inputs are small files of every format the player opens; `cargo test -p helikodu-ffmpeg-bridge` leaves a set in `target/tmp/ffmpeg-bridge-media/`.
@@ -50,3 +52,7 @@ Seed `autoeq_parse` with `ParametricEQ.txt` files from AutoEQ's results (with an
 ### Covers
 
 Seed `cover_decode` with small JPEG (baseline, progressive, CMYK, with an Exif orientation), PNG (palette, grey, 16-bit, interlaced, with transparency) and WebP (lossy, lossless, animated) files. The first byte of each input is the thumbnail size, so prepend one byte to each seed.
+
+### Queries
+
+Seed `query_parse` with the examples of the query syntax (`artist:"Pink Floyd" year:1970..1979 rating>=4`, `genre:jazz -genre:fusion added<30d`, `codec:flac samplerate>=88200 sort:added desc limit:50`, `title~"^(Intro|Outro)$" OR duration<30s`) and with plain search text in several scripts.

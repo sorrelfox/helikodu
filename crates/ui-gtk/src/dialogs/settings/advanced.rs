@@ -3,9 +3,9 @@
 
 //! Settings › Advanced: the ID3 version of new tags, in-place writing of
 //! very large files, ratings in files (a later version), the library
-//! database, the log detail and the diagnostics, developer mode, and putting
-//! every setting back to its default. Backups and slow drives come in later
-//! versions.
+//! database, loading each track into memory for slow drives, the log detail
+//! and the diagnostics, developer mode, and putting every setting back to its
+//! default. Backups come in a later version.
 
 use std::rc::Rc;
 
@@ -144,8 +144,16 @@ fn logs(context: &Rc<Context>) -> gtk::Box {
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     let current = context.settings().advanced.log_detail;
     let choice = dropdown(
-        &[tr("Normal detail"), tr("Full detail, for a bug report")],
-        usize::from(current == LogDetail::Full),
+        &[
+            tr("No logs"),
+            tr("Normal detail"),
+            tr("Full detail, for a bug report"),
+        ],
+        match current {
+            LogDetail::Off => 0,
+            LogDetail::Normal => 1,
+            LogDetail::Full => 2,
+        },
         240,
     );
     choice.update_property(&[gtk::accessible::Property::Label(&tr("Logs"))]);
@@ -153,10 +161,10 @@ fn logs(context: &Rc<Context>) -> gtk::Box {
     on_selected(&choice, move |i| {
         if let Some(context) = weak.upgrade() {
             context.update(|s| {
-                s.advanced.log_detail = if i == 1 {
-                    LogDetail::Full
-                } else {
-                    LogDetail::Normal
+                s.advanced.log_detail = match i {
+                    0 => LogDetail::Off,
+                    2 => LogDetail::Full,
+                    _ => LogDetail::Normal,
                 };
             });
         }
@@ -300,6 +308,32 @@ fn reset(context: &Rc<Context>) -> gtk::Box {
     line
 }
 
+/// Reading each track into memory before it plays, up to a size.
+fn slow_drives(context: &Rc<Context>) -> gtk::Box {
+    let (line, switch) = switch_row(
+        &tr("Load each track into memory before it plays"),
+        Some(&fill(
+            &tr(
+                "For drives that are slow or go to sleep. Tracks over {} are read from the drive as usual.",
+            ),
+            &[&bytes(helikodu_model::settings::MEMORY_BUFFER_LIMIT)],
+        )),
+    );
+    switch.set_active(context.settings().playback.decoders.load_into_memory);
+    switch.set_widget_name("load-into-memory");
+    let weak = Rc::downgrade(context);
+    switch.connect_active_notify(move |switch| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let on = switch.is_active();
+        if !context.update(|s| s.playback.decoders.load_into_memory = on) {
+            switch.set_active(!on);
+        }
+    });
+    line
+}
+
 /// The Advanced page.
 pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     let (scroller, body) = page_body();
@@ -315,6 +349,7 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
         &database(context),
     ));
     body.append(&divider());
+    body.append(&row(&tr("Slow drives"), None, &slow_drives(context)));
     body.append(&row(&tr("Logs"), None, &logs(context)));
     body.append(&row(&tr("Developer mode"), None, &developer(context)));
     body.append(&divider());

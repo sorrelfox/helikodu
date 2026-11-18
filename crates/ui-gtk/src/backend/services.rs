@@ -277,6 +277,64 @@ pub struct WriteResult {
     pub error: Option<String>,
 }
 
+/// How many tracks have loudness values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct LoudnessCoverage {
+    /// The tracks whose files are present.
+    pub tracks: usize,
+    /// Those with values from their tags or measured.
+    pub with_values: usize,
+}
+
+/// The tracks a loudness measurement covers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LoudnessScope {
+    /// These tracks; an album gets album values when all its tracks are
+    /// among them.
+    Tracks(Vec<TrackKey>),
+    /// Every track without a current measurement ("Measure the rest").
+    Rest,
+}
+
+/// Where a loudness measurement stands.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct LoudnessStatus {
+    /// The tracks measured (or failed) so far.
+    pub done: usize,
+    /// The tracks to measure, once known.
+    pub total: Option<usize>,
+    /// The measurement is over.
+    pub finished: bool,
+    /// The tracks that could not be measured.
+    pub failed: usize,
+    /// It was stopped before the end.
+    pub cancelled: bool,
+    /// Why it failed, if it did.
+    pub error: Option<String>,
+}
+
+impl LoudnessStatus {
+    /// The share done, from 0 to 1, once it is known.
+    pub fn fraction(&self) -> Option<f64> {
+        match self.total {
+            Some(0) => Some(1.0),
+            Some(total) => Some((self.done as f64 / total as f64).clamp(0.0, 1.0)),
+            None => None,
+        }
+    }
+}
+
+/// What the limiter did, for its editor.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct LimiterReading {
+    /// The gain reduction now, in dB (0 or positive).
+    pub reduction_db: f64,
+    /// The largest reduction in this track, in dB.
+    pub largest_db: f64,
+    /// How often it limited in this track.
+    pub times: u64,
+}
+
 /// Versions of the libraries in use, for About and the diagnostics.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Versions {
@@ -328,4 +386,20 @@ pub trait Services: fmt::Debug + Send + Sync {
     fn formats(&self) -> FormatReport;
     /// Versions of the libraries in use.
     fn versions(&self) -> Versions;
+
+    /// How many tracks have loudness values, and how many tracks there are.
+    /// Blocking.
+    fn loudness_coverage(&self) -> Option<LoudnessCoverage>;
+    /// Starts measuring the loudness of `scope` in the background, stopping
+    /// an earlier measurement. Progress arrives as
+    /// [`Update::Loudness`](super::Update::Loudness). Blocking: it waits for an
+    /// earlier measurement to stop.
+    fn measure_loudness(&self, scope: LoudnessScope) -> Result<(), BackendError>;
+    /// Stops the running loudness measurement; what it finished stays stored.
+    /// Blocking.
+    fn stop_loudness(&self);
+    /// Whether a loudness measurement runs.
+    fn is_measuring_loudness(&self) -> bool;
+    /// What the limiter did lately, when the player reports it.
+    fn limiter_activity(&self) -> Option<LimiterReading>;
 }

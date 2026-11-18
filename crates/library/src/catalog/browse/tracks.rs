@@ -16,7 +16,7 @@ use crate::db::unix_time;
 
 /// The columns that [`summary`] reads, from the tracks `t`, files `f`, folders `d` and
 /// albums `a`.
-pub(super) const COLUMNS: &str = "t.id, t.title, t.artist, t.album_id, a.title, t.disc_no,
+pub(crate) const COLUMNS: &str = "t.id, t.title, t.artist, t.album_id, a.title, t.disc_no,
     t.track_no, t.duration_ms, t.year, t.kind, t.section, t.sub_index,
     f.missing_since IS NOT NULL";
 
@@ -31,7 +31,7 @@ pub(super) const ALBUM_ORDER: &str = "coalesce(t.disc_no, 1), t.track_no IS NULL
     d.path, f.name, t.sub_index, t.id";
 
 /// A track from a row of [`COLUMNS`].
-pub(super) fn summary(row: &Row<'_>) -> rusqlite::Result<TrackSummary> {
+pub(crate) fn summary(row: &Row<'_>) -> rusqlite::Result<TrackSummary> {
     Ok(TrackSummary {
         id: track_id_from_sql(row.get(0)?),
         title: row.get(1)?,
@@ -164,7 +164,7 @@ const BY_YEAR: &str = "t.album_id IS NULL, coalesce(a.original_year, a.year) IS 
     t.title_sort, t.id";
 
 /// Albums by album artist, year and title, then the tracks without an album by title.
-const BY_ALBUM_ARTIST: &str = "t.album_id IS NULL, a.artist_sort IS NULL, a.artist_sort,
+pub(crate) const BY_ALBUM_ARTIST: &str = "t.album_id IS NULL, a.artist_sort IS NULL, a.artist_sort,
     coalesce(a.original_year, a.year), a.title_sort, t.album_id,
     coalesce(t.disc_no, 1), t.track_no IS NULL, t.track_no, d.path, f.name, t.sub_index,
     t.title_sort, t.id";

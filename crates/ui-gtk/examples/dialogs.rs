@@ -4,7 +4,8 @@
 //! Renders the dialogs to PNG files, dark and light, over the sample backend:
 //! the Settings pages, the full-output confirmation, the output switcher, the
 //! tag editor, the first run, a scan in progress, Supported formats and
-//! About. Run it headless:
+//! About; and DSP and EQ with each editor (`--dsp` renders only those and the
+//! pages with sound-processing controls). Run it headless:
 //!
 //! ```sh
 //! crates/ui-gtk/tests/headless.sh cargo run -p helikodu-ui-gtk --example dialogs -- --out target/screenshots
@@ -221,8 +222,82 @@ fn shoot(application: &gtk::Application, dir: &Path, suffix: &str) {
     main.destroy();
 }
 
+/// Settings › DSP and EQ with each editor, as drawn, and the pages with the
+/// sound-processing controls.
+fn shoot_dsp(application: &gtk::Application, dir: &Path, suffix: &str) {
+    use helikodu_model::settings::{FilterKind, ParametricFilter};
+    let options = sample::SampleOptions {
+        albums: 120,
+        playing: Some((3, 1, 102)),
+    };
+    let backend = sample::backend(&options);
+    let main = window(application, &backend);
+    let filter = |kind, frequency_hz, gain_db, q| ParametricFilter {
+        kind,
+        frequency_hz,
+        gain_db,
+        q,
+        enabled: true,
+    };
+    let _ = backend.services().update_settings(&mut |s| {
+        let eq = &mut s.dsp.equalizer;
+        eq.enabled = true;
+        eq.parametric = vec![
+            filter(FilterKind::LowShelf, 105.0, 4.5, 0.7),
+            filter(FilterKind::Peak, 220.0, -2.4, 0.9),
+            filter(FilterKind::Peak, 1800.0, -1.8, 1.6),
+            filter(FilterKind::Peak, 3500.0, 3.0, 2.2),
+            filter(FilterKind::HighShelf, 9000.0, -3.5, 0.7),
+        ];
+        eq.graphic_10 = [4.5, 3.5, 1.5, -1.0, -2.0, -1.0, 0.5, 2.5, 1.0, -2.0];
+        eq.graphic_31 = [
+            5.0, 5.0, 4.5, 4.0, 4.0, 3.5, 3.0, 2.0, 1.5, 0.5, 0.0, -1.0, -1.5, -1.5, -2.0, -1.5,
+            -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 2.5, 2.0, 1.5, 1.0, 0.0, -1.0, -2.0, -2.5,
+        ];
+        s.dsp.limiter.enabled = true;
+    });
+    for (stage, name) in [
+        ("equalizer", "dsp-parametric"),
+        ("crossfeed", "dsp-crossfeed"),
+        ("channel-mix", "dsp-channel-mix"),
+        ("limiter", "dsp-limiter"),
+    ] {
+        let settings = main.open_dsp_stage(stage);
+        settings.set_default_size(1080, 780);
+        save(&settings, dir, &format!("{name}{suffix}"));
+    }
+    for (mode, name) in [
+        ("Graphic, 10 bands", "dsp-graphic-10"),
+        ("Graphic, 31 bands", "dsp-graphic-31"),
+    ] {
+        let settings = main.open_dsp_stage("equalizer");
+        if let Some(button) = descendants(settings.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::ToggleButton>().ok())
+            .find(|b| b.label().as_deref() == Some(mode))
+        {
+            button.set_active(true);
+        }
+        save(&settings, dir, &format!("{name}{suffix}"));
+    }
+    for page in ["playback", "output", "loudness", "advanced"] {
+        let settings = main.open_settings(page);
+        save(&settings, dir, &format!("settings-{page}{suffix}"));
+    }
+    if let Some(settings) = toplevel("settings") {
+        settings.close();
+    }
+    gio::prelude::ActionGroupExt::activate_action(application, "formats", None);
+    if let Some(formats) = toplevel("formats") {
+        save(&formats, dir, &format!("formats{suffix}"));
+        formats.close();
+    }
+    main.destroy();
+}
+
 fn main() -> ExitCode {
     let mut out = PathBuf::from("target/screenshots");
+    let dsp_only = std::env::args().any(|a| a == "--dsp");
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--out"
@@ -247,10 +322,22 @@ fn main() -> ExitCode {
     application.connect_activate(move |application| {
         let _hold = application.hold();
         set_choice(SchemeChoice::Dark, AccentChoice::Amber);
+        if dsp_only {
+            shoot_dsp(application, &out, "");
+            set_choice(SchemeChoice::Light, AccentChoice::Amber);
+            spin(200);
+            shoot_dsp(application, &out, ".light");
+            application.quit();
+            return;
+        }
         shoot(application, &out, "");
         set_choice(SchemeChoice::Light, AccentChoice::Amber);
         spin(200);
         shoot(application, &out, ".light");
+        shoot_dsp(application, &out, ".light");
+        set_choice(SchemeChoice::Dark, AccentChoice::Amber);
+        spin(200);
+        shoot_dsp(application, &out, "");
         application.quit();
     });
     application.run_with_args(&["dialogs"]);

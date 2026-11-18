@@ -128,6 +128,14 @@ pub(crate) fn diagnostics(backend: &Backend) -> String {
         "Library folders: {}",
         settings.library.folders.len()
     ));
+    lines.push(format!(
+        "Log: {}",
+        match settings.advanced.log_detail {
+            helikodu_model::settings::LogDetail::Off => "none kept",
+            helikodu_model::settings::LogDetail::Normal => "normal detail",
+            helikodu_model::settings::LogDetail::Full => "full detail",
+        }
+    ));
     if let Some(file) = services.settings_file() {
         lines.push(format!("Settings: {}", tilde(&file)));
     }

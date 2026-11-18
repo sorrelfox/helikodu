@@ -735,8 +735,21 @@ impl LibrarySource for ServiceLibrary {
     }
 
     fn set_rating(&self, track: TrackKey, stars: Option<u8>) -> Result<(), BackendError> {
-        self.library()?
-            .rate(track_id(track), stars.filter(|s| *s > 0))
+        // Through the library service, which announces the stored rating to
+        // every list showing the track.
+        let library = self
+            .service
+            .library()
+            .ok_or_else(|| BackendError(tr("There is no library.")))?;
+        let (reply, answer) = std::sync::mpsc::channel();
+        library
+            .rate(track_id(track), stars.filter(|s| *s > 0), move |r| {
+                let _ = reply.send(r);
+            })
+            .map_err(error)?;
+        answer
+            .recv()
+            .map_err(|_| BackendError(tr("The library has stopped.")))?
             .map_err(error)
     }
 
@@ -1242,6 +1255,9 @@ struct Forwarder {
     pending_cover: Arc<Mutex<Option<(EntryId, CoverHash)>>>,
     /// Whether the window is shown; position updates wait otherwise.
     positions: Arc<AtomicBool>,
+    /// Whether the engine has reported the path of what is heard; the output
+    /// button then follows the path rather than the decoded format.
+    path_known: bool,
 }
 
 impl Forwarder {
@@ -1413,9 +1429,13 @@ impl Forwarder {
                 ..
             } => {
                 let bits = u16::try_from(spec.format.bits()).ok();
-                self.output.signal = SignalState::Unreported;
-                self.output.sample_rate = Some(spec.rate.hz());
-                self.output.bits = bits;
+                // The path of the new track may have come first; otherwise it
+                // follows, and until then the old one stands.
+                if !self.path_known {
+                    self.output.signal = SignalState::Unreported;
+                    self.output.sample_rate = Some(spec.rate.hz());
+                    self.output.bits = bits;
+                }
                 let format = AudioFormat {
                     codec: path.extension().map(|e| e.to_string_lossy().to_uppercase()),
                     sample_rate: Some(spec.rate.hz()),
@@ -1448,6 +1468,16 @@ impl Forwarder {
             PlayerEvent::VolumeChanged(volume) => {
                 self.send(Update::Volume(f64::from(volume.position())))
             }
+            PlayerEvent::SignalPath(path) => {
+                self.path_known = path.is_some();
+                if let Some(path) = path {
+                    self.output.follow(path);
+                }
+                self.send(Update::SignalPath(path.clone()))
+            }
+            // Like the position, the counters wait while the window is hidden.
+            PlayerEvent::PlaybackStats(_) if !self.positions.load(Ordering::Relaxed) => true,
+            PlayerEvent::PlaybackStats(stats) => self.send(Update::Stats(*stats)),
             PlayerEvent::OutputChanged(selection) => {
                 self.output.device = output_name(selection);
                 self.send(Update::Output(self.output.clone()))
@@ -1525,11 +1555,18 @@ impl Forwarder {
                 })
             }
             LibraryEvent::Changed => self.send(Update::LibraryChanged),
+            LibraryEvent::RatingChanged { track, stars } => self.send(Update::RatingChanged {
+                track: TrackKey(track.get()),
+                stars: *stars,
+            }),
             LibraryEvent::Scan(_) | LibraryEvent::ScanEnded(_) => {
                 if matches!(event, LibraryEvent::ScanEnded(_)) {
                     services::follow_folders(&self.service, false);
                 }
                 services::scan_update(event).is_none_or(|update| self.send(update))
+            }
+            LibraryEvent::Loudness(_) => {
+                services::loudness_update(event).is_none_or(|update| self.send(update))
             }
             _ => true,
         }
@@ -1545,6 +1582,15 @@ impl Forwarder {
             && self.send(Update::StopAfter(status.stop_after != StopAfter::Off))
             && self.send(Update::State(playback(status.playback)));
         self.send_queue();
+        if let Some(path) = &status.signal_path {
+            self.path_known = true;
+            self.output.follow(path);
+            let _ = self.send(Update::Output(self.output.clone()));
+        }
+        let _ = self.send(Update::SignalPath(status.signal_path.clone()));
+        if let Some(stats) = status.stats {
+            let _ = self.send(Update::Stats(stats));
+        }
         if let Some(now) = status.now_playing {
             let format = AudioFormat {
                 codec: now
@@ -1667,6 +1713,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         output: OutputInfo::default(),
         pending_cover: Arc::new(Mutex::new(None)),
         positions: Arc::clone(&positions),
+        path_known: false,
     };
     thread::Builder::new()
         .name("helikodu-ui-events".into())

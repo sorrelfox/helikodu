@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Settings › Playback: the Previous button, the seek step, when a play
-//! counts, what playing an album does to the queue, the start-up queue, long
-//! tracks and power. Crossfades and fades come in a later version; the two
-//! power switches that a later version applies are shown insensitive.
+//! counts, what playing an album does to the queue, crossfades and fades, the
+//! start-up queue, long tracks, power, and the decoders of synthesized
+//! formats (the SoundFont for MIDI, the song lengths of SID tunes, how often a
+//! looping tune repeats and its fade). The two power switches that a later
+//! version applies are shown insensitive.
 
 use std::rc::Rc;
 
@@ -14,8 +16,10 @@ use helikodu_model::settings::{ContextAction, StartAction};
 use super::{Context, page_body};
 use crate::backend::services::Settings;
 use crate::dialogs::common::{
-    divider, dropdown, key_caps, note, on_selected, row, switch_row, with_note,
+    compact_button, divider, dropdown, key_caps, note, on_selected, row, switch_row, tilde,
+    with_note,
 };
+use crate::dialogs::decoder_files::{self, DecoderFile};
 use crate::i18n::{fill, ntr, tr};
 use crate::widgets::label;
 
@@ -301,9 +305,267 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     body.append(&row(&tr("Count a play"), None, &count_play(context)));
     body.append(&row(&tr("Playing an album"), None, &album(context)));
     body.append(&divider());
+    body.append(&row(&tr("Crossfade"), None, &crossfade(context)));
+    body.append(&row(&tr("Fades"), None, &fades(context)));
+    body.append(&divider());
     body.append(&row(&tr("When Helikodu starts"), None, &start(context)));
     body.append(&row(&tr("Long tracks"), None, &long_tracks(context)));
     body.append(&divider());
     body.append(&row(&tr("Power"), None, &power(context)));
+    body.append(&divider());
+    body.append(&row(
+        &tr("MIDI files"),
+        None,
+        &decoder_file(context, DecoderFile::SoundFont),
+    ));
+    body.append(&row(
+        &tr("SID tunes"),
+        None,
+        &decoder_file(context, DecoderFile::SidSongLengths),
+    ));
+    body.append(&row(&tr("Looping tunes"), None, &looping(context)));
     scroller.upcast()
+}
+
+/// A length in milliseconds as the fade and crossfade lists show it: `Off`,
+/// `50 ms`, `1 s`, `2.5 s`.
+fn length(ms: u32) -> String {
+    match ms {
+        0 => tr("Off"),
+        ms if ms < 1000 => fill(&tr("{} ms"), &[&ms.to_string()]),
+        ms if ms % 1000 == 0 => fill(&tr("{} s"), &[&(ms / 1000).to_string()]),
+        ms => fill(&tr("{} s"), &[&format!("{:.1}", f64::from(ms) / 1000.0)]),
+    }
+}
+
+/// The crossfade between tracks and on a skip: "between tracks [Off]",
+/// "when you skip [Off]". Off keeps the length for when it is on again.
+fn crossfade(context: &Rc<Context>) -> gtk::Box {
+    let transitions = context.settings().playback.transitions;
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    line.append(&label(&tr("between tracks"), &["hk-t2"]));
+    let between = value_dropdown(
+        context,
+        &[0, 1000, 2000, 3000, 5000, 8000, 12_000],
+        if transitions.crossfade {
+            transitions.crossfade_ms
+        } else {
+            0
+        },
+        length,
+        116,
+        |s, ms| {
+            let t = &mut s.playback.transitions;
+            t.crossfade = ms > 0;
+            if ms > 0 {
+                t.crossfade_ms = ms;
+            }
+        },
+    );
+    between.set_widget_name("crossfade");
+    line.append(&between);
+    let skip_words = label(&tr("when you skip"), &["hk-t2"]);
+    skip_words.set_margin_start(10);
+    line.append(&skip_words);
+    let skip = value_dropdown(
+        context,
+        &[0, 500, 1000, 2000, 3000, 5000],
+        if transitions.skip_crossfade {
+            transitions.skip_crossfade_ms
+        } else {
+            0
+        },
+        length,
+        116,
+        |s, ms| {
+            let t = &mut s.playback.transitions;
+            t.skip_crossfade = ms > 0;
+            if ms > 0 {
+                t.skip_crossfade_ms = ms;
+            }
+        },
+    );
+    skip.set_widget_name("skip-crossfade");
+    line.append(&skip);
+    with_note(
+        &line,
+        &tr(
+            "Tracks that follow each other on an album always join without a crossfade. Nothing is crossfaded on a bit-perfect path.",
+        ),
+    )
+}
+
+/// The four fades, each with its label above.
+fn fades(context: &Rc<Context>) -> gtk::Box {
+    let transitions = context.settings().playback.transitions;
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    line.set_homogeneous(true);
+    type Fade = (String, &'static str, u32, fn(&mut Settings, u32));
+    let fades: [Fade; 4] = [
+        (
+            tr("Pause and resume"),
+            "pause-fade",
+            transitions.pause_fade_ms,
+            |s, v| s.playback.transitions.pause_fade_ms = v,
+        ),
+        (tr("Stop"), "stop-fade", transitions.stop_fade_ms, |s, v| {
+            s.playback.transitions.stop_fade_ms = v
+        }),
+        (tr("Seek"), "seek-fade", transitions.seek_fade_ms, |s, v| {
+            s.playback.transitions.seek_fade_ms = v
+        }),
+        (
+            tr("Skip to another track"),
+            "skip-fade",
+            transitions.skip_fade_ms,
+            |s, v| s.playback.transitions.skip_fade_ms = v,
+        ),
+    ];
+    for (title, name, current, set) in fades {
+        let column = gtk::Box::new(gtk::Orientation::Vertical, 6);
+        let heading = label(&title, &["hk-t2", "hk-secondary"]);
+        column.append(&heading);
+        let choice = value_dropdown(
+            context,
+            &[0, 50, 100, 200, 300, 500, 1000, 2000],
+            current,
+            length,
+            -1,
+            set,
+        );
+        choice.set_halign(gtk::Align::Fill);
+        choice.set_widget_name(name);
+        choice.add_css_class(crate::dialogs::common::OWN_LABEL);
+        choice.update_relation(&[gtk::accessible::Relation::LabelledBy(&[
+            heading.upcast_ref()
+        ])]);
+        column.append(&choice);
+        line.append(&column);
+    }
+    line
+}
+
+/// A file a decoder needs: where it is, or that none is chosen, with
+/// "Choose…" and "Clear".
+fn decoder_file(context: &Rc<Context>, which: DecoderFile) -> gtk::Box {
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    let text = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    text.set_hexpand(true);
+    text.set_valign(gtk::Align::Center);
+    let (title, unset, explanation) = match which {
+        DecoderFile::SoundFont => (
+            tr("SoundFont"),
+            tr("None chosen: a SoundFont installed on the system is used, if there is one."),
+            tr("MIDI files are played with the instruments of a SoundFont (.sf2 or .sf3)."),
+        ),
+        DecoderFile::SidSongLengths => (
+            tr("Song lengths"),
+            tr("Not set: tunes play for the default length, then fade out."),
+            tr("Songlengths.md5 of the High Voltage SID Collection gives each tune its length."),
+        ),
+    };
+    let current = which.get(&context.settings());
+    text.append(&label(&title, &[]));
+    let shown = label(
+        &current.as_deref().map(tilde).unwrap_or(unset.clone()),
+        &["hk-mono-small", "hk-t2"],
+    );
+    shown.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
+    shown.set_widget_name(match which {
+        DecoderFile::SoundFont => "soundfont-path",
+        DecoderFile::SidSongLengths => "sid-lengths-path",
+    });
+    text.append(&shown);
+    text.append(&note(&explanation));
+    line.append(&text);
+    let choose = compact_button(&tr("Choose…"));
+    choose.update_property(&[gtk::accessible::Property::Label(&which.title())]);
+    line.append(&choose);
+    let clear = compact_button(&tr("Clear"));
+    clear.update_property(&[gtk::accessible::Property::Label(&fill(
+        &tr("Clear {}"),
+        &[&title],
+    ))]);
+    clear.set_visible(current.is_some());
+    line.append(&clear);
+    let weak = Rc::downgrade(context);
+    let (weak_shown, weak_clear) = (shown.downgrade(), clear.downgrade());
+    choose.connect_clicked(move |_| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let (weak, weak_shown, weak_clear) = (weak.clone(), weak_shown.clone(), weak_clear.clone());
+        decoder_files::choose(
+            &context.window,
+            context.services.clone(),
+            which,
+            move |result| match result {
+                Ok(path) => {
+                    if let Some(shown) = weak_shown.upgrade() {
+                        shown.set_text(&tilde(&path));
+                    }
+                    if let Some(clear) = weak_clear.upgrade() {
+                        clear.set_visible(true);
+                    }
+                }
+                Err(problem) => {
+                    if let Some(context) = weak.upgrade() {
+                        context.toast(&problem);
+                    }
+                }
+            },
+        );
+    });
+    let weak = Rc::downgrade(context);
+    let weak_shown = shown.downgrade();
+    clear.connect_clicked(move |clear| {
+        if let Some(context) = weak.upgrade()
+            && context.update(|s| which.set(s, None))
+        {
+            clear.set_visible(false);
+            if let Some(shown) = weak_shown.upgrade() {
+                shown.set_text(&unset);
+            }
+        }
+    });
+    line
+}
+
+/// How often a looping tune plays its loop, and its fade.
+fn looping(context: &Rc<Context>) -> gtk::Box {
+    let decoders = context.settings().playback.decoders.clone();
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    // The sentence reads "play the loop <n times>, then fade out over <time>".
+    line.append(&label(&tr("play the loop"), &["hk-t2"]));
+    let loops = value_dropdown(
+        context,
+        &[1, 2, 3, 4, 5],
+        decoders.loops,
+        |n| fill(&ntr("once", "{} times", n as usize), &[&n.to_string()]),
+        110,
+        |s, n| s.playback.decoders.loops = n,
+    );
+    loops.set_widget_name("loops");
+    line.append(&loops);
+    line.append(&label(&tr("then fade out over"), &["hk-t2"]));
+    let fade = value_dropdown(
+        context,
+        &[0, 3000, 5000, 8000, 10_000, 15_000],
+        decoders.fade_ms,
+        length,
+        110,
+        |s, ms| s.playback.decoders.fade_ms = ms,
+    );
+    fade.set_widget_name("loop-fade");
+    line.append(&fade);
+    let default = decoders.default_length_s;
+    with_note(
+        &line,
+        &fill(
+            &tr(
+                "For tracker modules and game music that repeat a part. Tunes whose length nothing states play for {} before the fade.",
+            ),
+            &[&format!("{}:{:02}", default / 60, default % 60)],
+        ),
+    )
 }

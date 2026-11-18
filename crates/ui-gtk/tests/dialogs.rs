@@ -418,6 +418,189 @@ fn keyboard_shortcuts(app: &gtk::Application) {
     window.destroy();
 }
 
+/// A widget called `name` exists under `root`.
+fn has_named(root: &impl IsA<gtk::Widget>, name: &str) -> bool {
+    descendants(root.upcast_ref())
+        .iter()
+        .any(|w| w.widget_name() == name)
+}
+
+fn dsp_editors_apply_live(app: &gtk::Application) {
+    use helikodu_model::settings::{BuiltInPreset, ChannelMode, CrossfeedPreset, EqMode};
+    let (window, backend) = window(app);
+    let services = backend.services();
+    let settings = window.open_dsp_stage("equalizer");
+    wait_for("the DSP page", || {
+        window.settings_page().as_deref() == Some("dsp")
+    });
+    let stack: gtk::Stack = named(&settings, "dsp-editors");
+    assert_eq!(stack.visible_child_name().as_deref(), Some("equalizer"));
+    // Every stage is off: the readout says the samples pass unchanged.
+    let path: gtk::Label = named(&settings, "dsp-path");
+    assert!(!path.text().contains("EQ"), "{}", path.text());
+    let switch: gtk::Switch = named(&settings, "stage-switch-equalizer");
+    switch.set_active(true);
+    assert!(services.settings().dsp.equalizer.enabled);
+    named::<gtk::Button>(&settings, "eq-add-filter").emit_clicked();
+    assert_eq!(services.settings().dsp.equalizer.parametric.len(), 1);
+    assert!(path.text().contains("EQ"), "{}", path.text());
+    // Graphic, 10 bands: ten faders, a built-in preset, back to flat.
+    button(&settings, "Graphic, 10 bands")
+        .downcast::<gtk::ToggleButton>()
+        .unwrap()
+        .set_active(true);
+    assert_eq!(services.settings().dsp.equalizer.mode, EqMode::Graphic10);
+    spin(50);
+    assert!(has_named(&settings, "eq-band-9"));
+    assert!(!has_named(&settings, "eq-band-10"));
+    let presets: gtk::DropDown = named(&settings, "eq-preset");
+    let bass = BuiltInPreset::ALL
+        .iter()
+        .position(|p| p.id == "bass-boost")
+        .unwrap();
+    presets.set_selected(u32::try_from(bass).unwrap());
+    assert_eq!(
+        services.settings().dsp.equalizer.graphic_10,
+        BuiltInPreset::ALL[bass].octaves
+    );
+    let preamp: gtk::Label = named(&settings, "eq-preamp");
+    assert!(preamp.text().contains("6.0"), "{}", preamp.text());
+    named::<gtk::Button>(&settings, "eq-flat").emit_clicked();
+    assert_eq!(services.settings().dsp.equalizer.graphic_10, [0.0; 10]);
+    button(&settings, "Graphic, 31 bands")
+        .downcast::<gtk::ToggleButton>()
+        .unwrap()
+        .set_active(true);
+    spin(50);
+    assert!(has_named(&settings, "eq-band-30"));
+    // The parametric filters were kept.
+    assert_eq!(services.settings().dsp.equalizer.parametric.len(), 1);
+
+    // Crossfeed: the chain selects the editor; a slider chooses Custom.
+    named::<gtk::ToggleButton>(&settings, "stage-crossfeed").emit_clicked();
+    assert_eq!(stack.visible_child_name().as_deref(), Some("crossfeed"));
+    named::<gtk::CheckButton>(&settings, "crossfeed-2").set_active(true);
+    assert_eq!(
+        services.settings().dsp.crossfeed.preset,
+        CrossfeedPreset::JanMeier
+    );
+    named::<gtk::Scale>(&settings, "crossfeed-level").set_value(8.0);
+    spin(150);
+    let crossfeed = services.settings().dsp.crossfeed;
+    assert_eq!(crossfeed.preset, CrossfeedPreset::Custom);
+    assert_eq!(crossfeed.level_db, 8.0);
+    assert_eq!(crossfeed.cutoff_hz, 650);
+    named::<gtk::Switch>(&settings, "stage-switch-crossfeed").set_active(true);
+    assert!(path.text().contains("crossfeed"), "{}", path.text());
+
+    // Channel mix and the limiter.
+    let settings = window.open_dsp_stage("channel-mix");
+    assert_eq!(stack.visible_child_name().as_deref(), Some("channel-mix"));
+    button(&settings, "Mono")
+        .downcast::<gtk::ToggleButton>()
+        .unwrap()
+        .set_active(true);
+    assert_eq!(
+        services.settings().dsp.channel_mix.channels,
+        ChannelMode::Mono
+    );
+    named::<gtk::Switch>(&settings, "include-lfe").set_active(true);
+    assert!(services.settings().dsp.channel_mix.include_lfe);
+    window.open_dsp_stage("limiter");
+    assert_eq!(stack.visible_child_name().as_deref(), Some("limiter"));
+    named::<gtk::Scale>(&settings, "lookahead").set_value(3.5);
+    spin(150);
+    assert_eq!(services.settings().dsp.limiter.lookahead_ms, 3.5);
+    assert_eq!(services.settings().validate(), Ok(()));
+    settings.close();
+    window.destroy();
+}
+
+fn m4_settings_controls(app: &gtk::Application) {
+    use helikodu_model::settings::{ClippingPrevention, DsdOutput, ResamplerQuality};
+    let (window, backend) = window(app);
+    let services = backend.services();
+    let settings = window.open_settings("playback");
+    spin(50);
+    // Crossfades: 2 s between tracks; fades from Off to 2 s.
+    named::<gtk::DropDown>(&settings, "crossfade").set_selected(2);
+    let transitions = services.settings().playback.transitions;
+    assert!(transitions.crossfade);
+    assert_eq!(transitions.crossfade_ms, 2000);
+    named::<gtk::DropDown>(&settings, "pause-fade").set_selected(0);
+    assert_eq!(services.settings().playback.transitions.pause_fade_ms, 0);
+    named::<gtk::DropDown>(&settings, "crossfade").set_selected(0);
+    assert!(!services.settings().playback.transitions.crossfade);
+    // Looping tunes.
+    named::<gtk::DropDown>(&settings, "loops").set_selected(2);
+    assert_eq!(services.settings().playback.decoders.loops, 3);
+    let soundfont: gtk::Label = named(&settings, "soundfont-path");
+    assert!(soundfont.text().starts_with("None"), "{}", soundfont.text());
+
+    window.open_settings("output");
+    spin(50);
+    named::<gtk::DropDown>(&settings, "dsd-output").set_selected(1);
+    assert_eq!(services.settings().output.dsd, DsdOutput::Dop);
+    named::<gtk::DropDown>(&settings, "resampler").set_selected(1);
+    assert_eq!(services.settings().dsp.resampler, ResamplerQuality::Medium);
+    named::<gtk::DropDown>(&settings, "exclusive-release").set_selected(1);
+    assert_eq!(services.settings().output.exclusive_release_s, 0);
+
+    window.open_settings("advanced");
+    spin(50);
+    named::<gtk::Switch>(&settings, "load-into-memory").set_active(true);
+    assert!(services.settings().playback.decoders.load_into_memory);
+
+    window.open_settings("loudness");
+    spin(50);
+    named::<gtk::CheckButton>(&settings, "clipping-limiter").set_active(true);
+    assert_eq!(
+        services.settings().loudness.clipping,
+        ClippingPrevention::Limiter
+    );
+    named::<gtk::DropDown>(&settings, "write-measured").set_selected(1);
+    assert!(services.settings().loudness.write_measured_to_tags);
+    let count: gtk::Label = named(&settings, "loudness-count");
+    wait_for("the loudness counts", || count.text().contains(" of "));
+    // Measuring the rest ends with a toast; the button is ready again.
+    let measure: gtk::Button = named(&settings, "measure-loudness");
+    measure.emit_clicked();
+    wait_for("the measurement", || {
+        measure.is_sensitive() && measure.label().as_deref() == Some("Measure the rest")
+    });
+    assert_eq!(services.settings().validate(), Ok(()));
+    settings.close();
+    window.destroy();
+}
+
+fn formats_need_a_soundfont(app: &gtk::Application) {
+    use helikodu_ui_gtk::backend::services::{Availability, FormatFamily};
+    let (window, backend) = window(app);
+    let services = backend.services();
+    let midi = |services: &std::sync::Arc<dyn helikodu_ui_gtk::backend::services::Services>| {
+        services
+            .formats()
+            .families
+            .into_iter()
+            .find(|f| f.family == FormatFamily::Midi)
+            .unwrap()
+            .availability
+    };
+    assert_eq!(midi(&services), Availability::NeedsSoundFont);
+    gio::prelude::ActionGroupExt::activate_action(app, "formats", None);
+    wait_for("Supported formats", || toplevel("formats").is_some());
+    let formats = toplevel("formats").unwrap();
+    assert!(has_named(&formats, "choose-soundfont"));
+    formats.close();
+    services
+        .update_settings(&mut |s| {
+            s.playback.decoders.soundfont = Some("/usr/share/soundfonts/default.sf2".into());
+        })
+        .unwrap();
+    assert_eq!(midi(&services), Availability::Available);
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
@@ -435,6 +618,9 @@ const TESTS: &[Test] = &[
     ("the_output_switcher", the_output_switcher),
     ("formats_and_about", formats_and_about),
     ("keyboard_shortcuts", keyboard_shortcuts),
+    ("dsp_editors_apply_live", dsp_editors_apply_live),
+    ("m4_settings_controls", m4_settings_controls),
+    ("formats_need_a_soundfont", formats_need_a_soundfont),
 ];
 
 fn main() -> ExitCode {
@@ -455,7 +641,15 @@ fn main() -> ExitCode {
     let f = failures.clone();
     application.connect_activate(move |application| {
         let _hold = application.hold();
+        // Arguments after `--` keep the tests whose names contain one of them.
+        let filters: Vec<String> = std::env::args()
+            .skip(1)
+            .filter(|a| !a.starts_with('-'))
+            .collect();
         for (name, test) in TESTS {
+            if !filters.is_empty() && !filters.iter().any(|f| name.contains(f.as_str())) {
+                continue;
+            }
             let result = catch_unwind(AssertUnwindSafe(|| test(application)));
             match result {
                 Ok(()) => println!("test {name} ... ok"),

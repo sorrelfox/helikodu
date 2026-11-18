@@ -187,6 +187,11 @@ scale.hk-volume:disabled > trough > slider { background-color: var(--hk-glass-t3
 .hk-signal.processed { color: var(--hk-signal-processed-text); }
 .hk-signal.idle { color: var(--hk-signal-idle-text); }
 
+/* Only a popover's contents are the card: the popover node is its whole
+   surface, shadow margin included, so it stays transparent under every theme
+   (`.hk-glass` and some themes paint a background there, which the compositor
+   shows as an opaque rectangle around the card). */
+popover, popover.hk-popover, popover.menu, popover.hk-glass { background: none; background-color: transparent; background-image: none; border: none; box-shadow: none; }
 popover.hk-popover { padding: 0; margin: 0; }
 popover.hk-popover > contents { min-width: 0; min-height: 0; margin: 0; box-shadow: var(--hk-menu-shadow); padding: 0; border-radius: 14px; border: 1px solid var(--hk-glass-popover-border); background-color: var(--hk-glass-popover); color: var(--hk-glass-t1); }
 
@@ -284,3 +289,45 @@ scrollbar.overlay-indicator.horizontal:not(.dragging):not(.hovering) slider { mi
    "Stop after this track" is on. */
 .hk-stop-mark { min-width: 16px; min-height: 16px; border-radius: 8px; background-color: var(--hk-glass-stop-after-mark); box-shadow: 0 0 0 2px var(--hk-glass-bg); }
 .hk-stop-square { min-width: 6px; min-height: 6px; background-color: var(--hk-glass-bg); }
+
+/* ---- Signal path tab and readouts --------------------------------------- */
+
+.hk-signal.large { font-size: 11px; }
+.hk-path-card { margin: 12px 12px 0; padding: 14px 14px 9px; border-radius: 10px; background-color: var(--hk-glass-bg); color: var(--hk-glass-t1); }
+.hk-path-sentence { margin: 4px 0 12px; font-size: 12px; color: var(--hk-glass-t2); }
+list.hk-path-list { background: none; color: var(--hk-glass-t1); }
+list.hk-path-list > row { padding: 0 4px; border-radius: 6px; background: none; }
+list.hk-path-list > row:hover { background-color: var(--hk-glass-hover); }
+list.hk-path-list > row:not(:hover) { background: none; }
+.hk-path-line { min-height: 30px; }
+.hk-path-name { color: var(--hk-glass-t3); }
+.hk-path-value { font-family: monospace; font-size: 11.5px; font-weight: 500; font-feature-settings: "tnum", "liga" 0, "calt" 0; color: var(--hk-glass-t2); }
+.hk-path-value.active, .hk-path-value.end { color: var(--hk-glass-t1); }
+.hk-path-line.has-detail { min-height: 18px; padding-top: 6px; }
+.hk-path-detail { margin: 0 0 4px; font-family: monospace; font-size: 10.5px; font-feature-settings: "tnum", "liga" 0, "calt" 0; color: var(--hk-glass-t3); }
+.hk-path-stats { padding: 16px 20px 8px; }
+.hk-path-stats > .hk-section-label { margin-bottom: 6px; }
+.hk-stat-line { min-height: 26px; }
+.hk-stat-value { font-size: 12px; font-weight: 500; }
+.hk-signal-page .hk-panel-footer button.hk-link { min-height: 30px; padding: 0 8px; font-weight: 500; }
+.hk-switcher-readout { margin: 0 12px 8px; background-color: var(--hk-glass-node); }
+.hk-readout-line { font-size: 11.5px; color: var(--hk-glass-t1); }
+.hk-readout-line + .hk-readout-line { color: var(--hk-glass-t2); }
+
+/* ---- Dropdown lists ----------------------------------------------------- */
+
+/* A dropdown's list is a menu: the same card, rows and selection under every
+   theme, and no room for the search entry that is never shown. */
+dropdown > popover { padding: 0; margin: 0; font-size: 13px; font-weight: 400; }
+dropdown > popover > contents { min-width: 0; min-height: 0; margin: 0; padding: 6px; border-radius: 10px; border: 1px solid var(--hk-line2); background-color: var(--hk-menu); background-image: none; color: var(--hk-t1); box-shadow: var(--hk-menu-shadow); }
+dropdown > popover > contents > box { margin: 0; padding: 0; border-spacing: 0; background: none; }
+dropdown > popover > contents > box > * { margin: 0; padding: 0; }
+dropdown > popover scrolledwindow, dropdown > popover scrolledwindow > viewport { margin: 0; padding: 0; border: none; background: none; box-shadow: none; }
+dropdown > popover listview { margin: 0; padding: 0; border: none; background: none; background-color: transparent; color: var(--hk-t1); }
+dropdown > popover listview > row { min-height: 28px; margin: 0; padding: 0 8px 0 10px; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; outline: none; color: var(--hk-t1); }
+dropdown > popover listview > row:hover, dropdown > popover listview > row:focus-visible { background-color: var(--hk-seg); color: var(--hk-t1); }
+dropdown > popover listview > row:selected { background-color: var(--hk-sel); color: var(--hk-accent-text); font-weight: 600; }
+dropdown > popover listview > row:selected:hover { background-color: var(--hk-sel); }
+dropdown > popover listview > row label { color: inherit; }
+dropdown > popover listview > row image { -gtk-icon-size: 14px; color: var(--hk-accent-text); }
+dropdown > popover scrollbar.vertical slider { min-width: 4px; }

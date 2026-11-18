@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use helikodu_ui_gtk::backend::{AlbumKey, Backend, TrackColumn, sample};
+use helikodu_ui_gtk::backend::{AlbumKey, Backend, PlayerRequest, TrackColumn, sample};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
 
@@ -472,6 +472,43 @@ fn genre_grid_shows_covers(app: &gtk::Application) {
     let _ = std::fs::remove_dir_all(&folder);
 }
 
+/// A single click on a track row of the album page selects it; a double
+/// click plays. The clicks go to the list's own click gesture (GTK warns
+/// that the emitted signals carry no event, and goes on).
+fn album_tracks_play_on_double_click(app: &gtk::Application) {
+    let (window, _) = window(app);
+    window.open_album(AlbumKey(1));
+    spin(300);
+    let list = descendants(window.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::ListBox>().ok())
+        .find(|l| l.has_css_class("hk-tracks") && l.is_mapped())
+        .expect("the album page's track list");
+    let row = (0..)
+        .map_while(|i| list.row_at_index(i))
+        .find(|r| r.is_activatable())
+        .expect("a track row");
+    let bounds = row.compute_bounds(&list).expect("the row is laid out");
+    let (x, y) = (
+        f64::from(bounds.x() + 20.0),
+        f64::from(bounds.y() + bounds.height() / 2.0),
+    );
+    let gesture = list
+        .observe_controllers()
+        .iter::<glib::Object>()
+        .filter_map(|c| c.ok()?.downcast::<gtk::GestureClick>().ok())
+        .find(|g| g.button() == gtk::gdk::BUTTON_PRIMARY)
+        .expect("the list's click gesture");
+    assert!(!window.is_playing());
+    gesture.emit_by_name::<()>("pressed", &[&1i32, &x, &y]);
+    gesture.emit_by_name::<()>("released", &[&1i32, &x, &y]);
+    spin(300);
+    assert!(!window.is_playing(), "a single click does not play");
+    gesture.emit_by_name::<()>("pressed", &[&2i32, &x, &y]);
+    wait_for("playback", 2, || window.is_playing());
+    window.destroy();
+}
+
 /// The integrated style decorates the window itself (GTK then asks the
 /// compositor for no title bar); the classic style leaves it to the desktop.
 fn window_styles_ask_for_their_decorations(app: &gtk::Application) {
@@ -498,6 +535,102 @@ fn window_styles_ask_for_their_decorations(app: &gtk::Application) {
     window.destroy();
 }
 
+/// The stored rating of the track at `position` of the track table, and a
+/// different one to set.
+fn rating_and_other(window: &MainWindow, backend: &Backend, position: usize) -> Option<u8> {
+    let key = window.track_keys(position + 1)[position];
+    let before = backend.library().track_rows(&[key]).unwrap()[0].rating;
+    if before == Some(2) { Some(4) } else { Some(2) }
+}
+
+/// A rating set with a row's stars shows at once and stays when the rows are
+/// shown again (another track playing), reaches the album page holding the
+/// track, and fetches no rows again.
+fn rating_from_the_table_updates_the_row(app: &gtk::Application) {
+    let (window, backend) = window(app);
+    window.open_page("tracks");
+    wait_for("the first rows", 2, || window.track_row_rating(1).is_some());
+    let keys = window.track_keys(2);
+    let row = backend.library().track_rows(&keys[..1]).unwrap().remove(0);
+    let stars = rating_and_other(&window, &backend, 0);
+    window.open_album(row.album);
+    wait_for("the album page", 2, || {
+        !window.album_track_ratings().is_empty()
+    });
+    window.open_page("tracks");
+    spin(100);
+    let fetches = window.track_table_stats().1;
+
+    assert!(window.demo_rate_track_row(0, stars));
+    assert_eq!(window.track_row_rating(0), Some(stars), "shown at once");
+    wait_for("the stored rating", 2, || {
+        backend.library().track_rows(&keys[..1]).unwrap()[0].rating == stars
+    });
+    // Another track playing shows every row again, from its item.
+    backend.send(PlayerRequest::PlayTracks {
+        tracks: vec![keys[1]],
+        start: 0,
+        title: String::new(),
+        shuffle: false,
+    });
+    spin(200);
+    assert_eq!(window.track_row_rating(0), Some(stars), "kept on screen");
+    assert_eq!(
+        window.track_table_stats().1,
+        fetches,
+        "no rows fetched again"
+    );
+    let detail = backend.library().album(row.album).unwrap().unwrap();
+    let index = detail.tracks().position(|t| t.key == keys[0]).unwrap();
+    assert_eq!(window.album_track_ratings()[index], stars, "the album page");
+    window.destroy();
+}
+
+/// Rate in the album page's context menu changes the album page's row at once
+/// and the track table's row of the same track.
+fn rating_from_the_context_menu_updates_the_rows(app: &gtk::Application) {
+    let (window, backend) = window(app);
+    window.open_page("tracks");
+    wait_for("the first rows", 2, || window.track_row_rating(0).is_some());
+    let key = window.track_keys(1)[0];
+    let album = backend.library().track_rows(&[key]).unwrap()[0].album;
+    let first = backend
+        .library()
+        .album(album)
+        .unwrap()
+        .unwrap()
+        .tracks()
+        .next()
+        .unwrap()
+        .key;
+    assert_eq!(first, key, "the table starts with the album's first track");
+    let stars = rating_and_other(&window, &backend, 0);
+    window.open_album(album);
+    wait_for("the album page", 2, || {
+        !window.album_track_ratings().is_empty()
+    });
+    spin(300);
+    let menu = window
+        .demo_album_track_menu()
+        .expect("the context menu opens");
+    wait_for("the menu", 2, || menu.is_visible());
+    menu.popdown();
+    WidgetExt::activate_action(
+        &window,
+        "win.sel-rate",
+        Some(&i32::from(stars.unwrap()).to_variant()),
+    )
+    .unwrap();
+    assert_eq!(window.album_track_ratings()[0], stars, "shown at once");
+    wait_for("the stored rating", 2, || {
+        backend.library().track_rows(&[key]).unwrap()[0].rating == stars
+    });
+    window.open_page("tracks");
+    spin(200);
+    assert_eq!(window.track_row_rating(0), Some(stars), "the track table");
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
@@ -519,10 +652,22 @@ const TESTS: &[Test] = &[
     ("scrollbars_leave_room", scrollbars_leave_room),
     ("genre_grid_shows_covers", genre_grid_shows_covers),
     (
+        "album_tracks_play_on_double_click",
+        album_tracks_play_on_double_click,
+    ),
+    (
         "window_styles_ask_for_their_decorations",
         window_styles_ask_for_their_decorations,
     ),
     ("frame_times", frame_times),
+    (
+        "rating_from_the_table_updates_the_row",
+        rating_from_the_table_updates_the_row,
+    ),
+    (
+        "rating_from_the_context_menu_updates_the_rows",
+        rating_from_the_context_menu_updates_the_rows,
+    ),
 ];
 
 fn main() -> ExitCode {
