@@ -184,6 +184,10 @@ fi
 cd "$src"
 rustup toolchain install
 export VGMSTREAM_LIB_DIR="$deps/lib"
+# The linker resolves the libraries FFmpeg's own libraries depend on
+# (libavcodec needs libswresample) from here; without it the aarch64 link
+# fails, since /opt/deps is in no default search path.
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C link-arg=-Wl,-rpath-link,$deps/lib"
 meson setup "$work/build" "$src" --prefix=/usr --buildtype=release \
   -Doffline="$OFFLINE" -Dbundled_sqlite=true -Dvgmstream=true
 meson compile -C "$work/build"

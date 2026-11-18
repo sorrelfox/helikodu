@@ -52,7 +52,7 @@ flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest packagin
 flatpak run --filesystem=/tmp/helikodu-flatpak --command=flatpak-builder-lint org.flatpak.Builder repo /tmp/helikodu-flatpak/repo
 ```
 
-The manifest check passes without findings. The repository check (on a repository made with `flatpak-builder --repo=…`) reports only `metainfo-missing-screenshots` and `appstream-screenshots-not-mirrored-in-ostree`: the metainfo has no screenshots yet; they are added for the Flathub submission (see below), and Flathub's build mirrors them. The linter runs in a sandbox of its own: for a repository outside your home folder, add `--filesystem=<that folder>` after `flatpak run`.
+The manifest check passes without findings. Newer releases of the linter (as in Flathub's CI image) also report `finish-args-login1-system-talk-name` and `finish-args-own-name-wildcard-org.freedesktop.ReserveDevice1`; both permissions are deliberate (see the permission list above), the release workflow lists them as exceptions with their reasons, and the Flathub submission must ask for the same exceptions. The repository check (on a repository made with `flatpak-builder --repo=…`) reports only `metainfo-missing-screenshots` and `appstream-screenshots-not-mirrored-in-ostree`: the metainfo has no screenshots yet; they are added for the Flathub submission (see below), and Flathub's build mirrors them. The linter runs in a sandbox of its own: for a repository outside your home folder, add `--filesystem=<that folder>` after `flatpak run`.
 
 ## The release bundle
 
