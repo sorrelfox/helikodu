@@ -5,6 +5,7 @@
 //! playing track on top, then the history, the current track and what follows;
 //! the Signal path tab is in [`signal_path`].
 
+pub(crate) mod lyrics;
 mod signal_path;
 
 use std::cell::RefCell;
@@ -66,6 +67,9 @@ mod imp {
         pub(super) clear_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub(super) signal_page: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub(super) lyrics_page: TemplateChild<gtk::Box>,
+        pub(super) lyrics: RefCell<Option<Rc<lyrics::LyricsPage>>>,
         pub(super) covers: RefCell<Option<Rc<CoverCache>>>,
         pub(super) signal: RefCell<Option<Rc<signal_path::SignalPathPage>>>,
     }
@@ -206,6 +210,33 @@ impl Panel {
         let signal = signal_path::SignalPathPage::new(playback);
         imp.signal_page.append(signal.widget());
         imp.signal.replace(Some(signal));
+    }
+
+    /// Fills the Lyrics tab, following `lyrics`; its lines seek with `backend`.
+    pub(crate) fn bind_lyrics(
+        &self,
+        backend: &Backend,
+        playback: &Rc<Playback>,
+        model: &Rc<crate::models::lyrics::LyricsModel>,
+        covers: &Rc<CoverCache>,
+    ) {
+        let imp = self.imp();
+        let b = backend.clone();
+        let page = lyrics::LyricsPage::new(playback, model, covers, move |to| {
+            b.send(PlayerRequest::Seek(to));
+        });
+        imp.lyrics_page.append(page.widget());
+        imp.lyrics.replace(Some(page));
+    }
+
+    /// The Lyrics tab, once bound.
+    pub(crate) fn lyrics_page(&self) -> Option<Rc<lyrics::LyricsPage>> {
+        self.imp().lyrics.borrow().clone()
+    }
+
+    /// Shows the Lyrics tab.
+    pub(crate) fn show_lyrics(&self) {
+        self.imp().lyrics_tab.set_active(true);
     }
 
     /// Shows the Signal path tab.

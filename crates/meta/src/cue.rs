@@ -35,7 +35,7 @@ mod path;
 mod reading;
 mod resolve;
 mod sheet;
-mod text;
+pub(crate) mod text;
 mod warning;
 
 pub use chapters::{chapters_to_tracks, read_chapters};

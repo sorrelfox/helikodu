@@ -1183,6 +1183,10 @@ fn fill_info(editor: &Rc<Editor>, index: usize) {
             ),
         ],
     ));
+    // Kept in the library and applied at once, not part of "Save".
+    if let Some(group) = super::track_flags::playback_group(&editor.backend, track.key) {
+        right.append(&group);
+    }
     info.append(&right);
 }
 

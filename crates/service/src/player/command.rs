@@ -7,15 +7,17 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use helikodu_model::audio::{MediaTime, OutputSelection};
-use helikodu_model::library::TrackRef;
+use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::player::{
-    EnqueueAt, EntryId, QueueContext, RepeatMode, ShuffleMode, StopAfter, Volume,
+    EnqueueAt, EntryId, LoopRange, PlayScope, QueueContext, RepeatMode, ShuffleMode, StopAfter,
+    TrackFlags, Volume,
 };
 use helikodu_model::settings::{
     DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, TransitionSettings,
 };
 
 use super::config::PlayerPrefs;
+use super::timers::SleepWhen;
 use crate::library::{AlbumId, GenreId, PersonId};
 
 /// A context the service turns into tracks by asking the library.
@@ -113,12 +115,54 @@ pub enum PlayerCommand {
     SetVolume(Volume),
     /// Change the volume by this much of the whole range (from -1.0 to 1.0).
     AdjustVolume(f32),
-    /// Shuffle on or off.
+    /// Shuffle off, or by tracks, albums, folders, groupings or within albums.
     SetShuffle(ShuffleMode),
-    /// Repeat off, one or all.
+    /// Repeat off, one, the album or all.
     SetRepeat(RepeatMode),
-    /// Stop after the current track, or not.
+    /// Stop after the current track, the album or the queue, or not.
     SetStopAfter(StopAfter),
+    /// Consume ("Remove tracks after they play") on or off.
+    SetConsume(bool),
+    /// "Play only": every entry, those of the current artist, or of the current
+    /// album.
+    SetPlayScope(PlayScope),
+    /// "Continue from the selected track" on or off.
+    SetFollowCursor(bool),
+    /// The entry selected in the queue, for "Continue from the selected track".
+    SetCursor(Option<EntryId>),
+    /// Go to the first track of the next album in the queue.
+    NextAlbum,
+    /// Go to the first track of the album before, or of the current one when it is
+    /// the first.
+    PreviousAlbum,
+    /// Go to the first track of an album of the queue chosen at random.
+    RandomAlbum,
+    /// Set the start of the A-B loop at the playing position.
+    LoopStartHere,
+    /// Set the end of the A-B loop at the playing position; the loop then plays.
+    LoopEndHere,
+    /// Set both points of the A-B loop (dragging its flags), or clear it with
+    /// `None`.
+    SetLoop(Option<LoopRange>),
+    /// Start the sleep timer, replacing a running one.
+    StartSleepTimer {
+        /// How long until the time is up.
+        length: Duration,
+        /// What happens then.
+        when: SleepWhen,
+    },
+    /// Give the running sleep timer more time.
+    ExtendSleepTimer(Duration),
+    /// Turn the sleep timer off.
+    CancelSleepTimer,
+    /// Change the playback flags of a library track; they are stored in the library
+    /// and apply to the queue at once (the volume from the next time it plays).
+    SetTrackFlags {
+        /// The track.
+        track: TrackId,
+        /// Its flags.
+        flags: TrackFlags,
+    },
     /// Move playback to another backend, device or mode, keeping the position.
     SetOutput(OutputSelection),
     /// Move playback to the next output device: through the devices of every

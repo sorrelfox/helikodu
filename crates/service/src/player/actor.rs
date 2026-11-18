@@ -15,8 +15,9 @@ use helikodu_library::{ListenEnd, MeasuredLoudness};
 use helikodu_model::audio::{AudioSpec, MediaTime, OutputSelection};
 use helikodu_model::library::{MediaSource, TrackId, TrackRef};
 use helikodu_model::player::{
-    ContextSource, EngineCommand, EngineError, EngineEvent, EntryId, ItemId, PlaybackItem,
-    PlaybackState, QueueContext, StopAfter, TrackEndReason, TransportState, Volume,
+    ContextSource, EngineCommand, EngineError, EngineEvent, EntryId, ItemId, PlayModes, PlayScope,
+    PlaybackItem, PlaybackState, QueueContext, QueueEntry, ShuffleMode, StopAfter, TrackEndReason,
+    TrackFlags, TransportState, Volume,
 };
 
 use super::command::{ContextRequest, PlayerCommand};
@@ -24,9 +25,10 @@ use super::config::{PlayerPrefs, SessionConfig};
 use super::listen::{ListenTracker, Recorded, Recorder};
 use super::loudness::LoudnessTags;
 use super::outputs::{next_output, output_choices};
-use super::queue::{Advance, Queue};
+use super::queue::{Advance, EntryKeys, Keyed, Queue};
 use super::session::{SESSION_VERSION, SavedSession, SessionFiles, Strike};
 use super::shared::{NowPlaying, QueueSnapshot, Shared};
+use super::timers::{AbLoop, SLEEP_FADE, SleepTimerStatus, SleepWhen};
 use super::{EndReason, Notice, PlayerEvent};
 use crate::Event;
 use crate::bus::EventBus;
@@ -38,6 +40,22 @@ const SEARCH_LIMIT: usize = 5000;
 
 /// The longest the actor sleeps while a save is due, in real time.
 const MAX_WAIT: Duration = Duration::from_millis(500);
+
+/// How often the sleep timer's fade lowers the volume.
+const FADE_STEP: Duration = Duration::from_millis(250);
+
+/// A running sleep timer.
+#[derive(Debug, Clone, Copy)]
+struct Sleep {
+    /// When the time is up, on the actor's clock.
+    deadline: Duration,
+    length: Duration,
+    when: SleepWhen,
+    /// The time is up and playback stops when the track ends.
+    due: bool,
+    /// The engine plays at this share of the volume, while fading.
+    fade: Option<f32>,
+}
 
 /// What arrives in the actor's mailbox.
 #[derive(Debug)]
@@ -88,6 +106,7 @@ pub(super) struct Startup {
     pub(super) selection: OutputSelection,
     pub(super) suspects: HashSet<TrackRef>,
     pub(super) strikes: HashMap<TrackRef, u32>,
+    pub(super) stop_after: StopAfter,
     pub(super) crash: Option<Notice>,
     pub(super) session: Option<(SessionFiles, SessionConfig)>,
     pub(super) prefs: PlayerPrefs,
@@ -129,6 +148,8 @@ pub(super) struct Actor {
     exhausted: bool,
     stop_requested: bool,
     stopped_after: bool,
+    /// The sleep timer stopped playback after the track.
+    slept: bool,
     /// `Ended` has been sent, or nothing has played yet.
     ended: bool,
     played: usize,
@@ -139,6 +160,11 @@ pub(super) struct Actor {
     published_version: u64,
     published_state: Option<PlaybackState>,
     crash: Option<Notice>,
+    /// The entry selected in the queue, for "Continue from the selected track".
+    cursor: Option<EntryId>,
+    /// The A-B loop of the item playing.
+    ab: Option<(ItemId, AbLoop)>,
+    sleep: Option<Sleep>,
 }
 
 impl Actor {
@@ -183,10 +209,11 @@ impl Actor {
             restored,
             volume: startup.volume,
             selection: startup.selection,
-            stop_after: StopAfter::Off,
+            stop_after: startup.stop_after,
             exhausted: false,
             stop_requested: false,
             stopped_after: false,
+            slept: false,
             ended: true,
             played: 0,
             failed: 0,
@@ -196,7 +223,24 @@ impl Actor {
             published_version: u64::MAX,
             published_state: None,
             crash: startup.crash,
+            cursor: None,
+            ab: None,
+            sleep: None,
         }
+        .with_keys()
+    }
+
+    /// Looks up the keys of the restored queue's tracks.
+    fn with_keys(mut self) -> Self {
+        if self.library.is_some() {
+            let mut queue = std::mem::replace(&mut self.queue, Queue::new(super::rng::Rng::new(0)));
+            queue.rekey(|entries| {
+                let tracks: Vec<TrackRef> = entries.iter().map(|e| e.track.clone()).collect();
+                self.keys_for(&tracks)
+            });
+            self.queue = queue;
+        }
+        self
     }
 
     pub(super) fn run(mut self, mailbox: &Receiver<Input>) {
@@ -206,7 +250,7 @@ impl Actor {
         self.emit(PlayerEvent::VolumeChanged(self.volume));
         self.after_input();
         loop {
-            let input = match self.save_due_in() {
+            let input = match self.wait_due_in() {
                 Some(wait) => match mailbox.recv_timeout(wait.min(MAX_WAIT)) {
                     Ok(input) => Some(input),
                     Err(RecvTimeoutError::Timeout) => None,
@@ -323,6 +367,7 @@ impl Actor {
             self.queue.modes(),
             self.stop_after,
         );
+        let extra = (self.ab.map(|(_, ab)| ab), self.sleep_status(), self.cursor);
         self.shared.update_status(|s| {
             (
                 s.playback,
@@ -333,7 +378,9 @@ impl Actor {
                 s.modes,
                 s.stop_after,
             ) = status;
+            (s.ab_loop, s.sleep_timer, s.cursor) = extra;
         });
+        self.check_sleep();
         self.name_in_sentinel();
         if self.save_due_in() == Some(Duration::ZERO) {
             self.save_session();
@@ -377,6 +424,7 @@ impl Actor {
             volume: self.volume,
             output: self.selection.clone(),
             suspects: self.suspects.iter().cloned().collect(),
+            stop_after: self.stop_after,
         };
         let now = self.clock.elapsed();
         let Some(session) = &mut self.session else {
@@ -437,13 +485,16 @@ impl Actor {
                 start,
             } => self.play_tracks(context, tracks, start),
             PlayerCommand::Enqueue { tracks, at } => {
+                let tracks = self.keyed(tracks);
                 self.queue.enqueue(tracks, at);
                 self.refresh_next();
             }
             PlayerCommand::PlayEntry(entry) => {
+                let old = self.current.as_ref().map(|s| s.entry);
                 if self.queue.jump_to(entry) {
                     self.unplayable.remove(&entry);
                     self.load(entry, Direction::Forward, None);
+                    self.consume(old);
                 }
             }
             PlayerCommand::Remove(entries) => self.remove(&entries),
@@ -493,21 +544,102 @@ impl Actor {
             }
             PlayerCommand::SetShuffle(shuffle) => {
                 self.queue.set_shuffle(shuffle);
-                self.emit(PlayerEvent::ModesChanged(self.queue.modes()));
-                self.refresh_next();
+                self.modes_changed();
             }
             PlayerCommand::SetRepeat(repeat) => {
                 self.queue.set_repeat(repeat);
-                self.emit(PlayerEvent::ModesChanged(self.queue.modes()));
-                self.refresh_next();
+                self.modes_changed();
+            }
+            PlayerCommand::SetConsume(consume) => {
+                self.queue.set_other_modes(PlayModes {
+                    consume,
+                    ..self.queue.modes()
+                });
+                self.modes_changed();
+            }
+            PlayerCommand::SetPlayScope(scope) => {
+                self.queue.set_other_modes(PlayModes {
+                    scope,
+                    ..self.queue.modes()
+                });
+                self.modes_changed();
+            }
+            PlayerCommand::SetFollowCursor(follow_cursor) => {
+                self.queue.set_other_modes(PlayModes {
+                    follow_cursor,
+                    ..self.queue.modes()
+                });
+                self.modes_changed();
+            }
+            PlayerCommand::SetCursor(cursor) => {
+                if cursor != self.cursor {
+                    self.cursor = cursor;
+                    self.emit(PlayerEvent::CursorChanged(cursor));
+                    self.refresh_next();
+                }
             }
             PlayerCommand::SetStopAfter(stop_after) => {
                 if stop_after != self.stop_after {
                     self.stop_after = stop_after;
                     self.emit(PlayerEvent::StopAfterChanged(stop_after));
+                    self.mark_dirty();
                     self.refresh_next();
                 }
             }
+            PlayerCommand::NextAlbum => {
+                let skip = self.skipper();
+                let target = self.queue.peek_next_album(|e| skip.skips(e));
+                self.go_to_album(target, Direction::Forward);
+            }
+            PlayerCommand::PreviousAlbum => {
+                let skip = self.skipper();
+                let target = self.queue.peek_previous_album(|e| skip.skips(e));
+                self.go_to_album(target, Direction::Backward);
+            }
+            PlayerCommand::RandomAlbum => {
+                let skip = self.skipper();
+                let target = self.queue.pick_random_album(|e| skip.skips(e));
+                self.go_to_album(target, Direction::Forward);
+            }
+            PlayerCommand::LoopStartHere => {
+                let at = self.position;
+                self.change_loop(|ab| Some(ab.with_start(at)));
+            }
+            PlayerCommand::LoopEndHere => {
+                let at = self.position;
+                self.change_loop(|ab| ab.with_end(at));
+            }
+            PlayerCommand::SetLoop(range) => self.change_loop(|_| {
+                range.map(|range| AbLoop {
+                    start: Some(range.start),
+                    end: Some(range.end),
+                })
+            }),
+            PlayerCommand::StartSleepTimer { length, when } => {
+                self.end_fade();
+                self.sleep = Some(Sleep {
+                    deadline: self.clock.elapsed() + length,
+                    length,
+                    when,
+                    due: false,
+                    fade: None,
+                });
+                self.emit(PlayerEvent::SleepTimerChanged(self.sleep_status()));
+                self.refresh_next();
+            }
+            PlayerCommand::ExtendSleepTimer(by) => {
+                if let Some(sleep) = &mut self.sleep {
+                    let now = self.clock.elapsed();
+                    sleep.deadline = sleep.deadline.max(now) + by;
+                    sleep.length += by;
+                    sleep.due = false;
+                    self.end_fade();
+                    self.emit(PlayerEvent::SleepTimerChanged(self.sleep_status()));
+                    self.refresh_next();
+                }
+            }
+            PlayerCommand::CancelSleepTimer => self.cancel_sleep(),
+            PlayerCommand::SetTrackFlags { track, flags } => self.set_track_flags(track, flags),
             PlayerCommand::SetOutput(selection) => self.set_output(selection),
             PlayerCommand::NextOutput => {
                 let choices = output_choices(&self.selection);
@@ -551,26 +683,297 @@ impl Actor {
         self.engine_state == TransportState::Stopped && self.in_flight.is_none()
     }
 
+    /// Which entries automatic playback, "Next" and "Previous" pass over now.
+    fn skipper(&self) -> Skipper {
+        let modes = self.queue.modes();
+        let current = self.queue.current().map(|e| e.id);
+        let scope: Option<Option<String>> = match (modes.scope, current) {
+            (PlayScope::Artist, Some(current)) => Some(self.queue.keys(current).artist.clone()),
+            (PlayScope::Album, Some(current)) => {
+                Some(self.queue.album_of(current).map(str::to_owned))
+            }
+            _ => None,
+        };
+        let mut skipper = Skipper::default();
+        for entry in self.queue.items() {
+            let keys = self.queue.keys(entry.id);
+            let outside = match (&scope, modes.scope) {
+                (Some(key), PlayScope::Artist) => keys.artist != *key,
+                (Some(key), PlayScope::Album) => keys.album_key() != key.as_deref(),
+                _ => false,
+            };
+            if self.unplayable.contains(&entry.id)
+                || keys.flags.manual_only
+                || (modes.shuffle != ShuffleMode::Off && keys.flags.skip_in_shuffle)
+                || outside
+            {
+                skipper.excluded.insert(entry.id);
+            } else if self.suspects.contains(&entry.track) {
+                skipper.suspects.insert(entry.id);
+            }
+        }
+        skipper
+    }
+
     /// The next entry for automatic playback, telling the user about a suspect
     /// passed over.
     fn peek_next(&mut self, advance: Advance) -> Option<EntryId> {
+        let skip = self.skipper();
         let suspect = RefCell::new(None);
-        let unplayable = &self.unplayable;
-        let suspects = &self.suspects;
-        let next = self.queue.peek_next(advance, |e| {
-            let skip = unplayable.contains(&e.id) || suspects.contains(&e.track);
-            if skip && !unplayable.contains(&e.id) && suspect.borrow().is_none() {
-                *suspect.borrow_mut() = Some((e.id, e.track.clone()));
-            }
-            skip
-        });
-        if let Some((entry, track)) = suspect.into_inner() {
-            self.emit(PlayerEvent::Notice(Notice::SuspectSkipped { entry, track }));
-        }
+        let next = self.queue.peek_next(advance, |e| skip.check(e, &suspect));
+        self.tell_suspect(suspect);
         next
     }
 
+    fn tell_suspect(&self, suspect: RefCell<Option<(EntryId, TrackRef)>>) {
+        if let Some((entry, track)) = suspect.into_inner() {
+            self.emit(PlayerEvent::Notice(Notice::SuspectSkipped { entry, track }));
+        }
+    }
+
+    /// The entry selected for "Continue from the selected track", when it is to
+    /// play next.
+    fn cursor_target(&self) -> Option<EntryId> {
+        let cursor = self.cursor?;
+        (self.queue.modes().follow_cursor
+            && self.queue.current().is_none_or(|c| c.id != cursor)
+            && self.queue.index_of(cursor).is_some())
+        .then_some(cursor)
+    }
+
+    /// Makes `target` current as playback moves on to it: the selected entry of
+    /// "Continue from the selected track" is jumped to (and the selection used up),
+    /// any other is advanced to.
+    fn move_to(&mut self, target: EntryId) {
+        if self.cursor_target() == Some(target) {
+            self.queue.jump_to(target);
+            self.cursor = None;
+            self.emit(PlayerEvent::CursorChanged(None));
+        } else {
+            self.queue.advance_to(target);
+        }
+    }
+
+    /// With consume on, removes `old`, the entry playback has moved on from.
+    fn consume(&mut self, old: Option<EntryId>) {
+        if self.queue.modes().consume
+            && let Some(old) = old
+        {
+            if self.pending.as_ref().is_some_and(|p| p.entry == old) {
+                return;
+            }
+            self.queue.consume(old);
+        }
+    }
+
+    fn modes_changed(&mut self) {
+        self.emit(PlayerEvent::ModesChanged(self.queue.modes()));
+        self.refresh_next();
+    }
+
+    /// Goes to `target`, the first entry of an album, as the user asked.
+    fn go_to_album(&mut self, target: Option<EntryId>, direction: Direction) {
+        let Some(target) = target else {
+            return;
+        };
+        let old = self.current.as_ref().map(|s| s.entry);
+        if self.queue.jump_to(target) {
+            self.load(target, direction, None);
+            self.consume(old);
+        }
+    }
+
+    /// The keys of `tracks`, from the library where it knows them.
+    fn keys_for(&self, tracks: &[TrackRef]) -> Vec<EntryKeys> {
+        let Some(library) = &self.library else {
+            return tracks.iter().map(EntryKeys::of_track).collect();
+        };
+        let in_library: Vec<Option<TrackId>> = tracks
+            .iter()
+            .map(|track| match track {
+                TrackRef::Library(id) => Some(*id),
+                TrackRef::File(source) if source.section.is_none() => {
+                    library.track_at(source.path()).ok().flatten()
+                }
+                TrackRef::File(_) => None,
+            })
+            .collect();
+        let ids: Vec<TrackId> = in_library.iter().flatten().copied().collect();
+        let found = library.play_keys(&ids).unwrap_or_default();
+        tracks
+            .iter()
+            .zip(in_library)
+            .map(|(track, id)| match id.and_then(|id| found.get(&id)) {
+                Some(keys) => EntryKeys {
+                    album: keys.album.map(|album| format!("album:{album}")),
+                    folder: Some(format!("folder:{:?}", keys.folder)),
+                    grouping: keys.grouping.as_ref().map(|g| format!("grouping:{g}")),
+                    artist: keys.artist.map(|person| format!("person:{person}")),
+                    flags: keys.flags,
+                },
+                None => EntryKeys::of_track(track),
+            })
+            .collect()
+    }
+
+    fn keyed(&self, tracks: Vec<TrackRef>) -> Vec<Keyed> {
+        let keys = self.keys_for(&tracks);
+        tracks
+            .into_iter()
+            .zip(keys)
+            .map(|(track, keys)| Keyed { track, keys })
+            .collect()
+    }
+
+    fn set_track_flags(&mut self, track: TrackId, flags: TrackFlags) {
+        let saved = match &self.library {
+            Some(library) => library
+                .set_track_flags(track, flags)
+                .map_err(|e| e.to_string()),
+            None => Err("there is no library".to_owned()),
+        };
+        if let Err(reason) = saved {
+            self.emit(PlayerEvent::Notice(Notice::FlagsNotSaved { track, reason }));
+            return;
+        }
+        self.queue.set_flags(&TrackRef::Library(track), flags);
+        self.emit(PlayerEvent::TrackFlagsChanged { track, flags });
+        self.refresh_next();
+    }
+
+    // --- A-B loop and sleep timer ---------------------------------------------------
+
+    /// Changes the A-B loop of the playing item and tells the engine when the
+    /// section changed. Nothing happens while nothing plays.
+    fn change_loop(&mut self, change: impl FnOnce(AbLoop) -> Option<AbLoop>) {
+        if self.is_stopped() {
+            return;
+        }
+        let Some(item) = self.current.as_ref().map(|slot| slot.id) else {
+            return;
+        };
+        let old = self.ab.filter(|(i, _)| *i == item).map(|(_, ab)| ab);
+        let new = change(old.unwrap_or_default());
+        if new == old {
+            return;
+        }
+        let range = new.and_then(|ab| ab.range());
+        if range != old.and_then(|ab| ab.range()) {
+            self.send(EngineCommand::SetLoop { item, range });
+        }
+        self.ab = new.map(|ab| (item, ab));
+        self.emit(PlayerEvent::LoopChanged(new));
+    }
+
+    /// Ends the A-B loop when an item other than its own plays.
+    fn end_loop_unless(&mut self, item: ItemId) {
+        if self.ab.is_some_and(|(own, _)| own != item) {
+            self.ab = None;
+            self.emit(PlayerEvent::LoopChanged(None));
+        }
+    }
+
+    fn sleep_status(&self) -> Option<SleepTimerStatus> {
+        let sleep = self.sleep?;
+        Some(SleepTimerStatus {
+            remaining: sleep.deadline.saturating_sub(self.clock.elapsed()),
+            length: sleep.length,
+            when: sleep.when,
+        })
+    }
+
+    /// How long until the sleep timer needs the actor: its time, the start of its
+    /// fade, or the next step of the fade.
+    fn sleep_due_in(&self) -> Option<Duration> {
+        let sleep = self.sleep.filter(|s| !s.due)?;
+        let left = sleep.deadline.saturating_sub(self.clock.elapsed());
+        Some(match sleep.when {
+            SleepWhen::AtOnce if left > SLEEP_FADE => left - SLEEP_FADE,
+            SleepWhen::AtOnce => FADE_STEP.min(left),
+            _ => left,
+        })
+    }
+
+    /// How long the actor may wait for input.
+    fn wait_due_in(&self) -> Option<Duration> {
+        match (self.save_due_in(), self.sleep_due_in()) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
+        }
+    }
+
+    /// Follows the sleep timer: fades, pauses, or arms the stop after the track.
+    fn check_sleep(&mut self) {
+        let Some(mut sleep) = self.sleep.filter(|s| !s.due) else {
+            return;
+        };
+        let left = sleep.deadline.saturating_sub(self.clock.elapsed());
+        match sleep.when {
+            SleepWhen::AtOnce if left.is_zero() => {
+                self.sleep = None;
+                if matches!(
+                    self.engine_state,
+                    TransportState::Playing | TransportState::Draining
+                ) {
+                    self.send(EngineCommand::Pause);
+                }
+                if sleep.fade.is_some() {
+                    self.send(EngineCommand::SetVolume(self.volume));
+                }
+                self.emit(PlayerEvent::SleepTimerChanged(None));
+            }
+            SleepWhen::AtOnce => {
+                let playing = self.playback_state() == PlaybackState::Playing;
+                if left <= SLEEP_FADE && playing {
+                    let share = left.as_secs_f32() / SLEEP_FADE.as_secs_f32();
+                    if sleep.fade.is_none_or(|f| (f - share).abs() >= 0.01) {
+                        sleep.fade = Some(share);
+                        self.sleep = Some(sleep);
+                        let volume = Volume::clamped(self.volume.position() * share);
+                        self.send(EngineCommand::SetVolume(volume));
+                    }
+                }
+            }
+            _ if left.is_zero() => {
+                sleep.due = true;
+                self.sleep = Some(sleep);
+                self.emit(PlayerEvent::SleepTimerChanged(self.sleep_status()));
+                if self.is_stopped() {
+                    self.cancel_sleep();
+                } else {
+                    self.refresh_next();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Puts the engine's volume back after a fade of the sleep timer.
+    fn end_fade(&mut self) {
+        if let Some(sleep) = &mut self.sleep
+            && sleep.fade.take().is_some()
+        {
+            self.send(EngineCommand::SetVolume(self.volume));
+        }
+    }
+
+    fn cancel_sleep(&mut self) {
+        if self.sleep.is_some() {
+            self.end_fade();
+            self.sleep = None;
+            self.emit(PlayerEvent::SleepTimerChanged(None));
+            self.refresh_next();
+        }
+    }
+
+    /// Whether the sleep timer's time is up and playback stops after the track.
+    fn sleep_stops_after_track(&self) -> bool {
+        self.sleep
+            .is_some_and(|s| s.due && s.when == SleepWhen::AfterTrack)
+    }
+
     fn play_tracks(&mut self, context: QueueContext, tracks: Vec<TrackRef>, start: usize) {
+        let tracks = self.keyed(tracks);
         let append = self.prefs.append_contexts && self.queue.len() > 0;
         let first = if append {
             let first = self.queue.append_context(context, tracks, start);
@@ -727,10 +1130,16 @@ impl Actor {
         if self.queue.current().is_none() {
             return;
         }
-        match self.peek_next(Advance::User) {
+        let target = match self.cursor_target() {
+            Some(cursor) => Some(cursor),
+            None => self.peek_next(Advance::User),
+        };
+        match target {
             Some(next) => {
-                self.queue.advance_to(next);
+                let old = self.current.as_ref().map(|s| s.entry);
+                self.move_to(next);
                 self.load(next, Direction::Forward, None);
+                self.consume(old);
             }
             None if !self.is_stopped() => {
                 self.finish_listen(ListenEnd::Skipped);
@@ -750,11 +1159,10 @@ impl Actor {
                 .prefs
                 .previous_restart
                 .is_some_and(|after| self.position.as_duration() > after);
-        let unplayable = &self.unplayable;
-        let suspects = &self.suspects;
+        let skip = self.skipper();
         let previous = self
             .queue
-            .peek_previous(|e| unplayable.contains(&e.id) || suspects.contains(&e.track));
+            .peek_previous(|e| skip.skips(e) || skip.suspects.contains(&e.id));
         match previous {
             Some(previous) if !restart => {
                 self.queue.set_current(previous);
@@ -839,7 +1247,8 @@ impl Actor {
         self.last_id += 1;
         let id = ItemId::new(self.last_id);
         let path = source.path.clone();
-        let item = PlaybackItem::new(id, source);
+        let volume = self.queue.keys(entry).flags.volume_db();
+        let item = PlaybackItem::new(id, source).with_track_volume(volume);
         let measured = self.measured_loudness(library_track);
         let item = self
             .loudness
@@ -900,6 +1309,7 @@ impl Actor {
                     self.exhausted = false;
                     self.stop_requested = false;
                     self.stopped_after = false;
+                    self.slept = false;
                     self.ended = false;
                     self.send(EngineCommand::Load {
                         item,
@@ -932,11 +1342,10 @@ impl Actor {
     /// forward when nothing is left backward). Moves the queue there.
     fn skip_from(&mut self, direction: Direction) -> (Option<EntryId>, Direction) {
         if direction == Direction::Backward {
-            let unplayable = &self.unplayable;
-            let suspects = &self.suspects;
+            let skip = self.skipper();
             if let Some(previous) = self
                 .queue
-                .peek_previous(|e| unplayable.contains(&e.id) || suspects.contains(&e.track))
+                .peek_previous(|e| skip.skips(e) || skip.suspects.contains(&e.id))
             {
                 self.queue.set_current(previous);
                 return (Some(previous), Direction::Backward);
@@ -969,11 +1378,26 @@ impl Actor {
         }
     }
 
+    /// The entry the engine is to join after the current one: none when stop-after
+    /// or the sleep timer stops playback after it, the selected entry for "Continue
+    /// from the selected track", otherwise the next one of the play modes.
     fn wanted_next(&mut self) -> Option<EntryId> {
-        if self.stop_after == StopAfter::Track {
+        let stop_after = if self.sleep_stops_after_track() {
+            StopAfter::Track
+        } else {
+            self.stop_after
+        };
+        if stop_after == StopAfter::Track {
             return None;
         }
-        self.peek_next(Advance::Auto)
+        if let Some(cursor) = self.cursor_target() {
+            return Some(cursor);
+        }
+        let skip = self.skipper();
+        let suspect = RefCell::new(None);
+        let next = self.queue.next_for(stop_after, |e| skip.check(e, &suspect));
+        self.tell_suspect(suspect);
+        next
     }
 
     fn set_next(&mut self, mut wanted: Option<EntryId>) {
@@ -1093,12 +1517,15 @@ impl Actor {
             (Some(current), _) if current.id == item => current.clone(),
             (_, Some(pending)) if pending.id == item => {
                 let pending = pending.clone();
+                let old = self.current.as_ref().map(|s| s.entry);
                 self.pending = None;
-                self.queue.advance_to(pending.entry);
+                self.move_to(pending.entry);
+                self.consume(old);
                 pending
             }
             _ => return,
         };
+        self.end_loop_unless(item);
         slot.length = length;
         self.current = Some(slot.clone());
         self.near_end = false;
@@ -1174,17 +1601,30 @@ impl Actor {
             }
         } else if reason == TrackEndReason::Finished
             && self.pending.is_none()
-            && self.stop_after == StopAfter::Track
+            && (self.stop_after != StopAfter::Off || self.sleep_stops_after_track())
         {
+            // Stop-after or the sleep timer: the entry that would have played next
+            // becomes current, so that "Play" continues there.
             self.stopped_after = true;
-            self.stop_after = StopAfter::Off;
-            self.emit(PlayerEvent::StopAfterChanged(StopAfter::Off));
-            if let Some(next) = self.peek_next(Advance::Auto) {
-                self.queue.advance_to(next);
+            if self.sleep_stops_after_track() {
+                self.slept = true;
+                self.sleep = None;
+                self.emit(PlayerEvent::SleepTimerChanged(None));
+            } else {
+                self.stop_after = StopAfter::Off;
+                self.emit(PlayerEvent::StopAfterChanged(StopAfter::Off));
             }
+            if let Some(next) = self.peek_next(Advance::Auto) {
+                self.move_to(next);
+            }
+            self.consume(Some(current.entry));
             self.current = None;
         } else if reason != TrackEndReason::Interrupted && self.pending.is_none() {
             self.exhausted = true;
+            if reason == TrackEndReason::Finished && self.queue.modes().consume {
+                self.queue.remove(&[current.entry]);
+                self.current = None;
+            }
         }
         self.end_if_stopped();
     }
@@ -1199,6 +1639,8 @@ impl Actor {
         self.pending = None;
         let reason = if self.stop_requested {
             EndReason::Stopped
+        } else if self.slept {
+            EndReason::SleepTimer
         } else if self.stopped_after {
             EndReason::StopAfter
         } else if self.exhausted {
@@ -1212,6 +1654,37 @@ impl Actor {
             played: self.played,
             failed: self.failed,
         });
+    }
+}
+
+/// Which entries automatic playback, "Next" and "Previous" pass over: those that
+/// cannot play, whose flags or the "Play only" scope leave them out, and tracks
+/// that ended the program before (`suspects`, told to the user when passed over).
+#[derive(Debug, Default)]
+struct Skipper {
+    excluded: HashSet<EntryId>,
+    suspects: HashSet<EntryId>,
+}
+
+impl Skipper {
+    /// Whether `entry` is left out for any reason but being suspect.
+    fn skips(&self, entry: &QueueEntry) -> bool {
+        self.excluded.contains(&entry.id)
+    }
+
+    /// Whether `entry` is passed over; the first suspect passed over is noted in
+    /// `suspect`.
+    fn check(&self, entry: &QueueEntry, suspect: &RefCell<Option<(EntryId, TrackRef)>>) -> bool {
+        if self.excluded.contains(&entry.id) {
+            return true;
+        }
+        if self.suspects.contains(&entry.id) {
+            if suspect.borrow().is_none() {
+                *suspect.borrow_mut() = Some((entry.id, entry.track.clone()));
+            }
+            return true;
+        }
+        false
     }
 }
 

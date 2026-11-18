@@ -32,8 +32,6 @@ SPDX-License-Identifier: GPL-3.0-or-later
                   <object class="GtkToggleButton" id="lyrics_tab">
                     <property name="label" translatable="yes">Lyrics</property>
                     <property name="group">queue_tab</property>
-                    <!-- Not in this version; the page stays for later. -->
-                    <property name="visible">False</property>
                   </object>
                 </child>
                 <child>
@@ -230,13 +228,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
           <object class="GtkStackPage">
             <property name="name">lyrics</property>
             <property name="child">
-              <object class="GtkLabel">
-                <property name="label" translatable="yes">Lyrics are shown here in a later version.</property>
-                <property name="wrap">True</property>
-                <property name="justify">center</property>
-                <property name="margin-start">24</property>
-                <property name="margin-end">24</property>
-                <style><class name="hk-t3"/></style>
+              <!-- Filled by the panel: the track, the lines, the footer. -->
+              <object class="GtkBox" id="lyrics_page">
+                <property name="orientation">vertical</property>
               </object>
             </property>
           </object>

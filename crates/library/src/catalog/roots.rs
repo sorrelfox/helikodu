@@ -42,24 +42,32 @@ fn hidden_roots(c: &Connection) -> rusqlite::Result<Vec<i64>> {
 }
 
 /// The condition on the tracks `t` for a query that hides the tracks of masked
-/// folders unless `include_masked`: `1` when nothing is hidden.
+/// folders unless `include_masked`, and the hidden copies when the queries show one
+/// copy of each group: `1` when nothing is hidden.
 ///
 /// It looks up each track's folder (two lookups by primary key), which costs less
 /// than a list of every hidden file when a large folder is masked.
 pub(crate) fn visibility(c: &Connection, include_masked: bool) -> rusqlite::Result<String> {
-    if include_masked {
-        return Ok("1".to_owned());
-    }
-    let hidden = hidden_roots(c)?;
-    if hidden.is_empty() {
-        return Ok("1".to_owned());
-    }
-    let list: Vec<String> = hidden.iter().map(i64::to_string).collect();
-    Ok(format!(
-        "(SELECT d.root_id FROM files f JOIN dirs d ON d.id = f.dir_id WHERE f.id = t.file_id)
+    let copies = crate::copies::settings::hidden_copies_condition(c)?;
+    let hidden = if include_masked {
+        Vec::new()
+    } else {
+        hidden_roots(c)?
+    };
+    let masked = (!hidden.is_empty()).then(|| {
+        let list: Vec<String> = hidden.iter().map(i64::to_string).collect();
+        format!(
+            "(SELECT d.root_id FROM files f JOIN dirs d ON d.id = f.dir_id WHERE f.id = t.file_id)
          NOT IN ({})",
-        list.join(", ")
-    ))
+            list.join(", ")
+        )
+    });
+    Ok(match (masked, copies) {
+        (None, None) => "1".to_owned(),
+        (Some(masked), None) => masked,
+        (None, Some(copies)) => copies.to_owned(),
+        (Some(masked), Some(copies)) => format!("{masked} AND {copies}"),
+    })
 }
 
 /// Masks the library folder `root` (since `now`), or unmasks it. Returns whether it

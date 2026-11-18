@@ -45,6 +45,9 @@ impl Library {
     /// The file of `track` and, for a CUE sheet track or a chapter, its span of the
     /// file; `None` if there is no such track. The span's times are exact: the
     /// library stores it in frames at the file's sample rate.
+    ///
+    /// A track of a copy that is not the main copy plays from the main copy, as
+    /// copies share one identity.
     pub fn track_source(&self, track: TrackId) -> Result<Option<TrackSource>, DbError> {
         self.database().read(|c| track_source(c, track))
     }
@@ -61,7 +64,13 @@ fn track_source(c: &Connection, track: TrackId) -> rusqlite::Result<Option<Track
              FROM tracks t
              JOIN files f ON f.id = t.file_id
              JOIN dirs d ON d.id = f.dir_id
-             WHERE t.id = ?1",
+             WHERE t.id = coalesce((
+                 -- A copy plays from the main copy, the file its identity plays.
+                 SELECT p.id FROM tracks c
+                 JOIN tracks p ON p.identity_id = c.identity_id
+                 JOIN files pf ON pf.id = p.file_id
+                 WHERE c.id = ?1 AND c.is_copy = 1 AND pf.missing_since IS NULL
+                 ORDER BY p.is_copy, p.id LIMIT 1), ?1)",
         )?
         .query_row([sql_track_id(track)], |row| {
             let dir = path_from_blob(row.get(0)?);

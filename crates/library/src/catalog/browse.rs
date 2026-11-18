@@ -411,6 +411,9 @@ pub struct TrackSummary {
     pub sub_index: u32,
     /// Whether its file is missing (it disappeared and has not come back yet).
     pub missing: bool,
+    /// How many other copies of it the library has: byte-identical files holding
+    /// the same track, not counting other paths to the same file.
+    pub copies: u32,
 }
 
 /// Parameters of a query, in order.

@@ -9,6 +9,11 @@
 //! Click or drag seeks; the arrow keys move by the seek step, Home and End jump
 //! to the ends. A seek is requested on release, and at most ten times a second
 //! while dragging.
+//!
+//! An A-B loop shows as two flags: a 1 px line at each end with a 12 px tab at
+//! the top that carries "A" or "B". Bars outside the loop are dimmed; inside
+//! it, played bars keep the accent and the others are lighter. Dragging a flag
+//! moves that end of the loop (requested on release).
 
 use std::cell::{Cell, RefCell};
 use std::time::{Duration, Instant};
@@ -28,6 +33,10 @@ const MIN: f32 = 0.08;
 const STEP: Duration = Duration::from_secs(5);
 
 type SeekHandler = Box<dyn Fn(Duration)>;
+type LoopHandler = Box<dyn Fn(Duration, Duration)>;
+
+/// How near a flag's line a press takes the flag rather than seeking.
+const FLAG_REACH: f64 = 6.0;
 
 mod imp {
     use super::*;
@@ -41,6 +50,11 @@ mod imp {
         pub(super) last_seek: Cell<Option<Instant>>,
         pub(super) peaks: RefCell<Vec<f32>>,
         pub(super) handler: RefCell<Option<SeekHandler>>,
+        /// The A-B loop's points, as far as they are set.
+        pub(super) ab: Cell<(Option<Duration>, Option<Duration>)>,
+        /// The flag being dragged (`true` for B) and where it is now.
+        pub(super) flag_drag: Cell<Option<(bool, Duration)>>,
+        pub(super) loop_handler: RefCell<Option<LoopHandler>>,
     }
 
     #[glib::object_subclass]
@@ -68,14 +82,18 @@ mod imp {
             drag.connect_drag_begin(glib::clone!(
                 #[weak]
                 obj,
-                move |_, x, _| obj.drag_to(x, false)
+                move |_, x, y| obj.press(x, y)
             ));
             drag.connect_drag_update(glib::clone!(
                 #[weak]
                 obj,
                 move |gesture, dx, _| {
                     if let Some((x, _)) = gesture.start_point() {
-                        obj.drag_to(x + dx, false);
+                        if obj.imp().flag_drag.get().is_some() {
+                            obj.move_flag(x + dx, false);
+                        } else {
+                            obj.drag_to(x + dx, false);
+                        }
                     }
                 }
             ));
@@ -84,7 +102,11 @@ mod imp {
                 obj,
                 move |gesture, dx, _| {
                     if let Some((x, _)) = gesture.start_point() {
-                        obj.drag_to(x + dx, true);
+                        if obj.imp().flag_drag.get().is_some() {
+                            obj.move_flag(x + dx, true);
+                        } else {
+                            obj.drag_to(x + dx, true);
+                        }
                     }
                 }
             ));
@@ -123,6 +145,10 @@ mod imp {
             let accent = crate::style::current().accent.glass_fill.to_gdk();
             let rest = glass::WAVE_REST.to_gdk();
             let peaks = self.peaks.borrow();
+            let (a, b) = obj.shown_loop();
+            let section = obj.fractions(a, b);
+            let outside = glass::LOOP_OUTSIDE.to_gdk();
+            let inside = glass::LOOP_INSIDE.to_gdk();
             for i in 0..count {
                 let peak = if peaks.is_empty() {
                     FLAT
@@ -135,11 +161,20 @@ mod imp {
                 let x = (i as f32 * pitch).round();
                 let width = ((i + 1) as f32 * pitch - GAP).round() - x;
                 let rect = graphene::Rect::new(x, ((h - bar_h) / 2.0).round(), width, bar_h);
-                let color = if i < played { &accent } else { &rest };
+                let middle = (i as f64 + 0.5) / count as f64;
+                let color = match section {
+                    Some((from, to)) if middle < from || middle > to => &outside,
+                    Some(_) if i < played => &accent,
+                    Some(_) => &inside,
+                    None if i < played => &accent,
+                    None => &rest,
+                };
                 snapshot.push_rounded_clip(&gsk::RoundedRect::from_rect(rect, 1.0));
                 snapshot.append_color(color, &rect);
                 snapshot.pop();
             }
+            drop(peaks);
+            obj.draw_flags(snapshot, a, b);
         }
     }
 }
@@ -161,6 +196,126 @@ impl WaveformSeekBar {
     /// Calls `handler` with the position the user seeks to.
     pub(crate) fn connect_seek(&self, handler: impl Fn(Duration) + 'static) {
         self.imp().handler.replace(Some(Box::new(handler)));
+    }
+
+    /// Calls `handler` with the loop's start and end when a flag is dragged.
+    pub(crate) fn connect_loop_moved(&self, handler: impl Fn(Duration, Duration) + 'static) {
+        self.imp().loop_handler.replace(Some(Box::new(handler)));
+    }
+
+    /// Shows the A-B loop's points, as far as they are set.
+    pub(crate) fn set_loop(&self, start: Option<Duration>, end: Option<Duration>) {
+        let imp = self.imp();
+        imp.ab.set((start, end));
+        if start.is_none() && end.is_none() {
+            imp.flag_drag.set(None);
+        }
+        self.queue_draw();
+    }
+
+    /// The loop's points, with a dragged flag where it is now.
+    fn shown_loop(&self) -> (Option<Duration>, Option<Duration>) {
+        let imp = self.imp();
+        let (a, b) = imp.ab.get();
+        match imp.flag_drag.get() {
+            Some((false, at)) => (Some(at), b),
+            Some((true, at)) => (a, Some(at)),
+            None => (a, b),
+        }
+    }
+
+    /// The loop as fractions of the length, once both points are set.
+    fn fractions(&self, a: Option<Duration>, b: Option<Duration>) -> Option<(f64, f64)> {
+        let length = self.imp().length.get().filter(|l| !l.is_zero())?;
+        let share = |d: Duration| (d.as_secs_f64() / length.as_secs_f64()).clamp(0.0, 1.0);
+        let (a, b) = (a?, b?);
+        (a < b).then(|| (share(a), share(b)))
+    }
+
+    fn flag_x(&self, at: Duration) -> Option<f64> {
+        let length = self.imp().length.get().filter(|l| !l.is_zero())?;
+        Some((at.as_secs_f64() / length.as_secs_f64()).clamp(0.0, 1.0) * f64::from(self.width()))
+    }
+
+    fn draw_flags(&self, snapshot: &gtk::Snapshot, a: Option<Duration>, b: Option<Duration>) {
+        let h = self.height() as f32;
+        let w = self.width() as f32;
+        let tab = crate::style::tokens::metric::r#loop::FLAG_TAB as f32;
+        let line = crate::style::tokens::metric::r#loop::FLAG_LINE as f32;
+        let flag = glass::LOOP_FLAG.to_gdk();
+        let ink = glass::BG.to_gdk();
+        for (at, text, after) in [(a, "A", false), (b, "B", true)] {
+            let Some(x) = at.and_then(|at| self.flag_x(at)) else {
+                continue;
+            };
+            let x = (x as f32).round().clamp(0.0, (w - line).max(0.0));
+            snapshot.append_color(&flag, &graphene::Rect::new(x, 0.0, line, h));
+            // A's tab hangs left of its line, B's right; both stay inside.
+            let left = if after { x } else { x + line - tab };
+            let left = left.clamp(0.0, (w - tab).max(0.0));
+            snapshot.append_color(&flag, &graphene::Rect::new(left, 0.0, tab, tab));
+            let layout = self.create_pango_layout(Some(text));
+            let mut font = gtk::pango::FontDescription::from_string("Monospace Medium");
+            font.set_absolute_size(9.0 * f64::from(gtk::pango::SCALE));
+            layout.set_font_description(Some(&font));
+            let (_, logical) = layout.pixel_extents();
+            snapshot.save();
+            snapshot.translate(&graphene::Point::new(
+                left + (tab - logical.width() as f32) / 2.0,
+                (tab - logical.height() as f32) / 2.0,
+            ));
+            snapshot.append_layout(&layout, &ink);
+            snapshot.restore();
+        }
+    }
+
+    /// A press: on a flag it takes the flag, elsewhere it seeks.
+    fn press(&self, x: f64, _y: f64) {
+        let imp = self.imp();
+        let (a, b) = imp.ab.get();
+        let near = |at: Option<Duration>| {
+            at.and_then(|at| self.flag_x(at))
+                .map(|fx| (fx - x).abs())
+                .filter(|d| *d <= FLAG_REACH)
+        };
+        let flag = match (near(a), near(b)) {
+            (Some(da), Some(db)) => Some(if db < da { (true, b) } else { (false, a) }),
+            (Some(_), None) => Some((false, a)),
+            (None, Some(_)) => Some((true, b)),
+            (None, None) => None,
+        };
+        match flag {
+            Some((is_b, Some(at))) if a.is_some() && b.is_some() => {
+                imp.flag_drag.set(Some((is_b, at)));
+                self.queue_draw();
+            }
+            _ => self.drag_to(x, false),
+        }
+    }
+
+    /// Moves the dragged flag to `x`; on release, asks for the new loop.
+    fn move_flag(&self, x: f64, done: bool) {
+        let imp = self.imp();
+        let (Some((is_b, _)), Some(length)) = (imp.flag_drag.get(), imp.length.get()) else {
+            return;
+        };
+        let width = f64::from(self.width().max(1));
+        let at = length.mul_f64((x / width).clamp(0.0, 1.0));
+        imp.flag_drag.set(Some((is_b, at)));
+        if done {
+            let (a, b) = self.shown_loop();
+            imp.flag_drag.set(None);
+            if let (Some(a), Some(b)) = (a, b) {
+                let (start, end) = if a <= b { (a, b) } else { (b, a) };
+                if start < end {
+                    imp.ab.set((Some(start), Some(end)));
+                    if let Some(handler) = imp.loop_handler.borrow().as_ref() {
+                        handler(start, end);
+                    }
+                }
+            }
+        }
+        self.queue_draw();
     }
 
     /// Shows a position. Ignored while the user drags.

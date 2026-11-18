@@ -565,6 +565,13 @@ impl Services for MemoryServices {
         })
     }
 
+    fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {
+        let library = self.library.as_ref()?;
+        library.track(track)?;
+        let flags = library.flags.lock().unwrap_or_else(PoisonError::into_inner);
+        Some(flags.get(&track).copied().unwrap_or_default())
+    }
+
     fn versions(&self) -> Versions {
         Versions {
             ffmpeg: Some("9.0.2".into()),

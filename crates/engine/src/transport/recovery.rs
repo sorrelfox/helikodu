@@ -32,6 +32,7 @@ impl Worker {
         self.drain = None;
         self.waiting_since = None;
         self.near_end_sent = None;
+        self.ab_loop = None;
     }
 
     /// Moves to `Playing`, or on to `Draining` if the end was already rendered.

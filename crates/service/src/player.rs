@@ -58,6 +58,7 @@ mod queue;
 mod rng;
 pub mod session;
 mod shared;
+mod timers;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -67,6 +68,7 @@ use std::thread::{self, JoinHandle};
 use helikodu_engine::decode::DecoderRegistry;
 use helikodu_engine::transport::Engine;
 use helikodu_model::audio::MediaTime;
+use helikodu_model::player::StopAfter;
 
 use self::actor::{Actor, Input, Startup};
 use self::listen::Recorder;
@@ -87,6 +89,7 @@ pub use self::error::PlayerError;
 pub use self::event::{EndReason, Notice, PlayerEvent};
 pub use self::outputs::{list_outputs, next_output, resolve_backend, sound_backends};
 pub use self::shared::{NowPlaying, PlayerStatus, QueueSnapshot, Splice};
+pub use self::timers::{AbLoop, SLEEP_FADE, SleepTimerStatus, SleepWhen};
 
 /// A running player. Dropping it ends the listen in progress, saves the session,
 /// removes the crash sentinel, stops playback and ends the service thread.
@@ -117,6 +120,7 @@ impl Player {
             selection: config.output.selection(),
             suspects: HashSet::new(),
             strikes: HashMap::new(),
+            stop_after: StopAfter::Off,
             crash: None,
             session: None,
             prefs: config.prefs,
@@ -139,6 +143,7 @@ impl Player {
                     );
                     startup.position = Some(MediaTime::from_millis(saved.position_ms));
                     startup.volume = saved.volume;
+                    startup.stop_after = saved.stop_after;
                     startup.selection = saved.output;
                 }
             }

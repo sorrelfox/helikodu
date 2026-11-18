@@ -20,7 +20,7 @@
 //! - **Report.** [`ScanEvent`]s go to a channel while the scan runs; a
 //!   [`CancelToken`] stops it.
 
-mod compare;
+pub(crate) mod compare;
 pub(crate) mod filter;
 mod options;
 mod pool;
@@ -39,7 +39,7 @@ use std::thread::{self, JoinHandle};
 pub use options::{ExcludeRule, ScanOptions, SymlinkPolicy, WorkerOptions};
 pub use program::{WORKER_PROGRAM, find_worker_program};
 pub use progress::{CancelToken, FailureKind, FileFailure, ScanError, ScanEvent, ScanSummary};
-pub(crate) use run::{run, run_targets};
+pub(crate) use run::{confirm_copies, run, run_targets};
 pub(crate) use scope::{ScanTarget, Scope};
 
 use crate::Library;

@@ -22,9 +22,17 @@ use super::records::tracks_of;
 use super::scope::{ScanTarget, Scope, normalize};
 use super::store::{self, STATE_CUE_SHEET, STATE_UNREADABLE};
 use super::walk::{Walk, Walker};
-use crate::catalog::{self, TrackChange};
+use std::os::unix::fs::MetadataExt;
+
+use rusqlite::OptionalExtension;
+
+use super::filter::classify;
+use super::walk::{Found, Stamp};
+use crate::catalog::{self, RootId, TrackChange};
+use crate::copies::{precheck, reconcile};
 use crate::db::unix_time::to_unix_seconds;
-use crate::db::{Database, DbError, WriteTicket, Writer};
+use crate::db::{Database, DbError, WriteTicket, Writer, path_from_blob};
+use helikodu_model::settings::DuplicateScan;
 
 /// How often progress is reported.
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
@@ -145,7 +153,18 @@ pub(crate) fn run_targets(
     summary.skipped_unreadable = plan.skipped_unreadable;
     summary.missing = plan.missing.len();
     summary.back = plan.back.len();
+    // Groups of copies with files that went or came back pick their main copy again
+    // at the end, after moved files have been found.
+    let touched: Vec<i64> = plan.missing.iter().chain(&plan.back).copied().collect();
     write_bookkeeping(writer, &mut plan)?;
+    // While copies are skipped, new copies are recognised before they are read.
+    let aside = if !plan.to_read.is_empty()
+        && db.read(crate::copies::settings::on_scan)? == DuplicateScan::Skip
+    {
+        precheck::set_aside(db, &mut plan.to_read, hash_threads(), cancel)?
+    } else {
+        Vec::new()
+    };
     emit(ScanEvent::Compared {
         found: plan.found,
         to_read: plan.to_read.len(),
@@ -166,7 +185,122 @@ pub(crate) fn run_targets(
             Ok(())
         })?;
     }
+    if !cancel.is_cancelled() && !aside.is_empty() {
+        writer.write(move |c| precheck::record(c, &aside))?;
+    }
+    if !cancel.is_cancelled() {
+        copies_pass(db, options, &touched, false, &mut summary, &emit, cancel)?;
+    }
     Ok(finish(summary, started, cancel, &emit))
+}
+
+/// Confirms copies and refreshes the groups of `touched` files (every group with
+/// `all`), then reads the files that need tracks (a main copy without any, or the
+/// copies when copies get tracks) and refreshes their groups again.
+pub(crate) fn confirm_copies(
+    db: &Database,
+    options: &ScanOptions,
+    touched: &[i64],
+    all: bool,
+    events: Option<&Sender<ScanEvent>>,
+    cancel: &CancelToken,
+) -> Result<ScanSummary, ScanError> {
+    let started = Instant::now();
+    let emit = |event: ScanEvent| {
+        if let Some(events) = events {
+            let _ = events.send(event);
+        }
+    };
+    let mut summary = ScanSummary::default();
+    copies_pass(db, options, touched, all, &mut summary, &emit, cancel)?;
+    Ok(finish(summary, started, cancel, &emit))
+}
+
+fn copies_pass(
+    db: &Database,
+    options: &ScanOptions,
+    touched: &[i64],
+    all: bool,
+    summary: &mut ScanSummary,
+    emit: &dyn Fn(ScanEvent),
+    cancel: &CancelToken,
+) -> Result<(), ScanError> {
+    let threads = hash_threads();
+    let mut touched = touched.to_vec();
+    let mut all = all;
+    // A read can leave work for one more round (tracks to merge); never more.
+    for _ in 0..3 {
+        let reconciled = reconcile::reconcile(db, &touched, all, threads, cancel)?;
+        summary.copies += reconciled.joined;
+        if let Some(reason) = reconciled.backup_failed {
+            emit(ScanEvent::CopiesNotMerged { reason });
+        }
+        if reconciled.needs_read.is_empty() || cancel.is_cancelled() {
+            break;
+        }
+        let ids = reconciled.needs_read;
+        let to_read = db.read(|c| files_to_read(c, &ids))?;
+        if to_read.is_empty() {
+            break;
+        }
+        read_files(db.writer()?, options, to_read, summary, emit, cancel)?;
+        touched = ids;
+        all = false;
+    }
+    Ok(())
+}
+
+/// How many threads hash files: one per processor, at most 4.
+fn hash_threads() -> usize {
+    thread::available_parallelism().map_or(2, |n| n.get().min(4))
+}
+
+/// The files `ids` as the workers read them, with their stamps from the disk now.
+fn files_to_read(c: &rusqlite::Connection, ids: &[i64]) -> rusqlite::Result<Vec<ToRead>> {
+    let mut file = c.prepare_cached(
+        "SELECT d.root_id, d.path, f.name, f.dir_id FROM files f JOIN dirs d ON d.id = f.dir_id
+         WHERE f.id = ?1",
+    )?;
+    let mut sheets = c.prepare_cached(
+        "SELECT name FROM files WHERE dir_id = ?1 AND scan_state = ?2 ORDER BY name",
+    )?;
+    let mut out = Vec::with_capacity(ids.len());
+    for &id in ids {
+        let row: Option<(i64, Vec<u8>, Vec<u8>, i64)> = file
+            .query_row([id], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })
+            .optional()?;
+        let Some((root, dir, name, dir_id)) = row else {
+            continue;
+        };
+        let dir = path_from_blob(dir);
+        let name = path_from_blob(name);
+        let Some(class) = classify(name.as_os_str()) else {
+            continue;
+        };
+        let path = dir.join(&name);
+        let Ok(metadata) = fs::metadata(&path) else {
+            continue;
+        };
+        let cue_sheets = sheets
+            .query_map(rusqlite::params![dir_id, STATE_CUE_SHEET], |row| {
+                Ok(dir.join(path_from_blob(row.get(0)?)))
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+        out.push(ToRead {
+            root: RootId(root),
+            found: Found {
+                stamp: Stamp::of(&metadata),
+                dev: metadata.dev(),
+                path,
+                class,
+            },
+            cue_sheets,
+            known: true,
+        });
+    }
+    Ok(out)
 }
 
 /// Fails unless `dir` is a folder that can be listed.
@@ -320,8 +454,9 @@ fn read_files(
                 match result {
                     Ok(report) => {
                         let records = tracks_of(item.root, &item.found, &report, options.covers);
-                        let ticket =
-                            writer.submit(move |c| store::write_file_tracks(c, &records, now))?;
+                        let dev = Some(item.found.dev);
+                        let ticket = writer
+                            .submit(move |c| store::write_file_tracks(c, &records, now, dev))?;
                         pending.push_back(Pending::Tracks(index, ticket));
                     }
                     Err(failure) => {

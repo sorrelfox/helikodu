@@ -470,10 +470,10 @@ fn calls_reach_the_player() {
     assert!(flag(&changes[2]["Shuffle"]));
 
     // The player confirms: nothing new to announce.
-    let modes = helikodu_model::player::PlayModes {
-        shuffle: helikodu_model::player::ShuffleMode::Tracks,
-        repeat: RepeatMode::All,
-    };
+    let modes = helikodu_model::player::PlayModes::new(
+        helikodu_model::player::ShuffleMode::Tracks,
+        RepeatMode::All,
+    );
     {
         let mut status = view.status.lock().unwrap();
         status.volume = Volume::clamped(0.5);

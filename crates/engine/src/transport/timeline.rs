@@ -14,6 +14,9 @@
 //! At a crossfade the next item's segment starts at the middle of the crossfade,
 //! with the item's position there; the item before records where its audio began
 //! to be mixed with it (`mix_from`).
+//!
+//! An A-B loop moves an item back within its segment: the segment records each ring
+//! position where that happens (a rewind) and the item's position there.
 
 use std::collections::VecDeque;
 
@@ -37,20 +40,66 @@ pub(super) struct Segment {
     pub(super) error: Option<EngineError>,
     /// The ring position from which the item is crossfaded into the next one.
     pub(super) mix_from: Option<u64>,
+    /// Where the item moved back (an A-B loop): ring positions in ascending order,
+    /// and the item's position there, in frames at the source rate.
+    pub(super) rewinds: Vec<(u64, u64)>,
 }
 
 impl Segment {
     /// The item's position at the ring position `at`.
     pub(super) fn position_at(&self, at: u64) -> MediaTime {
-        let offset = u128::from(at.saturating_sub(self.ring_start));
-        let source_rate = u128::from(self.spec.rate.hz());
-        let device_rate = u128::from(self.device_rate.hz());
-        let frames = self.start_frames
-            + u64::try_from(offset * source_rate / device_rate).unwrap_or(u64::MAX);
-        let time = MediaTime::from_frames(frames, self.spec.rate);
+        let time = MediaTime::from_frames(self.frames_at(at), self.spec.rate);
         match self.length {
             Some(length) if time > length => length.at_rate(self.spec.rate),
             _ => time,
+        }
+    }
+
+    /// The item's position at the ring position `at`, in frames at the source rate,
+    /// not limited to its length.
+    pub(super) fn frames_at(&self, at: u64) -> u64 {
+        let (ring, frames) = self.base_at(at);
+        frames.saturating_add(self.to_source(at.saturating_sub(ring)))
+    }
+
+    /// The latest start or rewind at or before the ring position `at`.
+    pub(super) fn base_at(&self, at: u64) -> (u64, u64) {
+        self.rewinds
+            .iter()
+            .rev()
+            .find(|&&(ring, _)| ring <= at)
+            .copied()
+            .unwrap_or((self.ring_start, self.start_frames))
+    }
+
+    /// `frames` ring frames as frames at the source rate, rounded down.
+    pub(super) fn to_source(&self, frames: u64) -> u64 {
+        let scaled = u128::from(frames) * u128::from(self.spec.rate.hz())
+            / u128::from(self.device_rate.hz());
+        u64::try_from(scaled).unwrap_or(u64::MAX)
+    }
+
+    /// `frames` frames at the source rate as ring frames, rounded up.
+    pub(super) fn to_ring(&self, frames: u64) -> u64 {
+        let scaled = (u128::from(frames) * u128::from(self.device_rate.hz()))
+            .div_ceil(u128::from(self.spec.rate.hz()));
+        u64::try_from(scaled).unwrap_or(u64::MAX)
+    }
+
+    /// Records that the item goes on at `frames` from the ring position `at`.
+    /// Rewinds at or after `at` are replaced.
+    pub(super) fn rewind(&mut self, at: u64, frames: u64) {
+        let keep = self.rewinds.partition_point(|&(ring, _)| ring < at);
+        self.rewinds.truncate(keep);
+        self.rewinds.push((at, frames));
+    }
+
+    /// Forgets the rewinds before the latest one at or before the heard position
+    /// `at`: positions before it are not asked for again.
+    fn prune(&mut self, at: u64) {
+        let passed = self.rewinds.partition_point(|&(ring, _)| ring <= at);
+        if passed > 1 {
+            self.rewinds.drain(..passed - 1);
         }
     }
 
@@ -184,6 +233,9 @@ impl Timeline {
             }
         }
         self.skips.retain(|&(_, until)| until > at);
+        if let Some(heard) = self.segments.front_mut() {
+            heard.prune(at);
+        }
     }
 
     /// Plays everything out: the events of every item start, then the end of the
@@ -218,6 +270,7 @@ mod tests {
             device_rate: SampleRate::HZ_48000,
             error: None,
             mix_from: None,
+            rewinds: Vec::new(),
         }
     }
 
@@ -232,6 +285,29 @@ mod tests {
             s.position_at(u64::MAX / 2),
             MediaTime::from_frames(100_000, SampleRate::HZ_44100)
         );
+    }
+
+    #[test]
+    fn rewinds_move_the_position_back() {
+        // At the source rate, so that ring frames are item frames.
+        let mut s = segment(1, 1000, 0);
+        s.device_rate = SampleRate::HZ_44100;
+        s.rewind(31_000, 10_000);
+        s.rewind(51_000, 10_000);
+        let at = |s: &Segment, ring| s.position_at(ring).frames_at(SampleRate::HZ_44100);
+        assert_eq!(at(&s, 30_999), 29_999);
+        assert_eq!(at(&s, 31_000), 10_000);
+        assert_eq!(at(&s, 50_999), 29_999);
+        assert_eq!(at(&s, 51_005), 10_005);
+        // A rewind replaces those at or after it.
+        s.rewind(41_000, 5_000);
+        assert_eq!(s.rewinds, [(31_000, 10_000), (41_000, 5_000)]);
+        assert_eq!(at(&s, 51_005), 15_005);
+        // Pruning keeps the one the heard position counts from.
+        s.prune(45_000);
+        assert_eq!(s.rewinds, [(41_000, 5_000)]);
+        assert_eq!(at(&s, 45_000), 9_000);
+        assert_eq!((s.to_ring(441), s.to_source(441)), (441, 441));
     }
 
     #[test]

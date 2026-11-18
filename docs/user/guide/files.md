@@ -6,6 +6,7 @@ Helikodu follows the XDG base directory rules. The folders below are the default
 |---|---|
 | `~/.config/helikodu/settings.toml` | Your settings |
 | `~/.local/share/helikodu/library.db` | The library: tracks, albums, ratings, play counts and playlists |
+| `~/.local/share/helikodu/library.db.backup-before-copies` | A copy of the library made once, before the play counts and ratings of copies of the same file were first combined (see [Copies of the same file](settings.md#copies-of-the-same-file)). You can delete it once you are happy with the result |
 | `~/.local/state/helikodu/session.json` | The queue, position, volume, modes and output device of the last session |
 | `~/.local/state/helikodu/playing.json` | A marker that exists only while something plays; see [Troubleshooting](troubleshooting.md#helikodu-skips-a-track-it-used-to-play) |
 | `~/.local/state/helikodu/ui-state.toml` | The window size and the widths of its panes |

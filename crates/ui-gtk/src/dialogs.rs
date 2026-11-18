@@ -14,6 +14,7 @@ pub(crate) mod loudness_footer;
 pub(crate) mod settings;
 pub(crate) mod shortcuts;
 pub(crate) mod tag_editor;
+pub(crate) mod track_flags;
 pub(crate) mod volume_confirm;
 
 use gtk::gio;

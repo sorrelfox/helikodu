@@ -283,10 +283,12 @@ pub(crate) fn remove_items(
 const ITEM: &str = "i.id, i.position, i.identity_id, i.ref_kind, i.missing_ref, i.title, i.artist,
     i.album, i.duration_ms,
     t.id, t.title, t.artist, t.album_id, a.title, t.disc_no, t.track_no, t.duration_ms, t.year,
-    t.kind, t.section, t.sub_index, f.missing_since IS NOT NULL";
+    t.kind, t.section, t.sub_index, f.missing_since IS NOT NULL, t.copies";
 
 const ITEM_FROM: &str = "FROM playlist_items i
-    LEFT JOIN tracks t ON t.id = (SELECT min(t2.id) FROM tracks t2 WHERE t2.identity_id = i.identity_id)
+    LEFT JOIN tracks t ON t.id = (SELECT t2.id FROM tracks t2 JOIN files f2 ON f2.id = t2.file_id
+        WHERE t2.identity_id = i.identity_id
+        ORDER BY f2.missing_since IS NOT NULL, t2.is_copy, t2.id LIMIT 1)
     LEFT JOIN files f ON f.id = t.file_id
     LEFT JOIN albums a ON a.id = t.album_id";
 
@@ -308,6 +310,7 @@ fn item(row: &Row<'_>) -> rusqlite::Result<PlaylistItem> {
             section: TrackSection::from_sql(row.get(19)?),
             sub_index: row.get(20)?,
             missing: row.get(21)?,
+            copies: u32::try_from(row.get::<_, i64>(22)?).unwrap_or(0),
         }),
         None => ItemContent::Dead(DeadItem {
             reference: reference(row.get(3)?, row.get(4)?),

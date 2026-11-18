@@ -23,6 +23,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+mod duplicates;
 mod info;
 mod location;
 mod query;
@@ -41,7 +42,9 @@ use helikodu_library::{
     TagWriteSettings,
 };
 use helikodu_model::library::TrackId;
+use helikodu_model::player::TrackFlags;
 use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
+use std::collections::HashMap;
 
 pub use self::info::{LibraryEntry, TagOrigin, TrackInfo, read_file_info};
 pub use self::location::{DATA_FOLDER, DATABASE_FILE, default_database_path};
@@ -53,6 +56,7 @@ pub use self::service::{
     LibraryEvent, LibraryService, LibraryServiceOptions, QueueItemInfo, WatchSettings,
 };
 pub use self::source::TrackSource;
+pub use helikodu_library::PlayKeys;
 /// What a tag editor needs: the files as they are opened for editing, the values a
 /// selection shares, and the changes written by [`MusicLibrary::write_tags`] and
 /// [`LibraryService::write_tags`].
@@ -75,6 +79,10 @@ pub use helikodu_library::{
 pub use helikodu_library::{
     AlbumMeasurement, CancelToken, LoudnessCoverage, LoudnessSelection, LoudnessTarget,
     MeasuredLoudness, StoredLoudness,
+};
+pub use helikodu_library::{
+    CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId, KeepRule,
+    MainCopyError, MatchBy, Trash, TrashError, TrashOutcome, TrashRefusal, Trashed, backup_path,
 };
 pub use helikodu_library::{SavedSearch, SavedSearchId};
 
@@ -106,6 +114,9 @@ pub enum LibraryError {
     /// A query could not run, or a saved search could not be changed.
     #[error(transparent)]
     Query(#[from] QueryError),
+    /// The main copy of a group of copies could not be changed.
+    #[error(transparent)]
+    MainCopy(#[from] MainCopyError),
     /// A scan was asked for without folders, and the library has none.
     #[error("the library has no folders yet; name the folders to scan")]
     NoFolders,
@@ -389,6 +400,25 @@ impl MusicLibrary {
     /// The library track of the whole file at `path`, if it is one.
     pub fn track_at(&self, path: &Path) -> Result<Option<TrackId>, LibraryError> {
         Ok(self.library.track_at(path, 0)?)
+    }
+
+    /// The playback flags of `track` (the tag editor's Playback group).
+    pub fn track_flags(&self, track: TrackId) -> Result<TrackFlags, LibraryError> {
+        Ok(self.library.track_flags(track)?)
+    }
+
+    /// Stores the playback flags of `track`. While a player runs, change them with
+    /// its `SetTrackFlags` command instead, so that its queue follows at once.
+    pub fn set_track_flags(&self, track: TrackId, flags: TrackFlags) -> Result<(), LibraryError> {
+        Ok(self.library.set_track_flags(track, flags)?)
+    }
+
+    /// The album, folder, grouping, artist and flags of `tracks`, for the play modes.
+    pub fn play_keys(
+        &self,
+        tracks: &[TrackId],
+    ) -> Result<HashMap<TrackId, PlayKeys>, LibraryError> {
+        Ok(self.library.play_keys(tracks)?)
     }
 
     /// The statistics of `track`.

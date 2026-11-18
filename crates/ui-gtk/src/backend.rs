@@ -25,6 +25,9 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 pub use helikodu_model::player::{
+    PlayModes, PlayScope, RepeatMode, ShuffleMode, StopAfter, TrackFlags,
+};
+pub use helikodu_model::player::{
     PlaybackStats, SignalLamp, SignalPath, SignalStage, StageKind, StageState,
 };
 pub use helikodu_model::settings::UiState;
@@ -643,6 +646,96 @@ pub enum PlayerRequest {
     SeekBy(f64),
     /// The volume control, 0 to 1.
     SetVolume(f64),
+    /// Moves the lyrics of the playing track by this many milliseconds
+    /// (positive shows the lines sooner); kept for the track.
+    AdjustLyricsOffset(i64),
+    /// Reads the lyrics of the playing track again.
+    ReloadLyrics,
+    /// Shuffle off, or by tracks, albums, folders, groupings or within albums.
+    SetShuffleMode(ShuffleMode),
+    /// Repeat off, the track, the album or the whole queue.
+    SetRepeatMode(RepeatMode),
+    /// Stop after the track, the album or the queue, or not.
+    SetStopAfterMode(StopAfter),
+    /// "Remove tracks after they play" on or off.
+    SetConsume(bool),
+    /// "Play only": everything, this artist or this album.
+    SetPlayScope(PlayScope),
+    /// "Continue from the selected track" on or off.
+    SetFollowCursor(bool),
+    /// The queue entry selected in the queue panel, for "Continue from the
+    /// selected track".
+    SetCursor(Option<u64>),
+    /// The first track of the next album in the queue.
+    NextAlbum,
+    /// The first track of the album before, or of this one when it is the first.
+    PreviousAlbum,
+    /// The first track of an album of the queue chosen at random.
+    RandomAlbum,
+    /// Sets the start of the A-B loop at the playing position.
+    LoopStartHere,
+    /// Sets the end of the A-B loop at the playing position; the loop then plays.
+    LoopEndHere,
+    /// Sets both points of the A-B loop (start, end), or clears it with `None`.
+    SetLoop(Option<(Duration, Duration)>),
+    /// Starts the sleep timer, replacing a running one.
+    StartSleepTimer {
+        /// How long until the time is up.
+        length: Duration,
+        /// What happens then.
+        when: SleepWhen,
+    },
+    /// Gives the running sleep timer more time.
+    ExtendSleepTimer(Duration),
+    /// Turns the sleep timer off.
+    CancelSleepTimer,
+    /// Changes the playback flags of a library track (the tag editor's Playback
+    /// group); they apply at once.
+    SetTrackFlags {
+        /// The track.
+        track: TrackKey,
+        /// Its flags.
+        flags: TrackFlags,
+    },
+}
+
+/// When the sleep timer stops playback once its time is up.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SleepWhen {
+    /// At once, after fading the sound out over the last 30 seconds.
+    #[default]
+    AtOnce,
+    /// When the track playing then ends.
+    AfterTrack,
+}
+
+/// A running sleep timer, as last reported.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SleepTimer {
+    /// The time left when it was reported; zero once the time is up and the
+    /// timer waits for the track to end.
+    pub remaining: Duration,
+    /// The length chosen, with what was added since.
+    pub length: Duration,
+    /// What happens when the time is up.
+    pub when: SleepWhen,
+}
+
+/// The A-B loop of the playing track, as far as its points are set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct LoopPoints {
+    /// The start (A).
+    pub start: Option<Duration>,
+    /// The end (B).
+    pub end: Option<Duration>,
+}
+
+impl LoopPoints {
+    /// The section that loops, once both points are set and A comes first.
+    pub fn range(&self) -> Option<(Duration, Duration)> {
+        let (start, end) = (self.start?, self.end?);
+        (start < end).then_some((start, end))
+    }
 }
 
 /// What happens at the end of a track or of the queue.
@@ -767,6 +860,43 @@ pub struct NowPlaying {
     pub format: AudioFormat,
 }
 
+/// Where the lyrics shown came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LyricsOrigin {
+    /// A `.lrc` file beside the track.
+    LrcFile,
+    /// A `.txt` file beside the track.
+    TextFile,
+    /// The tags of the track's file.
+    Tags,
+}
+
+/// One line of lyrics as the window shows it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LyricRow {
+    /// When it is sung; `None` in lyrics that are not synced.
+    pub time: Option<Duration>,
+    /// The text.
+    pub text: String,
+    /// Whether it starts a verse.
+    pub verse_start: bool,
+}
+
+/// The lyrics of the playing track.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LyricsView {
+    /// The lines.
+    pub lines: Vec<LyricRow>,
+    /// Whether the lines have times.
+    pub synced: bool,
+    /// Where they came from.
+    pub origin: LyricsOrigin,
+    /// The lyrics file, when they came from one.
+    pub file: Option<PathBuf>,
+    /// The offset of the track in milliseconds; positive shows the lines sooner.
+    pub offset_ms: i64,
+}
+
 /// The queue as the panel shows it.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct QueueSnapshot {
@@ -848,6 +978,11 @@ pub enum Update {
     Stats(PlaybackStats),
     /// A loudness measurement made progress or ended.
     Loudness(services::LoudnessStatus),
+    /// The lyrics of the playing track: `None` when it has none or nothing
+    /// plays.
+    Lyrics(Option<Arc<LyricsView>>),
+    /// The line of the lyrics sung now; `None` before the first.
+    LyricsLine(Option<usize>),
     /// Another program asked the player for this (MPRIS `Play`, `PlayPause`,
     /// `OpenUri`). It is sent with [`Backend::send`], so it passes the same gate
     /// as the window's own requests.
@@ -856,6 +991,25 @@ pub enum Update {
     Raise,
     /// Another program asked to quit (MPRIS `Quit`).
     Quit,
+    /// Every play mode: shuffle, repeat, consume, play only and "Continue from
+    /// the selected track". Sent after [`Update::Modes`].
+    PlayModes(PlayModes),
+    /// Stop after the track, the album or the queue, or not. Sent after
+    /// [`Update::StopAfter`].
+    StopAfterMode(StopAfter),
+    /// The A-B loop of the playing track changed; `None` when it ended.
+    Loop(Option<LoopPoints>),
+    /// The sleep timer started, changed or ended (`None`).
+    SleepTimer(Option<SleepTimer>),
+    /// The queue entry selected for "Continue from the selected track".
+    Cursor(Option<u64>),
+    /// The playback flags of a library track changed.
+    TrackFlags {
+        /// The track.
+        track: TrackKey,
+        /// Its flags now.
+        flags: TrackFlags,
+    },
 }
 
 /// Takes requests on the main thread.

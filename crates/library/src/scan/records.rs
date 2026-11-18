@@ -312,6 +312,7 @@ mod tests {
                 inode: 7,
             },
             class,
+            dev: 1,
         }
     }
 

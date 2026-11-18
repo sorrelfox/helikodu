@@ -1,6 +1,6 @@
 # helikodu-cli
 
-Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
+Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness, duplicates; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
 
 - **May depend on:** `model`, `service`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
@@ -21,6 +21,7 @@ helikodu-cli info FILE|TRACK-ID [--json] [--database PATH]
 helikodu-cli stats [--top N] [--json] [--database PATH]
 helikodu-cli loudness [--album|--library] [--write-tags] [--threads N] [--worker PATH]
                       [--json] [--database PATH] [FILE|TRACK-ID...]
+helikodu-cli duplicates [--json] [--database PATH]
 helikodu-cli --version
 ```
 
@@ -157,6 +158,26 @@ Shows the library folders, the totals and the most played tracks (`--top`, 0 to 
 
 `files` counts media files with tracks (not CUE sheets); `artists` counts track and album artists.
 
+#### duplicates
+
+Lists the groups of copies in the library: byte-identical files, the main copy first. It only lists; nothing is moved or deleted (the application moves copies to the trash). Text output marks each path `main`, `copy` or `same file` (another path to the same file on the disk, never a copy). With `--json`:
+
+```json
+{"groups": [
+  {"main_file_id": 12,
+   "files": [
+     {"file_id": 12, "path": "/music/Dawn/01.flac", "main": true, "missing": false,
+      "same_file_as": null, "format": "flac", "size_bytes": 24000000,
+      "added": 1795450000, "root": "/music", "track_id": 40},
+     {"file_id": 913, "path": "/backup/Dawn/01.flac", "main": false, "missing": false,
+      "same_file_as": null, "format": "flac", "size_bytes": 24000000,
+      "added": 1795460000, "root": "/backup", "track_id": null}
+   ]}
+]}
+```
+
+`track_id` is `null` for a copy without tracks of its own (with `on_scan = "skip"` in `[library.duplicates]`); `path_bytes` is added for a path that is not UTF-8, as in the other commands.
+
 #### loudness
 
 Measures library tracks, given as files or track numbers, with the EBU R128 / ReplayGain 2.0 scanner and stores the results in the library; playback prefers them over the tags. `--album` measures the whole albums of the tracks with the album gain (the album as one programme); a track given alone gets track values only. `--library` measures every track without a current measurement, with the rest of its album. `--write-tags` also writes `REPLAYGAIN_*` tags into the files (not for CUE sheet tracks); `--threads` sets the number of measuring threads (default half the processors). With `--json`:
@@ -196,6 +217,6 @@ cargo test -p helikodu-cli
 - `tests/cli.rs` runs the built program against generated WAV files with the `null` and `wav` backends; they make no sound.
 - `tests/replaygain.rs` plays FLAC files with ReplayGain tags and an Opus file with R128 tags, made by the `ffmpeg` tool, to the `wav` backend and checks the level of the output in every mode: the track and album gains, the preamp, the automatic choice by album neighbours, clipping prevention by the peak, and untagged files.
 - `tests/loudness.rs` scans two FLAC files made by `ffmpeg` as one album and parses the JSON of `loudness`: one track measured without album values and the file untouched, the rest of the library with the album gain, nothing left after that, the album of a track number with `--write-tags` (the tags read back by `info`), and the usage errors.
-- `tests/library.rs` makes a small library with `ffmpeg` (including a file name that is not UTF-8 and an excluded folder), scans it with real worker processes into a temporary database, and parses the JSON of `scan`, `search`, `info` and `stats`, and checks the errors and exit codes. It builds `helikodu-scan-worker` into the same target folder, beside `helikodu-cli`. It gives one track play counts with the `sqlite3` tool when that is installed.
+- `tests/library.rs` makes a small library with `ffmpeg` (including a file name that is not UTF-8 and an excluded folder), scans it with real worker processes into a temporary database, and parses the JSON of `scan`, `search`, `info`, `stats` and `duplicates`, and checks the errors and exit codes. It builds `helikodu-scan-worker` into the same target folder, beside `helikodu-cli`. It gives one track play counts with the `sqlite3` tool when that is installed.
 
 Tests whose tool or encoder is missing print `SKIPPED:` and pass.

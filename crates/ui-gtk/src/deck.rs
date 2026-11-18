@@ -11,7 +11,9 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{CompositeTemplate, glib};
 
-use crate::backend::{Backend, CoverKey, PlaybackState, PlayerRequest, Repeat, SignalState};
+mod modes;
+
+use crate::backend::{Backend, CoverKey, PlaybackState, PlayerRequest, SignalState};
 use crate::format;
 use crate::i18n::{fill, tr};
 use crate::models::CoverCache;
@@ -67,6 +69,18 @@ mod imp {
         /// Set while the volume slider follows the player, so it does not echo.
         pub(super) updating: Cell<bool>,
         pub(super) covers: RefCell<Option<Rc<CoverCache>>>,
+        /// Now Playing's start group: "Next" and the next track.
+        pub(super) next_box: RefCell<Option<(gtk::Box, gtk::Label)>>,
+        /// The loop chip before the remaining time, and its text.
+        pub(super) loop_chip: RefCell<Option<(gtk::Box, gtk::Label)>>,
+        /// The sleep chip before the volume, and its time left.
+        pub(super) sleep_chip: RefCell<Option<(gtk::Button, gtk::Label)>>,
+        /// The sleep timer popover.
+        pub(super) sleep_popover: RefCell<Option<Rc<crate::popovers::sleep_timer::SleepPopover>>>,
+        /// The countdown of the sleep chip while a timer runs.
+        pub(super) sleep_tick: RefCell<Option<glib::SourceId>>,
+        /// The player's state, for the mode buttons' handlers.
+        pub(super) playback: RefCell<std::rc::Weak<Playback>>,
     }
 
     #[glib::object_subclass]
@@ -120,20 +134,8 @@ impl Deck {
     pub(crate) fn bind(&self, backend: &Backend, playback: &Rc<Playback>, covers: &Rc<CoverCache>) {
         let imp = self.imp();
         imp.covers.replace(Some(covers.clone()));
-        let b = backend.clone();
-        let pb = Rc::downgrade(playback);
-        imp.shuffle.connect_clicked(move |_| {
-            if let Some(pb) = pb.upgrade() {
-                b.send(PlayerRequest::SetShuffle(!pb.view().shuffle));
-            }
-        });
-        let b = backend.clone();
-        let pb = Rc::downgrade(playback);
-        imp.repeat.connect_clicked(move |_| {
-            if let Some(pb) = pb.upgrade() {
-                b.send(PlayerRequest::SetRepeat(pb.view().repeat.next()));
-            }
-        });
+        imp.playback.replace(Rc::downgrade(playback));
+        self.setup_modes(backend, playback);
         let b = backend.clone();
         imp.seek_bar
             .connect_seek(move |to| b.send(PlayerRequest::Seek(to)));
@@ -207,13 +209,17 @@ impl Deck {
         play.add_controller(keys);
     }
 
-    /// Opens the play button's menu above it: Stop, Stop after this track,
-    /// Jump to the playing track.
+    /// Opens the play button's menu above it: Stop, Stop after ▸, Sleep
+    /// timer…, Jump to the playing track.
     pub(crate) fn popup_play_menu(&self) -> gtk::PopoverMenu {
         let menu = gtk::gio::Menu::new();
         let stop = gtk::gio::Menu::new();
         stop.append(Some(&tr("Stop")), Some("app.stop"));
-        stop.append(Some(&tr("Stop after this track")), Some("app.stop-after"));
+        stop.append_submenu(
+            Some(&tr("Stop after")),
+            &crate::play_modes::stop_after_menu(),
+        );
+        stop.append(Some(&tr("Sleep timer…")), Some("win.sleep-timer"));
         menu.append_section(None, &stop);
         let jump = gtk::gio::Menu::new();
         jump.append(
@@ -294,15 +300,17 @@ impl Deck {
             Change::Position => self.show_times(view),
             Change::State | Change::Track => {
                 let playing = view.state == PlaybackState::Playing;
-                let (icon, name) = if playing {
-                    ("media-playback-pause-symbolic", tr("Pause"))
+                imp.play.set_icon_name(if playing {
+                    "media-playback-pause-symbolic"
                 } else {
-                    ("media-playback-start-symbolic", tr("Play"))
-                };
-                imp.play.set_icon_name(icon);
-                imp.play.set_tooltip_text(Some(&name));
-                imp.play
-                    .update_property(&[gtk::accessible::Property::Label(&name)]);
+                    "media-playback-start-symbolic"
+                });
+                self.show_play_name(view);
+                // The sleep chip counts down only while playing.
+                if view.sleep.is_some() {
+                    self.tick_sleep(view);
+                    self.keep_sleep_ticking(view);
+                }
                 let has_track = view.now.is_some();
                 imp.play.set_sensitive(has_track);
                 imp.previous.set_sensitive(has_track);
@@ -377,47 +385,10 @@ impl Deck {
                 imp.output
                     .update_property(&[gtk::accessible::Property::Label(&name)]);
             }
-            Change::Modes => {
-                let (name, active) = if view.shuffle {
-                    (tr("Shuffle: on"), true)
-                } else {
-                    (tr("Shuffle: off"), false)
-                };
-                imp.shuffle.set_tooltip_text(Some(&name));
-                imp.shuffle
-                    .update_property(&[gtk::accessible::Property::Label(&name)]);
-                if active {
-                    imp.shuffle.add_css_class("active");
-                } else {
-                    imp.shuffle.remove_css_class("active");
-                }
-                let (icon, name) = match view.repeat {
-                    Repeat::Off => ("media-playlist-repeat-symbolic", tr("Repeat: off")),
-                    Repeat::All => ("media-playlist-repeat-symbolic", tr("Repeat: all")),
-                    Repeat::One => (
-                        "media-playlist-repeat-song-symbolic",
-                        tr("Repeat: this track"),
-                    ),
-                };
-                imp.repeat.set_icon_name(icon);
-                imp.repeat.set_tooltip_text(Some(&name));
-                imp.repeat
-                    .update_property(&[gtk::accessible::Property::Label(&name)]);
-                if view.repeat == Repeat::Off {
-                    imp.repeat.remove_css_class("active");
-                } else {
-                    imp.repeat.add_css_class("active");
-                }
-                imp.stop_mark.set_visible(view.stop_after);
-                let play_name = if view.stop_after {
-                    tr("Play or pause; stops after this track")
-                } else {
-                    tr("Play or pause")
-                };
-                imp.play
-                    .update_property(&[gtk::accessible::Property::Description(&play_name)]);
-            }
-            Change::Queue | Change::Stats => {}
+            Change::Modes => self.show_modes(view),
+            Change::Loop => self.show_loop(view),
+            Change::Sleep => self.show_sleep(view),
+            Change::Queue | Change::Stats | Change::Cursor => {}
         }
     }
 
@@ -444,5 +415,63 @@ impl Deck {
     /// The play button, for keyboard focus.
     pub(crate) fn focus_target(&self) -> gtk::Widget {
         self.imp().play.get().upcast()
+    }
+
+    /// Calls `activated` when the cover is clicked (it opens Now Playing).
+    pub(crate) fn connect_cover_activated(&self, activated: impl Fn() + 'static) {
+        let cover = self.imp().cover.get();
+        cover.set_cursor_from_name(Some("pointer"));
+        cover.set_tooltip_text(Some(&tr("Show Now Playing")));
+        let click = gtk::GestureClick::new();
+        click.connect_released(move |gesture, _, _, _| {
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            activated();
+        });
+        cover.add_controller(click);
+    }
+
+    /// In Now Playing the start group shows the next track (`Some`, as
+    /// "Title · duration", empty when none follows) instead of the playing one;
+    /// `None` shows the playing one again.
+    pub(crate) fn show_next(&self, next: Option<&str>) {
+        let imp = self.imp();
+        let Some(group) = imp.cover.parent().and_downcast::<gtk::Box>() else {
+            return;
+        };
+        if imp.next_box.borrow().is_none() {
+            let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+            line.set_valign(gtk::Align::Center);
+            line.set_visible(false);
+            let micro = gtk::Label::new(Some(&tr("Next")));
+            micro.add_css_class("hk-micro-label");
+            micro.add_css_class("hk-deck-next-label");
+            line.append(&micro);
+            let title = gtk::Label::new(None);
+            title.add_css_class("hk-deck-subtitle");
+            title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+            title.set_max_width_chars(40);
+            title.set_xalign(0.0);
+            line.append(&title);
+            group.append(&line);
+            imp.next_box.replace(Some((line, title)));
+        }
+        let shown = next.is_some();
+        let mut child = group.first_child();
+        while let Some(widget) = child {
+            child = widget.next_sibling();
+            let is_next = imp
+                .next_box
+                .borrow()
+                .as_ref()
+                .is_some_and(|(b, _)| widget == *b);
+            widget.set_visible(if is_next { shown } else { !shown });
+        }
+        if let (Some((line, title)), Some(text)) = (imp.next_box.borrow().as_ref(), next) {
+            title.set_text(text);
+            line.update_property(&[gtk::accessible::Property::Label(&fill(
+                &tr("Next: {}"),
+                &[text],
+            ))]);
+        }
     }
 }

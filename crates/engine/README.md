@@ -123,7 +123,7 @@ Not done yet in the output layer:
 |---|---|---|
 | Conversion to float | `to_float` | Integers as `n / 2^(bits-1)`: exact up to 24 bits |
 | Channel mapping, downmix, upmix | `MixMatrix` | ITU-R BS.775 coefficients (centre and surrounds at −3 dB), LFE dropped unless included, downmix scaled so it cannot clip |
-| Loudness gain | `resolve_gain`, `GainStage` | ReplayGain 2.0 reference of −18 LUFS; Opus R128 tags become `r128 / 256 + 5` dB; track, album and automatic modes, preamps for tagged and untagged files, clipping prevention by peak |
+| Loudness gain | `resolve_gain`, `resolve_track_gain`, `GainStage` | ReplayGain 2.0 reference of −18 LUFS; Opus R128 tags become `r128 / 256 + 5` dB; track, album and automatic modes, preamps for tagged and untagged files, the track's own volume adjustment, clipping prevention by peak |
 | Resampling | `ResampleStage` | rubato behind the crate's own `Resampler` trait: FFT for rate pairs with a small common divisor, windowed sinc otherwise; four quality presets; start-up delay removed, `n` frames become `ceil(n × to / from)` |
 | Software volume | `SoftwareVolume`, `SharedVolume` | `a = p³`, 20 ms linear ramps, mute |
 | Anti-click fades | `Fader`, `FadeDurations` | Raised-cosine fades on start, pause, resume, seek, stop, skip and device switch: 10 ms (5 ms around a seek) by default, the lengths of `[playback.transitions]` through `FadeDurations::from_settings` |
@@ -187,6 +187,7 @@ for event in events.iter() {
 | `transport/timeline.rs` | Which item each part of the ring buffer belongs to, and the heard position |
 | `transport/device.rs` | The connected backend, the open stream, and opening one for an item |
 | `transport/signal.rs` | The signal path of the heard item and the playback counters, as events |
+| `transport/ab_loop.rs` | The A-B loop of the loaded item |
 
 **How it plays.** While playing, the thread wakes every few milliseconds (a sixteenth of the buffer, 2 to 10 ms), writes at most one buffer length, follows the heard position and sends what is due. While stopped or paused it sleeps until a command arrives. Each block of work is bounded, and rendering reuses its buffers, so the steady state does not allocate; opening an item, a join and a transition do.
 
@@ -204,6 +205,10 @@ for event in events.iter() {
 - *Policies.* No crossfade between consecutive items of one album (`PlaybackItem::album`, the same key) while `keep_albums_gapless` is set, on a bit-perfect path in exclusive mode, or for an item of unknown length: they join gaplessly, bit-exact. When the next item needs another stream, the current one falls over the window instead (equal-power, to silence), the stream is reopened, and the next one fades in as long on the device side. The integer path of 32-bit sources stays off while a crossfade can begin.
 - *Skips.* A `Load` while playing is a skip. With the skip crossfade on and the same stream for the new item, the engine crossfades from the end of the audio already buffered (at most the buffer length) over the skip length; `TrackEnded` (`Interrupted`) and `TrackStarted` come at once, without `Loading`, and the new item's position counts from its first frame. Otherwise the playing item fades out over the skip fade.
 - A pause, seek, stop or device switch ends a crossfade: playback continues with the item heard, and the crossfade into the next one begins again, shortened, if there is time left.
+
+**A-B loop.** `SetLoop { item, range }` loops a section of the loaded item (the one heard, or paused at), or ends the loop with `None`; it is ignored for any other item or an empty range. The source cuts each decoded block that starts before the loop's end and reaches it, and once the chain has taken that block it moves the decoder back to the start without resetting the chain, so the start follows the end as the next frame, without a gap; the end of the source inside the loop moves back too (unless nothing was decoded since the last move). Each move back is a rewind of the item's timeline segment, so positions stay inside the loop. When a loop is set, changed or ended while playing, the audio already rendered is compared with it: from the first ring position where they part (the end passed, a move back that no longer applies, the next item already joined or crossfaded in) the buffer is dropped with a `Discard`, the next item goes back to being next, and the item is rendered again from there; a heard position at or past the end jumps to the start at once (while paused, the position moves there). A seek past the end leaves the loop: blocks after the end are not cut. While the loop holds, `NearEnd` is not sent for the item and no crossfade is planned into the next one. The loop ends with the item, and is given again to the item's source after a pause, seek or device switch.
+
+**Volume for this track.** `PlaybackItem::track_volume_db` is added to the loudness gain before clipping prevention (`resolve_track_gain`); with loudness normalization off it is the gain on its own (`track volume -3.00 dB` in the signal path). Zero adds nothing, so a bit-perfect path stays bit-perfect.
 
 **Position.** The heard ring position is the frames the device side has taken (played or dropped) minus the delay the backend reports; the timeline turns it into the item and its position, at the source rate.
 

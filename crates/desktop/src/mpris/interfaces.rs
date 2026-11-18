@@ -235,15 +235,13 @@ impl Player {
 
     #[zbus(property)]
     fn set_shuffle(&self, value: bool) {
+        let mut shuffle = ShuffleMode::Off;
         self.shared.state().assume(|state| {
             let modes = state::with_shuffle(state.modes(), value);
+            shuffle = modes.shuffle;
             state.set_modes(modes);
         });
-        self.send(PlayerCommand::SetShuffle(if value {
-            ShuffleMode::Tracks
-        } else {
-            ShuffleMode::Off
-        }));
+        self.send(PlayerCommand::SetShuffle(shuffle));
     }
 
     #[zbus(property)]

@@ -396,3 +396,55 @@ fn library_errors() {
         assert_eq!(code, Some(2), "{args:?}");
     }
 }
+
+#[test]
+fn duplicates_lists_the_groups_of_copies() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let fx = Fixture::new("duplicates");
+    // The album again in a second folder: two copies.
+    let backup = fx.dir.join("Backup");
+    std::fs::create_dir_all(&backup).unwrap();
+    for name in ["01 Morning.flac", "02 Noon.flac"] {
+        std::fs::copy(
+            fx.music.join("Aurora Test/Dawn").join(name),
+            backup.join(name),
+        )
+        .unwrap();
+    }
+    let worker = worker_program();
+    let (code, _, stderr) = fx.run(&[
+        os("scan"),
+        fx.music.as_os_str(),
+        backup.as_os_str(),
+        os("--exclude"),
+        os("Skip"),
+        os("--worker"),
+        worker.as_os_str(),
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+
+    let listed = fx.json(&[os("duplicates"), os("--json")]);
+    let groups = listed["groups"].as_array().unwrap();
+    assert_eq!(groups.len(), 2, "{listed}");
+    for group in groups {
+        let files = group["files"].as_array().unwrap();
+        assert_eq!(files.len(), 2);
+        assert_eq!(files[0]["main"], true);
+        assert_eq!(files[0]["file_id"], group["main_file_id"]);
+        assert_eq!(files[1]["main"], false);
+        let in_backup = files
+            .iter()
+            .filter(|f| f["path"].as_str().unwrap().contains("/Backup/"))
+            .count();
+        assert_eq!(in_backup, 1, "{group}");
+        assert_eq!(files[1]["same_file_as"], Value::Null);
+        assert_eq!(files[1]["format"], "flac");
+    }
+    let (code, stdout, stderr) = fx.run(&[os("duplicates")]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(stdout.contains("2 groups; 2 copies"), "{stdout}");
+    // Nothing was moved.
+    assert!(backup.join("01 Morning.flac").is_file());
+}

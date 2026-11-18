@@ -5,13 +5,14 @@ Choose **Preferences** in the main menu, or press **Ctrl+,**, to open the **Sett
 | Page | What it holds |
 |---|---|
 | **Library** | Your music **Folders**, **Skip** patterns, **Scanning** (watching for changes, symbolic links, video files, drives that are not connected), and **Storage** limits for covers, analysis data, logs and the undo history. See [First run and music folders](first-run.md) |
-| **Playback** | What the **Previous button** does, the **Seek step** of the seek shortcuts (5 s by default), when to **Count a play**, whether **Playing an album** replaces the queue or adds to it, what happens **When Helikodu starts**, resuming **Long tracks**, and keeping the computer awake while music plays (**Power**) |
+| **Playback** | What the **Previous button** does, the **Seek step** of the seek shortcuts (5 s by default), when to **Count a play**, whether **Playing an album** replaces the queue or adds to it, the **Crossfade** between tracks and when you skip, the **Fades** for pause, stop, seek and skip, what happens **When Helikodu starts**, resuming **Long tracks**, keeping the computer awake while music plays (**Power**), and the SoundFont for **MIDI files**, the song lengths for **SID tunes** and how often **Looping tunes** repeat. See [Crossfades and fades](playing.md#crossfades-and-fades) |
 | **Audio output** | The backend, device, mode, sample rate and format, volume control and buffer. See [Choosing the audio output](audio-output.md) |
-| **Loudness** | ReplayGain and R128 normalization. See [Loudness and ReplayGain](loudness.md) |
+| **Loudness** | ReplayGain and R128 normalization, and measuring the loudness of your tracks. See [Loudness and ReplayGain](loudness.md) |
+| **DSP and EQ** | Equalizer, crossfeed, channel mix, limiter and dither. See [Equalizer and sound processing](dsp.md) |
 | **Appearance** | Light or dark colours, the accent colour, the window style, the menu bar, striped tables, the language and notifications |
 | **Advanced** | Tag writing, the library database, how much the log records, developer mode, and putting every setting back to its default |
 
-**DSP and EQ** and **Shortcuts** are listed but come in a later version.
+**Shortcuts** is listed but comes in a later version.
 
 ## Appearance
 
@@ -31,9 +32,20 @@ High-contrast and reduced-motion preferences of the desktop are followed as well
 - **Very large files**: **Change tags in place for files over** a size (2 GiB by default). Smaller files are changed through a checked copy, which is safe even if the power fails; a change in place is faster for huge files but has no such safety net. The tag editor tells you before it happens.
 - **Ratings**: **Also write ratings to the tags of the files** is shown, but cannot be turned on in this version; ratings stay in the library.
 - **Library database**: where the library is stored, with **Open folder**.
-- **Logs**: **Normal detail** or **Full detail, for a bug report**, and **Copy diagnostics**, which puts a summary for a bug report on the clipboard. Logs stay on this computer.
+- **Slow drives**: **Load each track into memory before it plays**, for drives that are slow or go to sleep (up to 512 MiB per track).
+- **Logs**: **No logs**, **Normal detail** or **Full detail, for a bug report**, and **Copy diagnostics**, which puts a summary for a bug report on the clipboard. Logs stay on this computer.
 - **Developer mode**: **Show tools for testing** adds the silent and WAV-file outputs.
 - **Reset**: **Reset settings…** puts every setting back to its default. The library, playlists, ratings and play counts are kept.
+
+## Copies of the same file
+
+Helikodu notices when your library holds the same file more than once: files whose bytes are identical, content and tags (for example an album copied into a second folder). Files that were re-encoded or retagged are not copies. Two paths that lead to the very same file on the disk (a hard link, or a music folder reached through a link) count as one file.
+
+- Copies share one set of **play counts, ratings, history and playlist entries**. Playing any of them plays the **main copy**: the copy that came into the library first, unless you choose another. When the main copy disappears or its drive is not connected, the next copy takes over.
+- **What to do with copies** (`[library.duplicates]` in the settings file): `on_scan = "add"` (the default) gives copies their own entries in the library, as any other file; `on_scan = "skip"` keeps them out of every list, count and search, while Helikodu still knows them. `show_one = true` shows only the main copy of each file in every list, count, search and in the statistics; the folder view still shows every file. A change applies at once.
+- **Combining play counts.** When Helikodu first finds copies in a library that counted them separately, it adds up their plays and keeps the main copy's rating (or the newest one). Before it does this the first time, it makes a copy of the library next to it, `library.db.backup-before-copies`.
+- **Removing copies** moves them to the desktop trash, never deletes them, and only after you confirm. A copy is moved only if it is still identical to the main copy; the main copy itself, and a second path to the same file, are never moved.
+- `helikodu-cli duplicates` lists the copies.
 
 ## The settings file
 

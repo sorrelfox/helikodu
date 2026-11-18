@@ -16,6 +16,7 @@ pub mod files;
 pub mod formats;
 pub mod jobs;
 pub mod library;
+pub mod lyrics;
 pub mod player;
 mod service;
 pub mod settings;

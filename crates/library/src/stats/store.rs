@@ -103,8 +103,10 @@ pub(crate) fn set_rating(
     rating: Option<Rating>,
 ) -> rusqlite::Result<()> {
     ensure_row(c, identity)?;
-    c.prepare_cached("UPDATE stats SET rating = ?2 WHERE identity_id = ?1")?
-        .execute(params![identity.0, rating.map(Rating::half_stars)])?;
+    c.prepare_cached(
+        "UPDATE stats SET rating = ?2, rated_at = unixepoch() WHERE identity_id = ?1",
+    )?
+    .execute(params![identity.0, rating.map(Rating::half_stars)])?;
     Ok(())
 }
 
@@ -156,7 +158,7 @@ pub(crate) fn history(
     c.prepare_cached(
         "SELECT h.identity_id,
                 (SELECT t.id FROM tracks t WHERE t.identity_id = h.identity_id
-                 ORDER BY t.id LIMIT 1),
+                 ORDER BY t.is_copy, t.id LIMIT 1),
                 h.started_at, h.played_ms, h.counted, h.context
          FROM history h
          WHERE (?1 IS NULL OR h.identity_id = ?1)

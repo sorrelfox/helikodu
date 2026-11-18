@@ -27,7 +27,7 @@ use helikodu_model::settings::{OutputFormat, OutputSettings, SampleRatePolicy, V
 
 use super::{
     FadeDurations, GainDecision, LoudnessInfo, LoudnessSettings, MixKind, MixMatrix, MixOptions,
-    ResampleMethod, ResamplerQuality, TpdfDither, resolve_gain,
+    ResampleMethod, ResamplerQuality, TpdfDither, resolve_track_gain,
 };
 use crate::dsp::{CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan};
 use crate::output::StreamConfig;
@@ -114,6 +114,8 @@ pub struct PathRequest {
     pub loudness: LoudnessInfo,
     /// Whether the track plays as part of its album, for the automatic loudness mode.
     pub album_context: bool,
+    /// The track's own volume adjustment in dB, applied with the loudness gain.
+    pub track_volume_db: f64,
     /// The format the device was opened with.
     pub device: AudioSpec,
     /// Where the volume is applied.
@@ -265,8 +267,13 @@ impl PathPlan {
     pub fn new(request: &PathRequest, settings: &ProcessingSettings) -> Self {
         let source = request.source;
         let device = request.device;
-        let gain = resolve_gain(&request.loudness, &settings.loudness, request.album_context)
-            .filter(|gain| !gain.is_unity());
+        let gain = resolve_track_gain(
+            &request.loudness,
+            &settings.loudness,
+            request.album_context,
+            request.track_volume_db,
+        )
+        .filter(|gain| !gain.is_unity());
         let channel_mix = {
             let matrix = MixMatrix::new(source.spec.layout, device.layout, settings.mix);
             (!matrix.is_identity()).then(|| ChannelMixPlan {
@@ -472,6 +479,7 @@ mod tests {
             source: SourceFormat::new(source),
             loudness: LoudnessInfo::default(),
             album_context: false,
+            track_volume_db: 0.0,
             device,
             volume: VolumePlan::Fixed,
             dsp: false,
@@ -595,6 +603,26 @@ mod tests {
             },
             ..ProcessingSettings::default()
         };
+        assert!(PathPlan::new(&r, &settings).is_bit_perfect());
+    }
+
+    #[test]
+    fn the_track_volume_is_a_gain_stage() {
+        let settings = ProcessingSettings::default();
+        let mut r = request(cd(), cd());
+        r.track_volume_db = -3.0;
+        let plan = PathPlan::new(&r, &settings);
+        assert!(!plan.is_bit_perfect());
+        let gain = plan.gain.unwrap();
+        assert_eq!(gain.db, -3.0);
+        assert!((gain.linear() - 0.707_945_784_384_137_9).abs() < 1e-12);
+        assert_eq!(
+            plan.to_string(),
+            "44.1 kHz/16-bit stereo → track volume -3.00 dB → TPDF dither 16-bit → \
+             s16le 44.1 kHz stereo"
+        );
+        // Zero keeps a bit-perfect path bit-perfect.
+        r.track_volume_db = 0.0;
         assert!(PathPlan::new(&r, &settings).is_bit_perfect());
     }
 

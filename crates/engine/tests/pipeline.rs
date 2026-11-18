@@ -31,6 +31,7 @@ fn request(source: SourceFormat, device: AudioSpec, volume: VolumePlan) -> PathR
         source,
         loudness: LoudnessInfo::default(),
         album_context: false,
+        track_volume_db: 0.0,
         device,
         volume,
         dsp: false,

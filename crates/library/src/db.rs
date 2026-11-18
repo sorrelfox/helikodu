@@ -95,6 +95,7 @@ pub struct Database {
     writer: Option<WriterThread>,
     readers: ReadPool,
     schema_version: u32,
+    location: Location,
 }
 
 impl Database {
@@ -115,6 +116,7 @@ impl Database {
             writer: Some(writer),
             readers,
             schema_version,
+            location: config.location.clone(),
         })
     }
 
@@ -131,6 +133,7 @@ impl Database {
             writer: None,
             readers,
             schema_version,
+            location: config.location.clone(),
         })
     }
 
@@ -155,6 +158,27 @@ impl Database {
         read: impl FnOnce(&Connection) -> rusqlite::Result<T>,
     ) -> Result<T, DbError> {
         self.readers.read(read)
+    }
+
+    /// Where the database lives.
+    pub(crate) fn location(&self) -> &Location {
+        &self.location
+    }
+
+    /// Writes a consistent copy of the database to the new file `target`
+    /// (`VACUUM INTO`), from a reading connection, so that writes go on meanwhile.
+    pub(crate) fn copy_to(&self, target: &std::path::Path) -> Result<(), DbError> {
+        let Some(target) = target.to_str() else {
+            return Err(rusqlite::Error::InvalidPath(target.to_path_buf()).into());
+        };
+        self.readers.outside_transaction(|c| {
+            // The connection is opened read-only, so the database itself cannot
+            // change; `query_only` would refuse the statement.
+            c.pragma_update(None, "query_only", false)?;
+            let copied = c.execute("VACUUM INTO ?1", [target]).map(drop);
+            c.pragma_update(None, "query_only", true)?;
+            copied
+        })
     }
 
     /// Switches the sort order to `collation` and rebuilds the indexes that use it.

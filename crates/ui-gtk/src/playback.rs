@@ -6,13 +6,13 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use gtk::glib;
 
 use crate::backend::{
-    AlbumKey, Backend, NowPlaying, OutputInfo, PlaybackState, PlaybackStats, QueueSnapshot, Repeat,
-    SignalPath, Update,
+    AlbumKey, Backend, LoopPoints, NowPlaying, OutputInfo, PlayModes, PlaybackState, PlaybackStats,
+    QueueSnapshot, Repeat, RepeatMode, ShuffleMode, SignalPath, SleepTimer, StopAfter, Update,
 };
 
 /// What the player does now.
@@ -32,12 +32,28 @@ pub(crate) struct PlayerView {
     pub(crate) signal: Option<Rc<SignalPath>>,
     /// The output's counters, as last reported.
     pub(crate) stats: Option<PlaybackStats>,
+    /// Every play mode.
+    pub(crate) modes: PlayModes,
+    /// Stop after the track, the album or the queue.
+    pub(crate) stop_after_mode: StopAfter,
+    /// The A-B loop of the playing track.
+    pub(crate) ab_loop: Option<LoopPoints>,
+    /// The sleep timer while one runs, and when it was reported.
+    pub(crate) sleep: Option<(SleepTimer, Instant)>,
+    /// The queue entry selected for "Continue from the selected track".
+    pub(crate) cursor: Option<u64>,
 }
 
 impl PlayerView {
     /// The album of the playing track.
     pub(crate) fn album(&self) -> Option<AlbumKey> {
         self.now.as_ref().map(|n| n.track.album)
+    }
+
+    /// The time left on the sleep timer now, counted down from its report.
+    pub(crate) fn sleep_left(&self) -> Option<Duration> {
+        self.sleep
+            .map(|(timer, at)| timer.remaining.saturating_sub(at.elapsed()))
     }
 }
 
@@ -55,6 +71,12 @@ pub(crate) enum Change {
     Signal,
     /// The playback counters.
     Stats,
+    /// The A-B loop.
+    Loop,
+    /// The sleep timer.
+    Sleep,
+    /// The entry selected in the queue.
+    Cursor,
 }
 
 type Listener = Box<dyn Fn(&PlayerView, Change)>;
@@ -110,6 +132,10 @@ impl Playback {
             Change::Queue,
             Change::Signal,
             Change::Stats,
+            Change::Modes,
+            Change::Loop,
+            Change::Sleep,
+            Change::Cursor,
         ] {
             listener(&view, change);
         }
@@ -160,11 +186,52 @@ impl Playback {
                 Update::Modes { shuffle, repeat } => {
                     view.shuffle = shuffle;
                     view.repeat = repeat;
+                    // The full modes follow; until then the coarse ones hold.
+                    if shuffle != (view.modes.shuffle != ShuffleMode::Off) {
+                        view.modes.shuffle = if shuffle {
+                            ShuffleMode::Tracks
+                        } else {
+                            ShuffleMode::Off
+                        };
+                    }
+                    if repeat != coarse_repeat(view.modes.repeat) {
+                        view.modes.repeat = match repeat {
+                            Repeat::Off => RepeatMode::Off,
+                            Repeat::All => RepeatMode::All,
+                            Repeat::One => RepeatMode::One,
+                        };
+                    }
                     &[Change::Modes]
                 }
                 Update::StopAfter(on) => {
                     view.stop_after = on;
+                    if on != (view.stop_after_mode != StopAfter::Off) {
+                        view.stop_after_mode = if on { StopAfter::Track } else { StopAfter::Off };
+                    }
                     &[Change::Modes]
+                }
+                Update::PlayModes(modes) => {
+                    view.modes = modes;
+                    view.shuffle = modes.shuffle != ShuffleMode::Off;
+                    view.repeat = coarse_repeat(modes.repeat);
+                    &[Change::Modes]
+                }
+                Update::StopAfterMode(mode) => {
+                    view.stop_after_mode = mode;
+                    view.stop_after = mode != StopAfter::Off;
+                    &[Change::Modes]
+                }
+                Update::Loop(points) => {
+                    view.ab_loop = points;
+                    &[Change::Loop]
+                }
+                Update::SleepTimer(timer) => {
+                    view.sleep = timer.map(|t| (t, Instant::now()));
+                    &[Change::Sleep]
+                }
+                Update::Cursor(cursor) => {
+                    view.cursor = cursor;
+                    &[Change::Cursor]
                 }
                 // The output button follows the path: its lamp and the format
                 // the device was opened with.
@@ -209,5 +276,14 @@ impl Playback {
                 listener(&view, *change);
             }
         }
+    }
+}
+
+/// Repeat as the coarse modes name it: "this album" counts as repeating.
+fn coarse_repeat(mode: RepeatMode) -> Repeat {
+    match mode {
+        RepeatMode::Off => Repeat::Off,
+        RepeatMode::One => Repeat::One,
+        _ => Repeat::All,
     }
 }

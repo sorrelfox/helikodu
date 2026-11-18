@@ -95,7 +95,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
                 <accessibility>
                   <property name="label" translatable="yes">Add to Favourites</property>
                 </accessibility>
-                <style><class name="hk-icon"/></style>
+                <style><class name="hk-icon"/><class name="hk-deck-icon"/></style>
               </object>
             </child>
           </object>
@@ -106,9 +106,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
             <property name="valign">center</property>
             <child>
               <object class="GtkButton" id="shuffle">
-                <property name="icon-name">media-playlist-shuffle-symbolic</property>
+                <property name="icon-name">helikodu-shuffle-symbolic</property>
                 <property name="valign">center</property>
-                
                 <property name="tooltip-text" translatable="yes">Shuffle</property>
                 <accessibility>
                   <property name="label" translatable="yes">Shuffle</property>
@@ -176,9 +175,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
             </child>
             <child>
               <object class="GtkButton" id="repeat">
-                <property name="icon-name">media-playlist-repeat-symbolic</property>
+                <property name="icon-name">helikodu-repeat-symbolic</property>
                 <property name="valign">center</property>
-                
                 <property name="tooltip-text" translatable="yes">Repeat</property>
                 <accessibility>
                   <property name="label" translatable="yes">Repeat</property>

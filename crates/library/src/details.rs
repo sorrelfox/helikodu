@@ -291,14 +291,18 @@ fn totals(c: &Connection) -> rusqlite::Result<LibraryTotals> {
         let n: i64 = c.prepare_cached(sql)?.query_row([], |row| row.get(0))?;
         Ok(usize::try_from(n).unwrap_or(0))
     };
+    // With one copy shown, the hidden copies count nowhere.
+    let shown = crate::copies::settings::hidden_copies_condition(c)?.unwrap_or("1");
     let (tracks, duration_ms): (i64, i64) = c
-        .prepare_cached("SELECT count(*), coalesce(sum(duration_ms), 0) FROM tracks")?
+        .prepare_cached(&format!(
+            "SELECT count(*), coalesce(sum(duration_ms), 0) FROM tracks t WHERE {shown}"
+        ))?
         .query_row([], |row| Ok((row.get(0)?, row.get(1)?)))?;
     let (files, size): (i64, i64) = c
-        .prepare_cached(
+        .prepare_cached(&format!(
             "SELECT count(*), coalesce(sum(size), 0) FROM files f
-             WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.file_id = f.id)",
-        )?
+             WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.file_id = f.id AND {shown})"
+        ))?
         .query_row([], |row| Ok((row.get(0)?, row.get(1)?)))?;
     let (plays, played, rated): (i64, i64, i64) = c
         .prepare_cached(
@@ -308,16 +312,33 @@ fn totals(c: &Connection) -> rusqlite::Result<LibraryTotals> {
              WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.identity_id = s.identity_id)",
         )?
         .query_row([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+    let (artists, genres) = if shown == "1" {
+        (
+            count("SELECT count(DISTINCT person_id) FROM track_people WHERE role IN (0, 1)")?,
+            count("SELECT count(DISTINCT genre_id) FROM track_genres")?,
+        )
+    } else {
+        (
+            count(&format!(
+                "SELECT count(DISTINCT tp.person_id) FROM track_people tp
+                 JOIN tracks t ON t.id = tp.track_id WHERE tp.role IN (0, 1) AND {shown}"
+            ))?,
+            count(&format!(
+                "SELECT count(DISTINCT tg.genre_id) FROM track_genres tg
+                 JOIN tracks t ON t.id = tg.track_id WHERE {shown}"
+            ))?,
+        )
+    };
     Ok(LibraryTotals {
         roots: count("SELECT count(*) FROM roots")?,
         files: usize::try_from(files).unwrap_or(0),
         tracks: usize::try_from(tracks).unwrap_or(0),
-        albums: count(
+        albums: count(&format!(
             "SELECT count(*) FROM albums a
-             WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id)",
-        )?,
-        artists: count("SELECT count(DISTINCT person_id) FROM track_people WHERE role IN (0, 1)")?,
-        genres: count("SELECT count(DISTINCT genre_id) FROM track_genres")?,
+             WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id AND {shown})"
+        ))?,
+        artists,
+        genres,
         duration: unix_time::from_millis(duration_ms),
         size: u64::try_from(size).unwrap_or(0),
         missing_files: count("SELECT count(*) FROM files WHERE missing_since IS NOT NULL")?,
@@ -337,8 +358,8 @@ fn most_played(c: &Connection, limit: usize) -> rusqlite::Result<Vec<PlayedTrack
         "WITH top AS (
              SELECT s.identity_id AS identity, s.play_count AS plays,
                     s.last_played AS last_played,
-                    (SELECT min(t.id) FROM tracks t WHERE t.identity_id = s.identity_id)
-                        AS track
+                    (SELECT t.id FROM tracks t WHERE t.identity_id = s.identity_id
+                     ORDER BY t.is_copy, t.id LIMIT 1) AS track
              FROM stats s
              WHERE s.play_count > 0
                AND EXISTS (SELECT 1 FROM tracks t WHERE t.identity_id = s.identity_id)

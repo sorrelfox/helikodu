@@ -33,7 +33,7 @@ pub use dsp::{
     DspSettings, EqMode, EqualizerSettings, FilterKind, GRAPHIC_10_BANDS_HZ, GRAPHIC_31_BANDS_HZ,
     GraphicPreset, LimiterSettings, ParametricFilter, ResamplerQuality,
 };
-pub use library::{LibrarySettings, StorageLimits};
+pub use library::{DuplicateScan, DuplicateSettings, LibrarySettings, StorageLimits};
 pub use loudness::{ClippingPrevention, LoudnessMode, LoudnessSettings};
 pub use output::{
     DeviceLostPolicy, DeviceProfile, DsdOutput, OutputFormat, OutputSettings, SampleRatePolicy,

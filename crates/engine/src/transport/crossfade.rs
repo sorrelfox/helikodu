@@ -275,6 +275,7 @@ impl Worker {
         if frames == 0 && limit.is_some() && !source.is_finished() {
             return None;
         }
+        self.note_wraps(at);
         if let Some(mut ramp) = self.ramp {
             let touches = ramp.touches(frames);
             let ended = ramp.apply(&mut self.staging[..frames * channels], channels);
@@ -420,6 +421,10 @@ impl Worker {
         let room = (self.staging.len() / channels).saturating_sub(crossfade.capacity());
         let n = current.render(&mut self.staging[..room * channels]);
         let ended = current.is_finished();
+        self.note_wraps(at);
+        let Some(crossfade) = &mut self.crossfade else {
+            return n;
+        };
         let lead = usize::try_from(crossfade.lead.min(n as u64)).unwrap_or(n);
         crossfade.lead -= lead as u64;
         let began = crossfade.done == 0;
@@ -559,6 +564,7 @@ impl Worker {
         });
         let segment = self.segment_of(&incoming, at);
         let started = segment.started_event();
+        self.keep_loop_of(item.id);
         self.timeline.restart_with(segment);
         self.next = None;
         self.next_answered = false;

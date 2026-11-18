@@ -166,6 +166,9 @@ pub enum GainSource {
     Album,
     /// The track has no loudness information; the gain is the untagged preamp.
     Untagged,
+    /// Loudness normalization is off; the gain is the track's own volume
+    /// adjustment.
+    TrackVolume,
 }
 
 /// The gain chosen for one track.
@@ -177,6 +180,8 @@ pub struct GainDecision {
     pub source: GainSource,
     /// Whether clipping prevention lowered it.
     pub peak_limited: bool,
+    /// The track's own volume adjustment included in `db`, in dB.
+    pub track_volume_db: f64,
 }
 
 impl GainDecision {
@@ -197,8 +202,18 @@ impl fmt::Display for GainDecision {
             GainSource::Track => "track",
             GainSource::Album => "album",
             GainSource::Untagged => "untagged",
+            GainSource::TrackVolume => {
+                write!(f, "track volume {:+.2} dB", self.db)?;
+                if self.peak_limited {
+                    f.write_str(" (peak-limited)")?;
+                }
+                return Ok(());
+            }
         };
         write!(f, "ReplayGain {:+.2} dB ({source}", self.db)?;
+        if self.track_volume_db != 0.0 {
+            write!(f, ", track volume {:+.1} dB", self.track_volume_db)?;
+        }
         if self.peak_limited {
             f.write_str(", peak-limited")?;
         }
@@ -216,8 +231,35 @@ pub fn resolve_gain(
     settings: &LoudnessSettings,
     album_context: bool,
 ) -> Option<GainDecision> {
+    resolve_track_gain(info, settings, album_context, 0.0)
+}
+
+/// [`resolve_gain`] with the track's own volume adjustment `track_volume_db` added
+/// before clipping prevention. With loudness normalization off, the adjustment
+/// alone is the gain; `None` when that is zero too.
+pub fn resolve_track_gain(
+    info: &LoudnessInfo,
+    settings: &LoudnessSettings,
+    album_context: bool,
+    track_volume_db: f64,
+) -> Option<GainDecision> {
+    let track_volume_db = if track_volume_db.is_finite() {
+        track_volume_db
+    } else {
+        0.0
+    };
     let prefer_album = match settings.mode {
-        LoudnessMode::Off => return None,
+        LoudnessMode::Off if track_volume_db == 0.0 => return None,
+        LoudnessMode::Off => {
+            let peak = info.track_peak.or(info.album_peak);
+            let (db, peak_limited) = limit_by_peak(track_volume_db, peak, settings);
+            return Some(GainDecision {
+                db,
+                source: GainSource::TrackVolume,
+                peak_limited,
+                track_volume_db,
+            });
+        }
         LoudnessMode::Track => false,
         LoudnessMode::Album => true,
         LoudnessMode::Auto => album_context,
@@ -234,31 +276,47 @@ pub fn resolve_gain(
         track.or(album)
     };
     let Some((gain, peak, source)) = chosen else {
+        let db = settings.untagged_preamp_db + track_volume_db;
+        // The untagged preamp alone is not limited; a track volume is, where a
+        // peak is known.
+        let peak = info.track_peak.or(info.album_peak);
+        let (db, peak_limited) = if track_volume_db == 0.0 {
+            (db, false)
+        } else {
+            limit_by_peak(db, peak, settings)
+        };
         return Some(GainDecision {
-            db: settings.untagged_preamp_db,
+            db,
             source: GainSource::Untagged,
-            peak_limited: false,
+            peak_limited,
+            track_volume_db,
         });
     };
     // A track without its own peak may still have the album's; the album peak is
     // never below the track's, so it is a safe limit.
     let peak = peak.or(info.album_peak);
-    let mut db = gain + settings.preamp_db;
-    let mut peak_limited = false;
+    let (db, peak_limited) =
+        limit_by_peak(gain + settings.preamp_db + track_volume_db, peak, settings);
+    Some(GainDecision {
+        db,
+        source,
+        peak_limited,
+        track_volume_db,
+    })
+}
+
+/// `db`, lowered so that `peak` stays at full scale when the settings prevent
+/// clipping by the peak, and whether it was lowered.
+fn limit_by_peak(db: f64, peak: Option<f64>, settings: &LoudnessSettings) -> (f64, bool) {
     if settings.clipping == ClippingPrevention::Peak
         && let Some(peak) = peak
     {
         let limit = -linear_to_db(peak);
         if db > limit {
-            db = limit;
-            peak_limited = true;
+            return (limit, true);
         }
     }
-    Some(GainDecision {
-        db,
-        source,
-        peak_limited,
-    })
+    (db, false)
 }
 
 /// Applies a track's gain to interleaved `f32` frames, in 64-bit arithmetic.
@@ -446,11 +504,39 @@ mod tests {
     }
 
     #[test]
+    fn the_track_volume_is_added_before_clipping_prevention() {
+        let info = LoudnessInfo {
+            track_gain_db: Some(-6.0),
+            track_peak: Some(0.5),
+            ..LoudnessInfo::default()
+        };
+        let track = settings(LoudnessMode::Track);
+        let gain = resolve_track_gain(&info, &track, false, 3.5).unwrap();
+        assert!(close(gain.db, -2.5) && !gain.peak_limited);
+        assert_eq!(
+            gain.to_string(),
+            "ReplayGain -2.50 dB (track, track volume +3.5 dB)"
+        );
+        // A peak of 0.5 leaves 6.02 dB of room.
+        let gain = resolve_track_gain(&info, &track, false, 13.0).unwrap();
+        assert!(gain.peak_limited && close(gain.linear() * 0.5, 1.0));
+        // Normalization off: the adjustment alone, limited the same way.
+        let off = settings(LoudnessMode::Off);
+        assert_eq!(resolve_track_gain(&info, &off, false, 0.0), None);
+        let gain = resolve_track_gain(&info, &off, false, -4.0).unwrap();
+        assert_eq!((gain.db, gain.source), (-4.0, GainSource::TrackVolume));
+        assert_eq!(gain.to_string(), "track volume -4.00 dB");
+        let gain = resolve_track_gain(&info, &off, false, 9.0).unwrap();
+        assert!(gain.peak_limited && close(gain.linear() * 0.5, 1.0));
+    }
+
+    #[test]
     fn display_names_the_source() {
         let gain = GainDecision {
             db: -6.3,
             source: GainSource::Album,
             peak_limited: true,
+            track_volume_db: 0.0,
         };
         assert_eq!(
             gain.to_string(),

@@ -259,7 +259,7 @@ pub(crate) fn album(
             "SELECT {COLUMNS}, t.disc_subtitle {FROM}
              WHERE t.album_id = ?1 AND {visible} ORDER BY {ALBUM_ORDER}"
         ))?
-        .query_map([id.0], |row| Ok((summary(row)?, row.get(13)?)))?
+        .query_map([id.0], |row| Ok((summary(row)?, row.get(14)?)))?
         .collect::<rusqlite::Result<_>>()?;
     if tracks.is_empty() {
         return Ok(None);

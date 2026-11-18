@@ -45,9 +45,20 @@ harness = false
 name = "views"
 
 [[test]]
+# The Lyrics tab and Now Playing against the sample backend; GTK needs its own
+# main function.
+name = "lyrics"
+harness = false
+
+[[test]]
 # The tag editor over the running service and a generated library; GTK needs its
 # own main function.
 name = "tag_editing"
+harness = false
+
+[[test]]
+# The play modes against the sample backend; GTK needs its own main function.
+name = "play_modes"
 harness = false
 
 [lints]

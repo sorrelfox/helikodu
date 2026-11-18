@@ -15,11 +15,13 @@ This folder is outside the Cargo workspace because fuzzing needs a nightly toolc
 | `openmpt_open`, `gme_open`, `sid_open`, `midi_open` | The long-tail decoders of `helikodu-extra-decoders` (libopenmpt, libgme, libsidplayfp through its C++ shim, rustysynth with a SoundFont the target writes): the header probe, opening arbitrary bytes, every subsong (at most four), rendering, seeking to the middle and back to the start. The shared steps are in `fuzz_targets/song_check.rs` |
 | `query_parse` | `helikodu-library`'s query language parser: the strict parser's error spans, the round trip of what parses through the printer, and the plain-text fallback of the lenient parser |
 | `cover_decode` | `helikodu-meta`'s cover decoder: format sniffing, header probing, decoding within the size, dimension and pixel limits, and scaling into a thumbnail, checking that a decoded picture stays within the limits and agrees with its header |
+| `lyrics_parse` | `helikodu-meta`'s LRC parser: time, metadata and word tags, the line bounds, time order, word offsets inside their line, and the current-line lookup at extreme positions and offsets |
 
 ```sh
 cargo +nightly fuzz run ffmpeg_bridge_open
 cargo +nightly fuzz run cue_parse
 cargo +nightly fuzz run cover_decode
+cargo +nightly fuzz run lyrics_parse
 cargo +nightly fuzz run playlist_m3u
 cargo +nightly fuzz run playlist_pls
 cargo +nightly fuzz run playlist_xspf

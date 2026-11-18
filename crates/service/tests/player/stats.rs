@@ -22,7 +22,7 @@ use helikodu_service::player::{PlayerCommand, PlayerEvent, SinkPacing};
 
 use crate::media::{folder, next_path, null_output, player_with, until, wav_files, wav_output};
 
-fn add(library: &Library, root: &Path, path: &Path, millis: u64) -> TrackId {
+pub(crate) fn add(library: &Library, root: &Path, path: &Path, millis: u64) -> TrackId {
     let root = library.add_root(root).unwrap();
     let mut record = TrackRecord::new(
         root,

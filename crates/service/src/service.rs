@@ -32,6 +32,7 @@ use crate::files::AppDirs;
 use crate::library::{
     DATABASE_FILE, LibraryError, LibraryService, LibraryServiceOptions, MusicLibrary,
 };
+use crate::lyrics::{LocalLyrics, LyricsService};
 use crate::player::{
     CommandSender, Player, PlayerCommand, PlayerConfig, PlayerError, PlayerEvent, PlayerPrefs,
     ReplayGain, SessionConfig, SinkPacing,
@@ -113,6 +114,7 @@ pub struct Service {
     // Dropped in this order: the glue first, then the player (which saves the
     // session), then the library.
     glue: Option<(Arc<AtomicBool>, JoinHandle<()>)>,
+    lyrics: Option<LyricsService>,
     player: Player,
     library: Option<LibraryService>,
     settings: Arc<SettingsStore>,
@@ -150,6 +152,10 @@ impl Service {
             )?),
             None => None,
         };
+        // The library follows `[library.duplicates]`, now and when it changes.
+        if let Some(library) = &library {
+            library.apply_duplicate_settings(&current.library);
+        }
         let mut session = SessionConfig::new(&dirs.state);
         session.restore = current.playback.on_start == StartAction::Restore;
         session.debounce = config.session_debounce;
@@ -197,8 +203,19 @@ impl Service {
                 .spawn(move || keep_in_step(&events, &stop, &settings, &sender, output))
                 .map_err(ServiceError::Spawn)?
         };
+        // Without the lyrics the rest works on.
+        let lyrics = LyricsService::start(
+            &bus,
+            Arc::clone(&config.clock),
+            Arc::new(LocalLyrics::default()),
+            &player.status(),
+            Some(&dirs.state),
+        )
+        .inspect_err(|e| eprintln!("helikodu: cannot start the lyrics service: {e}"))
+        .ok();
         Ok(Self {
             glue: Some((stop, glue)),
+            lyrics,
             player,
             library,
             settings,
@@ -219,6 +236,11 @@ impl Service {
     /// The player.
     pub fn player(&self) -> &Player {
         &self.player
+    }
+
+    /// The lyrics of the playing track, unless their thread could not start.
+    pub fn lyrics(&self) -> Option<&LyricsService> {
+        self.lyrics.as_ref()
     }
 
     /// The library, unless the service runs without one.

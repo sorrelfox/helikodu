@@ -8,6 +8,7 @@
 //! a fixed seed, so two runs show the same library. Its files do not exist; the
 //! folders are made up from the tracks' paths.
 
+mod lyrics;
 mod services;
 mod signal;
 
@@ -159,6 +160,8 @@ pub struct SampleLibrary {
     loaded: usize,
     /// The thumbnail file every cover shows, when the albums have covers.
     cover_file: Option<PathBuf>,
+    /// The playback flags set through the player.
+    flags: Mutex<HashMap<TrackKey, super::TrackFlags>>,
 }
 
 fn format(r: &mut Random) -> AudioFormat {
@@ -346,6 +349,7 @@ impl SampleLibrary {
             roots,
             loaded: usize::MAX,
             cover_file: None,
+            flags: Mutex::new(HashMap::new()),
         };
         library.add_sample_playlists(&mut r);
         library
@@ -995,6 +999,8 @@ impl SampleLibrary {
 
 #[derive(Debug, Default)]
 struct FakeState {
+    /// The offset of the sample lyrics, in milliseconds.
+    lyrics_offset: i64,
     shuffle: bool,
     repeat: Repeat,
     stop_after: bool,
@@ -1004,6 +1010,13 @@ struct FakeState {
     state: PlaybackState,
     elapsed: Duration,
     next_entry: u64,
+    /// Every play mode, and stop-after.
+    modes: super::PlayModes,
+    stop_after_mode: super::StopAfter,
+    /// The A-B loop and the entry it belongs to.
+    ab_loop: Option<(super::LoopPoints, Option<u64>)>,
+    sleep: Option<super::SleepTimer>,
+    cursor: Option<u64>,
 }
 
 /// A player that only pretends: it follows requests and reports updates at once.
@@ -1068,6 +1081,23 @@ impl FakePlayer {
             self.emit(Update::Stats(playback_stats()));
         }
         self.emit(Update::Position { elapsed, length });
+        self.announce_lyrics();
+        self.end_loop_if_moved();
+    }
+
+    /// The lyrics of the current track and the line sung now.
+    fn announce_lyrics(&self) {
+        let state = self.state.borrow();
+        let lyrics = state
+            .current
+            .and_then(|i| state.queue.get(i))
+            .and_then(|t| lyrics::sample_lyrics(t.number, state.lyrics_offset));
+        let line = lyrics
+            .as_ref()
+            .and_then(|l| lyrics::line_at(l, state.elapsed));
+        drop(state);
+        self.emit(Update::Lyrics(lyrics.map(Arc::new)));
+        self.emit(Update::LyricsLine(line));
     }
 
     fn step(&self, by: isize) {
@@ -1240,7 +1270,16 @@ impl PlayerControl for FakePlayer {
                     elapsed: to,
                     length,
                 });
+                self.announce_lyrics();
             }
+            PlayerRequest::AdjustLyricsOffset(delta) => {
+                {
+                    let mut s = self.state.borrow_mut();
+                    s.lyrics_offset = (s.lyrics_offset + delta).clamp(-60_000, 60_000);
+                }
+                self.announce_lyrics();
+            }
+            PlayerRequest::ReloadLyrics => self.announce_lyrics(),
             PlayerRequest::SeekBy(seconds) => {
                 let to = {
                     let s = self.state.borrow();
@@ -1281,6 +1320,11 @@ impl PlayerControl for FakePlayer {
                 let repeat = {
                     let mut state = self.state.borrow_mut();
                     state.shuffle = on;
+                    state.modes.shuffle = if on {
+                        super::ShuffleMode::Tracks
+                    } else {
+                        super::ShuffleMode::Off
+                    };
                     state.repeat
                 };
                 self.emit(Update::Modes {
@@ -1292,6 +1336,11 @@ impl PlayerControl for FakePlayer {
                 let shuffle = {
                     let mut state = self.state.borrow_mut();
                     state.repeat = repeat;
+                    state.modes.repeat = match repeat {
+                        Repeat::Off => super::RepeatMode::Off,
+                        Repeat::All => super::RepeatMode::All,
+                        Repeat::One => super::RepeatMode::One,
+                    };
                     state.shuffle
                 };
                 self.emit(Update::Modes { shuffle, repeat });
@@ -1300,7 +1349,190 @@ impl PlayerControl for FakePlayer {
                 self.state.borrow_mut().stop_after = on;
                 self.emit(Update::StopAfter(on));
             }
+            other => self.send_play_mode(other),
         }
+    }
+}
+
+impl FakePlayer {
+    /// The play modes, the album commands, the A-B loop, the sleep timer and
+    /// the track flags.
+    fn send_play_mode(&self, request: PlayerRequest) {
+        use super::{LoopPoints, SleepTimer, StopAfter};
+        match request {
+            PlayerRequest::SetShuffleMode(mode) => {
+                self.change_modes(|m| m.shuffle = mode);
+            }
+            PlayerRequest::SetRepeatMode(mode) => self.change_modes(|m| m.repeat = mode),
+            PlayerRequest::SetConsume(on) => self.change_modes(|m| m.consume = on),
+            PlayerRequest::SetPlayScope(scope) => self.change_modes(|m| m.scope = scope),
+            PlayerRequest::SetFollowCursor(on) => self.change_modes(|m| m.follow_cursor = on),
+            PlayerRequest::SetStopAfterMode(mode) => {
+                {
+                    let mut state = self.state.borrow_mut();
+                    state.stop_after_mode = mode;
+                    state.stop_after = mode != StopAfter::Off;
+                }
+                self.emit(Update::StopAfter(mode != StopAfter::Off));
+                self.emit(Update::StopAfterMode(mode));
+            }
+            PlayerRequest::SetCursor(entry) => {
+                self.state.borrow_mut().cursor = entry;
+                self.emit(Update::Cursor(entry));
+            }
+            PlayerRequest::NextAlbum
+            | PlayerRequest::PreviousAlbum
+            | PlayerRequest::RandomAlbum => {
+                let to = {
+                    let state = self.state.borrow();
+                    let Some(current) = state.current else { return };
+                    album_start(&state.queue, current, &request)
+                };
+                if let Some(to) = to {
+                    {
+                        let mut state = self.state.borrow_mut();
+                        state.current = Some(to);
+                        state.elapsed = Duration::ZERO;
+                    }
+                    self.announce();
+                }
+            }
+            PlayerRequest::LoopStartHere | PlayerRequest::LoopEndHere => {
+                let ab = {
+                    let mut state = self.state.borrow_mut();
+                    let at = state.elapsed;
+                    let entry = state.current.and_then(|i| state.queue.get(i)?.entry);
+                    let old = state.ab_loop.map(|(p, _)| p).unwrap_or_default();
+                    let ab = if matches!(request, PlayerRequest::LoopStartHere) {
+                        Some(LoopPoints {
+                            start: Some(at),
+                            end: old.end.filter(|end| *end > at),
+                        })
+                    } else if at.is_zero() {
+                        None
+                    } else {
+                        Some(LoopPoints {
+                            start: Some(old.start.filter(|s| *s < at).unwrap_or_default()),
+                            end: Some(at),
+                        })
+                    };
+                    state.ab_loop = ab.map(|p| (p, entry));
+                    ab
+                };
+                self.emit(Update::Loop(ab));
+            }
+            PlayerRequest::SetLoop(range) => {
+                let ab = {
+                    let mut state = self.state.borrow_mut();
+                    let entry = state.current.and_then(|i| state.queue.get(i)?.entry);
+                    let ab = range.filter(|(s, e)| s < e).map(|(start, end)| LoopPoints {
+                        start: Some(start),
+                        end: Some(end),
+                    });
+                    state.ab_loop = ab.map(|p| (p, entry));
+                    ab
+                };
+                self.emit(Update::Loop(ab));
+            }
+            PlayerRequest::StartSleepTimer { length, when } => {
+                let timer = SleepTimer {
+                    remaining: length,
+                    length,
+                    when,
+                };
+                self.state.borrow_mut().sleep = Some(timer);
+                self.emit(Update::SleepTimer(Some(timer)));
+            }
+            PlayerRequest::ExtendSleepTimer(by) => {
+                let timer = {
+                    let mut state = self.state.borrow_mut();
+                    if let Some(timer) = state.sleep.as_mut() {
+                        timer.remaining += by;
+                        timer.length += by;
+                    }
+                    state.sleep
+                };
+                self.emit(Update::SleepTimer(timer));
+            }
+            PlayerRequest::CancelSleepTimer => {
+                self.state.borrow_mut().sleep = None;
+                self.emit(Update::SleepTimer(None));
+            }
+            PlayerRequest::SetTrackFlags { track, flags } => {
+                self.library
+                    .flags
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .insert(track, flags);
+                self.emit(Update::TrackFlags { track, flags });
+            }
+            _ => {}
+        }
+    }
+
+    fn change_modes(&self, change: impl FnOnce(&mut super::PlayModes)) {
+        let modes = {
+            let mut state = self.state.borrow_mut();
+            change(&mut state.modes);
+            state.shuffle = state.modes.shuffle != super::ShuffleMode::Off;
+            state.repeat = match state.modes.repeat {
+                super::RepeatMode::Off => Repeat::Off,
+                super::RepeatMode::One => Repeat::One,
+                _ => Repeat::All,
+            };
+            state.modes
+        };
+        let (shuffle, repeat) = {
+            let state = self.state.borrow();
+            (state.shuffle, state.repeat)
+        };
+        self.emit(Update::Modes { shuffle, repeat });
+        self.emit(Update::PlayModes(modes));
+    }
+
+    /// Ends the A-B loop when another entry plays.
+    fn end_loop_if_moved(&self) {
+        let ended = {
+            let mut state = self.state.borrow_mut();
+            let entry = state.current.and_then(|i| state.queue.get(i)?.entry);
+            let moved = state.ab_loop.is_some_and(|(_, e)| e != entry);
+            if moved {
+                state.ab_loop = None;
+            }
+            moved
+        };
+        if ended {
+            self.emit(Update::Loop(None));
+        }
+    }
+}
+
+/// Where an album command goes in `queue` from `current`: the first track of
+/// the next album, of the album before (or this one), or of another album.
+fn album_start(queue: &[TrackRow], current: usize, request: &PlayerRequest) -> Option<usize> {
+    let album = queue.get(current)?.album;
+    let start_of = |i: usize| {
+        let a = queue[i].album;
+        let mut s = i;
+        while s > 0 && queue[s - 1].album == a {
+            s -= 1;
+        }
+        s
+    };
+    match request {
+        PlayerRequest::NextAlbum => (current..queue.len()).find(|&i| queue[i].album != album),
+        PlayerRequest::PreviousAlbum => {
+            let first = start_of(current);
+            Some(if first == 0 { 0 } else { start_of(first - 1) })
+        }
+        // The sample player picks the next album, or the first when there is none.
+        _ => (current..queue.len())
+            .find(|&i| queue[i].album != album)
+            .or_else(|| {
+                (0..current)
+                    .find(|&i| queue[i].album != album)
+                    .map(start_of)
+            }),
     }
 }
 

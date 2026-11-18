@@ -88,6 +88,7 @@
 //! volume changes are heard within one device period, not after the buffer. A track
 //! that starts from its beginning is not faded in, so the path stays bit-perfect.
 
+mod ab_loop;
 mod commands;
 mod config;
 mod crossfade;

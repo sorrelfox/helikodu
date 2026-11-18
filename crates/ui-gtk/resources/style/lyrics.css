@@ -1,0 +1,69 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Lyrics: the Lyrics tab of the panel and Now Playing. */
+
+/* The Lyrics tab: the panel's colours. */
+.hk-lyrics-track { min-height: 63px; padding: 0 16px; border-bottom: 1px solid var(--hk-line); }
+.hk-lyrics-track-title { font-size: 13px; font-weight: 600; }
+.hk-lyrics-panel .hk-lyrics { padding: 14px 8px 16px; }
+.hk-lyrics .hk-lyric { font-size: 14px; font-weight: 500; }
+button.hk-lyric { min-height: 0; padding: 6px 12px; border: none; border-radius: 6px; background: none; box-shadow: none; outline-offset: -2px; }
+button.hk-lyric:hover { background-color: var(--hk-hover); }
+button.hk-lyric.future { color: var(--hk-t2); }
+button.hk-lyric.past { color: var(--hk-t3); }
+button.hk-lyric.current { color: var(--hk-t1); font-weight: 600; }
+label.hk-lyric.plain { padding: 6px 12px; color: var(--hk-t1); font-weight: 400; }
+.hk-lyric.verse { margin-top: 14px; }
+.hk-lyrics-empty { padding: 0 24px; }
+.hk-lyrics-offset { font-size: 11.5px; font-weight: 500; }
+.hk-lyrics-footer button.hk-icon.small { min-width: 26px; min-height: 26px; }
+.hk-lyrics-footer menubutton.hk-icon > button { min-width: 28px; min-height: 28px; padding: 0; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-t2); }
+.hk-lyrics-footer menubutton.hk-icon > button:hover { background-color: var(--hk-hover); color: var(--hk-t1); }
+
+/* Now Playing: glass in both colour schemes. */
+.hk-now-playing-view { color: var(--hk-glass-t1); }
+.hk-np-strip { min-height: 46px; padding: 0 8px 0 16px; }
+button.hk-np-library { min-height: 30px; padding: 0 8px; border: none; border-radius: 6px; background: none; box-shadow: none; color: var(--hk-glass-t2-strong); font-weight: 500; }
+button.hk-np-library:hover { background-color: var(--hk-glass-hover); color: var(--hk-glass-t1); }
+.hk-np-controls { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--hk-glass-line); }
+.hk-np-body { padding: 20px 72px 28px; }
+coverart.hk-np-cover { border-radius: 10px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.35); }
+.hk-np-title { margin-top: 26px; font-size: 28px; font-weight: 600; letter-spacing: -0.01em; color: var(--hk-glass-t1-strong); }
+.hk-np-artist { margin-top: 6px; font-size: 16px; color: var(--hk-glass-t2-strong); }
+.hk-np-album { margin-top: 4px; font-size: 13px; color: var(--hk-glass-t2); }
+.hk-np-stars { margin-top: 16px; }
+.hk-np-plays { font-size: 12px; color: var(--hk-glass-t2); }
+.hk-lyrics-glass .hk-lyrics { padding: 24px 0; }
+.hk-lyrics-glass .hk-lyric { font-size: 25px; font-weight: 500; }
+.hk-lyrics-glass button.hk-lyric { padding: 9px 14px; border-radius: 8px; }
+.hk-lyrics-glass button.hk-lyric:hover { background-color: var(--hk-glass-hover); }
+.hk-lyrics-glass button.hk-lyric.future { color: var(--hk-glass-lyric-upcoming); }
+.hk-lyrics-glass button.hk-lyric.past { color: var(--hk-glass-t4); }
+.hk-lyrics-glass button.hk-lyric.current { color: var(--hk-glass-t1-strong); font-weight: 600; }
+.hk-lyrics-glass label.hk-lyric.plain { padding: 9px 14px; color: var(--hk-glass-t1); }
+/* Now Playing keeps an even rhythm: no space between verses. */
+.hk-lyrics-glass .hk-lyric.verse { margin-top: 0; }
+.hk-lyric-time { min-width: 34px; font-family: monospace; font-size: 11px; font-weight: 400; color: var(--hk-glass-t4); font-feature-settings: "tnum"; }
+.hk-np-note { margin: 10px 0 0 68px; font-family: monospace; font-size: 11px; color: var(--hk-glass-t4); }
+.hk-np-none { font-size: 16px; color: var(--hk-glass-t2); }
+.hk-np-queue { background: none; }
+.hk-np-queue > row { min-height: 36px; padding: 0 14px; border-radius: 8px; color: var(--hk-glass-lyric-upcoming); font-size: 15px; }
+.hk-np-queue > row:hover { background-color: var(--hk-glass-hover); }
+.hk-np-queue > row.current { color: var(--hk-glass-t1-strong); font-weight: 600; }
+.hk-np-queue > row.history { color: var(--hk-glass-t4); }
+.hk-np-length { font-size: 12px; color: var(--hk-glass-t3); }
+
+/* The signal strip and the SignalPathChain. */
+.hk-np-signal { min-height: 77px; padding: 0 24px; border-top: 1px solid var(--hk-glass-line); }
+.hk-chain-stage { padding: 7px 12px; border-radius: 7px; border: 1px solid var(--hk-glass-line); background-color: var(--hk-glass-node); }
+.hk-chain-stage.active { border-color: var(--hk-signal-bit-perfect-line); }
+.hk-chain-name { color: var(--hk-glass-t2); font-size: 10px; }
+.hk-chain-value { font-size: 11.5px; font-weight: 500; color: var(--hk-glass-t2); }
+.hk-chain-stage.active .hk-chain-value { color: var(--hk-glass-t1); }
+.hk-chain-line { min-height: 1px; background-color: var(--hk-glass-line2); }
+.hk-chain-line.bit-perfect { background-color: var(--hk-signal-bit-perfect-line); }
+.hk-np-stat { font-size: 11px; color: var(--hk-glass-t2); text-transform: uppercase; }
+
+/* The deck in Now Playing: the next track. */
+.hk-deck-next-label { color: var(--hk-glass-t3); }

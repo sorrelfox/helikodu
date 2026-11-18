@@ -19,7 +19,8 @@ use std::time::{Duration, Instant};
 
 use helikodu_model::audio::{MediaTime, OutputMode, OutputSelection};
 use helikodu_model::player::{
-    EngineCommand, EngineError, EngineEvent, ItemId, PlaybackItem, TransportState, Volume,
+    EngineCommand, EngineError, EngineEvent, ItemId, LoopRange, PlaybackItem, TransportState,
+    Volume,
 };
 
 use super::EngineConfig;
@@ -99,6 +100,8 @@ pub(super) struct Worker {
     /// Since when a freewheeling sink waits for the next item.
     pub(super) waiting_since: Option<Instant>,
     pub(super) near_end_sent: Option<ItemId>,
+    /// The A-B loop of the loaded item.
+    pub(super) ab_loop: Option<(ItemId, LoopRange)>,
     pub(super) paused_since: Option<Instant>,
     last_position: Option<Instant>,
     /// Events collected while advancing the timeline.
@@ -151,6 +154,7 @@ impl Worker {
             drain: None,
             waiting_since: None,
             near_end_sent: None,
+            ab_loop: None,
             paused_since: None,
             last_position: None,
             pending: Vec::new(),
@@ -262,6 +266,7 @@ impl Worker {
             EngineCommand::SetTransitions(transitions) => self.set_transitions(transitions),
             EngineCommand::SetDecoderSettings(settings) => self.set_decoder_settings(&settings),
             EngineCommand::SelectAudioStream(stream) => self.select_audio_stream(stream),
+            EngineCommand::SetLoop { item, range } => self.set_loop(item, range),
             EngineCommand::UpdateSettings {
                 output,
                 loudness,
@@ -352,8 +357,9 @@ impl Worker {
         let mut events = std::mem::take(&mut self.pending);
         self.timeline.advance(at, &mut events);
         for event in events.drain(..) {
-            if let EngineEvent::TrackStarted { .. } = event {
+            if let EngineEvent::TrackStarted { item, .. } = event {
                 self.near_end_sent = None;
+                self.keep_loop_of(item);
             }
             self.emit(event);
         }
@@ -365,7 +371,7 @@ impl Worker {
             return;
         };
         let id = segment.item.id;
-        if self.near_end_sent == Some(id) {
+        if self.near_end_sent == Some(id) || self.loops_at(id, position) {
             return;
         }
         // A crossfade into the next item begins its length before the end.

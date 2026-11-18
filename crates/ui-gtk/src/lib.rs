@@ -16,6 +16,7 @@ mod dialogs;
 mod format;
 pub mod i18n;
 mod models;
+mod play_modes;
 mod playback;
 mod popovers;
 pub mod snapshot;

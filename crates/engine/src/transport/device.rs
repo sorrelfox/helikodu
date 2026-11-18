@@ -273,6 +273,12 @@ impl Worker {
             plan = plan_for(&self.config.processing, output, source).with_dsp(dsp);
         }
         source.attach(plan)?;
+        // The loop goes with the item, whichever source plays it.
+        let range = self
+            .ab_loop
+            .filter(|(id, _)| *id == source.item().id)
+            .map(|(_, range)| range);
+        source.set_loop(range);
         let needed = source.max_output_frames().max(4096) * channels;
         if self.staging.len() < needed {
             self.staging.resize(needed, 0.0);
@@ -372,6 +378,7 @@ pub(super) fn plan_for(
         source: source.format(),
         loudness: loudness_info(&item.loudness),
         album_context: item.album_context,
+        track_volume_db: item.track_volume_db,
         device: output.spec(),
         volume: output.volume,
         dsp: false,

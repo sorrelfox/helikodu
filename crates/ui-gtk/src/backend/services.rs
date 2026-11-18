@@ -402,4 +402,11 @@ pub trait Services: fmt::Debug + Send + Sync {
     fn is_measuring_loudness(&self) -> bool;
     /// What the limiter did lately, when the player reports it.
     fn limiter_activity(&self) -> Option<LimiterReading>;
+
+    /// The playback flags of a library track (the tag editor's Playback
+    /// group); `None` when the track is not in the library. Blocking.
+    fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {
+        let _ = track;
+        None
+    }
 }

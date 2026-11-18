@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use helikodu_model::audio::OutputSelection;
 use helikodu_model::library::TrackRef;
-use helikodu_model::player::{EntryId, PlayModes, QueueContext, QueueEntry, Volume};
+use helikodu_model::player::{EntryId, PlayModes, QueueContext, QueueEntry, StopAfter, Volume};
 use serde::{Deserialize, Serialize};
 
 use crate::files::{read_if_exists, remove_if_exists, write_atomic};
@@ -54,6 +54,9 @@ pub(crate) struct SavedSession {
     pub(crate) output: OutputSelection,
     #[serde(default)]
     pub(crate) suspects: Vec<TrackRef>,
+    /// Stop-after, which stays set until it stops playback.
+    #[serde(default)]
+    pub(crate) stop_after: StopAfter,
 }
 
 /// One track the sentinel names.
@@ -171,6 +174,7 @@ impl SessionFiles {
 #[cfg(test)]
 mod tests {
     use helikodu_model::library::{MediaSource, TrackId};
+    use helikodu_model::player::{PlayScope, RepeatMode, ShuffleMode};
 
     use super::*;
 
@@ -198,10 +202,16 @@ mod tests {
             linear: vec![EntryId::new(4)],
             current: Some(0),
             position_ms: 1234,
-            modes: PlayModes::default(),
+            modes: PlayModes {
+                consume: true,
+                follow_cursor: true,
+                scope: PlayScope::Album,
+                ..PlayModes::new(ShuffleMode::Albums, RepeatMode::Album)
+            },
             volume: Volume::new(0.5).unwrap(),
             output: OutputSelection::default(),
             suspects: vec![TrackRef::Library(TrackId::new(9))],
+            stop_after: StopAfter::Album,
         };
         files.save(&session).unwrap();
         assert_eq!(files.load(), Some(session));

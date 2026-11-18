@@ -14,6 +14,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
+use self::offline::duplicates::DuplicatesArgs;
 use self::offline::info::InfoArgs;
 use self::offline::list_outputs::ListOutputsArgs;
 use self::offline::loudness::LoudnessArgs;
@@ -54,6 +55,8 @@ enum Command {
     /// Measure the loudness of library tracks (EBU R128, ReplayGain 2.0) and store
     /// it in the library, optionally also in the files' tags.
     Loudness(LoudnessArgs),
+    /// List the groups of copies (byte-identical files) in the music library.
+    Duplicates(DuplicatesArgs),
 }
 
 /// How a command ended, when it did not fail outright.
@@ -74,6 +77,7 @@ fn main() -> ExitCode {
         Command::Info(args) => offline::info::run(&args),
         Command::Stats(args) => offline::stats::run(&args),
         Command::Loudness(args) => offline::loudness::run(args),
+        Command::Duplicates(args) => offline::duplicates::run(&args),
     };
     match result {
         Ok(Outcome::Success) => ExitCode::SUCCESS,

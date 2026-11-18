@@ -9,6 +9,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <file>style/tokens.css</file>
     <file>style/dialogs.css</file>
     <file>style/views.css</file>
+    <file>style/lyrics.css</file>
+    <file>style/playmodes.css</file>
     <file preprocess="xml-stripblanks">ui/albums.ui</file>
     <file preprocess="xml-stripblanks">ui/album.ui</file>
     <file preprocess="xml-stripblanks">ui/deck.ui</file>
@@ -25,5 +27,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <file>icons/scalable/actions/helikodu-playlist-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-sidebar-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-tag-symbolic.svg</file>
+    <file>icons/scalable/actions/helikodu-shuffle-symbolic.svg</file>
+    <file>icons/scalable/actions/helikodu-repeat-symbolic.svg</file>
+    <file>icons/scalable/actions/helikodu-repeat-one-symbolic.svg</file>
+    <file>icons/scalable/actions/helikodu-moon-symbolic.svg</file>
   </gresource>
 </gresources>

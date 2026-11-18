@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{PlaybackItem, Volume};
+use super::{ItemId, PlaybackItem, Volume};
 use crate::audio::{MediaTime, OutputSelection};
 use crate::settings::{
     DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, TransitionSettings,
@@ -71,4 +71,34 @@ pub enum EngineCommand {
     /// Replace the crossfade and fade settings while running. Fades apply from the
     /// next transition; a crossfade already under way finishes as it began.
     SetTransitions(TransitionSettings),
+    /// Loop a section of `item`, the loaded item, or end the loop with `None`.
+    ///
+    /// When playback reaches the end of the range it continues at its start without
+    /// a gap: the frame after the last one of the range is the range's first frame,
+    /// exactly. Audio already rendered past the end is dropped from the buffer, so
+    /// a loop whose end is behind the heard position jumps to its start at once. The
+    /// loop ends with the item; a seek past its end leaves it. Ignored when `item`
+    /// is not the loaded item or the range is empty.
+    SetLoop {
+        /// The item the range belongs to.
+        item: ItemId,
+        /// The section, or `None` to end the loop.
+        range: Option<LoopRange>,
+    },
+}
+
+/// A section of an item, from `start` to just before `end`, for an A-B loop.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct LoopRange {
+    /// The first position of the section (A).
+    pub start: MediaTime,
+    /// The position just after its last frame (B).
+    pub end: MediaTime,
+}
+
+impl LoopRange {
+    /// The range from `start` to `end`, or `None` when it is empty.
+    pub fn new(start: MediaTime, end: MediaTime) -> Option<Self> {
+        (start < end).then_some(Self { start, end })
+    }
 }

@@ -213,6 +213,8 @@ impl Library {
     }
 
     /// The measurement of `track`, current or not; `None` if it was never measured.
+    /// A copy of a track shares its measurement: the track's own comes first when
+    /// it is current, then a current one of a copy, then any.
     pub fn measured_loudness(&self, track: TrackId) -> Result<Option<StoredLoudness>, DbError> {
         self.database().read(|c| {
             c.prepare_cached(&format!(
@@ -220,7 +222,14 @@ impl Library {
                  FROM loudness l
                  JOIN tracks t ON t.id = l.track_id
                  JOIN files f ON f.id = t.file_id
-                 WHERE l.track_id = ?1"
+                 WHERE l.track_id IN (
+                     SELECT o.id FROM tracks q JOIN tracks o ON o.identity_id = q.identity_id
+                         AND o.sub_index = q.sub_index AND o.start_frame IS q.start_frame
+                         AND o.end_frame IS q.end_frame
+                     WHERE q.id = ?1)
+                 ORDER BY l.track_id = ?1 AND {CURRENT} DESC, {CURRENT} DESC,
+                          l.track_id = ?1 DESC
+                 LIMIT 1"
             ))?
             .query_row([sql_track_id(track)], stored_from_row)
             .optional()

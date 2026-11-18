@@ -28,7 +28,7 @@ pub(crate) struct Stamp {
 }
 
 impl Stamp {
-    fn of(metadata: &Metadata) -> Self {
+    pub(crate) fn of(metadata: &Metadata) -> Self {
         Self {
             size: metadata.len(),
             mtime_ns: metadata
@@ -46,6 +46,9 @@ pub(crate) struct Found {
     pub(crate) path: PathBuf,
     pub(crate) stamp: Stamp,
     pub(crate) class: FileClass,
+    /// The device the file is on; with the inode it names the file itself, so
+    /// that two paths to one file are not taken for two copies.
+    pub(crate) dev: u64,
 }
 
 /// The result of walking one library folder.
@@ -271,6 +274,7 @@ impl Walker {
             path,
             stamp: Stamp::of(metadata),
             class,
+            dev: metadata.dev(),
         });
     }
 

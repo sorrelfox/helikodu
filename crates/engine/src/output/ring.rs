@@ -224,6 +224,7 @@ pub(crate) fn ring(
         producer,
         actions: actions_in,
         scheduled: 0,
+        scheduled_until: 0,
         shared: shared.clone(),
     };
     let reader = SampleReader {
@@ -255,6 +256,8 @@ pub struct SampleWriter {
     producer: Producer<u32>,
     actions: Producer<Scheduled>,
     scheduled: u64,
+    /// The latest ring position an action was scheduled at.
+    scheduled_until: u64,
     shared: Arc<StreamShared>,
 }
 
@@ -353,7 +356,15 @@ impl SampleWriter {
             return false;
         }
         self.scheduled += 1;
+        self.scheduled_until = self.scheduled_until.max(at);
         true
+    }
+
+    /// The latest ring position an action has been scheduled at. Actions apply in
+    /// the order they were scheduled, so one scheduled now for an earlier position
+    /// applies only there.
+    pub fn scheduled_until(&self) -> u64 {
+        self.scheduled_until
     }
 
     /// Whether the device side has applied every scheduled action.

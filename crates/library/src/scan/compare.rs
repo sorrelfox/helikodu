@@ -23,6 +23,8 @@ pub(crate) struct ToRead {
     pub(crate) found: Found,
     /// The CUE sheets in the file's folder.
     pub(crate) cue_sheets: Vec<PathBuf>,
+    /// Whether the library has a row for the file already.
+    pub(crate) known: bool,
 }
 
 /// What a scan does, from the comparison of every root.
@@ -116,6 +118,7 @@ impl Plan {
                 self.to_read.push(ToRead {
                     root,
                     cue_sheets: sheets.get(&dir).cloned().unwrap_or_default(),
+                    known: entry.is_some(),
                     found,
                 });
             } else if entry.is_some_and(|e| e.state != STATE_UNREADABLE) {
@@ -157,6 +160,7 @@ mod tests {
             path: path.into(),
             stamp: stamp(size),
             class,
+            dev: 1,
         }
     }
 

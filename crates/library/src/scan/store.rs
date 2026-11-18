@@ -10,6 +10,7 @@
 //! | `NULL`, 0 | read; its tracks are in `tracks` |
 //! | 1 | unreadable; `scan_error` says why. Tracks it had before stay |
 //! | 2 | a CUE sheet; it has no tracks of its own |
+//! | 3 | a copy of another file, recorded without tracks while copies are skipped |
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -20,6 +21,7 @@ use super::walk::Stamp;
 use crate::catalog::albums::Regroup;
 use crate::catalog::write::{Written, ensure_dir, file_at, finish_tracks, write_track};
 use crate::catalog::{RootId, TrackChange, TrackRecord};
+use crate::copies;
 use crate::db::{display_text, path_from_blob, path_to_blob};
 
 /// `files.scan_state` of a file that was read.
@@ -28,6 +30,8 @@ pub(crate) const STATE_READ: i64 = 0;
 pub(crate) const STATE_UNREADABLE: i64 = 1;
 /// `files.scan_state` of a CUE sheet.
 pub(crate) const STATE_CUE_SHEET: i64 = 2;
+/// `files.scan_state` of a copy without tracks of its own.
+pub(crate) const STATE_COPY: i64 = 3;
 
 /// A file row of the library, as the scanner compares it with the disk.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -114,14 +118,42 @@ fn known_file(row: &rusqlite::Row<'_>) -> rusqlite::Result<(PathBuf, KnownFile)>
     ))
 }
 
-/// Writes the tracks read from one file and removes the file's tracks that are no
-/// longer in it (a CUE sheet that lost tracks, or a whole-file track replaced by a
-/// sheet's tracks). Marks the file as read.
+/// Writes the tracks read from one file (on the device `dev`) and removes the
+/// file's tracks that are no longer in it (a CUE sheet that lost tracks, or a
+/// whole-file track replaced by a sheet's tracks). Marks the file as read.
+///
+/// A copy that gets no tracks (copies are skipped, and it is unchanged and not the
+/// main copy) is only recorded with its new stamp.
 pub(crate) fn write_file_tracks(
     c: &Connection,
     records: &[TrackRecord],
     now: i64,
+    dev: Option<u64>,
 ) -> rusqlite::Result<Vec<TrackChange>> {
+    if let Some(first) = records.first()
+        && let Some(file) = file_at(c, &first.path)?
+        && copies::groups::group_of(c, file)?.is_some()
+    {
+        let size = i64::try_from(first.file.size).unwrap_or(i64::MAX);
+        if copies::groups::is_skipped_copy(c, file, size, &first.file.quick_hash)? {
+            c.prepare_cached(
+                "UPDATE files SET mtime_ns = ?2, inode = ?3, dev = coalesce(?4, dev),
+                                  scan_state = ?5, scan_error = NULL, missing_since = NULL
+                 WHERE id = ?1",
+            )?
+            .execute(params![
+                file,
+                first.file.mtime_ns,
+                first.file.inode.map(u64::cast_signed),
+                dev.map(u64::cast_signed),
+                STATE_COPY
+            ])?;
+            let mut work = copies::groups::Work::new(c, now)?;
+            copies::groups::refresh_groups_of(c, &[file], &mut work)?;
+            work.finish(c)?;
+            return Ok(Vec::new());
+        }
+    }
     let mut regroup = Regroup::default();
     let mut written: Vec<Written> = Vec::with_capacity(records.len());
     for record in records {
@@ -147,8 +179,16 @@ pub(crate) fn write_file_tracks(
         }
     }
     finish_tracks(c, regroup, &written)?;
-    c.prepare_cached("UPDATE files SET scan_state = ?2, scan_error = NULL WHERE id = ?1")?
-        .execute(params![file, STATE_READ])?;
+    c.prepare_cached(
+        "UPDATE files SET scan_state = ?2, scan_error = NULL, dev = coalesce(?3, dev)
+         WHERE id = ?1",
+    )?
+    .execute(params![file, STATE_READ, dev.map(u64::cast_signed)])?;
+    if copies::groups::group_of(c, file)?.is_some() {
+        let mut work = copies::groups::Work::new(c, now)?;
+        copies::groups::refresh_groups_of(c, &[file], &mut work)?;
+        work.finish(c)?;
+    }
     Ok(changes)
 }
 
@@ -212,6 +252,12 @@ pub(crate) fn mark_present(c: &Connection, ids: &[i64]) -> rusqlite::Result<()> 
 /// Removes the file rows `ids` that have no tracks (CUE sheets, unreadable files)
 /// and are gone from the disk.
 pub(crate) fn forget_files(c: &Connection, ids: &[i64]) -> rusqlite::Result<()> {
+    if !ids.is_empty() {
+        let mut work = copies::groups::Work::new(c, 0)?;
+        let gone: Vec<i64> = ids.to_vec();
+        copies::groups::before_removal(c, &gone, &mut work)?;
+        work.finish(c)?;
+    }
     let mut delete = c.prepare_cached(
         "DELETE FROM files WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM tracks WHERE file_id = ?1)",
     )?;
@@ -236,6 +282,9 @@ pub(crate) fn remove_missing_files(
         )?
         .query_map(params![root.0, cutoff], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?;
+    let mut work = copies::groups::Work::new(c, cutoff)?;
+    copies::groups::before_removal(c, &gone, &mut work)?;
+    work.finish(c)?;
     let mut regroup = Regroup::default();
     let mut delete = c.prepare_cached("DELETE FROM files WHERE id = ?1")?;
     for file in &gone {

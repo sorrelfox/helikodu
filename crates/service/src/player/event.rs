@@ -10,8 +10,10 @@ use helikodu_model::audio::{AudioSpec, DeviceInfo, MediaTime, OutputBackendKind,
 use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::player::{
     AudioStreamInfo, EngineError, EntryId, PlayModes, PlaybackState, PlaybackStats, SignalPath,
-    StopAfter, TransportState, Volume,
+    StopAfter, TrackFlags, TransportState, Volume,
 };
+
+use super::timers::{AbLoop, SleepTimerStatus};
 
 /// Something the player reports. Every event comes from the player's own thread, in
 /// the order things happened.
@@ -111,6 +113,20 @@ pub enum PlayerEvent {
         /// What it counted as.
         outcome: ListenOutcome,
     },
+    /// The A-B loop of the playing track changed: a point was set, or the loop
+    /// ended (`None`), also because another track started.
+    LoopChanged(Option<AbLoop>),
+    /// The sleep timer started, changed or ended (`None`).
+    SleepTimerChanged(Option<SleepTimerStatus>),
+    /// The entry selected for "Continue from the selected track" changed.
+    CursorChanged(Option<EntryId>),
+    /// The playback flags of a library track were changed through the player.
+    TrackFlagsChanged {
+        /// The track.
+        track: TrackId,
+        /// Its flags now.
+        flags: TrackFlags,
+    },
     /// Playback stopped and the player waits for a new command.
     Ended {
         /// Why.
@@ -131,8 +147,10 @@ pub enum EndReason {
     QueueFinished,
     /// [`Stop`](super::PlayerCommand::Stop) was sent.
     Stopped,
-    /// The track marked with stop-after ended.
+    /// Stop-after stopped playback: after the track, the album or the queue.
     StopAfter,
+    /// The sleep timer's time was up.
+    SleepTimer,
     /// The output failed and the engine stopped; a [`PlayerEvent::Problem`] said why.
     OutputFailed,
 }
@@ -163,6 +181,13 @@ pub enum Notice {
     },
     /// The session could not be saved.
     SessionNotSaved {
+        /// Why.
+        reason: String,
+    },
+    /// The playback flags of a track could not be stored.
+    FlagsNotSaved {
+        /// The track.
+        track: TrackId,
         /// Why.
         reason: String,
     },

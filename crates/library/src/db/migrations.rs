@@ -53,6 +53,7 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
     migration!(7, "0007", "static_playlists"),
     migration!(8, "0008", "loudness_measurements"),
     migration!(9, "0009", "saved_searches"),
+    migration!(10, "0010", "copies"),
 ];
 
 /// The schema version this build creates and understands.

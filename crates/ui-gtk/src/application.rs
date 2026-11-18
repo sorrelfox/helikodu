@@ -76,6 +76,10 @@ fn check_icons(display: &gtk::gdk::Display) {
         "media-skip-forward-symbolic",
         "media-playlist-shuffle-symbolic",
         "media-playlist-repeat-symbolic",
+        "helikodu-shuffle-symbolic",
+        "helikodu-repeat-symbolic",
+        "helikodu-repeat-one-symbolic",
+        "helikodu-moon-symbolic",
         "audio-volume-high-symbolic",
         "audio-volume-medium-symbolic",
         "audio-volume-low-symbolic",
@@ -143,6 +147,7 @@ pub fn install_actions(application: &gtk::Application, backend: &Backend) {
     });
     application.add_action(&quit);
     crate::dialogs::install_actions(application, backend);
+    crate::play_modes::install_actions(application, backend);
     for (action, accels) in [
         ("app.next", &["<Control>Right"][..]),
         ("app.previous", &["<Control>Left"]),
@@ -152,6 +157,7 @@ pub fn install_actions(application: &gtk::Application, backend: &Backend) {
         ("win.volume-up", &["<Control>Up"]),
         ("win.volume-down", &["<Control>Down"]),
         ("win.toggle-sidebar", &["F9"]),
+        ("win.now-playing", &["F11"]),
         ("win.show-menubar", &["<Control>m"]),
         ("win.cycle-pane", &["F6"]),
         ("win.back", &["<Alt>Left"]),
@@ -162,6 +168,9 @@ pub fn install_actions(application: &gtk::Application, backend: &Backend) {
         ("win.undo", &["<Control>z"]),
         ("win.select-all", &["<Control>a"]),
         ("app.new-playlist", &["<Control>n"]),
+        ("app.loop-start", &["<Control>bracketleft"]),
+        ("app.loop-end", &["<Control>bracketright"]),
+        ("app.loop-clear", &["<Control>backslash"]),
     ] {
         application.set_accels_for_action(action, accels);
     }

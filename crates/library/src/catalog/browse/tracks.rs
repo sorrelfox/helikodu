@@ -18,7 +18,7 @@ use crate::db::unix_time;
 /// albums `a`.
 pub(crate) const COLUMNS: &str = "t.id, t.title, t.artist, t.album_id, a.title, t.disc_no,
     t.track_no, t.duration_ms, t.year, t.kind, t.section, t.sub_index,
-    f.missing_since IS NOT NULL";
+    f.missing_since IS NOT NULL, t.copies";
 
 /// The joins under [`COLUMNS`].
 pub(super) const FROM: &str = "FROM tracks t
@@ -46,6 +46,7 @@ pub(crate) fn summary(row: &Row<'_>) -> rusqlite::Result<TrackSummary> {
         section: TrackSection::from_sql(row.get(10)?),
         sub_index: row.get(11)?,
         missing: row.get(12)?,
+        copies: u32::try_from(row.get::<_, i64>(13)?).unwrap_or(0),
     })
 }
 

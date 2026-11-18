@@ -18,6 +18,7 @@ use super::folders::disc_folder;
 use super::ids::{IdentityId, RootId, sql_track_id, track_id_from_sql};
 use super::people::{artists_fold, write_genres, write_people};
 use super::track_record::TrackRecord;
+use crate::copies;
 use crate::db::{display_text, path_from_blob, path_to_blob, unix_time};
 use crate::search::{fold, index};
 use crate::stats::store as stats_store;
@@ -223,7 +224,7 @@ pub(crate) fn write_track(
         )));
     };
     let dir_id = ensure_dir(c, record.root, dir)?;
-    let (file_id, moved) = upsert_file(c, record, dir_id, Path::new(name))?;
+    let (file_id, moved) = upsert_file(c, record, dir_id, Path::new(name), now)?;
     if moved {
         refresh_album_dir(c, record.root, file_id, dir, dir_id, regroup)?;
     }
@@ -252,8 +253,24 @@ pub(crate) fn write_track(
         };
         (track, identity, change)
     } else {
-        let (identity, change) = match returning_identity(c, &fingerprint)? {
-            Some(identity) => (identity, TrackChange::Returned),
+        let section = (
+            i64::from(record.sub_index),
+            record
+                .frames
+                .and_then(|(start, _)| i64::try_from(start).ok()),
+            record
+                .frames
+                .and_then(|(_, end)| end)
+                .and_then(|end| i64::try_from(end).ok()),
+        );
+        // A copy's track shares the identity of the same track of its group.
+        let shared = copies::groups::shared_identity(c, file_id, section)?;
+        let returning = match shared {
+            Some(identity) => Some((identity, TrackChange::Added)),
+            None => returning_identity(c, &fingerprint)?.map(|i| (i, TrackChange::Returned)),
+        };
+        let (identity, change) = match returning {
+            Some(found) => found,
             None => {
                 let identity = c
                     .prepare_cached(
@@ -338,7 +355,7 @@ impl FolderFacts {
 
 /// Rewrites the album folder of every track of the file `file`, after it moved to
 /// the folder `dir` (row `dir_id`) of `root`, noting the albums affected.
-fn refresh_album_dir(
+pub(crate) fn refresh_album_dir(
     c: &Connection,
     root: RootId,
     file: i64,
@@ -362,17 +379,32 @@ fn upsert_file(
     record: &TrackRecord,
     dir_id: i64,
     name: &Path,
+    now: i64,
 ) -> rusqlite::Result<(i64, bool)> {
     let stamp = &record.file;
     let size = i64::try_from(stamp.size).unwrap_or(i64::MAX);
     let inode = stamp.inode.and_then(|inode| i64::try_from(inode).ok());
     let name_blob = path_to_blob(name);
     let name_text = display_text(name.as_os_str());
-    let here: Option<i64> = c
-        .prepare_cached("SELECT id FROM files WHERE dir_id = ?1 AND name = ?2")?
-        .query_row(params![dir_id, name_blob], |row| row.get(0))
+    // The row, its size, quick hash and group of copies.
+    type Here = (i64, Option<i64>, Option<Vec<u8>>, Option<i64>);
+    let here: Option<Here> = c
+        .prepare_cached(
+            "SELECT id, size, quick_hash, copy_group FROM files WHERE dir_id = ?1 AND name = ?2",
+        )?
+        .query_row(params![dir_id, name_blob], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })
         .optional()?;
-    if let Some(id) = here {
+    if let Some((id, old_size, old_hash, group)) = here {
+        // A copy whose content changed is no longer one.
+        if group.is_some()
+            && (old_size != Some(size) || old_hash.as_deref() != Some(stamp.quick_hash.as_slice()))
+        {
+            let mut work = copies::groups::Work::new(c, now)?;
+            copies::groups::leave(c, id, &mut work)?;
+            work.finish(c)?;
+        }
         c.prepare_cached(
             "UPDATE files SET size = ?2, mtime_ns = ?3, inode = ?4, quick_hash = ?5,
                               missing_since = NULL
@@ -680,6 +712,10 @@ pub(crate) fn mark_file_missing(c: &Connection, path: &Path, since: i64) -> rusq
     };
     c.prepare_cached("UPDATE files SET missing_since = ?2 WHERE id = ?1")?
         .execute(params![file, since])?;
+    // Another copy takes over from a missing main copy.
+    let mut work = copies::groups::Work::new(c, since)?;
+    copies::groups::refresh_groups_of(c, &[file], &mut work)?;
+    work.finish(c)?;
     Ok(true)
 }
 
@@ -690,6 +726,10 @@ pub(crate) fn remove_file(c: &Connection, path: &Path) -> rusqlite::Result<usize
     let Some(file) = file_at(c, path)? else {
         return Ok(0);
     };
+    // A main copy's tracks may move to the next copy first.
+    let mut work = copies::groups::Work::new(c, 0)?;
+    copies::groups::before_removal(c, &[file], &mut work)?;
+    work.finish(c)?;
     let tracks: i64 = c
         .prepare_cached("SELECT count(*) FROM tracks WHERE file_id = ?1")?
         .query_row([file], |row| row.get(0))?;
@@ -715,6 +755,14 @@ pub(crate) fn remove_track(c: &Connection, track: TrackId) -> rusqlite::Result<b
     let Some(file) = file else {
         return Ok(false);
     };
+    let unused: bool = c
+        .prepare_cached("SELECT NOT EXISTS (SELECT 1 FROM tracks WHERE file_id = ?1)")?
+        .query_row([file], |row| row.get(0))?;
+    if unused {
+        let mut work = copies::groups::Work::new(c, 0)?;
+        copies::groups::before_removal(c, &[file], &mut work)?;
+        work.finish(c)?;
+    }
     c.prepare_cached(
         "DELETE FROM files WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM tracks WHERE file_id = ?1)",
     )?

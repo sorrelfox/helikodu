@@ -14,6 +14,8 @@ use helikodu_model::player::{
     StopAfter, TransportState, Volume,
 };
 
+use super::timers::{AbLoop, SleepTimerStatus};
+
 /// The queue as it is at one version.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct QueueSnapshot {
@@ -26,7 +28,7 @@ pub struct QueueSnapshot {
     pub entries: Vec<QueueEntry>,
     /// The index of the current entry.
     pub current: Option<usize>,
-    /// Shuffle and repeat.
+    /// The play modes.
     pub modes: PlayModes,
 }
 
@@ -120,6 +122,12 @@ pub struct PlayerStatus {
     pub signal_path: Option<Box<SignalPath>>,
     /// The output's counters, as last reported while playing.
     pub stats: Option<PlaybackStats>,
+    /// The A-B loop of the playing track.
+    pub ab_loop: Option<AbLoop>,
+    /// The sleep timer, while one runs.
+    pub sleep_timer: Option<SleepTimerStatus>,
+    /// The entry selected for "Continue from the selected track".
+    pub cursor: Option<EntryId>,
 }
 
 impl Default for PlayerStatus {
@@ -135,6 +143,9 @@ impl Default for PlayerStatus {
             stop_after: StopAfter::Off,
             signal_path: None,
             stats: None,
+            ab_loop: None,
+            sleep_timer: None,
+            cursor: None,
         }
     }
 }

@@ -12,6 +12,16 @@ The bar at the bottom of the window is the player deck. It shows the cover, titl
 
 Tracks of the same format follow each other without a gap, so live albums and DJ mixes play as they were recorded.
 
+## Crossfades and fades
+
+Under **Crossfade** in the **Playback** settings, tracks can blend into each other: **between tracks** sets how long the end of one track overlaps the start of the next, and **when you skip** does the same when you skip to another track. Both are **Off** by default. Tracks that follow each other on one album still join without a gap, and so does bit-perfect playback in exclusive mode.
+
+**Fades** sets short fades for **Pause and resume**, **Stop**, **Seek** and **Skip to another track**, so that nothing clicks.
+
+## Modules, game music, SID tunes and MIDI
+
+Tracker modules, game music files and Commodore 64 SID tunes play like any other track; a file with several songs becomes one track per song. Looping tunes play their loop twice and then fade out (**Looping tunes** in the **Playback** settings). MIDI files need a SoundFont: choose one under **MIDI files**, or Helikodu uses one installed on the system, if there is one. For SID tunes, **Song lengths** can point to the `Songlengths.md5` file of the High Voltage SID Collection, so each tune plays for its real length.
+
 Right-click the play button (or press and hold it) for its menu: **Stop**, **Stop after this track** and **Jump to the playing track**. **Stop after this track** stops at the end of the current track, once. The **Playback** submenu of the main menu has **Play/Pause**, **Stop**, **Previous**, **Next**, **Seek Back**, **Seek Forward** and **Stop After This Track**.
 
 ## The queue

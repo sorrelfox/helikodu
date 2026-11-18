@@ -145,7 +145,10 @@ impl State {
     pub(crate) fn properties(&self) -> Properties {
         let has_track = self.current.is_some();
         let can_go_next = match (has_track, self.index) {
-            (true, Some(index)) => index + 1 < self.count || self.modes.repeat == RepeatMode::All,
+            (true, Some(index)) => {
+                index + 1 < self.count
+                    || matches!(self.modes.repeat, RepeatMode::All | RepeatMode::Album)
+            }
             _ => false,
         };
         Properties {
@@ -464,7 +467,7 @@ fn playback_status(state: PlaybackState) -> &'static str {
 pub(crate) fn loop_status(repeat: RepeatMode) -> &'static str {
     match repeat {
         RepeatMode::One => "Track",
-        RepeatMode::All => "Playlist",
+        RepeatMode::All | RepeatMode::Album => "Playlist",
         _ => "None",
     }
 }
@@ -492,7 +495,9 @@ pub(crate) fn with_repeat(modes: PlayModes, repeat: RepeatMode) -> PlayModes {
 /// See [`with_repeat`].
 pub(crate) fn with_shuffle(modes: PlayModes, shuffle: bool) -> PlayModes {
     PlayModes {
-        shuffle: if shuffle {
+        shuffle: if shuffle && modes.shuffle != ShuffleMode::Off {
+            modes.shuffle
+        } else if shuffle {
             ShuffleMode::Tracks
         } else {
             ShuffleMode::Off
@@ -613,10 +618,7 @@ mod tests {
         state.apply(&track_changed(1, 2, 8), now);
         assert!(!state.properties().can_go_next);
         state.apply(
-            &PlayerEvent::ModesChanged(PlayModes {
-                shuffle: ShuffleMode::Tracks,
-                repeat: RepeatMode::All,
-            }),
+            &PlayerEvent::ModesChanged(PlayModes::new(ShuffleMode::Tracks, RepeatMode::All)),
             now,
         );
         let props = state.properties();

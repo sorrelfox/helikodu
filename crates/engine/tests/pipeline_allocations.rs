@@ -94,6 +94,7 @@ fn plan(source_hz: u32, device_hz: u32) -> PathPlan {
             ..LoudnessInfo::default()
         },
         album_context: false,
+        track_volume_db: 0.0,
         device,
         volume: VolumePlan::Software(Volume::new(0.7).unwrap()),
         dsp: false,

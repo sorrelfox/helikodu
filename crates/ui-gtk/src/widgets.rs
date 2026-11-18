@@ -10,9 +10,11 @@ pub(crate) mod brand_mark;
 pub(crate) mod cover_art;
 pub(crate) mod empty_state;
 pub(crate) mod eq_graph;
+pub(crate) mod lyric_lines;
 pub(crate) mod playing_indicator;
 pub(crate) mod rating_stars;
 pub(crate) mod signal_lamp;
+pub(crate) mod signal_path_chain;
 pub(crate) mod signal_path_list;
 pub(crate) mod waveform_seek_bar;
 

@@ -74,6 +74,16 @@ impl ReadPool {
 
     /// From now on, connections sort with `collation`. Each connection takes it up the
     /// next time it is lent out.
+    /// Runs `run` on a connection outside a transaction, for a statement that
+    /// cannot run inside one.
+    pub(crate) fn outside_transaction<T>(
+        &self,
+        run: impl FnOnce(&Connection) -> rusqlite::Result<T>,
+    ) -> Result<T, DbError> {
+        let mut lease = self.lease()?;
+        Ok(run(lease.connection_mut())?)
+    }
+
     pub(crate) fn set_collation(&self, collation: &LocaleCollation) {
         let mut state = self.lock();
         state.collation = collation.clone();

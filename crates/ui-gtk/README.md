@@ -14,12 +14,13 @@ The desktop user interface, built with GTK 4 without libadwaita. It talks to the
 | `src/backend.rs`, `src/backend/` | The adapter between the widgets and the core: `Backend`, `LibrarySource`, `PlayerControl` and the value types the widgets use. `service.rs` is the one over the running service, `sample.rs` one over invented content for tests, screenshots and `helikodu --demo` |
 | `src/style.rs`, `src/style/` | The theme system: `tokens.rs` (generated), `color.rs` (OKLab mixing, contrast, the accent variants), `theme.rs` (dark or light, the accent, high contrast and reduced motion from `GtkSettings` and the Settings portal), `css.rs` (the providers) |
 | `src/window.rs`, `src/window/` | The main window: sidebar, content header and view history, the panel with its tabs (Queue, and Signal path in `panel/signal_path.rs`: the path list, the playback counters, Copy diagnostics), resizable panes, toasts |
-| `src/deck.rs` | The player deck |
+| `src/deck.rs`, `src/deck/` | The player deck; `modes.rs`: the shuffle and repeat buttons (a click switches between off and the mode used last, right click or long press opens the mode's menu; both use bundled icons, since Breeze's shuffle icon is drawn smaller than its repeat icon; every deck icon is 16 px), the A-B loop's flags on the seek bar and its chip, the sleep chip |
+| `src/play_modes.rs` | The play modes in words, their menus (the Playback menu with the modes in its labels, Loop a section, Queue) and the application actions behind them; loop shortcuts Ctrl+[, Ctrl+] and Ctrl+\\ |
 | `src/views/` | Albums (the grid), the album page, Artists, Genres, Tracks (the column view), Folders, the playlist page and search; the one context menu and its window actions (`actions.rs`), drag and drop (`drag.rs`), the table cell (`table.rs`), and stand-ins for the views that come later |
 | `src/models/` | ID-backed list models: the album and track lists fetch their rows in batches on worker threads; cover thumbnails load newest first into a texture cache |
 | `src/widgets/` | Drawn widgets: cover art with the generated placeholder, the waveform seek bar, the signal lamp, rating stars, the playing indicator, the brand mark, the bipolar scale of the preamps and the balance, the equalizer's response with its faders (EqGraph), the artist avatar with initials |
 | `src/dialogs/` | Settings (Library, Playback, Audio output, Loudness, DSP and EQ with the chain and the editors of the equalizer, crossfeed, channel mix and limiter, Appearance, Advanced), the loudness measurement in the sidebar footer, the choice of a SoundFont or SID song-length file, the full-output confirmation, the tag editor, the first run with the scan footer, Keyboard shortcuts (Ctrl+?), Supported formats, About; the application actions that open them |
-| `src/popovers/` | The output quick switcher above the deck's output button |
+| `src/popovers/` | The output quick switcher above the deck's output button; the sleep timer (`sleep_timer.rs`: 15 min to 1.5 hours or a typed number of minutes, at once with a fade or after the track, +10 min, Turn off) |
 | `resources/` | Compiled into the resource bundle by `build.rs`: `style/helikodu.css`, `style/tokens.css` (generated), the templates in `ui/` and the bundled symbolic icons |
 
 `resources/style/tokens.json` holds the design's colours, type styles and sizes. `src/style/tokens.rs` and `resources/style/tokens.css` are generated from it; never edit them by hand:
@@ -71,6 +72,14 @@ crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test dialogs
 ```sh
 crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test tag_editing
 ```
+
+`tests/play_modes.rs` covers the play modes: the Playback menu's labels and the mode actions, the deck's shuffle and repeat buttons, stop after, the loop chip and the loop shortcuts, the sleep timer popover and chip, the queue panel's selection as the cursor of "Continue from the selected track" (a single click selects, a double click or Enter plays), the tag editor's Playback group (kept in the library and applied at once, not part of Save), the play button's menu with its Stop after submenu, every deck icon at 16 px under Adwaita and Breeze, and a paused window with the loop and sleep chips drawing no frames (the sleep chip counts down only while playing or while its popover is open). With `HELIKODU_PLAYMODE_SHOTS=DIR` it saves the deck with modes and chips, the sleep popover, the play button's menu and the Playback menu with its submenus, dark and light, to `DIR`; `HELIKODU_ICON_THEME` picks the icon theme for them:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test play_modes
+```
+
+The shuffle and repeat modes used last and "Follow the playing track" (View menu; it scrolls the queue panel to the track that starts) last for the session only: the window state file has no place for them yet.
 
 `tests/views.rs` covers the library views: the track table loading lazily and sorting by several keys, Artists, Genres and Folders, playlist edits with Undo, the context menu's actions, search with and without results, the menus, the empty library, and the frame times of the track table scrolling 100,000 tracks (slowly, fast, and jumping at random), which it prints:
 

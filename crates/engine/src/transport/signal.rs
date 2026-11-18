@@ -515,6 +515,7 @@ mod tests {
             source,
             loudness: LoudnessInfo::default(),
             album_context: false,
+            track_volume_db: 0.0,
             device,
             volume: VolumePlan::Fixed,
             dsp: false,

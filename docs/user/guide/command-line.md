@@ -28,6 +28,7 @@ helikodu-cli search TEXT...        # find tracks in the library
 helikodu-cli info FILE|TRACK-ID    # show a file's or track's tags and properties
 helikodu-cli stats                 # library totals and most played tracks
 helikodu-cli loudness --library    # measure the loudness of the tracks not yet measured
+helikodu-cli duplicates            # list the copies of files in the library (lists only)
 ```
 
 Some examples:
@@ -47,6 +48,6 @@ helikodu-cli search miles davis --limit 10 --json
 
 While `play` runs in a terminal, Space pauses, `n` and `p` go to the next and previous file, the arrow keys seek by 5 seconds, `+` and `-` change the volume, `o` moves playback to the next output device, and `q` quits.
 
-`scan`, `search`, `info`, `stats` and `loudness` use the same library as the application, so you can scan from the command line and browse the result in the window. Most commands take `--json` for output that scripts can read.
+`scan`, `search`, `info`, `stats`, `loudness` and `duplicates` use the same library as the application, so you can scan from the command line and browse the result in the window. Most commands take `--json` for output that scripts can read.
 
 The manual page `man helikodu-cli` describes every command, option and exit code.

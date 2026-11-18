@@ -22,6 +22,10 @@ use super::{SettingsError, check_range};
 /// hide_missing_drives = true
 /// missing_grace_days = 30        # a missing track leaves the library after this
 ///
+/// [library.duplicates]
+/// on_scan = "add"                # or "skip": copies get no tracks of their own
+/// show_one = false               # show only the main copy of each group
+///
 /// [library.storage]
 /// covers_mib = 2048
 /// analysis_mib = 1024
@@ -52,6 +56,8 @@ pub struct LibrarySettings {
     /// How many days (1 to 3650) a track whose file disappeared stays in the
     /// library, in case it comes back.
     pub missing_grace_days: u32,
+    /// How copies (byte-identical files) are treated.
+    pub duplicates: DuplicateSettings,
     /// Size limits of the caches and stores.
     pub storage: StorageLimits,
 }
@@ -67,6 +73,7 @@ impl Default for LibrarySettings {
             include_video: false,
             hide_missing_drives: true,
             missing_grace_days: 30,
+            duplicates: DuplicateSettings::default(),
             storage: StorageLimits::default(),
         }
     }
@@ -102,6 +109,34 @@ impl LibrarySettings {
         }
         self.storage.validate()
     }
+}
+
+/// What a scan does with a copy: a file whose bytes are identical to another
+/// library file's (content and tags).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DuplicateScan {
+    /// Copies get tracks like any other file.
+    #[default]
+    Add,
+    /// Copies are recorded, but get no tracks: they appear in no list, count or
+    /// search, and one of them takes over when the main copy disappears.
+    Skip,
+}
+
+/// How copies are treated: the `[library.duplicates]` table.
+///
+/// Copies of one file share one track identity (ratings, plays, history, playlist
+/// entries), and one of them is the main copy, which plays.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DuplicateSettings {
+    /// What a scan does with copies. A change applies to the library at once.
+    pub on_scan: DuplicateScan,
+    /// Whether lists, counts, search and statistics show only the main copy of each
+    /// group (meaningful with [`DuplicateScan::Add`]). The folder view still shows
+    /// every file.
+    pub show_one: bool,
 }
 
 /// How much the caches and stores may hold: the `[library.storage]` table.
@@ -175,6 +210,30 @@ mod tests {
         assert_eq!(library.rescan_interval_min, 30);
         assert_eq!(library.storage.covers_mib, 2048);
         assert_eq!(library.validate(), Ok(()));
+    }
+
+    #[test]
+    fn duplicate_settings_read_and_write() {
+        let settings: Settings =
+            toml::from_str("[library.duplicates]\non_scan = \"skip\"\nshow_one = true\n").unwrap();
+        assert_eq!(
+            settings.library.duplicates,
+            DuplicateSettings {
+                on_scan: DuplicateScan::Skip,
+                show_one: true,
+            }
+        );
+        let text = toml::to_string(&settings).unwrap();
+        assert!(text.contains("[library.duplicates]"), "{text}");
+        assert!(text.contains("on_scan = \"skip\""), "{text}");
+        assert_eq!(toml::from_str::<Settings>(&text).unwrap(), settings);
+        assert_eq!(
+            LibrarySettings::default().duplicates,
+            DuplicateSettings {
+                on_scan: DuplicateScan::Add,
+                show_one: false,
+            }
+        );
     }
 
     #[test]

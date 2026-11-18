@@ -22,11 +22,13 @@ use helikodu_library::{
 use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::settings::{LibrarySettings, Settings};
 
+use super::duplicates::DuplicateApplier;
 use super::{
     AlbumDetail, AlbumId, AlbumQuery, AlbumSummary, ArtistQuery, ArtistSummary, GenreQuery,
     GenreSummary, LibraryError, LibraryOverview, MusicLibrary, Paged, ScanRequest, SearchPage,
     TrackInfo, TrackQuery, TrackSummary,
 };
+use super::{CopyGroup, DuplicateCounts, DuplicateGroup, FileId, KeepRule, MatchBy, TrashOutcome};
 use crate::Event;
 use crate::bus::EventBus;
 use crate::jobs::loudness::{LoudnessEvent, LoudnessJob, LoudnessRequest};
@@ -64,6 +66,10 @@ pub enum LibraryEvent {
     /// Progress of a loudness measurement started with
     /// [`LibraryService::measure_loudness`].
     Loudness(LoudnessEvent),
+    /// A change of the `[library.duplicates]` settings has been applied to the
+    /// library: what had to be read (when copies get tracks again), or why it
+    /// failed. [`LibraryEvent::Changed`] follows.
+    DuplicatesApplied(Result<ScanSummary, String>),
 }
 
 /// How the library service starts.
@@ -155,6 +161,7 @@ pub struct LibraryService {
     scan: Mutex<Option<RunningScan>>,
     watcher: Mutex<Option<RunningWatcher>>,
     loudness: Mutex<Option<LoudnessJob>>,
+    duplicates: DuplicateApplier,
     bus: EventBus<Event>,
     worker_program: Option<PathBuf>,
 }
@@ -212,6 +219,8 @@ impl LibraryService {
                 )
             }
         };
+        let duplicates =
+            DuplicateApplier::start(library.clone(), bus.clone(), options.worker_program.clone());
         Ok(Self {
             library,
             jobs: Some(jobs),
@@ -220,6 +229,7 @@ impl LibraryService {
             scan: Mutex::new(None),
             watcher: Mutex::new(None),
             loudness: Mutex::new(None),
+            duplicates,
             bus,
             worker_program: options.worker_program,
         })
@@ -374,6 +384,98 @@ impl LibraryService {
         Ok(report)
     }
 
+    /// Applies the `[library.duplicates]` settings of `settings` in the background
+    /// (unless they are applied already): skipping copies removes their tracks,
+    /// adding them reads the copies again. The service does this at start and
+    /// whenever the settings change; progress is announced as
+    /// [`LibraryEvent::Scan`], the end as [`LibraryEvent::DuplicatesApplied`] and
+    /// [`LibraryEvent::Changed`].
+    pub fn apply_duplicate_settings(&self, settings: &LibrarySettings) {
+        self.duplicates.apply(settings);
+    }
+
+    /// The group of copies of the file of `track`, or `None`.
+    pub fn copies_of(
+        &self,
+        track: TrackId,
+        reply: impl FnOnce(Result<Option<CopyGroup>, LibraryError>) + Send + 'static,
+    ) -> Result<(), LibraryError> {
+        self.run(move |l| l.copies_of(track), reply)
+    }
+
+    /// Makes `file` the main copy of its group; announces [`LibraryEvent::Changed`].
+    pub fn set_main_copy(
+        &self,
+        file: FileId,
+        reply: impl FnOnce(Result<(), LibraryError>) + Send + 'static,
+    ) -> Result<(), LibraryError> {
+        let bus = self.bus.clone();
+        self.run(
+            move |l| {
+                l.set_main_copy(file)?;
+                bus.publish(&Event::Library(LibraryEvent::Changed));
+                Ok(())
+            },
+            reply,
+        )
+    }
+
+    /// Moves the copies `files`, which the owner confirmed, to the desktop trash
+    /// (see [`MusicLibrary::trash_copies`]); each file's result says where it went or
+    /// why it stayed. Announces [`LibraryEvent::Changed`].
+    pub fn trash_copies(
+        &self,
+        files: Vec<FileId>,
+        reply: impl FnOnce(Result<Vec<TrashOutcome>, LibraryError>) + Send + 'static,
+    ) -> Result<(), LibraryError> {
+        let bus = self.bus.clone();
+        self.run(
+            move |l| {
+                let outcomes = l.trash_copies(&files);
+                bus.publish(&Event::Library(LibraryEvent::Changed));
+                outcomes
+            },
+            reply,
+        )
+    }
+
+    /// Moves files found by the duplicate finder by another measure than identity
+    /// to the desktop trash (see [`MusicLibrary::trash_duplicates`]). Announces
+    /// [`LibraryEvent::Changed`].
+    pub fn trash_duplicates(
+        &self,
+        files: Vec<FileId>,
+        reply: impl FnOnce(Result<Vec<TrashOutcome>, LibraryError>) + Send + 'static,
+    ) -> Result<(), LibraryError> {
+        let bus = self.bus.clone();
+        self.run(
+            move |l| {
+                let outcomes = l.trash_duplicates(&files);
+                bus.publish(&Event::Library(LibraryEvent::Changed));
+                outcomes
+            },
+            reply,
+        )
+    }
+
+    /// The groups of duplicates by `match_by` with the marks `keep` suggests.
+    pub fn find_duplicates(
+        &self,
+        match_by: MatchBy,
+        keep: KeepRule,
+        reply: impl FnOnce(Result<Vec<DuplicateGroup>, LibraryError>) + Send + 'static,
+    ) -> Result<(), LibraryError> {
+        self.run(move |l| l.find_duplicates(match_by, keep), reply)
+    }
+
+    /// How many groups each measure of the duplicate finder finds.
+    pub fn duplicate_counts(
+        &self,
+        reply: impl FnOnce(Result<DuplicateCounts, LibraryError>) + Send + 'static,
+    ) -> Result<(), LibraryError> {
+        self.run(MusicLibrary::duplicate_counts, reply)
+    }
+
     /// The thumbnail of a cover: the file when it is cached, or else scheduled
     /// (newest first) and announced with [`LibraryEvent::ThumbnailReady`]. Does no
     /// file I/O on the calling thread. Without a thumbnail cache, `Unavailable`.
@@ -514,6 +616,7 @@ impl LibraryService {
 
 impl Drop for LibraryService {
     fn drop(&mut self) {
+        self.duplicates.stop();
         self.stop_loudness();
         self.cancel_scan();
         self.stop_watching();

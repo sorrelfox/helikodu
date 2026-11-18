@@ -18,6 +18,7 @@ path = [
     "AUTHORS",
     "po/LINGUAS",
     "po/POTFILES.in",
+    "**/proptest-regressions/**",
     ".github/**",
 ]
 precedence = "aggregate"

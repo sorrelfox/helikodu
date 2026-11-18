@@ -48,6 +48,7 @@ pub use self::loudness::{
     ClippingPrevention, GainDecision, GainSource, GainStage, LoudnessInfo, LoudnessMode,
     LoudnessSettings, R128_REFERENCE_LUFS, REFERENCE_LUFS, db_to_linear, linear_to_db,
     parse_gain_db, parse_peak, r128_to_replaygain_db, replaygain_db_to_r128, resolve_gain,
+    resolve_track_gain,
 };
 pub use self::path_plan::{
     ChannelMixPlan, PathPlan, PathRequest, PlannedStage, ProcessingSettings, ResamplePlan,

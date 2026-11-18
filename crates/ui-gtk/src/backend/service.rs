@@ -12,6 +12,7 @@
 //! playback come back to the window as [`Update::Request`], so they pass the
 //! full-output gate.
 
+mod lyrics;
 mod services;
 
 use std::collections::{HashMap, HashSet};
@@ -42,6 +43,7 @@ use helikodu_service::library::{
     PlaylistId, QueueItemInfo, Thumbnail, ThumbnailSize, TrackFilter, TrackOrder, TrackSortKey,
     TrackSummary,
 };
+use helikodu_service::player::SleepWhen as ServiceSleepWhen;
 use helikodu_service::player::{
     ContextRequest, EndReason, Notice, PlayerCommand, PlayerEvent, QueueSnapshot as Snapshot,
 };
@@ -1155,8 +1157,85 @@ impl PlayerControl for ServicePlayer {
             PlayerRequest::SetVolume(volume) => {
                 self.command(PlayerCommand::SetVolume(Volume::clamped(volume as f32)));
             }
+            PlayerRequest::AdjustLyricsOffset(delta) => {
+                if let Some(lyrics) = self.service.lyrics() {
+                    lyrics.adjust_offset(delta);
+                }
+            }
+            PlayerRequest::ReloadLyrics => {
+                if let Some(lyrics) = self.service.lyrics() {
+                    lyrics.reload();
+                }
+            }
+            PlayerRequest::SetShuffleMode(mode) => self.command(PlayerCommand::SetShuffle(mode)),
+            PlayerRequest::SetRepeatMode(mode) => self.command(PlayerCommand::SetRepeat(mode)),
+            PlayerRequest::SetStopAfterMode(mode) => {
+                self.command(PlayerCommand::SetStopAfter(mode));
+            }
+            PlayerRequest::SetConsume(on) => self.command(PlayerCommand::SetConsume(on)),
+            PlayerRequest::SetPlayScope(scope) => self.command(PlayerCommand::SetPlayScope(scope)),
+            PlayerRequest::SetFollowCursor(on) => self.command(PlayerCommand::SetFollowCursor(on)),
+            PlayerRequest::SetCursor(entry) => {
+                self.command(PlayerCommand::SetCursor(entry.map(EntryId::new)));
+            }
+            PlayerRequest::NextAlbum => self.command(PlayerCommand::NextAlbum),
+            PlayerRequest::PreviousAlbum => self.command(PlayerCommand::PreviousAlbum),
+            PlayerRequest::RandomAlbum => self.command(PlayerCommand::RandomAlbum),
+            PlayerRequest::LoopStartHere => self.command(PlayerCommand::LoopStartHere),
+            PlayerRequest::LoopEndHere => self.command(PlayerCommand::LoopEndHere),
+            PlayerRequest::SetLoop(None) => self.command(PlayerCommand::SetLoop(None)),
+            PlayerRequest::SetLoop(Some((start, end))) => {
+                if let Some(range) = helikodu_model::player::LoopRange::new(
+                    MediaTime::from_duration(start),
+                    MediaTime::from_duration(end),
+                ) {
+                    self.command(PlayerCommand::SetLoop(Some(range)));
+                }
+            }
+            PlayerRequest::StartSleepTimer { length, when } => {
+                self.command(PlayerCommand::StartSleepTimer {
+                    length,
+                    when: match when {
+                        super::SleepWhen::AtOnce => ServiceSleepWhen::AtOnce,
+                        super::SleepWhen::AfterTrack => ServiceSleepWhen::AfterTrack,
+                    },
+                });
+            }
+            PlayerRequest::ExtendSleepTimer(by) => {
+                self.command(PlayerCommand::ExtendSleepTimer(by));
+            }
+            PlayerRequest::CancelSleepTimer => self.command(PlayerCommand::CancelSleepTimer),
+            PlayerRequest::SetTrackFlags { track, flags } => {
+                self.command(PlayerCommand::SetTrackFlags {
+                    track: track_id(track),
+                    flags,
+                });
+            }
         }
     }
+}
+
+/// The A-B loop as the window shows it.
+fn loop_points(ab: Option<helikodu_service::player::AbLoop>) -> Option<super::LoopPoints> {
+    ab.map(|ab| super::LoopPoints {
+        start: ab.start.map(MediaTime::as_duration),
+        end: ab.end.map(MediaTime::as_duration),
+    })
+}
+
+/// The sleep timer as the window shows it.
+fn sleep_timer(
+    timer: Option<helikodu_service::player::SleepTimerStatus>,
+) -> Option<super::SleepTimer> {
+    timer.map(|t| super::SleepTimer {
+        remaining: t.remaining,
+        length: t.length,
+        when: if t.when == ServiceSleepWhen::AfterTrack {
+            super::SleepWhen::AfterTrack
+        } else {
+            super::SleepWhen::AtOnce
+        },
+    })
 }
 
 /// The window state in `ui-state.toml`.
@@ -1189,9 +1268,10 @@ fn output_name(selection: &OutputSelection) -> String {
 fn modes(modes: PlayModes) -> Update {
     Update::Modes {
         shuffle: modes.shuffle != ShuffleMode::Off,
+        // Repeating the album is "on" for the coarse view, as for MPRIS.
         repeat: match modes.repeat {
             RepeatMode::One => Repeat::One,
-            RepeatMode::All => Repeat::All,
+            RepeatMode::All | RepeatMode::Album => Repeat::All,
             _ => Repeat::Off,
         },
     }
@@ -1461,10 +1541,22 @@ impl Forwarder {
                 self.send_queue();
                 true
             }
-            PlayerEvent::ModesChanged(m) => self.send(modes(*m)),
+            PlayerEvent::ModesChanged(m) => {
+                self.send(modes(*m)) && self.send(Update::PlayModes(*m))
+            }
             PlayerEvent::StopAfterChanged(stop) => {
                 self.send(Update::StopAfter(*stop != StopAfter::Off))
+                    && self.send(Update::StopAfterMode(*stop))
             }
+            PlayerEvent::LoopChanged(ab) => self.send(Update::Loop(loop_points(*ab))),
+            PlayerEvent::SleepTimerChanged(timer) => {
+                self.send(Update::SleepTimer(sleep_timer(*timer)))
+            }
+            PlayerEvent::CursorChanged(entry) => self.send(Update::Cursor(entry.map(EntryId::get))),
+            PlayerEvent::TrackFlagsChanged { track, flags } => self.send(Update::TrackFlags {
+                track: TrackKey(track.get()),
+                flags: *flags,
+            }),
             PlayerEvent::VolumeChanged(volume) => {
                 self.send(Update::Volume(f64::from(volume.position())))
             }
@@ -1514,6 +1606,10 @@ impl Forwarder {
                     Notice::SessionNotSaved { reason } => {
                         Some(fill(&tr("The queue could not be saved: {}"), &[reason]))
                     }
+                    Notice::FlagsNotSaved { reason, .. } => Some(fill(
+                        &tr("The playback settings of the track could not be saved: {}"),
+                        &[reason],
+                    )),
                     _ => None,
                 };
                 message.is_none_or(|message| self.send(Update::Notice { message }))
@@ -1522,7 +1618,8 @@ impl Forwarder {
                 self.output.signal = SignalState::Idle;
                 self.output.sample_rate = None;
                 self.output.bits = None;
-                let state = if *reason == EndReason::StopAfter {
+                // The sleep timer pauses, keeping the position, as stop-after does.
+                let state = if matches!(*reason, EndReason::StopAfter | EndReason::SleepTimer) {
                     PlaybackState::Paused
                 } else {
                     PlaybackState::Idle
@@ -1580,7 +1677,12 @@ impl Forwarder {
             && self.send(Update::Volume(f64::from(status.volume.position())))
             && self.send(modes(status.modes))
             && self.send(Update::StopAfter(status.stop_after != StopAfter::Off))
-            && self.send(Update::State(playback(status.playback)));
+            && self.send(Update::State(playback(status.playback)))
+            && self.send(Update::PlayModes(status.modes))
+            && self.send(Update::StopAfterMode(status.stop_after))
+            && self.send(Update::Loop(loop_points(status.ab_loop)))
+            && self.send(Update::SleepTimer(sleep_timer(status.sleep_timer)))
+            && self.send(Update::Cursor(status.cursor.map(EntryId::get)));
         self.send_queue();
         if let Some(path) = &status.signal_path {
             self.path_known = true;
@@ -1608,6 +1710,9 @@ impl Forwarder {
                 length: now.length.map(MediaTime::as_duration),
             });
         }
+        for update in lyrics::initial(&self.service) {
+            let _ = self.send(update);
+        }
         if let Some(mpris) = &self.mpris {
             mpris.sync(self.service.player());
         }
@@ -1627,6 +1732,13 @@ impl Forwarder {
                 Ok(Event::Library(event)) => {
                     if !self.library_event(&event) {
                         return;
+                    }
+                }
+                Ok(Event::Lyrics(event)) => {
+                    for update in lyrics::updates(&event) {
+                        if !self.send(update) {
+                            return;
+                        }
                     }
                 }
                 Ok(_) => {}
@@ -1756,6 +1868,7 @@ mod tests {
         let update = modes(PlayModes {
             shuffle: ShuffleMode::Tracks,
             repeat: RepeatMode::One,
+            ..PlayModes::default()
         });
         assert_eq!(
             update,

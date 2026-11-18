@@ -9,10 +9,12 @@
 
 pub mod covers;
 pub mod cue;
+pub mod lyrics;
 pub mod playlists;
 pub mod tags;
 pub mod worker;
 
 pub use covers::{Cover, CoverHash, CoverLimits, CoverSource, find_cover};
 pub use cue::{CueSheet, CueTracks, VirtualTrack, read_chapters, read_cue, read_embedded_cue};
+pub use lyrics::{LocalLyrics, Lyrics, LyricsProvider};
 pub use tags::{FileTags, ReadOptions, TagError, TrackTags, read_tags};

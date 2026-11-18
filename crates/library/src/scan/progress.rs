@@ -52,6 +52,13 @@ pub enum ScanEvent {
         /// Why.
         failure: FileFailure,
     },
+    /// Copies were recognised, but the statistics of their tracks were not merged:
+    /// the one-time backup of the database before the first merge could not be
+    /// written. The next scan tries again.
+    CopiesNotMerged {
+        /// Why the backup failed.
+        reason: String,
+    },
     /// The scan is over; the same summary is the scan's result.
     Finished(ScanSummary),
 }
@@ -120,6 +127,8 @@ pub struct ScanSummary {
     pub skipped_unreadable: usize,
     /// Worker processes started again after a crash or a timeout.
     pub worker_restarts: usize,
+    /// Files recognised as copies of another file (byte-identical).
+    pub copies: usize,
     /// Whether the scan was cancelled before it finished.
     pub cancelled: bool,
     /// How long the scan took.

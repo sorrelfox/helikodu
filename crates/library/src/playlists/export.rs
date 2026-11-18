@@ -38,8 +38,11 @@ pub(crate) fn export_rows(
         "SELECT i.ref_kind, i.missing_ref, i.title, i.artist, i.album, i.duration_ms,
                 t.id, d.path, f.name, t.title, t.artist, a.title, t.duration_ms, t.track_no
          FROM playlist_items i
-         LEFT JOIN tracks t ON t.id = (SELECT min(t2.id) FROM tracks t2
-                                       WHERE t2.identity_id = i.identity_id)
+         LEFT JOIN tracks t ON t.id = (SELECT t2.id FROM tracks t2
+                                       JOIN files f2 ON f2.id = t2.file_id
+                                       WHERE t2.identity_id = i.identity_id
+                                       ORDER BY f2.missing_since IS NOT NULL, t2.is_copy, t2.id
+                                       LIMIT 1)
          LEFT JOIN files f ON f.id = t.file_id
          LEFT JOIN dirs d ON d.id = f.dir_id
          LEFT JOIN albums a ON a.id = t.album_id

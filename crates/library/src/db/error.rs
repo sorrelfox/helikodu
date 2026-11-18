@@ -98,6 +98,16 @@ pub enum DbError {
     /// The writer thread could not be started.
     #[error("could not start the database writer thread: {0}")]
     Thread(#[source] std::io::Error),
+
+    /// The backup of the database could not be written.
+    #[error("cannot write the backup {}: {source}", .path.display())]
+    Backup {
+        /// The backup file.
+        path: PathBuf,
+        /// Why.
+        #[source]
+        source: std::io::Error,
+    },
 }
 
 impl From<rusqlite::Error> for DbError {

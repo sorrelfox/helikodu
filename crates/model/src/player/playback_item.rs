@@ -61,6 +61,15 @@ pub struct PlaybackItem {
     /// `None` for the one the file marks as default, or the best one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audio_stream: Option<u32>,
+    /// The volume adjustment of this track alone ("Volume for this track"), in dB,
+    /// applied with the loudness gain. Zero by default.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub track_volume_db: f64,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)] // serde passes a reference
+fn is_zero(value: &f64) -> bool {
+    *value == 0.0
 }
 
 impl PlaybackItem {
@@ -73,6 +82,17 @@ impl PlaybackItem {
             album_context: false,
             album: None,
             audio_stream: None,
+            track_volume_db: 0.0,
+        }
+    }
+
+    /// The same item with the volume adjustment `db` (see
+    /// [`track_volume_db`](Self::track_volume_db)).
+    #[must_use]
+    pub fn with_track_volume(self, db: f64) -> Self {
+        Self {
+            track_volume_db: db,
+            ..self
         }
     }
 

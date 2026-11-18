@@ -1,0 +1,72 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * The play modes: the deck's mode buttons and icons, the loop and sleep
+ * chips, the sleep timer popover, and the queue panel's selected row.
+ */
+
+/* ---- Deck icons --------------------------------------------------------- */
+
+/* Every icon in the deck's buttons is 16 px, whatever the icon theme's own
+   size or padding: Breeze and Adwaita draw their media icons differently. */
+button.hk-deck-icon image, button.hk-output image { -gtk-icon-size: 16px; }
+button.hk-icon.hk-deck-icon { color: var(--hk-glass-t2); }
+button.hk-icon.hk-deck-icon:hover { color: var(--hk-glass-t1); }
+button.hk-icon.hk-deck-icon.active { color: var(--hk-accent-fill); }
+
+/* ---- Deck chips --------------------------------------------------------- */
+
+.hk-deck-chip {
+  border: 1px solid var(--hk-glass-line); background: none; background-image: none; box-shadow: none;
+  color: var(--hk-glass-t1); font-weight: 500;
+}
+.hk-deck-chip .hk-chip-icon { color: var(--hk-accent-fill); -gtk-icon-size: 12px; }
+.hk-loop-chip { min-height: 22px; padding: 0 2px 0 8px; border-radius: 6px; font-size: 10.5px; }
+button.hk-sleep-chip { min-height: 26px; padding: 0 10px; border-radius: 7px; font-size: 11.5px; }
+button.hk-sleep-chip:hover { background-color: var(--hk-glass-hover); }
+button.hk-sleep-chip .hk-chip-icon { -gtk-icon-size: 14px; }
+button.hk-chip-clear {
+  min-width: 20px; min-height: 20px; padding: 0; border: none; border-radius: 5px;
+  background: none; background-image: none; box-shadow: none; color: var(--hk-glass-t2);
+}
+button.hk-chip-clear:hover { background-color: var(--hk-glass-hover); color: var(--hk-glass-t1); }
+button.hk-chip-clear image { -gtk-icon-size: 10px; }
+
+/* ---- Sleep timer popover ------------------------------------------------ */
+
+.hk-sleep-head { padding: 0 16px; }
+.hk-sleep-title { font-size: 14px; font-weight: 600; }
+.hk-sleep-stops { font-size: 11px; color: var(--hk-glass-t2); text-transform: uppercase; letter-spacing: 0.04em; }
+.hk-sleep-body { padding: 0 16px 14px; }
+.hk-sleep-body .hk-section-label { margin-top: 4px; color: var(--hk-glass-t3); }
+button.hk-sleep-choice {
+  min-height: 28px; padding: 0 6px; border-radius: 7px; border: 1px solid var(--hk-glass-choice-border);
+  background: none; background-image: none; box-shadow: none; color: var(--hk-glass-t1); font-weight: 400;
+}
+button.hk-sleep-choice:hover { background-color: var(--hk-glass-hover); }
+button.hk-sleep-choice.chosen { border-color: var(--hk-accent-fill); background-color: var(--hk-sel); font-weight: 600; }
+.hk-sleep-other { margin-top: 2px; }
+.hk-sleep-note { font-size: 12px; color: var(--hk-glass-t2); }
+.hk-sleep-footer { padding: 0 12px 0 16px; border-top: 1px solid var(--hk-glass-line); }
+.hk-sleep-left { font-size: 13px; font-weight: 500; }
+.hk-sleep-left-word { font-size: 13px; color: var(--hk-glass-t2); }
+
+/* ---- Queue panel -------------------------------------------------------- */
+
+/* The selected row: where "Continue from the selected track" goes on. */
+list.hk-queue > row:selected { background-color: var(--hk-hover); box-shadow: inset 0 0 0 1px var(--hk-line2); color: var(--hk-t1); }
+list.hk-queue > row.current:selected { background-color: var(--hk-sel); }
+
+/* ---- Menus -------------------------------------------------------------- */
+
+/* A radio item shows a 6 px dot in the mark column, not a ring. */
+popover.menu modelbutton radio {
+  min-width: 16px; min-height: 16px; margin: 0 8px 0 0; padding: 0;
+  border: none; border-radius: 0; background: none; background-image: none; box-shadow: none;
+  transform: none; -gtk-icon-source: none; color: var(--hk-t1);
+}
+popover.menu modelbutton radio:hover, popover.menu modelbutton radio:active { transform: none; background: none; box-shadow: none; }
+popover.menu modelbutton radio:checked {
+  background-image: radial-gradient(circle 3px at center, currentColor 2.4px, transparent 3px);
+}

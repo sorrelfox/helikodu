@@ -767,6 +767,17 @@ impl Services for ServiceServices {
         None
     }
 
+    fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {
+        if track.0 == 0 {
+            return None;
+        }
+        self.service
+            .library()?
+            .library()
+            .track_flags(TrackId::new(track.0))
+            .ok()
+    }
+
     fn versions(&self) -> Versions {
         Versions {
             ffmpeg: None,

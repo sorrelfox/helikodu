@@ -75,8 +75,10 @@ impl Worker {
                         && self.dsp.as_ref().is_none_or(|dsp| !dsp.is_active())
                         && source.renders_exact() =>
                 {
+                    let at = output.writer.frames_written();
                     let frames = source.render_exact(&mut output.writer, budget);
                     budget = budget.saturating_sub(frames);
+                    self.note_wraps(at);
                     if frames == 0 {
                         break;
                     }
@@ -251,6 +253,7 @@ impl Worker {
             position: MediaTime::ZERO,
         };
         let started = resume.segment.started_event();
+        self.keep_loop_of(resume.segment.item.id);
         self.current = Some(source);
         self.next_answered = false;
         self.near_end_sent = None;
@@ -523,6 +526,7 @@ impl Worker {
                 .map_or(source.rate(), |output| output.spec().rate),
             error: None,
             mix_from: None,
+            rewinds: Vec::new(),
         }
     }
 }

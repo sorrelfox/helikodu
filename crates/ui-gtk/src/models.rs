@@ -7,6 +7,7 @@
 
 pub(crate) mod album_list;
 pub(crate) mod covers;
+pub(crate) mod lyrics;
 pub(crate) mod track_list;
 
 pub(crate) use album_list::{AlbumItem, AlbumListModel};

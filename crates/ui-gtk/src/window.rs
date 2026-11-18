@@ -9,9 +9,11 @@
 //! desktop draws its title bar, and the menu bar can be shown (Ctrl+M).
 
 pub(crate) mod dialog_hooks;
+pub(crate) mod now_playing;
 pub(crate) mod pages;
 pub(crate) mod pane_handle;
 pub(crate) mod panel;
+pub(crate) mod play_modes;
 pub(crate) mod sidebar;
 pub(crate) mod toast_overlay;
 
@@ -155,6 +157,7 @@ mod imp {
         pub(super) album: RefCell<Option<AlbumPage>>,
         pub(super) backend: RefCell<Option<Backend>>,
         pub(super) playback: RefCell<Option<Rc<Playback>>>,
+        pub(super) now_playing: RefCell<Option<Rc<crate::views::now_playing::NowPlayingView>>>,
         pub(super) history: RefCell<Vec<Page>>,
         pub(super) index: Cell<usize>,
         pub(super) placeholders: RefCell<HashSet<&'static str>>,
@@ -167,6 +170,8 @@ mod imp {
         pub(super) panel_chosen: Cell<bool>,
         /// Whether the output device is gone.
         pub(super) device_lost: Cell<bool>,
+        /// Set while the queue panel's selection follows the player.
+        pub(super) queue_selecting: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -293,6 +298,9 @@ impl MainWindow {
         imp.deck.bind(backend, &playback, &covers);
         self.setup_dialogs(backend, &playback);
         imp.panel.bind(backend, &playback, &covers);
+        let lyrics = crate::models::lyrics::LyricsModel::follow(&playback);
+        imp.panel.bind_lyrics(backend, &playback, &lyrics, &covers);
+        self.setup_now_playing(backend, &playback, &lyrics, &covers);
         let toasts = ToastOverlay::new(&imp.toast_overlay);
         imp.toasts.replace(Some(toasts));
         let weak = self.downgrade();
@@ -336,6 +344,7 @@ impl MainWindow {
         });
 
         self.install_actions();
+        self.setup_play_modes(backend, &playback);
         // Space plays and pauses unless the focused widget uses it (a button,
         // a switch, a text field…): a shortcut of the window in the bubble
         // phase, which runs only after the focus widget let the key through.
@@ -719,6 +728,13 @@ impl MainWindow {
     /// The four regions F6 moves between: sidebar, content, panel, deck.
     fn regions(&self) -> Vec<(gtk::Widget, gtk::Widget)> {
         let imp = self.imp();
+        // Now Playing in place of the panes: the view and the deck.
+        if let Some(view) = imp.now_playing.borrow().as_ref().filter(|v| v.is_active()) {
+            return vec![
+                (view.widget().clone().upcast(), view.focus_target()),
+                (imp.deck.get().upcast(), imp.deck.focus_target()),
+            ];
+        }
         let mut regions = Vec::new();
         if imp.sidebar_revealer.reveals_child()
             && let Some(sidebar) = imp.sidebar.borrow().as_ref()

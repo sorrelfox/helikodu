@@ -12,6 +12,7 @@ mod controls;
 mod crash;
 mod media;
 mod modes;
+mod play_modes;
 mod queue;
 mod session;
 mod stats;

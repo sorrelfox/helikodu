@@ -174,6 +174,36 @@ impl CoverArt {
         }
     }
 
+    /// The cover's dominant colour, roughly: the average of the image, or the
+    /// ground of the placeholder. For the tint behind Now Playing.
+    pub(crate) fn tint(&self) -> Rgba {
+        let imp = self.imp();
+        if let Some(texture) = imp.texture.borrow().as_ref() {
+            let (w, h) = (texture.width().max(1), texture.height().max(1));
+            let (wu, hu) = (w.unsigned_abs() as usize, h.unsigned_abs() as usize);
+            if wu * hu <= 4096 * 4096 {
+                let stride = wu * 4;
+                let mut data = vec![0u8; stride * hu];
+                // The default format: B8G8R8A8, premultiplied.
+                texture.download(&mut data, stride);
+                let step = (wu * hu / 4096).max(1);
+                let (mut r, mut g, mut b, mut n) = (0u64, 0u64, 0u64, 0u64);
+                for pixel in data.as_chunks::<4>().0.iter().step_by(step) {
+                    b += u64::from(pixel[0]);
+                    g += u64::from(pixel[1]);
+                    r += u64::from(pixel[2]);
+                    n += 1;
+                }
+                if n > 0 {
+                    let channel = |v: u64| u8::try_from(v / n).unwrap_or(u8::MAX);
+                    return Rgba::new(channel(r), channel(g), channel(b), 1.0);
+                }
+            }
+        }
+        let (palette, _) = pick(imp.seed.get());
+        cover_placeholder::PALETTES[palette][0]
+    }
+
     /// Marks the cover of the album that plays (the accent ring).
     pub(crate) fn set_playing(&self, playing: bool) {
         if playing {

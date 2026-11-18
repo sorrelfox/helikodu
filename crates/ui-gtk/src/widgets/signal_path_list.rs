@@ -85,7 +85,7 @@ fn idle_words(stage: &SignalStage) -> String {
 /// The value and node of the stages of `kinds` taken together: active when
 /// one of them is, with the words of each that is; otherwise the words of
 /// the first one reported.
-fn stages(path: &SignalPath, kinds: &[StageKind]) -> (String, Node) {
+pub(crate) fn stages(path: &SignalPath, kinds: &[StageKind]) -> (String, Node) {
     let reported: Vec<&SignalStage> = kinds.iter().filter_map(|k| path.stage(*k)).collect();
     let active: Vec<&str> = reported
         .iter()

@@ -11,6 +11,7 @@ use helikodu_model::audio::MediaTime;
 use crate::bus::{EventBus, Subscription, Waker};
 use crate::clock::SharedClock;
 use crate::library::LibraryEvent;
+use crate::lyrics::LyricsEvent;
 use crate::player::PlayerEvent;
 use crate::settings::SettingsEvent;
 
@@ -24,6 +25,9 @@ pub enum Event {
     Settings(SettingsEvent),
     /// From the library service.
     Library(LibraryEvent),
+    /// From the lyrics service (with the player's events: they follow the
+    /// playing track).
+    Lyrics(LyricsEvent),
 }
 
 /// What a subscriber wants: which kinds of events, how often positions, and how it
@@ -88,6 +92,7 @@ impl SubscribeOptions {
             Event::Player(_) => self.player,
             Event::Settings(_) => self.settings,
             Event::Library(_) => self.library,
+            Event::Lyrics(_) => self.player,
         }
     }
 }

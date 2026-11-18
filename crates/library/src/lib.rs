@@ -10,11 +10,14 @@
 #![forbid(unsafe_code)]
 
 mod catalog;
+mod copies;
 mod covers;
 mod db;
 mod details;
 mod library;
 mod loudness;
+mod maintenance;
+mod play_keys;
 mod playlists;
 mod query;
 mod scan;
@@ -33,6 +36,10 @@ pub use catalog::{
 pub use catalog::{
     AudioProperties, CoverInfo, CoverLocation, FileStamp, IdentityId, ReplayGain, RootId,
     TrackChange, TrackCovers, TrackFingerprint, TrackKind, TrackRecord, TrackTags, TrackWrite,
+};
+pub use copies::{
+    BACKUP_SUFFIX, CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId,
+    KeepRule, MainCopyError, MatchBy, TrashOutcome, TrashRefusal, backup_path,
 };
 pub use covers::{
     ArtworkOptions, ArtworkPool, CoverLocator, CoverReadError, DEFAULT_CACHE_BYTES, Removed,
@@ -57,6 +64,8 @@ pub use loudness::{
     AlbumMeasurement, LoudnessCoverage, LoudnessSelection, LoudnessTarget, MeasuredLoudness,
     REFERENCE_LUFS, StoredLoudness,
 };
+pub use maintenance::{Trash, TrashError, Trashed};
+pub use play_keys::PlayKeys;
 pub use playlists::{
     DeadItem, DeadReference, ExportOptions, ExportReport, ImportOptions, ImportReport, ItemContent,
     PlaylistError, PlaylistId, PlaylistItem, PlaylistItemId, PlaylistSummary,
@@ -95,6 +104,10 @@ pub mod tag_editing {
     };
     pub use helikodu_meta::tags::{ReadOptions, TagError};
 }
+
+/// Lyrics from a track's tags or from a file beside it: the types of `meta`'s
+/// lyrics reader, so that front ends need not depend on `meta`.
+pub use helikodu_meta::lyrics;
 
 /// Direct SQL access to the database, below [`Library`].
 ///
