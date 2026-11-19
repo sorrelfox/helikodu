@@ -5,6 +5,7 @@
 
 mod ffmpeg_fallback;
 mod lofty_files;
+mod riff_info;
 mod text;
 
 use std::fs::File;

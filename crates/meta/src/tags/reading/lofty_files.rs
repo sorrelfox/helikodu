@@ -17,7 +17,7 @@ use lofty::flac::FlacFile;
 use lofty::id3::v1::{GENRES, Id3v1Tag};
 use lofty::id3::v2::{Frame, Id3v2Tag};
 use lofty::iff::aiff::{AiffFile, AiffTextChunks};
-use lofty::iff::wav::{RiffInfoList, WavFile};
+use lofty::iff::wav::WavFile;
 use lofty::mp4::{AtomData, AtomIdent, Ilst, Mp4Codec, Mp4File};
 use lofty::mpeg::{Layer, MpegFile};
 use lofty::musepack::MpcFile;
@@ -125,7 +125,17 @@ pub(super) fn read(
         FileType::Wav => {
             let f: WavFile = parse(&mut reader)?;
             id3v2_tag(&mut builder, fixer, f.id3v2());
-            riff_tag(&mut builder, fixer, f.riff_info());
+            // lofty drops INFO values that are not UTF-8; read them from the bytes.
+            let info = super::riff_info::read(&mut reader).unwrap_or_else(|| {
+                f.riff_info()
+                    .map(|tag| {
+                        tag.into_iter()
+                            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            });
+            riff_tag(&mut builder, fixer, &info);
             properties(file_properties(f.properties()), "pcm", "wav")
         }
         FileType::Aiff => {
@@ -426,13 +436,13 @@ fn id3_genre_index(data: &AtomData) -> Option<&'static str> {
     GENRES.get(usize::from(index.checked_sub(1)?)).copied()
 }
 
-fn riff_tag(b: &mut TagBuilder, fixer: &mut TextFixer, tag: Option<&RiffInfoList>) {
-    let Some(tag) = tag else {
+fn riff_tag(b: &mut TagBuilder, fixer: &mut TextFixer, items: &[(String, String)]) {
+    if items.is_empty() {
         return;
-    };
+    }
     b.begin_tag();
-    fixer.begin_tag(tag.into_iter().map(|(_, v)| v.as_str()));
-    for (key, value) in tag {
+    fixer.begin_tag(items.iter().map(|(_, v)| v.as_str()));
+    for (key, value) in items {
         let value = fixer.fix(value).into_owned();
         match riff::field(key) {
             Some(field) => b.apply(field, &value),

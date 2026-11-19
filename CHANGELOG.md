@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - The memory budget with 100,000 tracks is 270 MB RSS instead of 250 MB. The last measurement, 264 MB after scrolling through the whole track table, is within it, so this is no longer a known issue.
 
+### Fixed
+
+- WAV files whose RIFF INFO tags are in a legacy charset, such as Windows-1251 as old Windows taggers wrote them, no longer seem untagged: their title, artist and album are read and the charset is repaired like that of other old tags.
+
 ## [0.9.3] - 2026-11-19
 
 The release candidate with Helikodu's own Flatpak repository and fixes for narrow windows and the tray menu.
