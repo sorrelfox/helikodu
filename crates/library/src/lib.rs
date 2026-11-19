@@ -23,6 +23,7 @@ pub mod interchange;
 mod library;
 mod loudness;
 mod maintenance;
+mod managed;
 mod media_kinds;
 mod missing;
 mod organize;
@@ -84,6 +85,11 @@ pub use loudness::{
     REFERENCE_LUFS, StoredLoudness,
 };
 pub use maintenance::{Trash, TrashError, Trashed};
+pub use managed::{
+    ItemAction, ItemKind, ItemResult, ManagedError, ManagedItem, ManagedOperation, ManagedOptions,
+    ManagedOutcome, ManagedPlan, ManagedReport, ManagedRunId, ManagedRunSummary, SkipReason,
+    Transfer,
+};
 /// Backups of the database and putting one back.
 pub mod backups {
     pub use crate::maintenance::{

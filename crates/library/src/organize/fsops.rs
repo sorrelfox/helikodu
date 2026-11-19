@@ -229,7 +229,7 @@ fn read_full(file: &mut File, buffer: &mut [u8]) -> io::Result<usize> {
 
 /// Creates the folders above `path` that do not exist; returns them, outermost
 /// first.
-fn make_parents(path: &Path) -> io::Result<Vec<PathBuf>> {
+pub(crate) fn make_parents(path: &Path) -> io::Result<Vec<PathBuf>> {
     let mut missing = Vec::new();
     let mut folder = path.parent();
     while let Some(dir) = folder {

@@ -33,6 +33,7 @@ mod info;
 mod insights;
 mod kinds;
 mod location;
+mod managed;
 mod playlists;
 mod query;
 mod service;
@@ -61,6 +62,7 @@ pub use self::artist_photos::ARTIST_PHOTO_FOLDER;
 pub use self::history_export::{ExportedListen, HistoryFormat, write_history};
 pub use self::info::{LibraryEntry, TagOrigin, TrackInfo, read_file_info};
 pub use self::location::{DATA_FOLDER, DATABASE_FILE, default_database_path};
+pub use self::managed::{managed_options, set_managed_folder, turn_off_managed_folder};
 pub use self::playlists::{CleanupCounts, FoundReport, Pin, PinTarget, PlaylistNode, PlaylistType};
 pub use self::query::{
     ParsedQuery, QueryError, SavedSearchEntry, SyntaxError, SyntaxErrorKind, parse_query,
@@ -119,6 +121,12 @@ pub use helikodu_library::{FileSection, YearSpan, YearSummary};
 /// One undo history over tag edits and file runs, newest first: what Ctrl+Z and
 /// Ctrl+Shift+Z step through outside an open playlist.
 pub use helikodu_library::{HistoryAction, HistoryError, HistoryReport, UndoHistory};
+/// The managed media folder: plans, runs and their journal.
+pub use helikodu_library::{
+    ItemAction, ItemKind, ItemResult, ManagedError, ManagedItem, ManagedOperation, ManagedOptions,
+    ManagedOutcome, ManagedPlan, ManagedReport, ManagedRunId, ManagedRunSummary, SkipReason,
+    Transfer,
+};
 pub use helikodu_library::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 /// The undo journal of tag edits: [`MusicLibrary::edit_tags`] records each
 /// save, and [`MusicLibrary::step_tags`] undoes them or does them again.
@@ -161,6 +169,16 @@ pub enum LibraryError {
     /// Files could not be organized, or a run could not be undone or redone.
     #[error(transparent)]
     Organize(#[from] OrganizeError),
+    /// Files could not be imported into the managed folder or consolidated, or a
+    /// run of it could not go on or be rolled back.
+    #[error(transparent)]
+    Managed(#[from] helikodu_library::ManagedError),
+    /// The managed folder is off: no folder is set.
+    #[error("the managed folder is off; set a folder first")]
+    ManagedFolderOff,
+    /// The managed folder setting cannot be used; the text says why.
+    #[error("{0}")]
+    ManagedFolder(String),
     /// A backup could not be made, checked or staged.
     #[error(transparent)]
     Backup(#[from] helikodu_library::backups::BackupError),

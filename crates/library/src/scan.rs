@@ -27,6 +27,7 @@ mod pool;
 mod program;
 mod progress;
 mod records;
+mod reports;
 mod run;
 pub(crate) mod scope;
 pub(crate) mod store;
@@ -39,6 +40,7 @@ use std::thread::{self, JoinHandle};
 pub use options::{ExcludeRule, ScanOptions, SymlinkPolicy, WorkerOptions};
 pub use program::{WORKER_PROGRAM, find_worker_program};
 pub use progress::{CancelToken, FailureKind, FileFailure, ScanError, ScanEvent, ScanSummary};
+pub(crate) use reports::read_reports;
 pub(crate) use run::{confirm_copies, run, run_targets};
 pub(crate) use scope::{ScanTarget, Scope};
 

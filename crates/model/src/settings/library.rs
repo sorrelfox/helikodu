@@ -28,6 +28,12 @@ use super::{SettingsError, check_range};
 /// on_scan = "add"                # or "skip": copies get no tracks of their own
 /// show_one = false               # show only the main copy of each group
 ///
+/// [library.managed]               # off while `folder` is not set
+/// folder = "/home/me/Music/Library"
+/// pattern = "{albumartist}/{album}/[{disc}-]{track} {title}"
+/// mode = "copy"                  # or "move": what importing does with the files
+/// characters = "portable"        # or "as-is", "ascii"
+///
 /// [library.storage]
 /// covers_mib = 2048
 /// analysis_mib = 1024
@@ -68,6 +74,8 @@ pub struct LibrarySettings {
     pub duplicates: DuplicateSettings,
     /// Size limits of the caches and stores.
     pub storage: StorageLimits,
+    /// The managed media folder, which imported files are copied or moved into.
+    pub managed: ManagedFolderSettings,
 }
 
 impl Default for LibrarySettings {
@@ -85,6 +93,7 @@ impl Default for LibrarySettings {
             analyze_in_background: true,
             duplicates: DuplicateSettings::default(),
             storage: StorageLimits::default(),
+            managed: ManagedFolderSettings::default(),
         }
     }
 }
@@ -117,7 +126,80 @@ impl LibrarySettings {
                 problem: "holds an empty pattern".into(),
             });
         }
-        self.storage.validate()
+        self.storage.validate()?;
+        self.managed.validate()
+    }
+}
+
+/// What importing into the managed folder does with the files.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ManagedMode {
+    /// The files are copied; the originals stay where they are.
+    #[default]
+    Copy,
+    /// The files are moved: copied, checked, and only then removed from where
+    /// they were.
+    Move,
+}
+
+/// The managed media folder: the `[library.managed]` table. Off by default; on
+/// while [`folder`](Self::folder) is set. The folder is in a library folder, or
+/// is one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ManagedFolderSettings {
+    /// The folder; `None` while the managed folder is off.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        with = "crate::path_serde::opt_text"
+    )]
+    pub folder: Option<PathBuf>,
+    /// The naming pattern the files get below the folder (the organizer's).
+    pub pattern: String,
+    /// Whether importing copies or moves the files.
+    pub mode: ManagedMode,
+    /// Which characters names may hold: `portable` (names that Windows can
+    /// read), `as-is` or `ascii`.
+    pub characters: String,
+}
+
+impl ManagedFolderSettings {
+    /// The pattern the managed folder starts with: the organizer's first.
+    pub const DEFAULT_PATTERN: &'static str = "{albumartist}/{album}/[{disc}-]{track} {title}";
+
+    /// Whether the managed folder is on.
+    pub fn is_on(&self) -> bool {
+        self.folder.is_some()
+    }
+
+    fn validate(&self) -> Result<(), SettingsError> {
+        if let Some(folder) = &self.folder
+            && !folder.is_absolute()
+        {
+            return Err(SettingsError {
+                key: "library.managed.folder".into(),
+                problem: format!("is {}, which is not an absolute path", folder.display()),
+            });
+        }
+        if self.pattern.trim().is_empty() {
+            return Err(SettingsError {
+                key: "library.managed.pattern".into(),
+                problem: "is empty".into(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl Default for ManagedFolderSettings {
+    fn default() -> Self {
+        Self {
+            folder: None,
+            pattern: Self::DEFAULT_PATTERN.to_owned(),
+            mode: ManagedMode::Copy,
+            characters: "portable".to_owned(),
+        }
     }
 }
 
@@ -243,6 +325,36 @@ mod tests {
                 on_scan: DuplicateScan::Add,
                 show_one: false,
             }
+        );
+    }
+
+    #[test]
+    fn the_managed_folder_is_off_by_default_and_reads_back() {
+        let library = LibrarySettings::default();
+        assert!(!library.managed.is_on());
+        assert_eq!(library.managed.mode, ManagedMode::Copy);
+        assert_eq!(
+            library.managed.pattern,
+            ManagedFolderSettings::DEFAULT_PATTERN
+        );
+        let text = toml::to_string(&Settings::default()).unwrap();
+        assert!(!text.contains("folder = "), "{text}");
+        let settings: Settings =
+            toml::from_str("[library.managed]\nfolder = \"/music/Library\"\nmode = \"move\"\n")
+                .unwrap();
+        assert_eq!(
+            settings.library.managed.folder.as_deref(),
+            Some(std::path::Path::new("/music/Library"))
+        );
+        assert_eq!(settings.library.managed.mode, ManagedMode::Move);
+        assert_eq!(settings.library.managed.characters, "portable");
+        let text = toml::to_string(&settings).unwrap();
+        assert_eq!(toml::from_str::<Settings>(&text).unwrap(), settings);
+        let mut relative = settings.library.clone();
+        relative.managed.folder = Some("Library".into());
+        assert_eq!(
+            relative.validate().unwrap_err().key,
+            "library.managed.folder"
         );
     }
 

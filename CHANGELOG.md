@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `helikodu-cli export-user-data` and `import-user-data` move ratings, play counts, history, playlists, smart playlists, Favourites and saved searches between installations as a documented JSON file.
 - Play counts can be written into the files (`write_play_counts_to_tags` in the `[advanced]` settings), as the `POPM` counter and `FMPS_PLAYCOUNT`, in batches rather than after every play; `helikodu-cli write-stats` writes the changed play counts and ratings now.
 
+- A managed media folder, off by default: `helikodu-cli managed-folder` sets a folder of the library and a naming pattern, imports files and folders from elsewhere (a downloads folder, a memory stick) into it by copying or moving them, with their covers, booklets, rip logs, lyrics and CUE sheets (whose `FILE` lines are changed to the new names), and consolidates the library files that are elsewhere into it, keeping their ratings, play counts and history. `--dry-run` shows every file and where it goes, names that are taken, and the space needed and free. Nothing is ever replaced, a copy is checked before an original is removed, and a run cut short continues or rolls back without losing a file.
+
 ### Changed
 
 - With **Restore the last session**, music that was playing when you closed or quit Helikodu now continues where it stopped when you start it again, with a short fade in; music that was paused or stopped stays paused. The track is selected in the queue panel and scrolled into view. Files you open with Helikodu play instead, and a track whose file is missing or that was playing when Helikodu ended abnormally stays paused.

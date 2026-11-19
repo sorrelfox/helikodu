@@ -108,7 +108,12 @@ fn mtime_ns(m: &fs::Metadata) -> i64 {
 /// and records the new stamp. A row the watcher made at `to` for the same file in
 /// the meantime gives way. Without a library folder at `to`, the row stays and
 /// the next scan finds the file missing.
-fn follow_in_library(c: &Connection, file: i64, from: &Path, to: &Path) -> rusqlite::Result<()> {
+pub(crate) fn follow_in_library(
+    c: &Connection,
+    file: i64,
+    from: &Path,
+    to: &Path,
+) -> rusqlite::Result<()> {
     let roots = roots(c)?;
     let Some((root, _)) = root_of(&roots, to) else {
         return Ok(());

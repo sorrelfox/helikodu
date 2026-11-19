@@ -27,14 +27,14 @@ use crate::copies::FileId;
 use crate::db::{Database, path_from_blob};
 
 /// The library folders that are not masked: their rows and paths.
-pub(super) fn roots(c: &Connection) -> rusqlite::Result<Vec<(i64, PathBuf)>> {
+pub(crate) fn roots(c: &Connection) -> rusqlite::Result<Vec<(i64, PathBuf)>> {
     c.prepare_cached("SELECT id, path FROM roots WHERE masked = 0")?
         .query_map([], |row| Ok((row.get(0)?, path_from_blob(row.get(1)?))))?
         .collect()
 }
 
 /// The library folder that holds `path`: the one with the longest path.
-pub(super) fn root_of(roots: &[(i64, PathBuf)], path: &Path) -> Option<(i64, PathBuf)> {
+pub(crate) fn root_of(roots: &[(i64, PathBuf)], path: &Path) -> Option<(i64, PathBuf)> {
     roots
         .iter()
         .filter(|(_, root)| path.starts_with(root) && path != root)
@@ -482,5 +482,51 @@ pub(super) fn present_files(
     };
     out.sort();
     out.dedup();
+    Ok(out)
+}
+
+/// A library file and the path a pattern gives it below a folder.
+pub(crate) struct LibraryTarget {
+    /// The file.
+    pub(crate) file: i64,
+    /// Where it is.
+    pub(crate) path: PathBuf,
+    /// Whether it is missing.
+    pub(crate) missing: bool,
+    /// Where the pattern puts it.
+    pub(crate) to: PathBuf,
+}
+
+/// Every library file in library folders that are not masked and not below
+/// `outside`, with the path `pattern` gives it below `base`, in path order.
+pub(crate) fn library_targets(
+    c: &Connection,
+    pattern: &NamingPattern,
+    base: &Path,
+    outside: &Path,
+    characters: super::CharacterSet,
+    unknown: &str,
+) -> rusqlite::Result<Vec<LibraryTarget>> {
+    let fields = pattern.fields();
+    let discs = album_discs(c)?;
+    let mut out = Vec::new();
+    for facts in load(c, None)? {
+        if facts.path.starts_with(outside) {
+            continue;
+        }
+        let values = values_of(c, &facts, &discs, Some(&fields))?;
+        let ext = extension(&facts.path);
+        let mut to = base.to_path_buf();
+        to.push(pattern.render_path(&values, characters, unknown, &ext));
+        let mut name = to.file_name().unwrap_or_default().to_os_string();
+        name.push(&ext);
+        to.set_file_name(name);
+        out.push(LibraryTarget {
+            file: facts.file,
+            path: facts.path,
+            missing: facts.missing,
+            to,
+        });
+    }
     Ok(out)
 }

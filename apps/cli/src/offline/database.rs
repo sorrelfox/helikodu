@@ -16,7 +16,7 @@ use serde_json::{Map, Value, json};
 #[derive(Debug, Args)]
 pub(crate) struct DatabaseArgs {
     /// The library database [default: $XDG_DATA_HOME/helikodu/library.db]
-    #[arg(long, value_name = "PATH")]
+    #[arg(long, value_name = "PATH", global = true)]
     database: Option<PathBuf>,
 }
 

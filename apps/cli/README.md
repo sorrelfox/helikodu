@@ -1,6 +1,6 @@
 # helikodu-cli
 
-Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness, analyze, duplicates; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
+Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness, analyze, duplicates, managed-folder; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
 
 - **May depend on:** `model`, `service`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
@@ -23,6 +23,8 @@ helikodu-cli loudness [--album|--library] [--write-tags] [--threads N] [--worker
                       [--json] [--database PATH] [FILE|TRACK-ID...]
 helikodu-cli analyze [--no-loudness] [--json] [--database PATH]
 helikodu-cli duplicates [--json] [--database PATH]
+helikodu-cli managed-folder show|set|off|import|consolidate|resume|roll-back
+                            [--settings PATH] [--database PATH] ...
 helikodu-cli status|queue|playlists [--json]
 helikodu-cli play-pause|pause|resume|stop|next|previous
 helikodu-cli seek POSITION            # 83, 1:23, +10, -5
@@ -222,6 +224,25 @@ Analyses every library track that has no current analysis, one at a time, as the
 ```
 
 The exit code is 1 when a track could not be analysed.
+
+#### managed-folder
+
+The managed media folder (`[library.managed]` in the settings file; see the user guide's file tools page). `show [--json]` prints the setting and a run that was cut short; `set [FOLDER] [--pattern P] [--mode copy|move] [--characters portable|as-is|ascii]` turns it on or changes it (a folder outside every library folder is added to `[library] folders`); `off` turns it off. `import PATH... [--move|--copy] [--dry-run] [--json]` and `consolidate [--move|--copy] [--dry-run] [--json]` plan first and, without `--dry-run`, carry the plan out; the files are read by `helikodu-scan-worker` and the library reads only the folders the files went to. `resume` and `roll-back` settle a run that was cut short (no new run starts before). With `--dry-run --json` the plan is:
+
+```json
+{
+  "operation": "import", "move": false, "folder": {"path": "/home/me/Music/Library"},
+  "items": [
+    {"kind": "audio", "action": "copy", "from": {"path": "/media/stick/01.flac"},
+     "to": {"path": "/home/me/Music/Library/Okto/Live/01 One.flac"},
+     "size_bytes": 23456789, "renamed": false, "rewritten": false, "file_id": null}
+  ],
+  "to_place": 1, "renamed": 0, "skipped": 0,
+  "total_bytes": 23456789, "bytes_needed": 23456789, "free_bytes": 1000000000
+}
+```
+
+`action` is `copy`, `move`, `copy (source is read-only)`, `skip (identical)` or `skip` (with `reason`). The exit code is 1 when a file could not be placed or a run was not finished.
 
 ### The commands for the running application
 

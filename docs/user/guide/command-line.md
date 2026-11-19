@@ -37,6 +37,7 @@ helikodu-cli export-user-data FILE # write ratings, plays, history and playlists
 helikodu-cli import-user-data FILE # read such a file into the library
 helikodu-cli carry-stats           # carry statistics from replaced files to their replacements
 helikodu-cli write-stats           # write changed play counts and ratings into the files
+helikodu-cli managed-folder ...    # the managed folder: show, set, import, consolidate
 ```
 
 Some examples:
@@ -59,6 +60,32 @@ While `play` runs in a terminal, Space pauses, `n` and `p` go to the next and pr
 `import`, `import-user-data` and `carry-stats` only show what they would change unless you add `--apply`; [Moving from another player](moving-from-another-player.md) describes them and `export-user-data`, `undo-import` and `write-stats`.
 
 `scan`, `search`, `info`, `stats`, `loudness` and `duplicates` use the same library as the application, so you can scan from the command line and browse the result in the window. Most commands take `--json` for output that scripts can read.
+
+## The managed folder
+
+`helikodu-cli managed-folder` sets the [managed folder](file-tools.md#the-managed-folder) and imports files into it. It reads and writes the same settings file as the application; change the setting while Helikodu is closed, or the application may write its own copy over it.
+
+```sh
+helikodu-cli managed-folder show [--json]          # the folder, pattern, mode, and a run cut short
+helikodu-cli managed-folder set FOLDER [--pattern PATTERN] [--mode copy|move] \
+    [--characters portable|as-is|ascii]            # turn it on, or change it
+helikodu-cli managed-folder off                    # turn it off; the files stay
+helikodu-cli managed-folder import PATH... [--move|--copy] [--dry-run] [--json]
+helikodu-cli managed-folder consolidate [--move|--copy] [--dry-run] [--json]
+helikodu-cli managed-folder resume [--json]        # continue a run that was cut short
+helikodu-cli managed-folder roll-back [--json]     # undo a run that was cut short
+```
+
+`--move` and `--copy` override the mode of the setting for one run. `--dry-run` prints the plan (each file and where it goes, numbered names, skipped files, the space needed and free) and changes nothing. `--settings PATH` and `--database PATH` choose another settings file and library. The command ends with exit code 1 when a file could not be placed or a run was not finished.
+
+```sh
+# Turn the managed folder on inside ~/Music, moving files on import
+helikodu-cli managed-folder set ~/Music/Library --mode move
+
+# See what importing a memory stick would do, then copy it in
+helikodu-cli managed-folder import /run/media/me/STICK/Music --dry-run
+helikodu-cli managed-folder import /run/media/me/STICK/Music --copy
+```
 
 ## Controlling the running application
 

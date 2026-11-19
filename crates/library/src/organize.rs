@@ -27,10 +27,10 @@
 //!
 //! The journal is only for file operations; it does not record tag edits.
 
-mod fsops;
+pub(crate) mod fsops;
 mod patterns;
-mod plan;
-mod run;
+pub(crate) mod plan;
+pub(crate) mod run;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -50,7 +50,7 @@ use crate::db::DbError;
 use crate::scan::CancelToken;
 
 /// One file operation at a time, in the whole program.
-static FILE_OPERATIONS: Mutex<()> = Mutex::new(());
+pub(crate) static FILE_OPERATIONS: Mutex<()> = Mutex::new(());
 
 /// Where organized files go.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -25,6 +25,7 @@ use self::offline::interchange::{
 };
 use self::offline::list_outputs::ListOutputsArgs;
 use self::offline::loudness::LoudnessArgs;
+use self::offline::managed_folder::ManagedFolderArgs;
 use self::offline::play::PlayArgs;
 use self::offline::scan::ScanArgs;
 use self::offline::search::SearchArgs;
@@ -89,6 +90,9 @@ enum Command {
     CarryStats(CarryStatsArgs),
     /// Write the play counts and ratings that changed into the files' tags.
     WriteStats(WriteStatsArgs),
+    /// Show or set the managed media folder, import files into it, and consolidate
+    /// the library into it.
+    ManagedFolder(ManagedFolderArgs),
     /// Show what the running application plays.
     Status(JsonArgs),
     /// Show the queue of the running application.
@@ -154,6 +158,7 @@ fn main() -> ExitCode {
         Command::ImportUserData(args) => offline::interchange::import_user_data(&args),
         Command::CarryStats(args) => offline::interchange::carry_stats(&args),
         Command::WriteStats(args) => offline::interchange::write_stats(&args),
+        Command::ManagedFolder(args) => offline::managed_folder::run(&args),
         Command::Status(args) => remote::commands::status(&args),
         Command::Queue(args) => remote::commands::queue(&args),
         Command::Playlists(args) => remote::commands::playlists(&args),
