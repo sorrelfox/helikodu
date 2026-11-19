@@ -33,6 +33,8 @@ Text with a field and an operator is a query: `genre:jazz -genre:fusion`, `ratin
 - **Combining:** words next to each other must all hold; `OR` gives either; a minus or `NOT` excludes; parentheses group.
 - **Order and size:** `sort:added desc` orders the results, `limit:50` keeps the first 50.
 - `has:lyrics`, `has:cover`, `has:rating` test for a value; `is:lossless`, `is:hires`, `is:loved` for a kind of track.
+- **Labels:** `label:jazz` finds the tracks with a label containing "jazz", given to them, their album or an artist; `label=jazz` the label itself, `has:label` any label. Plain text finds labels too. See [Labels and your own fields](labels-and-fields.md).
+- **Your own fields:** a computed or custom field you defined is named like any other: `decade=1990s`, `mood:calm`. A computed field is compared as text and cannot sort a search.
 
 While you type a field name, a list under the field offers the fields that start with it, with an example of each; after `kind:`, `codec:`, `has:` or `is:` it offers the values. **Tab** completes, **Up** and **Down** choose, **Escape** closes the list.
 

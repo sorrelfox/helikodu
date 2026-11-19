@@ -207,6 +207,7 @@ pub(crate) fn merge(
              SELECT ?2, kind FROM chosen_kinds WHERE identity_id = ?1",
         )?
         .execute(params![other, target])?;
+        crate::labels::move_identity(c, other, target)?;
         c.prepare_cached("UPDATE tracks SET identity_id = ?2 WHERE identity_id = ?1")?
             .execute(params![other, target])?;
         c.prepare_cached("DELETE FROM identities WHERE id = ?1")?
@@ -242,6 +243,7 @@ pub(crate) fn split_off(c: &Connection, identity: i64, now: i64) -> rusqlite::Re
          FROM stats WHERE identity_id = ?1",
     )?
     .execute(params![identity, new])?;
+    crate::labels::copy_identity(c, identity, new)?;
     Ok(new)
 }
 

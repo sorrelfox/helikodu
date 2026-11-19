@@ -20,6 +20,7 @@ mod details;
 mod expressions;
 mod history;
 pub mod interchange;
+mod labels;
 mod library;
 mod loudness;
 mod maintenance;
@@ -38,6 +39,7 @@ mod tag_journal;
 pub mod tag_tools;
 mod tag_writes;
 mod track_source;
+mod user_fields;
 mod watch;
 
 pub use analysis::{
@@ -79,6 +81,9 @@ pub use helikodu_meta::playlists::{PathStyle, PlaylistKind};
 /// A cover found by a scan worker, as a [`TrackCovers`] holds it.
 pub use helikodu_meta::worker::{CoverOrigin, CoverReport};
 pub use history::{HistoryAction, HistoryError, HistoryReport, UndoHistory};
+pub use labels::{
+    ItemLabels, LabelError, LabelItems, LabelSummary, LabelTarget, MAX_LABEL_CHARS, clean_label,
+};
 pub use library::Library;
 pub use loudness::{
     AlbumMeasurement, LoudnessCoverage, LoudnessSelection, LoudnessTarget, MeasuredLoudness,
@@ -98,6 +103,10 @@ pub mod backups {
         recover_damaged, restore_path, stage_restore,
     };
 }
+/// The fields the user defines: computed fields and custom fields.
+pub use helikodu_model::user_fields::{
+    DefinitionError, DefinitionPart, DefinitionProblem, FieldDefinition, UserField,
+};
 pub use media_kinds::FileSection;
 pub use missing::{FoundFile, MissingFile, RelinkOutcome, RelinkProblem};
 pub use organize::{
@@ -133,6 +142,7 @@ pub use tag_journal::{
 };
 pub use tag_writes::{RateError, RatingOutcome, TagWriteReport, TagWriteSettings};
 pub use track_source::TrackSource;
+pub use user_fields::FieldError;
 pub use watch::{PollReason, RescanReason, WatchEvent, WatchMode, WatchOptions, Watcher};
 
 /// What a tag editor needs to open files and write their tags: the types of

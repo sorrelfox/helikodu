@@ -10,6 +10,7 @@ Naming patterns are written in Helikodu's expression language. The [organizer](f
 - In a naming pattern, a `/` starts a folder. A `/` inside a value or inside quotes never does.
 - `{track}` has two digits (three on an album of a hundred tracks or more). `{disc}` has a value only on an album of several discs.
 - In a naming pattern, an expression that gives nothing outside brackets is written as "Unknown".
+- Fields you defined yourself work too: a computed field such as `{decade}` gives the text of its own expression, and a custom field such as `{mood}` the tag it stands for. `{label}` gives a track's labels. See [Labels and your own fields](labels-and-fields.md).
 
 ## Inside the braces
 

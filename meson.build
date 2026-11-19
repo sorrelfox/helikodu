@@ -174,6 +174,7 @@ custom_target(
     'docs/user/guide/first-run.md',
     'docs/user/guide/installing.md',
     'docs/user/guide/keyboard-shortcuts.md',
+    'docs/user/guide/labels-and-fields.md',
     'docs/user/guide/loudness.md',
     'docs/user/guide/moving-from-another-player.md',
     'docs/user/guide/playing.md',

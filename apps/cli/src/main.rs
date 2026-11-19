@@ -18,11 +18,13 @@ use clap::{Parser, Subcommand};
 
 use self::offline::analyze::AnalyzeArgs;
 use self::offline::duplicates::DuplicatesArgs;
+use self::offline::fields::FieldsArgs;
 use self::offline::info::InfoArgs;
 use self::offline::interchange::{
     CarryStatsArgs, ExportUserDataArgs, ImportArgs, ImportUserDataArgs, UndoImportArgs,
     WriteStatsArgs,
 };
+use self::offline::labels::LabelsArgs;
 use self::offline::list_outputs::ListOutputsArgs;
 use self::offline::loudness::LoudnessArgs;
 use self::offline::managed_folder::ManagedFolderArgs;
@@ -42,8 +44,8 @@ const EXIT_NOTHING_PLAYABLE: u8 = 3;
 /// The exit code when a command for the running application finds none.
 const EXIT_NOT_RUNNING: u8 = 4;
 
-/// Plays audio files, lists output devices, scans, searches and measures the music
-/// library, and controls the running application.
+/// Plays audio files, lists output devices, scans, searches, labels and measures the
+/// music library, and controls the running application.
 #[derive(Debug, Parser)]
 #[command(name = "helikodu-cli", version, max_term_width = 100)]
 struct Cli {
@@ -93,6 +95,12 @@ enum Command {
     /// Show or set the managed media folder, import files into it, and consolidate
     /// the library into it.
     ManagedFolder(ManagedFolderArgs),
+    /// List, give, take, rename and merge the labels of library tracks, albums and
+    /// artists.
+    Labels(LabelsArgs),
+    /// List, define and remove computed fields (named expressions) and custom
+    /// fields (names for tags).
+    Fields(FieldsArgs),
     /// Show what the running application plays.
     Status(JsonArgs),
     /// Show the queue of the running application.
@@ -159,6 +167,8 @@ fn main() -> ExitCode {
         Command::CarryStats(args) => offline::interchange::carry_stats(&args),
         Command::WriteStats(args) => offline::interchange::write_stats(&args),
         Command::ManagedFolder(args) => offline::managed_folder::run(&args),
+        Command::Labels(args) => offline::labels::run(&args),
+        Command::Fields(args) => offline::fields::run(&args),
         Command::Status(args) => remote::commands::status(&args),
         Command::Queue(args) => remote::commands::queue(&args),
         Command::Playlists(args) => remote::commands::playlists(&args),

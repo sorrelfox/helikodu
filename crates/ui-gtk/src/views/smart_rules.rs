@@ -234,6 +234,7 @@ pub(crate) fn field_label(field: &Field) -> String {
         Field::LastPlayed => tr("Last played"),
         Field::FirstPlayed => tr("First played"),
         Field::LastSkipped => tr("Last skipped"),
+        Field::Label => tr("Label"),
         Field::Tag(name) => name.clone(),
         _ => field.name().into_owned(),
     }

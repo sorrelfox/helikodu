@@ -47,14 +47,21 @@ impl Library {
     ///
     /// Refuses a database written by a newer version ([`DbError::NewerSchema`]); such a
     /// database can still be opened with [`open_read_only`](Self::open_read_only).
+    ///
+    /// Puts the fields the user defined in this library in use (see
+    /// [`helikodu_model::user_fields`]).
     pub fn open(config: &DatabaseConfig) -> Result<Self, DbError> {
-        Database::open(config).map(Self::from)
+        let library = Database::open(config).map(Self::from)?;
+        library.install_user_fields();
+        Ok(library)
     }
 
     /// Opens an existing library for reading only, without migrating it. Writes fail
     /// with [`DbError::ReadOnly`].
     pub fn open_read_only(config: &DatabaseConfig) -> Result<Self, DbError> {
-        Database::open_read_only(config).map(Self::from)
+        let library = Database::open_read_only(config).map(Self::from)?;
+        library.install_user_fields();
+        Ok(library)
     }
 
     /// The schema version of the database.

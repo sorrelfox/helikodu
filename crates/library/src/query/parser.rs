@@ -602,9 +602,13 @@ impl Parser<'_> {
             let by = if text.eq_ignore_ascii_case("random") {
                 SortBy::Random
             } else {
-                Field::from_name(text).map(SortBy::Field).ok_or_else(|| {
-                    self.error(name.clone(), Kind::UnknownSortKey(text.to_owned()))
-                })?
+                // A computed field has no value in the database to sort by.
+                Field::from_name(text)
+                    .filter(|field| !matches!(field, Field::Computed(_)))
+                    .map(SortBy::Field)
+                    .ok_or_else(|| {
+                        self.error(name.clone(), Kind::UnknownSortKey(text.to_owned()))
+                    })?
             };
             let save = self.pos;
             self.skip_ws();

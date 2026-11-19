@@ -64,6 +64,7 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
     migration!(18, "0018", "track_analysis"),
     migration!(19, "0019", "imports"),
     migration!(20, "0020", "managed_folder"),
+    migration!(21, "0021", "labels_and_fields"),
 ];
 
 /// The schema version this build creates and understands.

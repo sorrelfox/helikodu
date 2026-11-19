@@ -32,6 +32,7 @@ mod history_export;
 mod info;
 mod insights;
 mod kinds;
+mod labels;
 mod location;
 mod managed;
 mod playlists;
@@ -116,6 +117,10 @@ pub use helikodu_library::{
     CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId, KeepRule,
     MainCopyError, MatchBy, Trash, TrashError, TrashOutcome, TrashRefusal, Trashed, backup_path,
 };
+/// The fields the user defines: computed fields and custom fields.
+pub use helikodu_library::{
+    DefinitionError, DefinitionPart, DefinitionProblem, FieldDefinition, FieldError, UserField,
+};
 pub use helikodu_library::{FacetChoice, FacetField, FacetKey, FacetList, FacetValue};
 pub use helikodu_library::{FileSection, YearSpan, YearSummary};
 /// One undo history over tag edits and file runs, newest first: what Ctrl+Z and
@@ -126,6 +131,10 @@ pub use helikodu_library::{
     ItemAction, ItemKind, ItemResult, ManagedError, ManagedItem, ManagedOperation, ManagedOptions,
     ManagedOutcome, ManagedPlan, ManagedReport, ManagedRunId, ManagedRunSummary, SkipReason,
     Transfer,
+};
+/// Labels of tracks, albums and artists, kept in the library.
+pub use helikodu_library::{
+    ItemLabels, LabelError, LabelItems, LabelSummary, LabelTarget, MAX_LABEL_CHARS,
 };
 pub use helikodu_library::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 /// The undo journal of tag edits: [`MusicLibrary::edit_tags`] records each
@@ -188,6 +197,12 @@ pub enum LibraryError {
     /// An import, an export of the user data or an undo of an import failed.
     #[error(transparent)]
     Import(#[from] helikodu_library::interchange::ImportError),
+    /// A label could not be given, taken, renamed or merged.
+    #[error(transparent)]
+    Label(#[from] LabelError),
+    /// A field could not be defined or removed.
+    #[error(transparent)]
+    Field(#[from] FieldError),
     /// An artist photo could not be set or removed.
     #[error(transparent)]
     ArtistPhoto(#[from] helikodu_library::ArtistPhotoError),

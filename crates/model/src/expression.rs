@@ -58,8 +58,10 @@ mod tests;
 
 use std::cmp::Ordering;
 use std::fmt;
+use std::sync::Arc;
 
 use crate::query::Field;
+use crate::user_fields::{self, UserFields};
 
 pub use values::{FieldMap, FieldValues};
 
@@ -105,6 +107,8 @@ enum Node {
     Field(Field),
     /// A field's value as it is stored.
     Raw(Field),
+    /// The value of a field the user defined by an expression.
+    Computed(Arc<ComputedField>),
     /// The value bound by the `let` this many bindings from the outermost.
     Variable(usize),
     /// `let(name, value, body)`: the body with the value bound.
@@ -119,6 +123,18 @@ enum Node {
     Or(Vec<Node>),
     /// A comparison.
     Compare(Comparison, Box<Node>, Box<Node>),
+}
+
+/// A field the user defined by an expression, read together with the computed
+/// fields it uses (see [`user_fields`]).
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct ComputedField {
+    /// Its name, in lower case.
+    pub(crate) name: String,
+    /// Its expression.
+    pub(crate) template: Template,
+    /// 1, plus the depth of the deepest computed field it uses.
+    pub(crate) depth: usize,
 }
 
 /// A comparison operator.
@@ -372,19 +388,26 @@ pub enum Piece<'a> {
 }
 
 impl Template {
-    /// Reads `text` as a template in which `/` is text like any other.
+    /// Reads `text` as a template in which `/` is text like any other. Its fields
+    /// are those of the query language and the ones the user defined.
     pub fn parse(text: &str) -> Result<Self, Error> {
-        Self::read(text, false)
+        Self::read(text, false, &user_fields::current())
     }
 
     /// Reads `text` as a path template: `/` starts a folder, and no folder name
     /// may be always empty.
     pub fn parse_path(text: &str) -> Result<Self, Error> {
-        Self::read(text, true)
+        Self::read(text, true, &user_fields::current())
     }
 
-    fn read(text: &str, path: bool) -> Result<Self, Error> {
-        let parts = parser::parse(text, path)?;
+    /// Reads `text` as [`parse`](Self::parse) does, with the user's fields of
+    /// `user` instead of those in use.
+    pub(crate) fn parse_with(text: &str, user: &UserFields) -> Result<Self, Error> {
+        Self::read(text, false, user)
+    }
+
+    fn read(text: &str, path: bool, user: &UserFields) -> Result<Self, Error> {
+        let parts = parser::parse(text, path, user)?;
         Ok(Self {
             text: text.to_owned(),
             parts,
@@ -396,7 +419,13 @@ impl Template {
         &self.text
     }
 
-    /// The fields the template reads, in order, each once.
+    /// The depth of the deepest computed field the template uses; 0 for none.
+    pub(crate) fn computed_depth(&self) -> usize {
+        eval::computed_depth(&self.parts)
+    }
+
+    /// The fields the template reads, in order, each once; for a computed field,
+    /// the fields its expression reads.
     pub fn fields(&self) -> Vec<Field> {
         let mut fields = Vec::new();
         eval::collect_fields(&self.parts, &mut fields);

@@ -18,5 +18,6 @@ pub mod player;
 pub mod query;
 pub mod settings;
 mod text_form;
+pub mod user_fields;
 
 pub use text_form::ParseError;

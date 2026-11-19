@@ -282,6 +282,7 @@ fn list_of(
         Field::Lyricist => people(c, facts.track, 5)?,
         Field::Genre => genres(c, facts.track)?,
         Field::Tag(key) => other_tag(c, facts.track, key)?,
+        Field::Label => crate::labels::of_track(c, facts.track)?,
         _ => return Ok(None),
     }))
 }

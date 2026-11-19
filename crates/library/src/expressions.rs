@@ -140,6 +140,22 @@ fn add_extra(
     Ok(())
 }
 
+/// The values of `fields` (every field and tag when `None`) of each of `tracks`
+/// on the connection `c`; tracks the library does not have are left out.
+pub(crate) fn values_on(
+    c: &Connection,
+    tracks: &[TrackId],
+    fields: Option<&[Field]>,
+) -> rusqlite::Result<Vec<(TrackId, FieldMap)>> {
+    let mut values = naming_values_of(c, tracks, fields)?;
+    let extra = EXTRA.to_vec();
+    let wanted = fields.unwrap_or(&extra);
+    for (track, map) in &mut values {
+        add_extra(c, *track, wanted, map)?;
+    }
+    Ok(values)
+}
+
 impl Library {
     /// The values of `fields` (every field and tag when `None`) of each of
     /// `tracks`, for expressions; tracks the library does not have are left out.
@@ -150,14 +166,8 @@ impl Library {
     ) -> Result<Vec<(TrackId, FieldMap)>, DbError> {
         let tracks = tracks.to_vec();
         let fields = fields.map(<[Field]>::to_vec);
-        self.database().read(move |c| {
-            let mut values = naming_values_of(c, &tracks, fields.as_deref())?;
-            let wanted = fields.unwrap_or_else(|| EXTRA.to_vec());
-            for (track, map) in &mut values {
-                add_extra(c, *track, &wanted, map)?;
-            }
-            Ok(values)
-        })
+        self.database()
+            .read(move |c| values_on(c, &tracks, fields.as_deref()))
     }
 
     /// The text `expression` gives for each of `tracks`, in their order; tracks

@@ -92,8 +92,14 @@ pub enum Field {
     FirstPlayed,
     /// When it was last skipped.
     LastSkipped,
+    /// A label the user gave the track, its album or one of its artists. Labels
+    /// live in the library, never in the files.
+    Label,
     /// Any other tag, by its name in upper case (`tag:MOOD`).
     Tag(String),
+    /// A field the user defined by an expression, by its name in lower case (see
+    /// [`user_fields`](crate::user_fields)).
+    Computed(String),
 }
 
 /// The kind of values a field holds, which decides the operators and values it takes.
@@ -159,6 +165,7 @@ const NAMES: &[(Field, &str, &[&str])] = &[
     (Field::LastPlayed, "lastplayed", &["played"]),
     (Field::FirstPlayed, "firstplayed", &[]),
     (Field::LastSkipped, "lastskipped", &["skipped"]),
+    (Field::Label, "label", &["labels"]),
 ];
 
 /// The prefix of a tag field's name.
@@ -180,9 +187,17 @@ impl Field {
         valid.then(|| Self::Tag(name.to_ascii_uppercase()))
     }
 
-    /// The field named `name` (any case, canonical name or another spelling), or a
-    /// tag field for `tag:NAME`.
+    /// The field named `name` (any case, canonical name or another spelling), a tag
+    /// field for `tag:NAME`, or a field the user defined (see
+    /// [`user_fields`](crate::user_fields)): a computed field, or the tag a custom
+    /// field stands for.
     pub fn from_name(name: &str) -> Option<Self> {
+        Self::built_in(name).or_else(|| crate::user_fields::current().field(name))
+    }
+
+    /// The field named `name` among the fields every library has: a named field or
+    /// `tag:NAME`, without the ones the user defined.
+    pub fn built_in(name: &str) -> Option<Self> {
         if let Some(tag) = name
             .get(..TAG_PREFIX.len())
             .filter(|prefix| prefix.eq_ignore_ascii_case(TAG_PREFIX))
@@ -202,6 +217,7 @@ impl Field {
     pub fn name(&self) -> std::borrow::Cow<'static, str> {
         match self {
             Self::Tag(tag) => format!("{TAG_PREFIX}{tag}").into(),
+            Self::Computed(name) => name.clone().into(),
             field => NAMES
                 .iter()
                 .find(|(named, _, _)| named == field)
@@ -231,7 +247,9 @@ impl Field {
             | Self::Path
             | Self::Folder
             | Self::Filename
-            | Self::Tag(_) => FieldKind::Text,
+            | Self::Label
+            | Self::Tag(_)
+            | Self::Computed(_) => FieldKind::Text,
             Self::Kind => FieldKind::Kind,
             Self::Year
             | Self::OriginalYear

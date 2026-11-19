@@ -24,7 +24,7 @@ mod values;
 use std::time::SystemTime;
 
 use helikodu_model::library::TrackId;
-use helikodu_model::query::{Query, TermProblem};
+use helikodu_model::query::{Expr, Query, TermProblem};
 
 pub use facets::{FacetChoice, FacetField, FacetKey, FacetList, FacetValue};
 pub use parser::{ParsedQuery, parse as parse_query, parse_lenient as parse_query_lenient};
@@ -36,7 +36,8 @@ use crate::catalog::{Page, Paged, TrackSummary};
 use crate::db::DbError;
 use crate::db::unix_time::to_unix_seconds;
 use crate::library::Library;
-use compiler::{Compiled, QueryContext};
+use crate::user_fields::{computed_in, computed_values};
+use compiler::{Compiled, Lookups, QueryContext};
 pub(crate) use run::summaries as track_summaries;
 
 /// A query to run: the tree, the page of results wanted and how to treat masked
@@ -93,13 +94,15 @@ impl Library {
     /// Compiles `request` for now.
     fn compile(&self, request: &QueryRequest) -> Result<Compiled, QueryError> {
         let now = to_unix_seconds(SystemTime::now());
-        let utc_offset = self.database().read(|c| run::utc_offset(c, now))?;
+        let (utc_offset, lookups) = self
+            .database()
+            .read(|c| Ok((run::utc_offset(c, now)?, lookups(c, &request.query)?)))?;
         let context = QueryContext {
             now,
             utc_offset,
             seed: request.seed,
         };
-        compiler::compile(&request.query, &context).map_err(QueryError::Invalid)
+        compiler::compile(&request.query, &context, &lookups).map_err(QueryError::Invalid)
     }
 
     /// One page of the tracks `request` selects, in its order, with how many it
@@ -205,10 +208,34 @@ pub(crate) fn track_ids_on(
         utc_offset: run::utc_offset(c, now)?,
         seed: 0,
     };
-    match compiler::compile(query, &context) {
+    match compiler::compile(query, &context, &lookups(c, query)?) {
         Ok(compiled) => run::track_ids(c, &compiled, false).map(Ok),
         Err(problem) => Ok(Err(problem)),
     }
+}
+
+/// What `query` needs looked up in the library before it is compiled: the labels
+/// when it has plain text, and the values of the computed fields it compares.
+fn lookups(c: &rusqlite::Connection, query: &Query) -> rusqlite::Result<Lookups> {
+    fn has_text(expr: &Expr) -> bool {
+        match expr {
+            Expr::Text(_) => true,
+            Expr::All(children) | Expr::Any(children) => children.iter().any(has_text),
+            Expr::Not(inner) => has_text(inner),
+            _ => false,
+        }
+    }
+    let labels = if query.filter.as_ref().is_some_and(has_text) {
+        c.prepare_cached("SELECT id, fold FROM labels")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?
+    } else {
+        Vec::new()
+    };
+    Ok(Lookups {
+        labels,
+        computed: computed_values(c, &computed_in(query))?,
+    })
 }
 
 fn check_name(name: &str) -> Result<String, QueryError> {

@@ -5,12 +5,12 @@
 //! expressions in braces. Every error has the characters it is about.
 
 use super::{Comparison, Error, Function, MAX_BRACKET_DEPTH, MAX_NESTING, Node, Part, Problem};
-use crate::query::Field;
+use crate::user_fields::{Lookup, UserFields};
 
 type Result<T> = std::result::Result<T, Error>;
 
 /// Reads `text`; with `path`, `/` starts a folder.
-pub(super) fn parse(text: &str, path: bool) -> Result<Vec<Part>> {
+pub(super) fn parse(text: &str, path: bool, user: &UserFields) -> Result<Vec<Part>> {
     let chars: Vec<char> = text.chars().collect();
     if text.trim().is_empty() {
         return Err(error(Problem::Empty, 0, chars.len()));
@@ -19,6 +19,7 @@ pub(super) fn parse(text: &str, path: bool) -> Result<Vec<Part>> {
         chars: &chars,
         pos: 0,
         path,
+        user,
         brace: 0,
         scopes: Vec::new(),
         depth: 0,
@@ -70,6 +71,8 @@ struct Parser<'a> {
     chars: &'a [char],
     pos: usize,
     path: bool,
+    /// The fields the user defined.
+    user: &'a UserFields,
     /// Where the braces being read open.
     brace: usize,
     /// The names `let` binds, outermost first, in lower case.
@@ -440,9 +443,16 @@ impl Parser<'_> {
         {
             return Ok(Node::Variable(index));
         }
-        Field::from_name(name)
-            .map(Node::Field)
+        self.field(name)
             .ok_or_else(|| error(Problem::UnknownField(name.to_owned()), start, end))
+    }
+
+    /// The field `name`: one of the query language, or one the user defined.
+    fn field(&self, name: &str) -> Option<Node> {
+        Some(match self.user.lookup(name)? {
+            Lookup::Field(field) => Node::Field(field),
+            Lookup::Computed(computed) => Node::Computed(computed),
+        })
     }
 
     /// Reads the arguments of the function `name` from its `(` on.
@@ -473,7 +483,7 @@ impl Parser<'_> {
             Function::Raw => {
                 let argument = self.next()?;
                 let field = match &argument.tok {
-                    Tok::Name(n) => Field::from_name(n),
+                    Tok::Name(n) => self.field(n),
                     Tok::Close => return Err(arity(argument.end)),
                     Tok::End | Tok::Eof => return Err(self.unexpected(&argument)),
                     _ => None,
@@ -483,7 +493,10 @@ impl Parser<'_> {
                 };
                 let close = self.next()?;
                 match close.tok {
-                    Tok::Close => Ok(Node::Raw(field)),
+                    Tok::Close => Ok(match field {
+                        Node::Field(field) => Node::Raw(field),
+                        computed => computed,
+                    }),
                     Tok::Comma => Err(arity(close.end)),
                     Tok::End => Err(error(Problem::UnclosedParenthesis, open.start, open.end)),
                     _ => Err(self.unexpected(&close)),

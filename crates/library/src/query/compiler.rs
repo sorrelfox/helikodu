@@ -19,6 +19,8 @@
 
 mod calendar;
 
+use std::collections::HashMap;
+
 use helikodu_model::query::{
     Comparison, Expr, Field, FieldKind, Flag, Limit, LimitUnit, MediaKind, Operator, Presence,
     Query, SortBy, SortKey, TermProblem, Value,
@@ -26,6 +28,7 @@ use helikodu_model::query::{
 use rusqlite::types::Value as SqlValue;
 
 use crate::catalog::{BY_ALBUM_ARTIST, LOSSLESS};
+use crate::labels::{first_label, has_label};
 use crate::search::{fold, term_condition, terms};
 
 /// The tables a compiled query refers to.
@@ -34,6 +37,10 @@ pub(crate) const FROM: &str = "FROM tracks t
     JOIN dirs d ON d.id = f.dir_id
     LEFT JOIN albums a ON a.id = t.album_id
     LEFT JOIN stats s ON s.identity_id = t.identity_id";
+
+/// The most memory a regular expression may compile to, as in the `regexp()`
+/// function.
+const REGEX_SIZE_LIMIT: usize = 1 << 20;
 
 /// What relative dates and a shuffled order are relative to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,6 +51,18 @@ pub(crate) struct QueryContext {
     pub(crate) utc_offset: i64,
     /// The seed of `sort:random`.
     pub(crate) seed: u64,
+}
+
+/// What a query needs from the library besides its own text, looked up before it
+/// is compiled.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct Lookups {
+    /// Every label, its id and folded name, when the query has plain text: plain
+    /// text finds the tracks of the labels it is part of.
+    pub(crate) labels: Vec<(i64, String)>,
+    /// The values of the computed fields the query compares, by field name and
+    /// track id; a track without a value is not there.
+    pub(crate) computed: HashMap<String, HashMap<i64, String>>,
 }
 
 /// A compiled query.
@@ -69,13 +88,18 @@ pub(crate) struct CompiledLimit {
 }
 
 /// Compiles `query`. Fails if a comparison does not fit together.
-pub(crate) fn compile(query: &Query, context: &QueryContext) -> Result<Compiled, TermProblem> {
+pub(crate) fn compile(
+    query: &Query,
+    context: &QueryContext,
+    lookups: &Lookups,
+) -> Result<Compiled, TermProblem> {
     if let Some((_, problem)) = query.problem() {
         return Err(problem);
     }
     let mut sql = Sql {
         params: Vec::new(),
         context: *context,
+        lookups,
     };
     let condition = match &query.filter {
         Some(filter) => sql.expr(filter),
@@ -128,6 +152,10 @@ enum TextSource {
     Album,
     /// Other tags, by key.
     Tag(String),
+    /// The labels of the track, its album and its artists.
+    Labels,
+    /// A computed field, by name.
+    Computed(String),
 }
 
 fn text_source(field: &Field) -> Option<TextSource> {
@@ -163,6 +191,8 @@ fn text_source(field: &Field) -> Option<TextSource> {
         Field::Folder => column("d.path_text", "hk_fold(d.path_text)"),
         Field::Filename => column("f.name_text", "hk_fold(f.name_text)"),
         Field::Tag(key) => TextSource::Tag(key.clone()),
+        Field::Label => TextSource::Labels,
+        Field::Computed(name) => TextSource::Computed(name.clone()),
         _ => return None,
     })
 }
@@ -231,12 +261,13 @@ fn sql_operator(op: Operator) -> &'static str {
     }
 }
 
-struct Sql {
+struct Sql<'a> {
     params: Vec<SqlValue>,
     context: QueryContext,
+    lookups: &'a Lookups,
 }
 
-impl Sql {
+impl Sql<'_> {
     /// Adds a parameter and returns its placeholder.
     fn bind(&mut self, value: impl Into<SqlValue>) -> String {
         self.params.push(value.into());
@@ -270,7 +301,50 @@ impl Sql {
         if term.is_empty() {
             return "1".to_owned();
         }
-        truth(term_condition(&term, &mut self.params), true)
+        let condition = truth(term_condition(&term, &mut self.params), true);
+        let labels: Vec<i64> = self
+            .lookups
+            .labels
+            .iter()
+            .filter(|(_, label)| label.contains(&term))
+            .map(|(id, _)| *id)
+            .collect();
+        if labels.is_empty() {
+            return condition;
+        }
+        let list = self.bind_ids(&labels);
+        format!(
+            "({condition} OR {})",
+            has_label(&format!("SELECT value FROM json_each({list})"))
+        )
+    }
+
+    /// Binds `ids` as a JSON array, for `json_each()`, and returns its placeholder.
+    fn bind_ids(&mut self, ids: &[i64]) -> String {
+        let list: Vec<String> = ids.iter().map(i64::to_string).collect();
+        self.bind(format!("[{}]", list.join(",")))
+    }
+
+    /// The tracks whose value of the computed field `name` passes `test`.
+    fn computed(&mut self, name: &str, test: impl Fn(&str) -> bool) -> String {
+        let mut ids: Vec<i64> = self
+            .lookups
+            .computed
+            .get(name)
+            .map(|values| {
+                values
+                    .iter()
+                    .filter(|(_, value)| test(value))
+                    .map(|(id, _)| *id)
+                    .collect()
+            })
+            .unwrap_or_default();
+        if ids.is_empty() {
+            return "0".to_owned();
+        }
+        ids.sort_unstable();
+        let list = self.bind_ids(&ids);
+        format!("t.id IN (SELECT value FROM json_each({list}))")
     }
 
     fn compare(&mut self, c: &Comparison) -> String {
@@ -356,6 +430,24 @@ impl Sql {
                     true,
                 )
             }
+            TextSource::Labels => {
+                let condition = self.name_condition(op, text, "l.fold", "l.name");
+                has_label(&format!("SELECT l.id FROM labels l WHERE {condition}"))
+            }
+            TextSource::Computed(name) => match op {
+                Operator::Contains => self.computed(name, |value| fold(value).contains(&folded)),
+                Operator::Matches => {
+                    let Ok(pattern) = regex::RegexBuilder::new(text)
+                        .size_limit(REGEX_SIZE_LIMIT)
+                        .dfa_size_limit(REGEX_SIZE_LIMIT)
+                        .build()
+                    else {
+                        return "0".to_owned();
+                    };
+                    self.computed(name, |value| pattern.is_match(value))
+                }
+                _ => self.computed(name, |value| fold(value.trim()) == folded.trim()),
+            },
             TextSource::Tag(key) => {
                 let key = self.bind(key.clone());
                 let condition = self.name_condition(op, text, "hk_fold(tt.value)", "tt.value");
@@ -502,6 +594,8 @@ impl Sql {
                     let key = self.bind(key);
                     format!("t.id IN (SELECT track_id FROM track_tags WHERE key = {key})")
                 }
+                TextSource::Labels => has_label("SELECT id FROM labels"),
+                TextSource::Computed(name) => self.computed(&name, |_| true),
             };
         }
         match (field, scalar_column(field)) {
@@ -556,6 +650,7 @@ impl Sql {
                     true,
                 )
             }
+            Field::Label => (first_label(), true),
             Field::Work => ("t.work COLLATE HK_LOCALE".to_owned(), true),
             Field::Movement => ("t.movement COLLATE HK_LOCALE".to_owned(), true),
             Field::DiscSubtitle => ("t.disc_subtitle COLLATE HK_LOCALE".to_owned(), true),
@@ -692,7 +787,7 @@ mod tests {
             ],
             limit: Some(Limit::tracks(5)),
         };
-        let compiled = compile(&query, &context()).unwrap();
+        let compiled = compile(&query, &context(), &Lookups::default()).unwrap();
         for sql in [&compiled.condition, &compiled.order] {
             assert!(!sql.to_lowercase().contains("zqx"), "{sql}");
             assert!(!sql.contains("DROP"), "{sql}");
@@ -711,7 +806,9 @@ mod tests {
     fn numbers_are_bound_in_column_units() {
         let compare = |field: Field, value: Value| {
             let query = Query::new(Expr::compare(field, Operator::GreaterOrEqual, value));
-            compile(&query, &context()).unwrap().params
+            compile(&query, &context(), &Lookups::default())
+                .unwrap()
+                .params
         };
         assert_eq!(
             compare(
@@ -739,7 +836,8 @@ mod tests {
                     Operator::Less,
                     Value::number(1)
                 )),
-                &context()
+                &context(),
+                &Lookups::default()
             ),
             Err(TermProblem::Operator)
         );

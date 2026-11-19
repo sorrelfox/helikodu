@@ -24,5 +24,6 @@ This guide describes the current version. Helikodu is young: some menu entries a
 16. [The command line](command-line.md)
 17. [Where Helikodu keeps its files](files.md)
 18. [Troubleshooting](troubleshooting.md)
+19. [Labels and your own fields](labels-and-fields.md)
 
 See also the [FAQ](../faq.md) and the manual pages `helikodu(1)`, `helikodu-cli(1)` and `helikodu-scan-worker(1)`.

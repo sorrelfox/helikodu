@@ -38,6 +38,8 @@ helikodu-cli import-user-data FILE # read such a file into the library
 helikodu-cli carry-stats           # carry statistics from replaced files to their replacements
 helikodu-cli write-stats           # write changed play counts and ratings into the files
 helikodu-cli managed-folder ...    # the managed folder: show, set, import, consolidate
+helikodu-cli labels list|add|...   # labels of tracks, albums and artists
+helikodu-cli fields list|define|... # computed and custom fields
 ```
 
 Some examples:
@@ -60,6 +62,7 @@ While `play` runs in a terminal, Space pauses, `n` and `p` go to the next and pr
 `import`, `import-user-data` and `carry-stats` only show what they would change unless you add `--apply`; [Moving from another player](moving-from-another-player.md) describes them and `export-user-data`, `undo-import` and `write-stats`.
 
 `scan`, `search`, `info`, `stats`, `loudness` and `duplicates` use the same library as the application, so you can scan from the command line and browse the result in the window. Most commands take `--json` for output that scripts can read.
+`scan`, `search`, `info`, `stats`, `loudness`, `duplicates`, `labels` and `fields` use the same library as the application, so you can scan from the command line and browse the result in the window. Most commands take `--json` for output that scripts can read. `labels` and `fields` are described in [Labels and your own fields](labels-and-fields.md).
 
 ## The managed folder
 

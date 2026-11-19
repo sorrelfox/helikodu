@@ -78,6 +78,7 @@ fn node_fields(node: &Node, out: &mut Vec<Field>) {
                 out.push(field.clone());
             }
         }
+        Node::Computed(computed) => collect_fields(&computed.template.parts, out),
         Node::Literal(_) | Node::Variable(_) => {}
         Node::Let(value, body) => {
             node_fields(value, out);
@@ -94,6 +95,30 @@ fn node_fields(node: &Node, out: &mut Vec<Field>) {
             }
         }
     }
+}
+
+/// The depth of the deepest computed field in `parts`; 0 for none.
+pub(super) fn computed_depth(parts: &[Part]) -> usize {
+    fn node(n: &Node) -> usize {
+        match n {
+            Node::Computed(computed) => computed.depth,
+            Node::Literal(_) | Node::Variable(_) | Node::Field(_) | Node::Raw(_) => 0,
+            Node::Let(a, b) | Node::Compare(_, a, b) => node(a).max(node(b)),
+            Node::Not(inner) => node(inner),
+            Node::Call(_, nodes) | Node::And(nodes) | Node::Or(nodes) => {
+                nodes.iter().map(node).max().unwrap_or(0)
+            }
+        }
+    }
+    parts
+        .iter()
+        .map(|part| match part {
+            Part::Value(n) => node(n),
+            Part::Optional(inner) => computed_depth(inner),
+            Part::Text(_) | Part::Folder(_) => 0,
+        })
+        .max()
+        .unwrap_or(0)
 }
 
 fn truth(yes: bool) -> String {
@@ -283,6 +308,7 @@ impl<'a> Evaluator<'a> {
                 .value(field)
                 .map(|v| v.trim().to_owned())
                 .unwrap_or_default(),
+            Node::Computed(computed) => computed.template.evaluate(self.values),
             Node::Variable(index) => self.bound.get(*index).cloned().unwrap_or_default(),
             Node::Let(value, body) => {
                 let value = self.text(value);

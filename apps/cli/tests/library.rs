@@ -448,3 +448,85 @@ fn duplicates_lists_the_groups_of_copies() {
     // Nothing was moved.
     assert!(backup.join("01 Morning.flac").is_file());
 }
+
+#[test]
+fn labels_and_fields() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let fx = Fixture::new("labels");
+    let worker = worker_program();
+    let (code, _, stderr) = fx.run(&[
+        os("scan"),
+        fx.music.as_os_str(),
+        os("--exclude"),
+        os("Skip"),
+        os("--worker"),
+        worker.as_os_str(),
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+
+    // A label of an artist counts for the artist's tracks.
+    let (code, _, stderr) = fx.run(&[
+        os("labels"),
+        os("add"),
+        os("calm"),
+        os("--artist"),
+        os("aurora test"),
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+    let (code, _, stderr) = fx.run(&[
+        os("labels"),
+        os("add"),
+        os("Café"),
+        os("--query"),
+        os("title:café"),
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+    let listed = fx.json(&[os("labels"), os("list"), os("--json")]);
+    let labels = listed["labels"].as_array().unwrap();
+    assert_eq!(labels.len(), 2, "{listed}");
+    assert_eq!(labels[0]["name"], "Café");
+    assert_eq!(labels[1]["name"], "calm");
+    assert_eq!(labels[1]["tracks"], 2);
+    assert_eq!(labels[1]["artists"], 1);
+    let (code, _, stderr) = fx.run(&[os("labels"), os("merge"), os("café"), os("calm")]);
+    assert_eq!(code, Some(0), "{stderr}");
+    let listed = fx.json(&[os("labels"), os("list"), os("--json")]);
+    assert_eq!(listed["labels"][0]["tracks"], 3, "{listed}");
+
+    // Fields: a problem is shown where it is; a good definition is listed.
+    let (code, _, stderr) = fx.run(&[
+        os("fields"),
+        os("define"),
+        os("decade"),
+        os("{left(yeer,3)}0s"),
+    ]);
+    assert_eq!(code, Some(1));
+    assert!(stderr.contains("there is no field yeer"), "{stderr}");
+    assert!(stderr.contains("        ^^^^"), "{stderr}");
+    for args in [
+        [os("define"), os("decade"), os("{left(year,3)}0s")],
+        [os("define"), os("genre_mood"), os("--tag=TXXX:MOOD")],
+    ] {
+        let mut all = vec![os("fields")];
+        all.extend(args);
+        let (code, _, stderr) = fx.run(&all);
+        assert_eq!(code, Some(0), "{stderr}");
+    }
+    let fields = fx.json(&[os("fields"), os("list"), os("--json")]);
+    assert_eq!(fields["fields"][0]["name"], "decade");
+    assert_eq!(fields["fields"][1]["tag"], "MOOD");
+    let (code, stdout, stderr) = fx.run(&[
+        os("fields"),
+        os("value"),
+        os("decade"),
+        os("1"),
+        os("2"),
+        os("3"),
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(stdout.contains("2020s"), "{stdout}");
+    let (code, _, stderr) = fx.run(&[os("fields"), os("remove"), os("decade")]);
+    assert_eq!(code, Some(0), "{stderr}");
+}

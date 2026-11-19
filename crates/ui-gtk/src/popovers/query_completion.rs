@@ -78,6 +78,10 @@ fn describe(field: &Field) -> (String, &'static str) {
         Field::LastPlayed => (tr("When it was last played"), "lastplayed>1y"),
         Field::FirstPlayed => (tr("When it was first played"), "firstplayed<30d"),
         Field::LastSkipped => (tr("When it was last skipped"), "lastskipped<7d"),
+        Field::Label => (
+            tr("A label of the track, its album or an artist"),
+            "label:jazz",
+        ),
         _ => (tr("A tag"), "tag:mood=calm"),
     }
 }

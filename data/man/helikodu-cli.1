@@ -114,6 +114,15 @@ helikodu\-cli \- play audio files, query the Helikodu library and control the ap
 .RB [ \-\-play\-counts ]
 .RB [ \-\-worker
 .IR path ]
+.B helikodu\-cli labels
+.RB { list | show | add | remove | rename | merge | delete }
+.RI [ arguments ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli fields
+.RB { list | define | remove | value }
+.RI [ arguments ]
 .RB [ \-\-database
 .IR path ]
 .br
@@ -450,6 +459,59 @@ settings say, or as
 and
 .B \-\-play\-counts
 say.
+.SS labels
+Labels are free words given to library tracks, albums and artists.
+They are kept in the library and never written to the files; a label of an
+album or an artist counts for all of its tracks.
+.B labels list
+lists them with how many tracks, albums and artists have them;
+.B labels show
+the labels of what it names.
+.BI "labels add " label
+and
+.BI "labels remove " label
+give and take a label;
+.BI "labels rename " "label new-name" ,
+.BI "labels merge " "from into"
+and
+.BI "labels delete " label
+change the labels themselves.
+.B show ,
+.B add
+and
+.B remove
+take exactly one of:
+.TP
+.BI \-\-track " id" ...
+Library tracks, by the ids
+.B search
+prints.
+.TP
+.BI \-\-query " query"
+The tracks a query of the application's search language finds.
+.TP
+.BI \-\-album\-of " track-id"
+The album of a library track.
+.TP
+.BI \-\-artist " name"
+An artist, by name.
+.SS fields
+Fields the user defines, usable in searches and naming patterns.
+.BI "fields define " "name expression"
+defines a computed field, whose value is the expression's text, such as
+.BR "fields define decade '{left(year,3)}0s'" ;
+.BI "fields define " name " \-\-tag " tag
+a custom field for a tag, such as
+.BR "fields define mood \-\-tag MOOD" .
+A definition that cannot be used is refused with the place of the problem
+marked.
+.B fields list
+lists the fields,
+.BI "fields remove " name
+removes one, and
+.BI "fields value " "name track-id" ...
+shows a field's value for library tracks.
+The running application uses changed fields after it is started again.
 .SH COMMANDS FOR THE RUNNING APPLICATION
 These commands talk to the running Helikodu window through its D-Bus
 interface,
