@@ -77,7 +77,9 @@ With shuffle on, "Previous" retraces the tracks in the order they actually playe
 
 ## When Helikodu starts again
 
-Helikodu remembers the queue, the position in the playing track, the volume, shuffle, repeat and the output device. When you start it again, everything is as you left it, paused. (Choose **Start with an empty queue** under **When Helikodu starts** in the **Playback** settings if you prefer.)
+Helikodu remembers the queue, the position in the playing track, the volume, shuffle, repeat and the output device, and whether music was playing. When you start it again, everything is as you left it: if music was playing when you closed or quit Helikodu, it continues where it stopped, with a short fade in; if it was paused or stopped, it stays paused. Either way the track is selected in the queue panel, which scrolls to it. (Choose **Start with an empty queue** under **When Helikodu starts** in the **Playback** settings if you prefer.)
+
+Playback does not continue on its own when you start Helikodu with files to play (from the command line or your file manager's **Open With**), which play instead; when the track's file is missing; or when Helikodu ended abnormally while that track was playing.
 
 Long tracks and audiobooks, by default those over 20 minutes, continue where you stopped listening, even after you played something else (**Resume long tracks where they stopped**).
 

@@ -42,9 +42,11 @@
 //!   library) is recorded with the play and skip rules of
 //!   [`PlayerPrefs::play_rules`], on a thread of its own.
 //! - With a session folder, the queue, position, modes, volume and output are saved
-//!   after changes and at the end, and restored paused at the start; the crash
-//!   sentinel keeps a track that ended the program twice in a row from playing
-//!   automatically (see [`session`]).
+//!   after changes and at the end, and restored paused at the start; a front end
+//!   then sends [`PlayerCommand::ResumeSession`] to play on if it was playing when
+//!   the program ended. The crash sentinel keeps a track that ended the program
+//!   twice in a row from playing automatically, and one that was playing when the
+//!   program ended abnormally from being resumed (see [`session`]).
 
 mod actor;
 mod analyzer;
@@ -125,6 +127,7 @@ impl Player {
             suspects: HashSet::new(),
             strikes: HashMap::new(),
             stop_after: StopAfter::Off,
+            resume: None,
             crash: None,
             session: None,
             prefs: config.prefs,
@@ -134,9 +137,11 @@ impl Player {
             let mut files = SessionFiles::new(&session_config.dir);
             let report = files.take_crash_report();
             let saved = files.load();
+            let mut playing = false;
             if let Some(saved) = saved {
                 startup.suspects.extend(saved.suspects.iter().cloned());
                 if session_config.restore {
+                    playing = saved.playing;
                     startup.queue = Queue::restore(
                         rng,
                         saved.context,
@@ -152,6 +157,16 @@ impl Player {
                 }
             }
             startup.suspects.extend(report.suspects().cloned());
+            // Playing on is left to the listener for a track that may have ended
+            // the program.
+            startup.resume = startup
+                .queue
+                .current()
+                .filter(|_| playing)
+                .filter(|e| {
+                    !startup.suspects.contains(&e.track) && !report.strikes.contains_key(&e.track)
+                })
+                .map(|e| e.id);
             if report.crashed {
                 let mut suspects: Vec<_> = report.suspects().cloned().collect();
                 suspects.sort_by_key(|t| format!("{t:?}"));

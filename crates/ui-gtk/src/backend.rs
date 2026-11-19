@@ -1194,6 +1194,11 @@ pub enum PlayerRequest {
     PlayPause,
     /// Play, or go on playing; nothing changes while playing.
     Play,
+    /// Play on with the restored session if it was playing when the program
+    /// ended; sent once at the start, unless something else is to play.
+    ResumeSession,
+    /// The desktop session is about to end: save the session now.
+    SessionEnding,
     /// Stop.
     Stop,
     /// The next track.
@@ -1599,6 +1604,12 @@ pub trait PlayerControl: fmt::Debug {
     /// Whether a view shows the analyzer, and how many measurements a second
     /// it wants; `None` stops them.
     fn follow_analyzer(&self, _per_second: Option<u32>) {}
+
+    /// Whether the restored session was playing when the program ended and
+    /// waits for [`PlayerRequest::ResumeSession`].
+    fn resume_pending(&self) -> bool {
+        false
+    }
 }
 
 /// The front end's handle on the core.
@@ -1734,6 +1745,14 @@ impl Backend {
     /// Sends a request to the player past the gate.
     pub fn send_ungated(&self, request: PlayerRequest) {
         self.player.send(request);
+    }
+
+    /// Plays on with the restored session if it was playing when the program
+    /// ended (see [`PlayerControl::resume_pending`]); does nothing otherwise.
+    pub fn resume_session(&self) {
+        if self.player.resume_pending() {
+            self.send(PlayerRequest::ResumeSession);
+        }
     }
 
     /// Sets the gate requests pass before they reach the player.

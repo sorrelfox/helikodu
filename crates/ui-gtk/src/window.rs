@@ -186,6 +186,11 @@ mod imp {
         pub(super) device_lost: Cell<bool>,
         /// Set while the queue panel's selection follows the player.
         pub(super) queue_selecting: Cell<bool>,
+        /// The queue entry selected at the start, the restored current one,
+        /// while no other is chosen and it stays current.
+        pub(super) start_entry: Cell<Option<u64>>,
+        /// Set until the first queue from the player has been shown.
+        pub(super) awaiting_queue: Cell<bool>,
         /// The mini player, the tray and the other desktop services.
         pub(super) desktop: RefCell<Option<Rc<desktop::Integration>>>,
         /// The Home page.

@@ -234,6 +234,58 @@ fn play_mode_sleep_timer(app: &gtk::Application) {
     window.destroy();
 }
 
+/// A restored queue, paused on a track far down: the window selects that row
+/// and scrolls to it, without playing or making it the cursor.
+fn play_mode_start_selects_current(app: &gtk::Application) {
+    let backend = sample::backend(&sample::SampleOptions {
+        albums: 40,
+        playing: None,
+    });
+    backend.send(PlayerRequest::PlayTracks {
+        tracks: (1..=80).map(TrackKey).collect(),
+        start: 60,
+        title: "Restored".into(),
+        shuffle: false,
+    });
+    backend.send(PlayerRequest::PlayPause);
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    window.set_default_size(1440, 700);
+    window.present();
+    let list = window.queue_list();
+    let current = || {
+        descendants(list.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::ListBoxRow>().ok())
+            .find(|r| r.has_css_class("current"))
+    };
+    wait_for("the current row selected", || {
+        current().is_some_and(|row| list.selected_row().as_ref() == Some(&row))
+    });
+    let adjustment = list
+        .ancestor(gtk::ScrolledWindow::static_type())
+        .and_downcast::<gtk::ScrolledWindow>()
+        .unwrap()
+        .vadjustment();
+    wait_for("the current row in view", || {
+        let Some(bounds) = current().and_then(|row| row.compute_bounds(&list)) else {
+            return false;
+        };
+        let top = f64::from(bounds.y());
+        adjustment.value() > 0.0
+            && top >= adjustment.value()
+            && top + f64::from(bounds.height()) <= adjustment.value() + adjustment.page_size()
+    });
+    spin(100);
+    assert!(!window.is_playing(), "selecting does not play");
+    assert_eq!(
+        window.queue_cursor(),
+        None,
+        "the selection at the start is no cursor"
+    );
+    window.destroy();
+}
+
 fn play_mode_queue_cursor(app: &gtk::Application) {
     let (window, backend) = playing_window(app);
     let list = window.queue_list();
@@ -656,6 +708,10 @@ const TESTS: &[Test] = &[
     ),
     ("play_mode_sleep_timer", play_mode_sleep_timer),
     ("play_mode_queue_cursor", play_mode_queue_cursor),
+    (
+        "play_mode_start_selects_current",
+        play_mode_start_selects_current,
+    ),
     ("play_mode_track_flags", play_mode_track_flags),
     ("play_mode_play_button_menu", play_mode_play_button_menu),
     ("play_mode_deck_icon_sizes", play_mode_deck_icon_sizes),

@@ -225,7 +225,9 @@ fn start(context: &Rc<Context>) -> gtk::Box {
     });
     with_note(
         &choice,
-        &tr("The queue, the track and the position come back. Playback stays paused."),
+        &tr(
+            "The queue, the track and the position come back. Playback continues if it was playing when Helikodu closed.",
+        ),
     )
 }
 

@@ -1550,6 +1550,8 @@ impl PlayerControl for FakePlayer {
                 }
                 self.announce();
             }
+            // The sample player has no session to play on with.
+            PlayerRequest::ResumeSession | PlayerRequest::SessionEnding => {}
             PlayerRequest::Next => self.step(1),
             PlayerRequest::Previous => self.step(-1),
             PlayerRequest::Seek(to) => {

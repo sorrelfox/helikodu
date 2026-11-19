@@ -202,21 +202,36 @@ pub fn run(
             }
         }
     });
+    // The restored session plays on once, when the program is first shown,
+    // unless it was started to play files.
+    let started = Rc::new(std::cell::Cell::new(false));
     let b = backend.clone();
+    let s = started.clone();
     application.connect_activate(move |application| {
         present(application, &b, options);
+        if let Some(backend) = b.borrow().as_ref()
+            && !s.replace(true)
+        {
+            backend.resume_session();
+        }
     });
     let b = backend.clone();
     application.connect_open(move |application, files, hint| {
         let paths: Vec<_> = files.iter().filter_map(gio::File::path).collect();
         present(application, &b, options);
-        if let Some(backend) = b.borrow().as_ref()
-            && !paths.is_empty()
-        {
+        let Some(backend) = b.borrow().clone() else {
+            return;
+        };
+        let enqueue = hint == "enqueue";
+        let plays = !paths.is_empty() && !enqueue;
+        if !paths.is_empty() {
             backend.send(PlayerRequest::PlayFiles {
                 files: paths,
-                enqueue: hint == "enqueue",
+                enqueue,
             });
+        }
+        if !started.replace(true) && !plays {
+            backend.resume_session();
         }
     });
     let mut all = vec![std::env::args().next().unwrap_or_else(|| "helikodu".into())];

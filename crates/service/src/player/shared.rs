@@ -131,6 +131,9 @@ pub struct PlayerStatus {
     pub sleep_timer: Option<SleepTimerStatus>,
     /// The entry selected for "Continue from the selected track".
     pub cursor: Option<EntryId>,
+    /// The restored session was playing when the program ended and waits for
+    /// [`ResumeSession`](super::PlayerCommand::ResumeSession) to play on.
+    pub resume_pending: bool,
 }
 
 impl Default for PlayerStatus {
@@ -150,6 +153,7 @@ impl Default for PlayerStatus {
             ab_loop: None,
             sleep_timer: None,
             cursor: None,
+            resume_pending: false,
         }
     }
 }

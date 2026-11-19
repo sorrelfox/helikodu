@@ -11,7 +11,7 @@ Helikodu follows the XDG base directory rules. The folders below are the default
 | `~/.local/state/helikodu/logs/` | The log, when Settings › Advanced › Logs keeps one; within the size limit of Settings › Library › Storage |
 | `~/.local/state/helikodu/crashes/` | A report for each crash, the last 10 kept. Written even with **No logs** (then without log lines); never sent anywhere |
 | (in `library.db`) | The journal of the files the organizer moved, so that a run can be undone; kept for the undo limit of the settings |
-| `~/.local/state/helikodu/session.json` | The queue, position, volume, modes and output device of the last session |
+| `~/.local/state/helikodu/session.json` | The queue, position, volume, modes and output device of the last session, and whether it was playing |
 | `~/.local/state/helikodu/playing.json` | A marker that exists only while something plays; see [Troubleshooting](troubleshooting.md#helikodu-skips-a-track-it-used-to-play) |
 | `~/.local/state/helikodu/ui-state.toml` | The window size and the widths of its panes |
 | `~/.cache/helikodu/thumbnails/` | Cover thumbnails, up to 2 GiB by default. Safe to delete; they are made again when needed |

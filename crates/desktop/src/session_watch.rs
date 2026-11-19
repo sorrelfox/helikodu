@@ -10,6 +10,8 @@
 //!   system bus (`Lock` and `Unlock`, and the `LockedHint` property that
 //!   GNOME and KDE Plasma set). Both may report the same lock; only changes
 //!   are passed on.
+//! - **Session end:** the portal's session monitor reports a logout or shutdown
+//!   that is about to happen (`query-end`), so that the session can be saved.
 //! - **Sleep:** logind's `PrepareForSleep` on the system bus. So that playback
 //!   has paused before the system sleeps, a "delay" inhibitor lock is held
 //!   while [`SessionWatch::set_delay_sleep`] asks for it: when sleep comes the
@@ -49,6 +51,9 @@ pub enum SessionChange {
     GoingToSleep,
     /// The system woke up.
     Woke,
+    /// The desktop session is about to end (a logout or shutdown was asked
+    /// for; it may still be cancelled).
+    Ending,
 }
 
 enum Command {
@@ -193,6 +198,7 @@ async fn watch(
                 }
             }
             Step::QueryEnd => {
+                on_change(SessionChange::Ending);
                 if let Some((portal, monitor)) = &monitor {
                     let _ = portal.query_end_response(monitor).await;
                 }

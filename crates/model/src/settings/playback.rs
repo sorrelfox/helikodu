@@ -154,7 +154,8 @@ pub enum ContextAction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum StartAction {
-    /// The last session: queue, position, volume and modes; playback stays paused.
+    /// The last session: queue, position, volume and modes. Playback continues if
+    /// it was playing when the program ended, and stays paused otherwise.
     #[default]
     Restore,
     /// An empty queue.

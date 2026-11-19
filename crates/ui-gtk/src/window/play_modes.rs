@@ -100,6 +100,7 @@ impl MainWindow {
         // not while the main menu is open, but once it has closed.
         let shown = Rc::new(std::cell::Cell::new(None));
         let weak = self.downgrade();
+        let at_start = playback.view();
         playback.connect(move |view, change| {
             let Some(window) = weak.upgrade() else { return };
             match change {
@@ -127,11 +128,41 @@ impl MainWindow {
                         crate::play_modes::sync_actions(&application, view);
                     }
                 }
-                Change::Track if window.follows_playing() => window.scroll_queue_to_current(),
-                Change::Queue | Change::Cursor => window.select_cursor(view),
+                Change::Track => {
+                    if window.follows_playing() {
+                        window.scroll_queue_to_current();
+                    }
+                    // The panel showed the queue anew.
+                    window.select_cursor(view);
+                }
+                Change::Queue => {
+                    window.take_start_selection(view);
+                    window.select_cursor(view);
+                }
+                Change::Cursor => window.select_cursor(view),
                 _ => {}
             }
         });
+        // The queue the player restored, when it comes.
+        self.imp().awaiting_queue.set(true);
+        if !at_start.queue.items.is_empty() {
+            self.take_start_selection(&at_start);
+            self.select_cursor(&at_start);
+        }
+    }
+
+    /// The first queue shown: its current entry is selected (without making
+    /// it the cursor or playing it) and scrolled into view.
+    fn take_start_selection(&self, view: &PlayerView) {
+        let imp = self.imp();
+        if !imp.awaiting_queue.replace(false) || view.cursor.is_some() {
+            return;
+        }
+        let current = current_entry(view);
+        imp.start_entry.set(current);
+        if current.is_some() {
+            self.reveal_queue_current();
+        }
     }
 
     /// Shows in the Playback menu what changed while the main menu was open.
@@ -200,12 +231,14 @@ impl MainWindow {
         list.connect_row_selected(move |_, row| {
             // Rows go away whenever the queue is shown again; only a choice
             // of the user is a new cursor.
-            if weak.upgrade().is_none_or(|w| w.imp().queue_selecting.get()) {
+            let Some(window) = weak.upgrade() else { return };
+            if window.imp().queue_selecting.get() {
                 return;
             }
             let Some(entry) = row.and_then(|r| r.widget_name().parse::<u64>().ok()) else {
                 return;
             };
+            window.imp().start_entry.set(None);
             if source
                 .upgrade()
                 .is_some_and(|p| p.view().cursor != Some(entry))
@@ -218,6 +251,11 @@ impl MainWindow {
     /// Selects the row of the cursor again after the queue was shown anew.
     fn select_cursor(&self, view: &PlayerView) {
         let list = self.imp().panel.queue_list();
+        let start = &self.imp().start_entry;
+        if view.cursor.is_some() || start.get() != current_entry(view) {
+            start.set(None);
+        }
+        let wanted = view.cursor.or(start.get());
         let selecting = &self.imp().queue_selecting;
         selecting.set(true);
         let mut child = list.first_child();
@@ -229,7 +267,7 @@ impl MainWindow {
             };
             match row.widget_name().parse::<u64>() {
                 Ok(entry) => {
-                    if Some(entry) == view.cursor {
+                    if Some(entry) == wanted {
                         chosen = Some(row);
                     }
                 }
@@ -244,27 +282,30 @@ impl MainWindow {
         selecting.set(false);
     }
 
+    /// Scrolls the queue panel to the current row once it has been laid out:
+    /// at once if it is shown, else when the panel is first shown.
+    fn reveal_queue_current(&self) {
+        // Frames to wait for the list to be laid out before giving up.
+        const TRIES: u32 = 30;
+        let list = self.imp().panel.queue_list();
+        let tries = std::cell::Cell::new(0);
+        list.add_tick_callback(move |list, _| {
+            if scroll_to_current(list) || tries.replace(tries.get() + 1) >= TRIES {
+                glib::ControlFlow::Break
+            } else {
+                glib::ControlFlow::Continue
+            }
+        });
+    }
+
     /// Scrolls the queue panel to the playing row.
     fn scroll_queue_to_current(&self) {
         let list = self.imp().panel.queue_list();
         let weak = list.downgrade();
         // After the panel has shown the new queue.
         glib::idle_add_local_once(move || {
-            let Some(list) = weak.upgrade() else { return };
-            let mut child = list.first_child();
-            while let Some(widget) = child {
-                child = widget.next_sibling();
-                if widget.has_css_class("current")
-                    && let Some(bounds) = widget.compute_bounds(&list)
-                    && let Some(adjustment) = list
-                        .ancestor(gtk::ScrolledWindow::static_type())
-                        .and_downcast::<gtk::ScrolledWindow>()
-                        .map(|s| s.vadjustment())
-                {
-                    let top = f64::from(bounds.y()) - adjustment.page_size() / 3.0;
-                    adjustment.set_value(top.max(0.0));
-                    break;
-                }
+            if let Some(list) = weak.upgrade() {
+                scroll_to_current(&list);
             }
         });
     }
@@ -330,4 +371,46 @@ impl MainWindow {
     pub fn queue_list(&self) -> gtk::ListBox {
         self.imp().panel.queue_list()
     }
+
+    /// The entry of "Continue from the selected track", as the player has it.
+    #[doc(hidden)]
+    pub fn queue_cursor(&self) -> Option<u64> {
+        self.imp().playback.borrow().as_ref()?.view().cursor
+    }
+}
+
+/// The queue entry of `view`'s current track.
+fn current_entry(view: &PlayerView) -> Option<u64> {
+    view.queue
+        .current
+        .and_then(|i| view.queue.items.get(i))
+        .and_then(|t| t.entry)
+}
+
+/// Scrolls `list` so that its current row shows a third of the way down;
+/// whether that row has been laid out.
+fn scroll_to_current(list: &gtk::ListBox) -> bool {
+    let mut child = list.first_child();
+    while let Some(widget) = child {
+        child = widget.next_sibling();
+        if widget.has_css_class("current") {
+            let Some(bounds) = widget.compute_bounds(list) else {
+                return false;
+            };
+            let Some(adjustment) = list
+                .ancestor(gtk::ScrolledWindow::static_type())
+                .and_downcast::<gtk::ScrolledWindow>()
+                .map(|s| s.vadjustment())
+            else {
+                return false;
+            };
+            if bounds.height() <= 0.0 || adjustment.page_size() <= 0.0 {
+                return false;
+            }
+            let top = f64::from(bounds.y()) - adjustment.page_size() / 3.0;
+            adjustment.set_value(top.max(0.0));
+            return true;
+        }
+    }
+    false
 }

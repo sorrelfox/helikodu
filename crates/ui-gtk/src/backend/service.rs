@@ -1572,6 +1572,10 @@ impl ServicePlayer {
 }
 
 impl PlayerControl for ServicePlayer {
+    fn resume_pending(&self) -> bool {
+        self.service.player().status().resume_pending
+    }
+
     fn playlists_changed(&self) {
         if let Some(mpris) = self.mpris.clone() {
             // It reads the library and talks to the bus: not on the main thread.
@@ -1785,6 +1789,8 @@ impl PlayerControl for ServicePlayer {
             }
             PlayerRequest::PlayPause => self.command(PlayerCommand::PlayPause),
             PlayerRequest::Play => self.command(PlayerCommand::Play),
+            PlayerRequest::ResumeSession => self.command(PlayerCommand::ResumeSession),
+            PlayerRequest::SessionEnding => self.command(PlayerCommand::SessionEnding),
             PlayerRequest::Stop => self.command(PlayerCommand::Stop),
             PlayerRequest::Next => self.command(PlayerCommand::Next),
             PlayerRequest::Previous => self.command(PlayerCommand::Previous),

@@ -18,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- With **Restore the last session**, music that was playing when you closed or quit Helikodu now continues where it stopped when you start it again, with a short fade in; music that was paused or stopped stays paused. The track is selected in the queue panel and scrolled into view. Files you open with Helikodu play instead, and a track whose file is missing or that was playing when Helikodu ended abnormally stays paused.
 - The memory budget with 100,000 tracks is 270 MB RSS instead of 250 MB. The last measurement, 264 MB after scrolling through the whole track table, is within it, so this is no longer a known issue.
 
 ### Fixed

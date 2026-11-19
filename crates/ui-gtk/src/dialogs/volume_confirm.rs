@@ -67,7 +67,7 @@ pub(crate) fn needs_confirmation(settings: &Settings, key: &DeviceKey) -> bool {
 pub(crate) fn starts_playback(request: &PlayerRequest, state: PlaybackState) -> bool {
     let playing = state == PlaybackState::Playing;
     match request {
-        PlayerRequest::PlayPause | PlayerRequest::Play => !playing,
+        PlayerRequest::PlayPause | PlayerRequest::Play | PlayerRequest::ResumeSession => !playing,
         PlayerRequest::PlayFiles { enqueue, .. } => !enqueue,
         PlayerRequest::PlayAlbum { .. }
         | PlayerRequest::PlayTracks { .. }

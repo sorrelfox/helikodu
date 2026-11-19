@@ -108,6 +108,10 @@ pub(super) struct Startup {
     pub(super) suspects: HashSet<TrackRef>,
     pub(super) strikes: HashMap<TrackRef, u32>,
     pub(super) stop_after: StopAfter,
+    /// The restored current entry, to play again on
+    /// [`ResumeSession`](PlayerCommand::ResumeSession): it was playing when the
+    /// program ended, and its track is not suspect.
+    pub(super) resume: Option<EntryId>,
     pub(super) crash: Option<Notice>,
     pub(super) session: Option<(SessionFiles, SessionConfig)>,
     pub(super) prefs: PlayerPrefs,
@@ -142,6 +146,15 @@ pub(super) struct Actor {
     position: MediaTime,
     /// A restored position, held until "Play" loads the entry.
     restored: Option<MediaTime>,
+    /// The restored entry that was playing when the program ended, until
+    /// `ResumeSession` plays it or anything else is played.
+    resume: Option<EntryId>,
+    /// An item loaded paused by `ResumeSession`, to play once the engine has
+    /// paused at its position, so that it fades in as after a pause.
+    resume_fade: Option<ItemId>,
+    /// The tracks the sentinel named when the desktop session began to end; they
+    /// are not named again until what plays changes.
+    ending: Option<Vec<TrackRef>>,
     volume: Volume,
     selection: OutputSelection,
     stop_after: StopAfter,
@@ -208,6 +221,9 @@ impl Actor {
             engine_state: TransportState::Stopped,
             position: restored.unwrap_or(MediaTime::ZERO),
             restored,
+            resume: startup.resume.filter(|_| restored.is_some()),
+            resume_fade: None,
+            ending: None,
             volume: startup.volume,
             selection: startup.selection,
             stop_after: startup.stop_after,
@@ -368,7 +384,12 @@ impl Actor {
             self.queue.modes(),
             self.stop_after,
         );
-        let extra = (self.ab.map(|(_, ab)| ab), self.sleep_status(), self.cursor);
+        let extra = (
+            self.ab.map(|(_, ab)| ab),
+            self.sleep_status(),
+            self.cursor,
+            self.resume.is_some(),
+        );
         self.shared.update_status(|s| {
             (
                 s.playback,
@@ -379,7 +400,7 @@ impl Actor {
                 s.modes,
                 s.stop_after,
             ) = status;
-            (s.ab_loop, s.sleep_timer, s.cursor) = extra;
+            (s.ab_loop, s.sleep_timer, s.cursor, s.resume_pending) = extra;
         });
         self.check_sleep();
         self.name_in_sentinel();
@@ -426,6 +447,7 @@ impl Actor {
             output: self.selection.clone(),
             suspects: self.suspects.iter().cloned().collect(),
             stop_after: self.stop_after,
+            playing: self.playing_for_session(),
         };
         let now = self.clock.elapsed();
         let Some(session) = &mut self.session else {
@@ -437,6 +459,18 @@ impl Actor {
             let reason = error.to_string();
             self.emit(PlayerEvent::Notice(Notice::SessionNotSaved { reason }));
         }
+    }
+
+    /// Whether the session is saved as playing: the current entry plays or is
+    /// being loaded to play, or a restored one that was playing waits to resume.
+    /// Paused and stopped are not playing.
+    fn playing_for_session(&self) -> bool {
+        self.resume.is_some()
+            || self.resume_fade.is_some()
+            || matches!(
+                self.playback_state(),
+                PlaybackState::Playing | PlaybackState::Buffering
+            )
     }
 
     fn name_in_sentinel(&mut self) {
@@ -453,6 +487,12 @@ impl Actor {
                 strikes: self.strikes.get(&slot.track).copied().unwrap_or(0),
             })
             .collect();
+        if let Some(ending) = &self.ending {
+            if named.iter().map(|s| &s.track).eq(ending.iter()) {
+                return;
+            }
+            self.ending = None;
+        }
         if let Err(error) = session.files.name(named) {
             let reason = format!("cannot write the crash sentinel: {error}");
             self.emit(PlayerEvent::Notice(Notice::SessionNotSaved { reason }));
@@ -512,16 +552,25 @@ impl Actor {
                 self.refresh_next();
             }
             PlayerCommand::PlayPause => match self.engine_state {
-                TransportState::Paused | TransportState::Stopped => self.play(),
-                _ => self.send(EngineCommand::Pause),
+                TransportState::Paused | TransportState::Stopped if self.resume_fade.is_none() => {
+                    self.play();
+                }
+                _ => {
+                    self.resume_fade = None;
+                    self.send(EngineCommand::Pause);
+                }
             },
             PlayerCommand::Play => self.play(),
+            PlayerCommand::ResumeSession => self.resume_session(),
+            PlayerCommand::SessionEnding => self.session_ending(),
             PlayerCommand::Pause => {
+                self.resume_fade = None;
                 if !self.is_stopped() {
                     self.send(EngineCommand::Pause);
                 }
             }
             PlayerCommand::Stop => {
+                self.resume_fade = None;
                 if !self.is_stopped() {
                     self.finish_listen(ListenEnd::Stopped);
                     self.stop_requested = true;
@@ -1116,6 +1165,50 @@ impl Actor {
         self.refresh_next();
     }
 
+    /// Plays the restored entry again where it was, if it was playing when the
+    /// program ended and nothing else has played since; a missing file leaves it
+    /// stopped.
+    fn resume_session(&mut self) {
+        let Some(entry) = self.resume.take() else {
+            return;
+        };
+        let Some(track) = self
+            .queue
+            .current()
+            .filter(|e| e.id == entry)
+            .map(|e| e.track.clone())
+        else {
+            return;
+        };
+        if !self.is_stopped() || self.restored.is_none() {
+            return;
+        }
+        let present = self
+            .resolve(&track)
+            .is_ok_and(|(source, _)| source.path().is_file());
+        if !present {
+            return;
+        }
+        let start = self.restored.take();
+        self.load_as(entry, Direction::Forward, start, true);
+    }
+
+    /// Saves the session, and takes the tracks playing out of the sentinel until
+    /// playback moves on: an end by the desktop session is no crash.
+    fn session_ending(&mut self) {
+        self.save_session();
+        let named: Vec<TrackRef> = [&self.current, &self.pending]
+            .into_iter()
+            .flatten()
+            .filter(|_| !self.ended || self.in_flight.is_some())
+            .map(|slot| slot.track.clone())
+            .collect();
+        if let Some(session) = &mut self.session {
+            let _ = session.files.clear();
+            self.ending = Some(named);
+        }
+    }
+
     fn play(&mut self) {
         match self.engine_state {
             TransportState::Paused => self.send(EngineCommand::Play),
@@ -1309,7 +1402,21 @@ impl Actor {
     /// Loads `entry`, the queue's current entry, replacing whatever plays; at
     /// `start`, or where a long track last stopped. An entry that cannot be resolved
     /// is skipped in `direction`.
-    fn load(&mut self, entry: EntryId, mut direction: Direction, start: Option<MediaTime>) {
+    fn load(&mut self, entry: EntryId, direction: Direction, start: Option<MediaTime>) {
+        self.load_as(entry, direction, start, false);
+    }
+
+    /// [`load`](Self::load), or with `fade_in` loaded paused and played once the
+    /// engine has paused there, so that it starts with the fade after a pause.
+    fn load_as(
+        &mut self,
+        entry: EntryId,
+        mut direction: Direction,
+        start: Option<MediaTime>,
+        fade_in: bool,
+    ) {
+        self.resume = None;
+        self.resume_fade = None;
         self.finish_listen(ListenEnd::Skipped);
         let mut target = Some(entry);
         while let Some(entry) = target {
@@ -1331,10 +1438,11 @@ impl Actor {
                     self.stopped_after = false;
                     self.slept = false;
                     self.ended = false;
+                    self.resume_fade = fade_in.then_some(item.id);
                     self.send(EngineCommand::Load {
                         item,
                         start,
-                        paused: false,
+                        paused: fade_in,
                     });
                     return;
                 }
@@ -1456,6 +1564,16 @@ impl Actor {
         match event {
             EngineEvent::StateChanged(state) => {
                 self.engine_state = state;
+                if state == TransportState::Paused
+                    && let Some(item) = self.resume_fade
+                    && self.current.as_ref().is_some_and(|slot| slot.id == item)
+                {
+                    self.resume_fade = None;
+                    self.send(EngineCommand::Play);
+                }
+                if state == TransportState::Stopped {
+                    self.resume_fade = None;
+                }
                 self.emit_state();
                 self.end_if_stopped();
             }

@@ -4,8 +4,8 @@
 //! The session on disk, and the crash sentinel.
 //!
 //! - `session.json` holds the queue (entries, context order, context, current
-//!   entry), the position, the play modes, the volume, the output and the tracks
-//!   marked suspect. It is written by atomic replace.
+//!   entry), the position, whether it was playing, the play modes, the volume, the
+//!   output and the tracks marked suspect. It is written by atomic replace.
 //! - `playing.json` is the **crash sentinel**: it names the tracks being loaded or
 //!   played (the current one, and the next one once the engine opened it for a
 //!   gapless join), each with the number of abnormal ends in a row that named it
@@ -57,6 +57,11 @@ pub(crate) struct SavedSession {
     /// Stop-after, which stays set until it stops playback.
     #[serde(default)]
     pub(crate) stop_after: StopAfter,
+    /// Whether the current entry was playing when the session was saved (paused
+    /// and stopped are not playing). Files written before it existed read as not
+    /// playing.
+    #[serde(default)]
+    pub(crate) playing: bool,
 }
 
 /// One track the sentinel names.
@@ -212,9 +217,35 @@ mod tests {
             output: OutputSelection::default(),
             suspects: vec![TrackRef::Library(TrackId::new(9))],
             stop_after: StopAfter::Album,
+            playing: true,
         };
         files.save(&session).unwrap();
         assert_eq!(files.load(), Some(session));
+    }
+
+    #[test]
+    fn an_older_session_reads_as_not_playing() {
+        let dir = dir("older");
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut value = serde_json::to_value(SavedSession {
+            version: SESSION_VERSION,
+            context: QueueContext::files(),
+            entries: Vec::new(),
+            linear: Vec::new(),
+            current: None,
+            position_ms: 0,
+            modes: PlayModes::default(),
+            volume: Volume::FULL,
+            output: OutputSelection::default(),
+            suspects: Vec::new(),
+            stop_after: StopAfter::Off,
+            playing: true,
+        })
+        .unwrap();
+        value.as_object_mut().unwrap().remove("playing");
+        std::fs::write(dir.join(SESSION_FILE), value.to_string()).unwrap();
+        let loaded = SessionFiles::new(&dir).load().unwrap();
+        assert!(!loaded.playing);
     }
 
     #[test]

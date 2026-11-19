@@ -101,6 +101,17 @@ pub enum PlayerCommand {
     PlayPause,
     /// Resume, or after a stop play the current entry again.
     Play,
+    /// Plays the restored session's current entry from its saved position if it
+    /// was playing when the program ended, fading in as after a pause. Does
+    /// nothing if it was paused or stopped, if its track may have ended the
+    /// program abnormally (see [`session`](super::session)), if its file is
+    /// missing, or once anything else has been played. A front end sends it once
+    /// at the start, unless it was started to play something else.
+    ResumeSession,
+    /// The desktop session is about to end, which may end the program without a
+    /// normal quit: the session is saved now, and the tracks playing are not
+    /// counted as having ended the program abnormally, until playback moves on.
+    SessionEnding,
     /// Pause, keeping the position.
     Pause,
     /// Stop and release the device.

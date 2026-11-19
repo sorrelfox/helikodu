@@ -260,6 +260,12 @@ impl MainWindow {
             SessionChange::Locked => self.settings_value(|s| s.playback.pause_on_lock),
             SessionChange::GoingToSleep => self.settings_value(|s| s.playback.pause_before_sleep),
             SessionChange::Unlocked | SessionChange::Woke => false,
+            // The program may be ended without a normal quit: what plays is
+            // saved now, and not counted as a crash at the next start.
+            SessionChange::Ending => {
+                integration.backend.send(PlayerRequest::SessionEnding);
+                false
+            }
         };
         if pause && playing {
             integration.backend.send(PlayerRequest::PlayPause);
