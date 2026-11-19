@@ -153,8 +153,11 @@ fn an_audiobook_shows_its_chapters(app: &gtk::Application) {
 fn folders_outside_the_library(app: &gtk::Application) {
     let (window, _) = window(app);
     window.open_page("folders");
-    wait_for("the tree", 2, || window.list_counts().2 == 3);
-    wait_for("the sections", 2, || {
+    // The places of "This computer" are read on a worker thread, which can
+    // take longer while the computer is busy (as in a full test run); the
+    // waits end as soon as the page is there.
+    wait_for("the tree", 10, || window.list_counts().2 == 3);
+    wait_for("the sections", 10, || {
         let texts = shown_texts(&window);
         texts.iter().any(|t| t == "Library folders")
             && texts.iter().any(|t| t == "This computer")
