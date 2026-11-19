@@ -25,7 +25,18 @@ In Now Playing (**F11**, or click the cover in the deck), **Analyzer** shows the
 
 Under **Crossfade** in the **Playback** settings, tracks can blend into each other: **between tracks** sets how long the end of one track overlaps the start of the next, and **when you skip** does the same when you skip to another track. Both are **Off** by default. Tracks that follow each other on one album still join without a gap, and so does bit-perfect playback in exclusive mode.
 
+When both tracks have been analysed (Helikodu analyses library tracks in the background), the crossfade between tracks follows the music instead of a fixed length: it starts where the ending track begins to fade out, leaves out the silence after its last sound and before the first sound of the next track, and is never longer than the length you set. A track that ends without a fade goes over into the next one within about half a second. Tracks that have not been analysed yet, and files outside the library, are crossfaded over the length you set.
+
 **Fades** sets short fades for **Pause and resume**, **Stop**, **Seek** and **Skip to another track**, so that nothing clicks.
+
+### Silence between and inside tracks
+
+Two more options, in the settings file only (see [The settings file](settings.md#the-settings-file)), use the same analysis:
+
+- **Trimming silence** (`trim_silence`, off by default) leaves out the silence before the first sound and after the last sound of a track where tracks join, and when a track starts from its beginning.
+- **Skipping silence** (`skip_silence`, off by default) jumps over long silent stretches inside a track, such as the minutes of silence before a hidden track at the end of an album. A stretch must last at least `skip_silence_min_s` seconds (10 by default); one second of silence is kept at each side of the jump. Silence in the first 15 seconds of a track is kept.
+
+Tracks that follow each other on one album are never trimmed, so pregaps and hidden tracks stay as the album has them, and bit-perfect playback in exclusive mode never trims or skips. Times stay those of the file: a trimmed track starts at the time where its sound begins, the time jumps forward over a skipped stretch as it would after a seek, and seeking goes exactly where you ask, into silence too. The length shown is the length of the file.
 
 ## Modules, game music, SID tunes and MIDI
 

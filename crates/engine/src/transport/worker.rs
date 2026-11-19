@@ -86,6 +86,12 @@ pub(super) struct Worker {
     pub(super) ramp: Option<Ramp>,
     /// The item whose crossfade into the next one has been decided.
     pub(super) crossfade_checked: Option<ItemId>,
+    /// The item whose end, and the start of the item after it, have been decided
+    /// from their analyses.
+    pub(super) joins_planned: Option<ItemId>,
+    /// The item loaded from its beginning whose leading silence is left out when
+    /// it starts.
+    pub(super) trim_start: Option<ItemId>,
     /// The fade in of the next item after the stream is reopened for it, when the
     /// current one fades out instead of a crossfade.
     pub(super) reopen_fade: Option<Duration>,
@@ -148,6 +154,8 @@ impl Worker {
             crossfade: None,
             ramp: None,
             crossfade_checked: None,
+            joins_planned: None,
+            trim_start: None,
             reopen_fade: None,
             timeline: Timeline::default(),
             dsp: None,
@@ -381,7 +389,8 @@ impl Worker {
             return;
         }
         // A crossfade into the next item begins its length before the end.
-        let lead = self.config.near_end + self.crossfade_lead();
+        // A trailing silence that may be left out ends the item earlier.
+        let lead = self.config.near_end + self.crossfade_lead() + self.tail_lead(&segment.item);
         let close = segment.length.is_some_and(|length| {
             length.as_duration().saturating_sub(position.as_duration()) <= lead
         });

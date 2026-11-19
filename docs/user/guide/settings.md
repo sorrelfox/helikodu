@@ -58,3 +58,15 @@ Helikodu notices when your library holds the same file more than once: files who
 ## The settings file
 
 All settings are stored in `~/.config/helikodu/settings.toml`, a plain text file. You can edit it while Helikodu is closed. A value that is out of range resets its section to the defaults; a file that cannot be read at all is replaced by the defaults and kept as `settings.toml.bak`. To start over with all defaults, delete the file.
+
+Some settings have no control in the window yet and are set in the file only:
+
+| Table | Key | Default | What it does |
+|---|---|---|---|
+| `[playback.transitions]` | `crossfade_from_analysis` | `true` | The crossfade between tracks takes its overlap from the track analysis (see [Crossfades and fades](playing.md#crossfades-and-fades)); only matters while the crossfade is on |
+| `[playback.transitions]` | `trim_silence` | `false` | Leaves out the silence before and after the sound of a track (see [Silence between and inside tracks](playing.md#silence-between-and-inside-tracks)) |
+| `[playback.transitions]` | `skip_silence` | `false` | Jumps over long silence inside a track |
+| `[playback.transitions]` | `skip_silence_min_s` | `10` | How long, in seconds (5 to 600), silence inside a track must be to be skipped |
+| `[loudness]` | `leveller` | `false` | Evens out tracks without loudness values while they play (see [The leveller](loudness.md#the-leveller)) |
+
+Settings files of earlier versions, without these keys, load with the defaults.

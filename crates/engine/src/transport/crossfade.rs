@@ -3,6 +3,13 @@
 
 //! Crossfades: the item that ends and the next one mixed at the device rate.
 //!
+//! - **From the analysis.** When both items have a track analysis and the
+//!   transitions take the overlap from it (the default), the window ends where the
+//!   outgoing item's sound ends (its trailing silence left out) and begins where it
+//!   starts to fade out for good, at most the setting's length before that; the
+//!   incoming item starts with its sound. Without a fade the window is short (about
+//!   half a second). With an analysis missing on either side, the setting's length
+//!   applies as below.
 //! - **Between tracks.** With crossfades on, the render side mixes the next item
 //!   into the last frames of the current one: outgoing gain `cos(πt/2)`, incoming
 //!   `sin(πt/2)`, after each item's own gain and resampling and before the DSP chain.
@@ -38,6 +45,7 @@ use helikodu_model::player::{EngineEvent, PlaybackItem, TrackEndReason};
 use helikodu_model::settings::TransitionSettings;
 
 use super::device::plan_for;
+use super::silence::{analysed_overlap, head_start, skips_for};
 use super::source::Source;
 use super::worker::Worker;
 use crate::dsp::DspChain;
@@ -212,6 +220,12 @@ impl Worker {
         if self.crossfade.is_none() && self.ramp.is_none() {
             self.crossfade_checked = None;
         }
+        // Silence is left out as the new settings ask, from now on.
+        self.update_skips();
+        self.joins_planned = None;
+        if self.next_answered {
+            self.plan_joins();
+        }
     }
 
     /// How much earlier than [`EngineConfig::near_end`](super::EngineConfig::near_end)
@@ -230,17 +244,21 @@ impl Worker {
         if self.crossfade.is_some() || self.ramp.is_some() {
             return false;
         }
-        let (Some(wanted), Some(current), Some(output)) = (
-            self.config.transitions.track_crossfade(),
-            &self.current,
-            &self.output,
-        ) else {
+        let (Some(current), Some(output)) = (&self.current, &self.output) else {
             return true;
         };
-        if self.crossfade_checked == Some(current.item().id) {
+        // The trailing silence may still be left out: its start is a window too.
+        let cut = self.pending_tail_cut();
+        let wanted = self
+            .config
+            .transitions
+            .track_crossfade()
+            .filter(|_| self.crossfade_checked != Some(current.item().id));
+        if wanted.is_none() && cut.is_none() {
             return true;
         }
-        let ahead = frames_of(wanted, output.spec().rate.hz())
+        let ahead = wanted.map_or(0, |wanted| frames_of(wanted, output.spec().rate.hz()))
+            + cut.unwrap_or(0)
             + (budget + self.staging.len() / output.writer.channels().max(1)) as u64;
         current
             .remaining_frames()
@@ -264,7 +282,11 @@ impl Worker {
     /// `frames_written`.
     pub(super) fn render_block(&mut self, channels: usize) -> Option<usize> {
         let at = self.output.as_ref()?.writer.frames_written();
-        let limit = self.plan_crossfade(channels, at);
+        let limit = match self.plan_crossfade(channels, at) {
+            Some(limit) => Some(limit),
+            None if self.crossfade.is_none() => self.trim_wait(channels),
+            None => None,
+        };
         if self.crossfade.is_some() {
             return Some(self.render_mixed(channels, at));
         }
@@ -315,7 +337,9 @@ impl Worker {
         };
         let mut length = frames_of(wanted, rate).min(current.total_frames()? / 2);
         let room = (self.staging.len() / channels) as u64;
-        if remaining > length + room {
+        // Before the next item is known, the window may end where the sound does.
+        let horizon = remaining.saturating_sub(self.pending_tail_cut().unwrap_or(0));
+        if horizon > length + room {
             return None;
         }
         let Some(next) = &self.next else {
@@ -323,7 +347,7 @@ impl Worker {
                 self.crossfade_checked = Some(id);
             } else if freewheel {
                 if self.waits_for_next() {
-                    return Some(remaining.saturating_sub(length));
+                    return Some(horizon.saturating_sub(length));
                 }
                 self.crossfade_checked = Some(id);
             }
@@ -338,6 +362,15 @@ impl Worker {
             let frames = u128::from(frames) * u128::from(rate) / u128::from(next.rate().hz());
             u64::try_from(frames).unwrap_or(u64::MAX)
         })?;
+        // From the analysis: the outgoing item's fade, its trailing silence left out
+        // (the end set when the next item became known).
+        if self.config.transitions.analysed_crossfade()
+            && current.end().is_some()
+            && next.item().analysis.is_some()
+            && let Some(overlap) = analysed_overlap(current, rate)
+        {
+            length = length.min(overlap.max(frames_of(MIN_CROSSFADE, rate)));
+        }
         length = length.min(next_total / 2).min(remaining);
         if length < frames_of(MIN_CROSSFADE, rate) {
             return None;
@@ -380,9 +413,15 @@ impl Worker {
             return false;
         };
         let dsp = self.dsp.as_ref().map(DspChain::plan).unwrap_or_default();
-        let plan = plan_for(&self.config.processing, output, incoming).with_dsp(dsp);
+        let plan = plan_for(&self.config.processing, output, incoming, dsp);
+        let bit_perfect = output.mode == OutputMode::Exclusive && plan.is_bit_perfect();
         match incoming.attach(plan) {
-            Ok(()) => true,
+            Ok(()) => {
+                if !bit_perfect {
+                    incoming.set_skips(skips_for(&self.config.transitions, incoming));
+                }
+                true
+            }
             Err(error) => {
                 let id = incoming.item().id;
                 self.error(Some(id), error);
@@ -536,7 +575,13 @@ impl Worker {
         if let Some(remaining) = current.remaining_frames() {
             length = length.min(remaining);
         }
+        let trim = self.config.transitions.trim_silence && start.is_zero();
         let Ok(mut incoming) = Source::open(&self.registry, item.clone()).and_then(|mut s| {
+            // From the beginning: after the leading silence, when it is trimmed.
+            let start = match head_start(&s).filter(|_| trim) {
+                Some(frames) => MediaTime::from_frames(frames, s.rate()),
+                None => start,
+            };
             s.seek(start)?;
             Ok(s)
         }) else {
@@ -546,10 +591,11 @@ impl Worker {
             return false;
         }
         let dsp = self.dsp.as_ref().map(DspChain::plan).unwrap_or_default();
-        let plan = plan_for(&self.config.processing, output, &incoming).with_dsp(dsp);
+        let plan = plan_for(&self.config.processing, output, &incoming, dsp);
         if incoming.attach(plan).is_err() {
             return false;
         }
+        incoming.set_skips(skips_for(&self.config.transitions, &incoming));
         if let Some(remaining) = incoming.remaining_frames() {
             length = length.min(remaining / 2);
         }

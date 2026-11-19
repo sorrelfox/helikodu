@@ -4,14 +4,18 @@
 //! The stages of a [`PathPlan`], built and wired together.
 //!
 //! [`SourceChain`] runs per source, ahead of playback: channel mixing, loudness gain
-//! and resampling, from the decoder's `f32` frames to frames in the device's rate and
+//! (with the leveller for tracks without loudness values) and resampling, from the decoder's `f32` frames to frames in the device's rate and
 //! layout. [`OutputChain`] runs on the mixed stream just before it reaches the
 //! device: software volume, anti-click fades and dither. Both allocate only when
 //! built.
 
+use std::sync::Arc;
+
+use helikodu_model::analysis::TrackAnalysis;
+
 use super::{
-    FadeDurations, FadeState, Fader, GainStage, MixMatrix, PathPlan, PipelineError, ResampleStage,
-    SoftwareVolume, TpdfDither, Transition,
+    FadeDurations, FadeState, Fader, GainStage, Leveller, LevellerPlan, MixMatrix, PathPlan,
+    PipelineError, ResampleStage, SoftwareVolume, TpdfDither, Transition,
 };
 
 /// Channel mixing, gain and resampling for one source.
@@ -23,6 +27,11 @@ pub struct SourceChain {
     max_block: usize,
     mix: Option<MixMatrix>,
     gain: Option<GainStage>,
+    leveller: Option<Leveller>,
+    /// The track analysis the leveller reads its envelope from.
+    analysis: Option<Arc<TrackAnalysis>>,
+    /// The source frame of the next input frame, as far as the chain knows.
+    position: u64,
     resample: Option<ResampleStage>,
     /// Mixed frames on their way to the resampler.
     scratch: Box<[f32]>,
@@ -31,6 +40,16 @@ pub struct SourceChain {
 impl SourceChain {
     /// Builds the source stages of `plan` for blocks of up to `max_block` frames.
     pub fn new(plan: &PathPlan, max_block: usize) -> Result<Self, PipelineError> {
+        Self::with_analysis(plan, max_block, None)
+    }
+
+    /// [`new`](Self::new) for a track with the analysis `analysis`, whose loudness
+    /// envelope the leveller reads ahead in.
+    pub fn with_analysis(
+        plan: &PathPlan,
+        max_block: usize,
+        analysis: Option<Arc<TrackAnalysis>>,
+    ) -> Result<Self, PipelineError> {
         let input_channels = usize::from(plan.source.spec.channel_count());
         let output_channels = usize::from(plan.device.channel_count());
         if input_channels == 0 || output_channels == 0 {
@@ -58,6 +77,11 @@ impl SourceChain {
             gain: plan
                 .gain
                 .map(|gain| GainStage::new(rate, output_channels, gain.linear())),
+            leveller: plan
+                .leveller
+                .map(|l| Leveller::new(l, rate, output_channels, analysis.clone())),
+            analysis,
+            position: 0,
             resample,
             scratch: vec![0.0; scratch_len].into_boxed_slice(),
         })
@@ -107,6 +131,36 @@ impl SourceChain {
         }
     }
 
+    /// The leveller, when the chain has one.
+    pub fn leveller(&self) -> Option<&Leveller> {
+        self.leveller.as_ref()
+    }
+
+    /// Starts, changes or ends the leveller. A new one starts at 0 dB; one that
+    /// ends goes back to 0 dB over a short ramp first.
+    pub fn set_leveller(&mut self, plan: Option<LevellerPlan>) {
+        match (plan, &mut self.leveller) {
+            (Some(plan), Some(leveller)) => leveller.set_plan(plan),
+            (Some(plan), None) => {
+                let mut leveller =
+                    Leveller::new(plan, self.rate, self.output_channels, self.analysis.clone());
+                leveller.locate(self.position);
+                self.leveller = Some(leveller);
+            }
+            (None, Some(leveller)) => leveller.release(),
+            (None, None) => {}
+        }
+    }
+
+    /// The next input frame is the source frame `frame`: after a seek, or a jump
+    /// over silence. Only the leveller cares.
+    pub fn locate(&mut self, frame: u64) {
+        self.position = frame;
+        if let Some(leveller) = &mut self.leveller {
+            leveller.locate(frame);
+        }
+    }
+
     /// Processes the interleaved frames of `input` into `output`. Returns the number of
     /// input frames taken and output frames written. Frames not taken (beyond
     /// [`max_block`](Self::max_block), or for lack of output room) must be passed again.
@@ -131,6 +185,10 @@ impl SourceChain {
         if let Some(gain) = &mut self.gain {
             gain.apply(mixed);
         }
+        if let Some(leveller) = &mut self.leveller {
+            leveller.apply(mixed);
+        }
+        self.position += frames as u64;
         match &mut self.resample {
             Some(resample) => {
                 let (taken, written) =

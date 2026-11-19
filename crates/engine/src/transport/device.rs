@@ -16,7 +16,7 @@ use helikodu_model::settings::DeviceLostPolicy;
 use super::source::Source;
 use super::stats::{EngineStats, Reported};
 use super::worker::Worker;
-use crate::dsp::DspChain;
+use crate::dsp::{DspChain, DspPlan};
 use crate::output::{
     EventSender, NullBackend, OutputBackend, OutputError, OutputStream, Pacing, SampleWriter,
     SharedConnector, SharedReservation, StreamConfig, WavBackend, automatic_backend,
@@ -266,13 +266,23 @@ impl Worker {
             self.dsp = Some(DspChain::new(&self.config.dsp, device.rate.hz(), channels));
         }
         let dsp = self.dsp.as_ref().map(DspChain::plan).unwrap_or_default();
-        let mut plan = plan_for(&self.config.processing, output, source).with_dsp(dsp);
+        let mut plan = plan_for(&self.config.processing, output, source, dsp);
         if source.decoder_info().dop && !super::formats::keeps_dop(&plan) {
             // DoP needs every bit to reach the DAC; this path would change them.
             source.fall_back_to_pcm()?;
-            plan = plan_for(&self.config.processing, output, source).with_dsp(dsp);
+            plan = plan_for(&self.config.processing, output, source, dsp);
         }
         source.attach(plan)?;
+        // Long silence inside the item is jumped over, unless the path is
+        // bit-perfect in exclusive mode.
+        let bit_perfect = output.mode == OutputMode::Exclusive
+            && source.plan().is_some_and(PathPlan::is_bit_perfect);
+        let skips = if bit_perfect {
+            Vec::new()
+        } else {
+            super::silence::skips_for(&self.config.transitions, source)
+        };
+        source.set_skips(skips);
         // The loop goes with the item, whichever source plays it.
         let range = self
             .ab_loop
@@ -368,12 +378,30 @@ impl Worker {
     }
 }
 
-/// The processing plan of `source` on `output` with `settings`.
+/// The processing plan of `source` on `output` with `settings`, with the DSP
+/// chain's stages `dsp`. On a stream in exclusive mode the leveller is left out
+/// when the path would be bit-perfect without it.
 pub(super) fn plan_for(
     settings: &ProcessingSettings,
     output: &Output,
     source: &Source,
+    dsp: DspPlan,
 ) -> PathPlan {
+    let plan = plain_plan(settings, output, source).with_dsp(dsp);
+    if output.mode == OutputMode::Exclusive && plan.leveller.is_some() {
+        let mut without = *settings;
+        without.loudness.leveller = false;
+        let plain = plain_plan(&without, output, source).with_dsp(dsp);
+        if plain.is_bit_perfect() {
+            return plain;
+        }
+    }
+    plan
+}
+
+/// The processing plan of `source` on `output` with `settings`, before the DSP
+/// chain.
+fn plain_plan(settings: &ProcessingSettings, output: &Output, source: &Source) -> PathPlan {
     let item = source.item();
     let request = PathRequest {
         source: source.format(),

@@ -25,10 +25,15 @@ use super::{SettingsError, check_range};
 /// stop_fade_ms = 200
 /// seek_fade_ms = 50
 /// skip_fade_ms = 100           # when the skip is not crossfaded
+/// crossfade_from_analysis = true  # overlap chosen from the track analysis
+/// trim_silence = false         # leading and trailing silence between tracks
+/// skip_silence = false         # long silence inside a track
+/// skip_silence_min_s = 10
 /// ```
 ///
-/// Nothing is crossfaded on a bit-perfect path in exclusive mode, whatever these
-/// say.
+/// Nothing is crossfaded, trimmed or skipped on a bit-perfect path in exclusive
+/// mode, whatever these say, and tracks that follow each other on one album are
+/// never trimmed while albums are kept gapless.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TransitionSettings {
@@ -54,6 +59,21 @@ pub struct TransitionSettings {
     /// The fade out when the listener skips to another track without a crossfade,
     /// in milliseconds (0 to 2000).
     pub skip_fade_ms: u32,
+    /// Whether the crossfade between tracks takes its overlap from the track
+    /// analysis when both tracks have one: it starts where the outgoing track
+    /// begins to fade out (or where its sound ends), at most the crossfade's
+    /// length before the end of its sound, and the incoming track starts with its
+    /// sound. Only matters while the crossfade between tracks is on.
+    pub crossfade_from_analysis: bool,
+    /// Whether the silence before the sound of a track and after it is left out
+    /// where tracks join and when a track starts from its beginning.
+    pub trim_silence: bool,
+    /// Whether long silent stretches inside a track (before a hidden track, for
+    /// example) are skipped.
+    pub skip_silence: bool,
+    /// How long a silent stretch inside a track must be to be skipped, in seconds
+    /// (5 to 600).
+    pub skip_silence_min_s: u32,
 }
 
 impl Default for TransitionSettings {
@@ -70,6 +90,10 @@ impl Default for TransitionSettings {
             stop_fade_ms: 200,
             seek_fade_ms: 50,
             skip_fade_ms: 100,
+            crossfade_from_analysis: true,
+            trim_silence: false,
+            skip_silence: false,
+            skip_silence_min_s: 10,
         }
     }
 }
@@ -79,6 +103,8 @@ impl TransitionSettings {
     pub const CROSSFADE_RANGE_MS: RangeInclusive<u32> = 100..=12_000;
     /// The range of the fade lengths, in milliseconds.
     pub const FADE_RANGE_MS: RangeInclusive<u32> = 0..=2000;
+    /// The range of the shortest silent stretch that is skipped, in seconds.
+    pub const SKIP_SILENCE_RANGE_S: RangeInclusive<u32> = 5..=600;
 
     /// Checks the values that the types alone do not constrain.
     pub fn validate(&self) -> Result<(), SettingsError> {
@@ -99,7 +125,11 @@ impl TransitionSettings {
         ] {
             check_range(key, value, Self::FADE_RANGE_MS)?;
         }
-        Ok(())
+        check_range(
+            "playback.transitions.skip_silence_min_s",
+            self.skip_silence_min_s,
+            Self::SKIP_SILENCE_RANGE_S,
+        )
     }
 
     /// The length of the crossfade between tracks that follow each other, when it
@@ -132,6 +162,19 @@ impl TransitionSettings {
     pub fn skip_fade(&self) -> Duration {
         millis(self.skip_fade_ms)
     }
+
+    /// Whether the crossfade between tracks is on and takes its overlap from the
+    /// track analysis.
+    pub fn analysed_crossfade(&self) -> bool {
+        self.crossfade && self.crossfade_from_analysis
+    }
+
+    /// The shortest silent stretch inside a track that is skipped, when skipping is
+    /// on.
+    pub fn silence_skip(&self) -> Option<Duration> {
+        self.skip_silence
+            .then(|| Duration::from_secs(u64::from(self.skip_silence_min_s)))
+    }
 }
 
 fn millis(ms: u32) -> Duration {
@@ -153,7 +196,34 @@ mod tests {
         assert_eq!(t.stop_fade(), Duration::from_millis(200));
         assert_eq!(t.seek_fade(), Duration::from_millis(50));
         assert_eq!(t.skip_fade(), Duration::from_millis(100));
+        assert!(t.crossfade_from_analysis && !t.analysed_crossfade());
+        assert!(!t.trim_silence);
+        assert_eq!(t.silence_skip(), None);
+        assert_eq!(t.skip_silence_min_s, 10);
         assert_eq!(t.validate(), Ok(()));
+    }
+
+    #[test]
+    fn older_files_get_the_analysis_defaults() {
+        let old: Settings = toml::from_str(
+            "[playback.transitions]\ncrossfade = true\ncrossfade_ms = 4000\n\
+             keep_albums_gapless = true\n",
+        )
+        .unwrap();
+        let t = old.playback.transitions;
+        assert!(t.analysed_crossfade());
+        assert!(!t.trim_silence && !t.skip_silence);
+        let new: Settings = toml::from_str(
+            "[playback.transitions]\ntrim_silence = true\nskip_silence = true\n\
+             skip_silence_min_s = 30\ncrossfade_from_analysis = false\n",
+        )
+        .unwrap();
+        let t = new.playback.transitions;
+        assert!(t.trim_silence && !t.crossfade_from_analysis);
+        assert_eq!(t.silence_skip(), Some(Duration::from_secs(30)));
+        let mut bad = t;
+        bad.skip_silence_min_s = 4;
+        assert!(bad.validate().is_err());
     }
 
     #[test]

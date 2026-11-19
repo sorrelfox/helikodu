@@ -18,6 +18,7 @@ use super::{SettingsError, check_range};
 /// untagged_preamp_db = -6.0    # files without them
 /// clipping = "lower-gain"      # lower-gain | limiter
 /// write_measured_to_tags = false  # measured values also go into the files' tags
+/// leveller = false             # even out files without loudness values as they play
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -34,6 +35,11 @@ pub struct LoudnessSettings {
     /// Whether the loudness scanner also writes what it measures into the files'
     /// tags (ReplayGain 2.0). Off: the values are kept in the library only.
     pub write_measured_to_tags: bool,
+    /// Whether files without loudness values are evened out while they play, by a
+    /// slow gain toward the loudness of files with values, instead of the fixed
+    /// gain of `untagged_preamp_db`. Only while a mode is on; never on a
+    /// bit-perfect path in exclusive mode.
+    pub leveller: bool,
 }
 
 impl LoudnessSettings {
@@ -72,6 +78,7 @@ impl Default for LoudnessSettings {
             untagged_preamp_db: -6.0,
             clipping: ClippingPrevention::LowerGain,
             write_measured_to_tags: false,
+            leveller: false,
         }
     }
 }
@@ -112,7 +119,14 @@ mod tests {
         assert_eq!(loudness.mode, LoudnessMode::Auto);
         assert_eq!(loudness.untagged_preamp_db, -6.0);
         assert!(!loudness.write_measured_to_tags);
+        assert!(!loudness.leveller);
         assert_eq!(loudness.validate(), Ok(()));
+        let old: crate::settings::Settings =
+            toml::from_str("[loudness]\nmode = \"track\"\n").unwrap();
+        assert!(!old.loudness.leveller);
+        let on: crate::settings::Settings =
+            toml::from_str("[loudness]\nleveller = true\n").unwrap();
+        assert!(on.loudness.leveller);
     }
 
     #[test]

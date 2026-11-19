@@ -22,6 +22,7 @@ impl Worker {
         self.interrupt(Transition::Skip);
         self.reset_items();
         self.set_state(TransportState::Loading);
+        self.trim_start_of(&item, start);
         let id = item.id;
         let opened = Source::open(&self.registry, item).and_then(|mut source| {
             let frames = source.seek(start)?;
@@ -51,6 +52,8 @@ impl Worker {
         match self.play_current(transition) {
             Ok(()) => {
                 self.settle_playing();
+                // After its leading silence, when that was left out.
+                let position = self.started_at().unwrap_or(position);
                 self.send_position_of(id, position);
             }
             Err(error) => self.output_failed(error, resume),
@@ -100,6 +103,8 @@ impl Worker {
     }
 
     pub(super) fn seek(&mut self, to: MediaTime) {
+        // A seek goes where it is asked to, silence or not.
+        self.trim_start = None;
         match self.state {
             TransportState::Paused => {
                 let Some(resume) = &mut self.resume else {
@@ -165,8 +170,14 @@ impl Worker {
         self.continue_at(resume, Some(Transition::DeviceSwitch));
     }
 
-    /// Replaces the item that follows the heard one.
+    /// Replaces the item that follows the heard one, and decides from the analyses
+    /// where the current item ends and the next one starts.
     pub(super) fn set_next(&mut self, item: Option<PlaybackItem>) {
+        self.replace_next(item);
+        self.plan_joins();
+    }
+
+    fn replace_next(&mut self, item: Option<PlaybackItem>) {
         if self.state == TransportState::Paused
             && let Some(resume) = &mut self.resume
             && resume.follower.is_some()
@@ -312,10 +323,20 @@ impl Worker {
         match self.play_current(transition) {
             Ok(()) => {
                 self.settle_playing();
-                self.send_position_of(resume.segment.item.id, resume.position);
+                let position = self.started_at().unwrap_or(resume.position);
+                self.send_position_of(resume.segment.item.id, position);
             }
             Err(error) => self.output_failed(error, resume),
         }
+    }
+
+    /// The position the heard item started at on the stream, once playing.
+    fn started_at(&self) -> Option<MediaTime> {
+        let segment = self.timeline.heard()?;
+        Some(MediaTime::from_frames(
+            segment.start_frames,
+            segment.spec.rate,
+        ))
     }
 
     /// Ends the heard item: a fade out if playing, then `TrackEnded` with

@@ -26,8 +26,9 @@ use helikodu_model::player::Volume;
 use helikodu_model::settings::{OutputFormat, OutputSettings, SampleRatePolicy, VolumeControl};
 
 use super::{
-    FadeDurations, GainDecision, LoudnessInfo, LoudnessSettings, MixKind, MixMatrix, MixOptions,
-    ResampleMethod, ResamplerQuality, TpdfDither, resolve_track_gain,
+    ClippingPrevention, FadeDurations, GainDecision, GainSource, LevellerPlan, LoudnessInfo,
+    LoudnessSettings, MixKind, MixMatrix, MixOptions, REFERENCE_LUFS, ResampleMethod,
+    ResamplerQuality, TpdfDither, resolve_track_gain,
 };
 use crate::dsp::{CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan};
 use crate::output::StreamConfig;
@@ -240,8 +241,12 @@ pub struct PathPlan {
     pub source: SourceFormat,
     /// The device format.
     pub device: AudioSpec,
-    /// The loudness gain, unless it is off or exactly 0 dB.
+    /// The loudness gain, unless it is off or exactly 0 dB (but always with the
+    /// leveller).
     pub gain: Option<GainDecision>,
+    /// The leveller, for a track without loudness values when the settings ask for
+    /// it.
+    pub leveller: Option<LevellerPlan>,
     /// Channel mixing, unless the layouts match.
     pub channel_mix: Option<ChannelMixPlan>,
     /// Resampling, unless the rates match.
@@ -273,7 +278,13 @@ impl PathPlan {
             request.album_context,
             request.track_volume_db,
         )
-        .filter(|gain| !gain.is_unity());
+        .filter(|gain| !gain.is_unity() || gain.source == GainSource::Leveller);
+        let leveller = gain
+            .filter(|gain| gain.source == GainSource::Leveller)
+            .map(|_| LevellerPlan {
+                target_lufs: REFERENCE_LUFS + settings.loudness.preamp_db,
+                peak_safe: settings.loudness.clipping == ClippingPrevention::Peak,
+            });
         let channel_mix = {
             let matrix = MixMatrix::new(source.spec.layout, device.layout, settings.mix);
             (!matrix.is_identity()).then(|| ChannelMixPlan {
@@ -300,6 +311,7 @@ impl PathPlan {
             source,
             device,
             gain,
+            leveller,
             channel_mix,
             resample,
             crossfade: request.crossfade,
@@ -557,6 +569,32 @@ mod tests {
         // Not on a 24-bit device.
         r.device = spec(SampleFormat::S24(Little), 44_100, ChannelLayout::STEREO);
         assert!(!PathPlan::new(&r, &settings).is_bit_perfect());
+    }
+
+    #[test]
+    fn the_leveller_takes_the_place_of_the_untagged_gain() {
+        let mut settings = ProcessingSettings::default();
+        settings.loudness.mode = super::super::LoudnessMode::Track;
+        settings.loudness.untagged_preamp_db = 0.0;
+        let r = request(cd(), cd());
+        assert!(PathPlan::new(&r, &settings).is_bit_perfect());
+        settings.loudness.leveller = true;
+        settings.loudness.preamp_db = 2.0;
+        let plan = PathPlan::new(&r, &settings);
+        assert!(!plan.is_bit_perfect());
+        assert_eq!(
+            plan.leveller,
+            Some(LevellerPlan {
+                target_lufs: -16.0,
+                peak_safe: true
+            })
+        );
+        assert_eq!(plan.gain.map(|g| g.source), Some(GainSource::Leveller));
+        assert!(plan.to_string().contains("leveller (no loudness values)"));
+        // A track with values keeps its gain.
+        let mut tagged = r;
+        tagged.loudness.track_gain_db = Some(-3.0);
+        assert_eq!(PathPlan::new(&tagged, &settings).leveller, None);
     }
 
     #[test]

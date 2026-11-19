@@ -13,6 +13,7 @@
 #![allow(clippy::unwrap_used)]
 
 mod ab_loop;
+mod analysis;
 mod crossfade;
 mod devices;
 mod dsp;

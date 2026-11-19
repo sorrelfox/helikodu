@@ -1,6 +1,6 @@
 # Track analysis
 
-Helikodu analyses every library track once, in the background, and keeps the result in the library database. Nothing is written into the files. The analysis is the ground work for transitions that pick their overlap from the music, for trimming and skipping silence, and for a leveller for tracks without loudness values; none of them uses it yet.
+Helikodu analyses every library track once, in the background, and keeps the result in the library database. Nothing is written into the files. Playback uses it for transitions that pick their overlap from the music, for trimming and skipping silence, and for a leveller for tracks without loudness values (see [How playback uses it](#how-playback-uses-it)).
 
 ## What is analysed
 
@@ -51,3 +51,37 @@ The library service runs it in the background (`helikodu_service::library::Backg
 - **Progress.** `LibraryService::analysis_progress` returns an `AnalysisProgress`: total, analysed and failed tracks, and the state (`Off`, `Idle`, `Running`, `Yielding`, `Paused(Scanning | OnBattery)`). The same is announced as `LibraryEvent::Analysis` when the state changes and at most every 2 s while the job works. There is no screen for it yet.
 
 `helikodu-cli analyze [--no-loudness] [--json] [--database PATH]` runs the same job in the foreground on a library database and prints its progress.
+
+## How playback uses it
+
+**Getting it to the engine.** The player builds a `PlaybackItem` for each queue entry on its own thread (`helikodu_service::player`, `item_for`). As it does for measured loudness (`measured_loudness`), it reads the track's stored analysis there (`track_analysis`) and puts it on the item, `PlaybackItem::analysis` (an `Arc<TrackAnalysis>`, not serialized), when the row is current and analysed. The engine thread only reads what comes with the item; it never touches the database. Files outside the library, failed and outdated analyses give no analysis, and everything below falls back to what the engine did before.
+
+**Settings.** Four keys in `[playback.transitions]` (`TransitionSettings`): `crossfade_from_analysis` (on), `trim_silence` (off), `skip_silence` (off) and `skip_silence_min_s` (10, 5 to 600). One in `[loudness]`: `leveller` (off). They reach the engine as the other transition and loudness settings do (`SetTransitions`, `UpdateSettings`) and apply from then on.
+
+**Bit-perfect.** Nothing below happens on a bit-perfect path in exclusive mode, the rule the crossfade already followed (`Worker::bit_perfect_exclusive`: the stream is exclusive and the current item's plan is bit-perfect). For the leveller, `plan_for` in the transport makes the plan once with it and once without; in exclusive mode, when the plan without it is bit-perfect, that one is used.
+
+**Gapless albums.** Consecutive tracks of one album while `keep_albums_gapless` is on (`Worker::gapless_join`, the test the crossfade already made) are neither crossfaded nor trimmed: neither the end of the first nor the start of the second changes. The start of an album run (a `Load`, or the join from another album) and its end may be trimmed.
+
+**Silence at joins** (`transport/silence.rs`). When `SetNext` answers, `plan_joins` decides for the pair: with `trim_silence`, or with an analysed crossfade and both items analysed, the current item gets an end 10 ms after its sound (`Source::set_end`; the decoded block is cut there and the source ends) and the next one is moved to 10 ms before its sound, if it stands at its start. Neither for a gapless join; the last item of the queue is trimmed at its end. Until the answer comes, a freewheeling sink waits at the end of the sound (`trim_wait`), and in real time `NearEnd` comes earlier by the trailing silence (`tail_lead`), so the answer is normally there before the decoder reaches it; an answer that comes too late leaves the silence in. A `Load` from position zero with `trim_silence` starts after the leading silence once the item's plan is known (`trim_leading`); a seek goes where it is asked.
+
+**Overlap-aware crossfades** (`transport/crossfade.rs`, `plan_crossfade`). With the crossfade between tracks on, `crossfade_from_analysis` on, both items analysed and the current item's end set by `plan_joins`, the window is `audio.end − fade_out_start` of the outgoing item plus the 10 ms margin, at most the configured length (and as before at most half of either item and what is left). It ends where the outgoing item now ends, so it starts at `fade_out_start`, and the incoming item starts with its sound. Without a fade the analysis puts `fade_out_start` half a second inside the sound, so the window is about half a second. Otherwise the fixed length applies as before.
+
+**Skipping silence inside a track.** With `skip_silence`, each silent stretch of at least `skip_silence_min_s` that begins 15 s or more into the track becomes a jump from 1 s into it to 1 s before its end (`skips_for`, set on the source when it is attached). The source cuts the block where a jump begins and, once the chain has taken it, seeks the decoder to the jump's end without resetting the chain, as for the A-B loop. Jumps are reported in `Source::wraps`, and the worker records them in the timeline segment as rewinds (`note_wraps`), so positions after the jump are file positions. `remaining_frames` subtracts the jumps ahead and stops at the early end, so crossfade windows stay exact. A seek into a stretch plays from there (the jump starts must lie at or after the decoder's block); a seek before it still jumps. Not with an A-B loop on the item.
+
+**Time and position.** File time throughout: `Position`, the seek target, and the length in `TrackStarted` are those of the file. A trimmed start reports the frame it starts at (the first `Position` after `Load` is where the sound starts), a jump moves the position forward like a seek (MPRIS sees the jump and sends `Seeked`), and a trimmed end simply ends the track before its length. The shown time therefore never disagrees with what a seek bar or another player would show for the same file.
+
+**The leveller** (`pipeline/leveller.rs`, `Leveller`). A per-source stage after the loudness gain, before resampling. `resolve_track_gain` gives a track without loudness values `GainSource::Leveller` (with the track's own volume as its static gain) instead of the untagged preamp when `[loudness] leveller` is on and a mode is on; the plan then carries a `LevellerPlan` (target −18 LUFS plus the preamp of files with values; peak-safe when clipping is prevented by lowering the gain). Constants:
+
+| Constant | Value |
+|---|---|
+| Step (gain decision interval) | 100 ms |
+| Live short-term window (no analysis) | 3 s, at least 1 s before the first step |
+| Envelope look-behind / look-ahead (analysis) | 1 s / 4 s |
+| Gate (quieter seconds or steps do not count; nothing louder holds the gain) | −50 LUFS |
+| Gain bound | ±12 dB |
+| Rise / fall rate | 1 dB/s / 3 dB/s |
+| Dead band | 0.5 dB |
+| Ceiling for the loudest sample seen (peak-safe) | 0.989 (about −0.1 dBFS) |
+| Release when switched off | 50 ms back to 0 dB |
+
+Live loudness is K-weighted (BS.1770 filters at the source rate) and gated like the envelope. With an analysis, the first step goes straight to the gain of the start of the track. Between steps the gain moves in a straight line frame by frame; a block whose peak would pass the ceiling lowers it at once. The stage allocates when built and never while processing. Switching it on during a track starts it at 0 dB; switching it off ramps back to 0 dB. The signal path shows it as `leveller (no loudness values)`.

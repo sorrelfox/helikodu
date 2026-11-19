@@ -16,6 +16,7 @@
 //! | Conversion to float | [`to_float`] | per source |
 //! | Channel mapping, downmix, upmix | [`MixMatrix`] | per source |
 //! | ReplayGain / R128 gain | [`GainStage`], [`resolve_gain`] | per source |
+//! | Leveller (tracks without loudness values) | [`Leveller`] | per source |
 //! | Resampling | [`ResampleStage`] | per source |
 //! | Crossfade (equal power) | [`equal_power`] | where two sources are mixed |
 //! | Software volume (`a = p³`) | [`SoftwareVolume`] | on the mixed stream |
@@ -32,6 +33,7 @@ mod channel_mix;
 mod convert;
 mod dither;
 mod error;
+pub mod leveller;
 mod loudness;
 mod path_plan;
 mod ramp;
@@ -44,6 +46,7 @@ pub use self::convert::{Encoder, PcmSample, to_float};
 pub(crate) use self::convert::{f32_to_s32, s32_to_f32};
 pub use self::dither::TpdfDither;
 pub use self::error::PipelineError;
+pub use self::leveller::{Leveller, LevellerPlan};
 pub use self::loudness::{
     ClippingPrevention, GainDecision, GainSource, GainStage, LoudnessInfo, LoudnessMode,
     LoudnessSettings, R128_REFERENCE_LUFS, REFERENCE_LUFS, db_to_linear, linear_to_db,

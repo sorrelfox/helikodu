@@ -134,6 +134,9 @@ pub struct LoudnessSettings {
     pub untagged_preamp_db: f64,
     /// How clipping is prevented.
     pub clipping: ClippingPrevention,
+    /// Whether tracks without loudness information are evened out by the
+    /// [`Leveller`](super::Leveller) instead of the untagged preamp.
+    pub leveller: bool,
 }
 
 impl From<helikodu_model::settings::LoudnessSettings> for LoudnessSettings {
@@ -153,6 +156,7 @@ impl From<helikodu_model::settings::LoudnessSettings> for LoudnessSettings {
                 Clipping::LowerGain => ClippingPrevention::Peak,
                 Clipping::Limiter => ClippingPrevention::Limiter,
             },
+            leveller: settings.leveller,
         }
     }
 }
@@ -169,6 +173,9 @@ pub enum GainSource {
     /// Loudness normalization is off; the gain is the track's own volume
     /// adjustment.
     TrackVolume,
+    /// The track has no loudness information and the leveller evens it out; the
+    /// gain is the track's own volume adjustment, and the leveller rides on it.
+    Leveller,
 }
 
 /// The gain chosen for one track.
@@ -202,6 +209,16 @@ impl fmt::Display for GainDecision {
             GainSource::Track => "track",
             GainSource::Album => "album",
             GainSource::Untagged => "untagged",
+            GainSource::Leveller => {
+                f.write_str("leveller (no loudness values")?;
+                if self.track_volume_db != 0.0 {
+                    write!(f, ", track volume {:+.1} dB", self.track_volume_db)?;
+                }
+                if self.peak_limited {
+                    f.write_str(", peak-limited")?;
+                }
+                return f.write_str(")");
+            }
             GainSource::TrackVolume => {
                 write!(f, "track volume {:+.2} dB", self.db)?;
                 if self.peak_limited {
@@ -276,6 +293,17 @@ pub fn resolve_track_gain(
         track.or(album)
     };
     let Some((gain, peak, source)) = chosen else {
+        if settings.leveller {
+            // The leveller replaces the untagged preamp; the track volume stays.
+            let peak = info.track_peak.or(info.album_peak);
+            let (db, peak_limited) = limit_by_peak(track_volume_db, peak, settings);
+            return Some(GainDecision {
+                db,
+                source: GainSource::Leveller,
+                peak_limited,
+                track_volume_db,
+            });
+        }
         let db = settings.untagged_preamp_db + track_volume_db;
         // The untagged preamp alone is not limited; a track volume is, where a
         // peak is known.
@@ -454,6 +482,22 @@ mod tests {
         };
         let gain = resolve_gain(&LoudnessInfo::default(), &untagged, false).unwrap();
         assert_eq!((gain.db, gain.source), (-4.0, GainSource::Untagged));
+
+        // The leveller takes the place of the untagged preamp, and only there.
+        let levelled = LoudnessSettings {
+            leveller: true,
+            ..untagged
+        };
+        let gain = resolve_gain(&LoudnessInfo::default(), &levelled, false).unwrap();
+        assert_eq!((gain.db, gain.source), (0.0, GainSource::Leveller));
+        assert_eq!(gain.to_string(), "leveller (no loudness values)");
+        let gain = resolve_gain(&tagged(), &levelled, false).unwrap();
+        assert_eq!(gain.source, GainSource::Track);
+        let off = LoudnessSettings {
+            mode: LoudnessMode::Off,
+            ..levelled
+        };
+        assert_eq!(resolve_gain(&LoudnessInfo::default(), &off, false), None);
     }
 
     #[test]

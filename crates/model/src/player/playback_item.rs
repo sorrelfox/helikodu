@@ -4,9 +4,11 @@
 //! What the engine is asked to play.
 
 use std::fmt;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use crate::analysis::TrackAnalysis;
 use crate::library::MediaSource;
 
 /// Identifies one request to play something. The sender chooses it, and the engine
@@ -65,6 +67,12 @@ pub struct PlaybackItem {
     /// applied with the loudness gain. Zero by default.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub track_volume_db: f64,
+    /// The track analysis of the item (where its sound starts and ends, its silent
+    /// stretches and its loudness envelope), when the library has a current one.
+    /// Transitions, silence trimming and the leveller use it. Not serialized: it
+    /// is looked up again when the item is made.
+    #[serde(skip)]
+    pub analysis: Option<Arc<TrackAnalysis>>,
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)] // serde passes a reference
@@ -83,7 +91,15 @@ impl PlaybackItem {
             album: None,
             audio_stream: None,
             track_volume_db: 0.0,
+            analysis: None,
         }
+    }
+
+    /// The same item with the track analysis `analysis` (see
+    /// [`analysis`](Self::analysis)).
+    #[must_use]
+    pub fn with_analysis(self, analysis: Option<Arc<TrackAnalysis>>) -> Self {
+        Self { analysis, ..self }
     }
 
     /// The same item with the volume adjustment `db` (see

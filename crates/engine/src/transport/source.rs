@@ -43,9 +43,18 @@ pub(super) struct Source {
     rendered: u64,
     /// The A-B loop, when one is set.
     looping: Option<Loop>,
-    /// Where the last render call moved back to the loop's start: the output frames
-    /// written by then, and the source frame it went on at.
+    /// Where the last render call moved back to the loop's start, or jumped over
+    /// silence: the output frames written by then, and the source frame it went on
+    /// at.
     wraps: Vec<(usize, u64)>,
+    /// The source frame where the source ends early (its trailing silence left
+    /// out), if it does.
+    end: Option<u64>,
+    /// Silent stretches to jump over: from the first source frame to the second.
+    skips: Vec<(u64, u64)>,
+    /// The block in `decoded` was cut where a skip begins: once the chain has
+    /// taken it, the decoder moves to this frame.
+    jump: Option<u64>,
 }
 
 /// An A-B loop over the source frames `start .. end`, and where playback stands in
@@ -102,6 +111,9 @@ impl Source {
             rendered: 0,
             looping: None,
             wraps: Vec::new(),
+            end: None,
+            skips: Vec::new(),
+            jump: None,
         })
     }
 
@@ -145,6 +157,9 @@ impl Source {
         self.looping = self
             .looping
             .map(|l| Loop::new(l.range, self.format.spec.rate));
+        self.end = None;
+        self.skips.clear();
+        self.jump = None;
         Ok(())
     }
 
@@ -190,8 +205,11 @@ impl Source {
         self.finished = false;
         self.error = None;
         self.untouched = true;
+        self.jump = None;
+        let at = self.decoder.position();
         if let Some(chain) = &mut self.chain {
             chain.reset();
+            chain.locate(at);
         }
         // The loop stays; where playback stands in it starts anew.
         if let Some(l) = &mut self.looping {
@@ -205,9 +223,11 @@ impl Source {
 
     /// Builds the processing chain of `plan`, for the device the plan names.
     pub(super) fn attach(&mut self, plan: PathPlan) -> Result<(), EngineError> {
-        let chain = SourceChain::new(&plan, MAX_BLOCK).map_err(|error| EngineError::Output {
-            reason: error.to_string(),
-        })?;
+        let mut chain = SourceChain::with_analysis(&plan, MAX_BLOCK, self.item.analysis.clone())
+            .map_err(|error| EngineError::Output {
+                reason: error.to_string(),
+            })?;
+        chain.locate(self.next_frame());
         self.chain = Some(chain);
         self.plan = Some(plan);
         if self.untouched {
@@ -236,10 +256,22 @@ impl Source {
         self.output_frames(0)
     }
 
-    /// The device frames made from the source's frames `from` to its end.
+    /// The device frames made from the source's frames `from` to its end (or where
+    /// it ends early), less the silence it jumps over.
     fn output_frames(&self, from: u64) -> Option<u64> {
         let rate = self.rate();
-        let frames = self.length?.frames_at(rate).saturating_sub(from);
+        let mut last = self.length?.frames_at(rate);
+        if let Some(end) = self.end {
+            last = last.min(end);
+        }
+        // Only stretches that begin ahead are jumped over.
+        let skipped: u64 = self
+            .skips
+            .iter()
+            .filter(|&&(a, _)| a >= from)
+            .map(|&(a, b)| b.min(last).saturating_sub(a))
+            .sum();
+        let frames = last.saturating_sub(from).saturating_sub(skipped);
         let to = self.plan.as_ref().map_or(rate, |plan| plan.device.rate);
         let total = (u128::from(frames) * u128::from(to.hz())).div_ceil(u128::from(rate.hz()));
         Some(u64::try_from(total).unwrap_or(u64::MAX))
@@ -253,6 +285,7 @@ impl Source {
             return;
         };
         chain.set_gain(plan.gain.map_or(1.0, |gain| gain.linear()));
+        chain.set_leveller(plan.leveller);
         self.plan = Some(plan);
     }
 
@@ -303,6 +336,12 @@ impl Source {
                 }
                 self.consumed += taken * in_channels;
                 written += made;
+                continue;
+            }
+            if self.jump_due() {
+                if self.jump(written) {
+                    counted = written;
+                }
                 continue;
             }
             if self.wrap_due() {
@@ -446,6 +485,9 @@ impl Source {
         self.wraps.push((written, at));
         self.counted_from = at;
         self.rendered = 0;
+        if let Some(chain) = &mut self.chain {
+            chain.locate(at);
+        }
         true
     }
 }
@@ -482,7 +524,7 @@ impl Source {
             && if left {
                 self.words.len() == self.decoded.len()
             } else {
-                !self.eof || self.wrap_due()
+                !self.eof || self.wrap_due() || self.jump_due()
             }
     }
 
@@ -510,6 +552,12 @@ impl Source {
                 }
                 self.consumed += made * channels;
                 written += made;
+                continue;
+            }
+            if self.jump_due() {
+                if self.jump(written) {
+                    counted = written;
+                }
                 continue;
             }
             if self.wrap_due() {
@@ -548,6 +596,7 @@ impl Source {
                 block_words(&self.block, self.format, &mut self.words);
                 self.consumed = 0;
                 self.cut_at_loop_end();
+                self.cut_at_trims();
                 true
             }
             Ok(false) => {
@@ -576,5 +625,129 @@ fn block_words(block: &PcmBlock, format: SourceFormat, words: &mut Vec<i32>) {
         && let BlockSamples::S32(samples) = block.samples()
     {
         words.extend_from_slice(samples);
+    }
+}
+
+/// Silence left out: an early end (the trailing silence) and jumps over long silent
+/// stretches inside the source.
+///
+/// A block that reaches the end is cut there and the source ends after it. A block
+/// in which a skip begins is cut where it begins; once the chain has taken it, the
+/// decoder moves to the skip's end without the chain being reset, as for the A-B
+/// loop, and the move is reported in [`wraps`](Source::wraps), so that positions
+/// stay those of the file. Neither applies while an A-B loop is set.
+impl Source {
+    /// Whether nothing has been played and the source stands at its first frame.
+    pub(super) fn is_at_start(&self) -> bool {
+        self.untouched && self.decoder.position() == 0
+    }
+
+    /// The source frame where the source ends early, if it does.
+    pub(super) fn end(&self) -> Option<u64> {
+        self.end
+    }
+
+    /// Ends the source at the source frame `end`, or at its real end with `None`.
+    /// Does nothing once the source has passed `end`, or has already ended at an
+    /// earlier one.
+    pub(super) fn set_end(&mut self, end: Option<u64>) {
+        if self.end == end || (self.end.is_some() && self.eof && self.error.is_none()) {
+            return;
+        }
+        if end.is_some_and(|end| self.next_frame() > end) {
+            return;
+        }
+        self.end = end;
+        if end.is_some() && self.jump.is_none() && self.consumed < self.decoded.len() {
+            self.cut_at_end();
+        }
+    }
+
+    /// Jumps over the source frames of each of `skips` (in order, not overlapping)
+    /// from now on.
+    pub(super) fn set_skips(&mut self, skips: Vec<(u64, u64)>) {
+        self.skips = skips;
+    }
+
+    /// Cuts the block just decoded where a skip begins in it, or at the end.
+    fn cut_at_trims(&mut self) {
+        if self.looping.is_some() {
+            return;
+        }
+        let channels = usize::from(self.format.spec.channel_count()).max(1);
+        let first = self.block.position();
+        let frames = (self.decoded.len() / channels) as u64;
+        let skip = self
+            .skips
+            .iter()
+            .find(|&&(from, _)| from >= first && from < first + frames)
+            .copied();
+        if let Some((from, to)) = skip {
+            let keep = usize::try_from(from - first).unwrap_or(usize::MAX) * channels;
+            self.decoded.truncate(keep);
+            if !self.words.is_empty() {
+                self.words.truncate(keep);
+            }
+            self.jump = Some(to);
+            return;
+        }
+        self.cut_at_end();
+    }
+
+    /// Cuts the block in `decoded` at the end, when it reaches past it, and ends the
+    /// source after it. Frames the chain has taken stay.
+    fn cut_at_end(&mut self) {
+        let Some(end) = self.end else {
+            return;
+        };
+        let channels = usize::from(self.format.spec.channel_count()).max(1);
+        let first = self.block.position();
+        let frames = (self.decoded.len() / channels) as u64;
+        if first + frames <= end {
+            return;
+        }
+        let keep = usize::try_from(end.saturating_sub(first))
+            .unwrap_or(usize::MAX)
+            .saturating_mul(channels)
+            .max(self.consumed);
+        self.decoded.truncate(keep);
+        if !self.words.is_empty() {
+            self.words.truncate(keep);
+        }
+        self.eof = true;
+    }
+
+    /// Whether the decoder jumps over a silent stretch now: the block cut where it
+    /// begins has been taken.
+    fn jump_due(&self) -> bool {
+        self.jump.is_some() && self.consumed >= self.decoded.len()
+    }
+
+    /// Moves the decoder to the end of the silent stretch, keeping the chain, and
+    /// notes the move at the output frame `written`. Returns whether it moved.
+    fn jump(&mut self, written: usize) -> bool {
+        let Some(to) = self.jump.take() else {
+            return false;
+        };
+        if let Err(error) = self
+            .decoder
+            .seek(MediaTime::from_frames(to, self.format.spec.rate))
+        {
+            self.eof = true;
+            self.error = Some(error.into());
+            return false;
+        }
+        self.decoded.clear();
+        self.words.clear();
+        self.consumed = 0;
+        self.eof = false;
+        let at = self.decoder.position();
+        self.wraps.push((written, at));
+        self.counted_from = at;
+        self.rendered = 0;
+        if let Some(chain) = &mut self.chain {
+            chain.locate(at);
+        }
+        true
     }
 }

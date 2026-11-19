@@ -65,6 +65,12 @@
 //!   buffered audio when the skip crossfade is on, sending `TrackEnded`
 //!   (`Interrupted`) and `TrackStarted` at once without `Loading`; otherwise it fades
 //!   out over the skip fade.
+//! - With the track analysis of the items ([`PlaybackItem::analysis`]), the
+//!   crossfade takes its overlap from it, silence is trimmed where tracks join and
+//!   long silence inside a track is skipped, as the transitions ask; positions
+//!   stay those of the file (see the `silence` module). Not on a bit-perfect path
+//!   in exclusive mode, and nothing is trimmed between tracks of one album kept
+//!   gapless.
 //! - At the end of the last item the engine sends `StateChanged(Draining)`, and once
 //!   the buffer has played out `TrackEnded` and `StateChanged(Stopped)`.
 //! - `NearEnd` is sent once per item, when the heard position is within
@@ -98,6 +104,7 @@ mod recovery;
 mod render;
 mod settings;
 mod signal;
+mod silence;
 mod source;
 mod stats;
 mod timeline;
@@ -107,6 +114,8 @@ use std::fmt;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
+#[cfg(doc)]
+use helikodu_model::player::PlaybackItem;
 use helikodu_model::player::{EngineCommand, EngineEvent};
 
 pub use self::config::EngineConfig;

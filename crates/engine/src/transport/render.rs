@@ -247,10 +247,12 @@ impl Worker {
             self.set_state(TransportState::Stopped);
             return;
         };
+        // The item may start after its leading silence.
+        let position = MediaTime::from_frames(source.position(), source.rate());
         let resume = Resume {
             segment: self.segment_of(&source, 0),
             follower: None,
-            position: MediaTime::ZERO,
+            position,
         };
         let started = resume.segment.started_event();
         self.keep_loop_of(resume.segment.item.id);
@@ -264,7 +266,7 @@ impl Worker {
             Ok(()) => {
                 self.emit(started);
                 self.settle_playing();
-                self.send_position_of(resume.segment.item.id, MediaTime::ZERO);
+                self.send_position_of(resume.segment.item.id, position);
             }
             Err(error) => {
                 self.emit(started);
@@ -377,6 +379,11 @@ impl Worker {
         }
         self.drain = None;
         self.waiting_since = None;
+        // Where the item ends and the next one starts is decided again.
+        self.joins_planned = None;
+        if self.next_answered {
+            self.plan_joins();
+        }
         Ok(())
     }
 
@@ -409,6 +416,7 @@ impl Worker {
             self.output = Some(self.open_output(config)?);
         }
         self.attach_current()?;
+        self.trim_leading();
         // A new start: nothing of the audio before it stays in the filters.
         if let Some(dsp) = &mut self.dsp {
             dsp.reset();

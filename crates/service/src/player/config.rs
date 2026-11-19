@@ -72,6 +72,9 @@ pub struct ReplayGain {
     /// Whether a gain is lowered so that the file's peak (from its tags) stays at or
     /// below full scale. On by default.
     pub prevent_clipping: bool,
+    /// Whether files without loudness values are evened out by the leveller
+    /// instead of the untagged preamp. Off by default.
+    pub leveller: bool,
 }
 
 impl ReplayGain {
@@ -90,6 +93,7 @@ impl ReplayGain {
             preamp_db: loudness.preamp_db,
             untagged_preamp_db: loudness.untagged_preamp_db,
             prevent_clipping: loudness.clipping == ClippingSetting::LowerGain,
+            leveller: loudness.leveller,
         }
     }
 }
@@ -101,6 +105,7 @@ impl Default for ReplayGain {
             preamp_db: 0.0,
             untagged_preamp_db: 0.0,
             prevent_clipping: true,
+            leveller: false,
         }
     }
 }
@@ -316,6 +321,7 @@ impl PlayerConfig {
             } else {
                 ClippingPrevention::Limiter
             },
+            leveller: gain.leveller,
         }
     }
 }
@@ -400,6 +406,7 @@ mod tests {
             preamp_db: 3.0,
             untagged_preamp_db: -2.0,
             prevent_clipping: false,
+            leveller: true,
         };
         let loudness = config
             .engine_config(&OutputSelection::default())
@@ -409,6 +416,7 @@ mod tests {
         assert_eq!(loudness.preamp_db, 3.0);
         assert_eq!(loudness.untagged_preamp_db, -2.0);
         assert_eq!(loudness.clipping, ClippingPrevention::Limiter);
+        assert!(loudness.leveller);
 
         config.replay_gain.preamp_db = 30.0;
         assert!(matches!(
@@ -441,6 +449,12 @@ mod tests {
         assert_eq!(gain.mode, ReplayGainMode::Auto);
         assert_eq!(gain.untagged_preamp_db, -6.0);
         assert!(gain.prevent_clipping);
+        assert!(!gain.leveller);
+        let levelled = LoudnessTable {
+            leveller: true,
+            ..LoudnessTable::default()
+        };
+        assert!(ReplayGain::from_settings(&levelled).leveller);
     }
 
     #[test]

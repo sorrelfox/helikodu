@@ -88,7 +88,7 @@ impl Worker {
             return;
         }
         let dsp = self.dsp.as_ref().map(DspChain::plan).unwrap_or_default();
-        let plan = plan_for(&self.config.processing, output, source).with_dsp(dsp);
+        let plan = plan_for(&self.config.processing, output, source, dsp);
         let channels = output.writer.channels().max(1);
         let at = output.writer.frames_written() + (self.staged.len() / channels) as u64;
         let dither = plan.always_dither;

@@ -20,4 +20,8 @@ Under **Loudness data**, **Measure the rest** measures every track and album tha
 
 Library tracks that have no loudness values at all, neither tags nor a measurement, are measured by themselves: after a scan Helikodu analyses new tracks in the background, one at a time and at the lowest priority, slowing down while it plays music from the same disk and pausing on battery. An album is measured as one programme, so it gets album values too. Tracks with loudness tags keep using them. Nothing is written to the files.
 
+### The leveller
+
+Tracks without any loudness values (files outside the library, or library tracks not measured yet) normally play at the gain of **Files without loudness values**. With `leveller = true` in the `[loudness]` table of the settings file (there is no control for it yet; it is off by default), Helikodu evens them out while they play instead: a slow gain brings them toward the loudness of tracks with values, at most 12 dB up or down, rising by at most 1 dB and falling by at most 3 dB a second, so that it does not pump. For an analysed track it reads the loudness of the next few seconds from the analysis and starts to turn down before a loud passage; for other files it follows the loudness of the last three seconds. With **Lower the gain** it never raises the loudest peak heard so far above full scale; with **Use the limiter** it leaves peaks to the limiter. Tracks with loudness values keep their gains, and the leveller is off while **Even out loudness** is **Off** and on a bit-perfect path in exclusive mode. The signal path shows it as "leveller (no loudness values)".
+
 When a gain is applied, playback is no longer bit-perfect. Set **Even out loudness** to **Off** if bit-perfect output matters more to you.

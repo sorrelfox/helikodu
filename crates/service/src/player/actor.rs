@@ -11,7 +11,8 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
 
 use helikodu_engine::transport::Engine;
-use helikodu_library::{ListenEnd, MeasuredLoudness};
+use helikodu_library::{AnalysisOutcome, ListenEnd, MeasuredLoudness};
+use helikodu_model::analysis::TrackAnalysis;
 use helikodu_model::audio::{AudioSpec, MediaTime, OutputSelection};
 use helikodu_model::library::{MediaSource, TrackId, TrackRef};
 use helikodu_model::player::{
@@ -1259,7 +1260,8 @@ impl Actor {
         let measured = self.measured_loudness(library_track);
         let item = self
             .loudness
-            .complete(&path, &neighbours, item, measured.as_ref());
+            .complete(&path, &neighbours, item, measured.as_ref())
+            .with_analysis(self.track_analysis(library_track));
         Ok((
             item,
             Slot {
@@ -1277,6 +1279,17 @@ impl Actor {
     fn measured_loudness(&self, track: Option<TrackId>) -> Option<MeasuredLoudness> {
         let stored = self.library.as_ref()?.measured_loudness(track?).ok()??;
         stored.current.then_some(stored.measured)
+    }
+
+    /// The library's current track analysis of `track`, if it has one. Read here,
+    /// on the player's thread, and handed to the engine with the item, so the
+    /// engine thread never waits for the database.
+    fn track_analysis(&self, track: Option<TrackId>) -> Option<Arc<TrackAnalysis>> {
+        let stored = self.library.as_ref()?.track_analysis(track?).ok()??;
+        match stored.outcome {
+            AnalysisOutcome::Analyzed(analysis) if stored.current => Some(Arc::new(analysis)),
+            _ => None,
+        }
     }
 
     /// The file of `track` without asking the library for more than its path.
