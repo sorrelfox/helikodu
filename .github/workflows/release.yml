@@ -315,22 +315,49 @@ jobs:
       - name: Bundle
         env:
           ARCH: ${{ matrix.arch }}
+          FLATPAK_REPO_GPG_KEY: ${{ secrets.FLATPAK_REPO_GPG_KEY }}
         run: |
-          set -eux
+          set -eu
+          # The key of Helikodu's Flatpak repository (docs/dev/flatpak.md):
+          # the bundle is signed with it and names the repository, so that
+          # installing the file adds the repository and later updates come
+          # from there.
+          if [ -z "$FLATPAK_REPO_GPG_KEY" ]; then
+            echo "the secret FLATPAK_REPO_GPG_KEY is not set (docs/dev/flatpak.md)" >&2
+            exit 1
+          fi
+          command -v gpg >/dev/null || dnf install -y -q gnupg2
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          printf '%s\n' "$FLATPAK_REPO_GPG_KEY" | gpg --batch --quiet --import
+          key=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')
+          public=$(gpg --show-keys --with-colons packaging/flatpak/helikodu-repo.gpg | awk -F: '/^fpr/ { print $10; exit }')
+          if [ "$key" != "$public" ]; then
+            echo "the secret key $key is not the key of packaging/flatpak/helikodu-repo.gpg ($public)" >&2
+            exit 1
+          fi
+          set -x
           version=$(sed -n "/^\[workspace.package\]/,/^\[/s/^version = \"\(.*\)\"/\1/p" Cargo.toml)
           out="$GITHUB_WORKSPACE/target/release-flatpak"
           rm -rf "$out"
           mkdir -p "$out"
           bundle="$out/helikodu-$version-$ARCH.flatpak"
           # The Flathub remote in the bundle lets `flatpak install --bundle`
-          # install the GNOME runtime with it.
+          # install the GNOME runtime with it; the repository and its key make
+          # the installation follow Helikodu's repository for updates.
           flatpak build-bundle --arch="$ARCH" \
             --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+            --repo-url=https://sorrelfox.github.io/helikodu/repo/ \
+            --gpg-keys=packaging/flatpak/helikodu-repo.gpg \
+            --gpg-sign="$key" --gpg-homedir="$GNUPGHOME" \
             "$RUNNER_TEMP/repo" "$bundle" io.github.sorrelfox.Helikodu
           # The bundle installs, is the version and architecture it is named
           # for, and both programs start.
           flatpak install --user --noninteractive --bundle "$bundle"
           flatpak info --user io.github.sorrelfox.Helikodu | tee "$RUNNER_TEMP/info"
+          # Installing it added Helikodu's repository as the origin.
+          flatpak remotes --user --columns=name,url | tee "$RUNNER_TEMP/remotes"
+          grep -q "https://sorrelfox.github.io/helikodu/repo/" "$RUNNER_TEMP/remotes"
           grep -Eq "^ *Version: $version\$" "$RUNNER_TEMP/info"
           grep -Eq "^ *Arch: $ARCH\$" "$RUNNER_TEMP/info"
           # The container has no user session; flatpak run needs a runtime

@@ -38,15 +38,24 @@ Whichever way you install Helikodu, your library and settings are kept in your h
 
 ## The Flatpak
 
-The Flatpak runs on any distribution with Flatpak installed. It brings its own decoder libraries (vgmstream included) and uses the FFmpeg of the GNOME runtime. Install it for your user:
+The Flatpak runs on any distribution with Flatpak installed. It brings its own decoder libraries (vgmstream included) and uses the FFmpeg of the GNOME runtime. It is published in Helikodu's own Flatpak repository, from which it is also updated. Open `https://sorrelfox.github.io/helikodu/helikodu.flatpakref` with your software centre (the **Install with Flatpak** button of the website), or install it for your user from a terminal:
 
 ```sh
-flatpak install --user --bundle helikodu-<version>-x86_64.flatpak
+flatpak install --user --from https://sorrelfox.github.io/helikodu/helikodu.flatpakref
 ```
 
 The first time, Flatpak also installs the GNOME 51 runtime from Flathub (a download of several hundred megabytes) and, if your system does not have it yet, asks to add the Flathub remote. Helikodu then appears in your application list; from a terminal, start it with `flatpak run io.github.sorrelfox.Helikodu`, and the command-line tool with `flatpak run --command=helikodu-cli io.github.sorrelfox.Helikodu`.
 
-To update, install the next release's file the same way. To remove it, run `flatpak uninstall --user io.github.sorrelfox.Helikodu` (add `--delete-data` to remove its library and settings too).
+New versions come with your other Flatpak updates: from the software centre, or with `flatpak update`. The repository is signed, and its key comes with the `.flatpakref` file.
+
+The `.flatpak` file on the Releases page is the same application in one file, for a computer without network access, for example: `flatpak install --user --bundle helikodu-<version>-x86_64.flatpak`. From version 0.9.3 on, it adds Helikodu's repository too when installed, so it is updated the same way. The files of version 0.9.2 and earlier do not. If you installed one of them, switch it to the repository once, and it is updated from then on; your library and settings stay:
+
+```sh
+flatpak remote-add --user --if-not-exists helikodu https://sorrelfox.github.io/helikodu/helikodu.flatpakrepo
+flatpak install --user --reinstall helikodu io.github.sorrelfox.Helikodu
+```
+
+To remove it, run `flatpak uninstall --user io.github.sorrelfox.Helikodu` (add `--delete-data` to remove its library and settings too).
 
 The Flatpak has no network access at all, and sees only your `Music` folder. Folders elsewhere are added through the folder dialog in **Settings ▸ Library**; Helikodu then rescans them now and then instead of noticing changes at once. To have such a folder watched like `Music`, grant it with `flatpak override --user --filesystem=/path/to/folder io.github.sorrelfox.Helikodu`. The Flatpak keeps its library and settings apart from other installations, in `~/.var/app/io.github.sorrelfox.Helikodu/`. It comes without a SoundFont: to play MIDI files, choose one under **MIDI files** in the **Playback** settings.
 

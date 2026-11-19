@@ -503,15 +503,16 @@ helikodu-cli export-playlist 'Late evening' late-evening.m3u8</code></pre>
           </tbody>
         </table>
       </div>
-      <p class="actions"><a class="button primary" href="{{repository}}/releases">Download from GitHub</a> <a class="button" href="changelog/">Read the release notes</a></p>
+      <p class="actions"><a class="button primary" href="helikodu.flatpakref">Install with Flatpak</a> <a class="button" href="{{repository}}/releases">Download from GitHub</a> <a class="button" href="changelog/">Read the release notes</a></p>
+      <p class="note"><b>Install with Flatpak</b> opens your software centre, which installs Helikodu from Helikodu's own Flatpak repository and keeps it up to date from there, like any other application. From version 0.9.3 on, the Flatpak file from GitHub adds the same repository when you install it.</p>
       <p class="note">Every file except the Arch package also comes for 64-bit ARM computers (<code>aarch64</code>, or <code>arm64</code> for the Debian and Ubuntu packages). The Flatpak and the AppImage bring their own libraries; the packages use those of their distribution. The ready-built archives were built on Debian 13 and need FFmpeg 7.1; where only a newer FFmpeg is installed, use the Flatpak or the AppImage instead. <a href="guide/#installing">Installing, step by step</a> says which file suits which system.</p>
     </div>
     <figure>
-      <pre class="term"><code><span class="c"># Check the download, then install the Flatpak for your user</span>
-sha256sum --check --ignore-missing SHA256SUMS
-flatpak install --user --bundle helikodu-{{version}}-x86_64.flatpak
-flatpak run io.github.sorrelfox.Helikodu</code></pre>
-      <figcaption>The first time, Flatpak also installs the GNOME runtime from Flathub. Helikodu then appears in the application list of your desktop.</figcaption>
+      <pre class="term"><code><span class="c"># Install from Helikodu's Flatpak repository, for your user</span>
+flatpak install --user --from https://sorrelfox.github.io/helikodu/helikodu.flatpakref
+<span class="c"># Later: updates come with all your other Flatpak applications</span>
+flatpak update</code></pre>
+      <figcaption>The first time, Flatpak also installs the GNOME runtime from Flathub. Helikodu then appears in the application list of your desktop. The repository is signed; its key comes with the <code>.flatpakref</code> file.</figcaption>
     </figure>
   </div>
   <div class="permissions" id="flatpak-permissions">

@@ -28,6 +28,13 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 sorrelfox and Helikodu contributors"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
+# The public key of the Flatpak repository: a fact, not a creative work.
+[[annotations]]
+path = ["packaging/flatpak/helikodu-repo.gpg"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 sorrelfox and Helikodu contributors"
+SPDX-License-Identifier = "CC0-1.0"
+
 # The pictures of the website and of the app stores.
 [[annotations]]
 path = ["docs/site/assets/shots/**", "docs/site/assets/screenshots/**", "docs/site/assets/social.jpg"]

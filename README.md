@@ -97,14 +97,15 @@ Helikodu is published on the [Releases](https://github.com/sorrelfox/helikodu/re
 | `helikodu-<version>.tar.xz` | The source code, with everything needed to build it without a network |
 | `SHA256SUMS` | Checksums of the files |
 
-Every file except the Arch package also comes for 64-bit ARM computers (`aarch64`, or `arm64` for the Debian and Ubuntu packages). To install the Flatpak for your user:
+Every file except the Arch package also comes for 64-bit ARM computers (`aarch64`, or `arm64` for the Debian and Ubuntu packages).
+
+The Flatpak is also published in Helikodu's own Flatpak repository, which keeps it up to date like any other Flatpak application. Open [helikodu.flatpakref](https://sorrelfox.github.io/helikodu/helikodu.flatpakref) with your software centre, or install it for your user from a terminal:
 
 ```sh
-sha256sum --check --ignore-missing SHA256SUMS
-flatpak install --user --bundle helikodu-<version>-x86_64.flatpak
+flatpak install --user --from https://sorrelfox.github.io/helikodu/helikodu.flatpakref
 ```
 
-The first time, Flatpak also installs the GNOME runtime from Flathub. Helikodu then appears in the application list of your desktop.
+The first time, Flatpak also installs the GNOME runtime from Flathub. Helikodu then appears in the application list of your desktop, and `flatpak update` (or the software centre) brings new versions. From version 0.9.3 on, the `.flatpak` file from the Releases page adds the same repository when it is installed. The repository is signed; its public key is [`packaging/flatpak/helikodu-repo.gpg`](packaging/flatpak/helikodu-repo.gpg).
 
 ### What the Flatpak may do, and why
 

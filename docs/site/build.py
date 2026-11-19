@@ -38,6 +38,7 @@ Pages may use these marks, each replaced when the site is built:
 """
 
 import argparse
+import base64
 import functools
 import html
 import http.server
@@ -55,6 +56,11 @@ ASSETS = HERE / "assets"
 ICON = REPO / "data/icons/hicolor/scalable/apps/io.github.sorrelfox.Helikodu.svg"
 REPOSITORY = "https://github.com/sorrelfox/helikodu"
 ADDRESS = "https://sorrelfox.github.io/helikodu/"
+# Helikodu's Flatpak repository, published with the site by the Pages
+# workflow, and the public key its commits and summary are signed with.
+FLATPAK_REPO = ADDRESS + "repo/"
+FLATPAK_KEY = REPO / "packaging/flatpak/helikodu-repo.gpg"
+APP_ID = "io.github.sorrelfox.Helikodu"
 # The path of the site on its server. The page for addresses that do not exist
 # is shown at any address, so its links start from here.
 BASE = "/helikodu/"
@@ -476,6 +482,28 @@ def check_links(site):
         fail("broken links:\n  " + "\n  ".join(errors))
 
 
+def flatpak_files(out):
+    """Writes the files that add Helikodu's Flatpak repository: a
+    .flatpakref, which installs Helikodu and adds the repository in one step
+    (software centres open it), and a .flatpakrepo for `flatpak remote-add`.
+    Both carry the repository's public key."""
+    if not FLATPAK_KEY.is_file():
+        fail(f"{FLATPAK_KEY.relative_to(REPO)} is missing: the public key of the Flatpak "
+             "repository (docs/dev/flatpak.md)")
+    key = base64.b64encode(FLATPAK_KEY.read_bytes()).decode("ascii")
+    common = (f"Title=Helikodu\nUrl={FLATPAK_REPO}\nHomepage={ADDRESS}\n"
+              "Comment=An offline audio player and music library manager\n"
+              f"Icon={ADDRESS}assets/helikodu.svg\n")
+    (out / "helikodu.flatpakrepo").write_text(
+        "[Flatpak Repo]\n" + common + f"GPGKey={key}\n", encoding="utf-8")
+    # The branch of the bundles and of the repository: the manifest names none.
+    (out / "helikodu.flatpakref").write_text(
+        "[Flatpak Ref]\n" f"Name={APP_ID}\nBranch=master\nIsRuntime=false\n"
+        "SuggestRemoteName=helikodu\n"
+        "RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo\n"
+        + common + f"GPGKey={key}\n", encoding="utf-8")
+
+
 def build(out):
     if out.exists():
         if out.is_dir() and any(out.iterdir()) and not (out / "assets" / "site.css").is_file():
@@ -484,6 +512,7 @@ def build(out):
     out.mkdir(parents=True)
     shutil.copytree(ASSETS, out / "assets")
     shutil.copyfile(ICON, out / "assets" / "helikodu.svg")
+    flatpak_files(out)
 
     site = Site(out)
     builder = guide_builder()

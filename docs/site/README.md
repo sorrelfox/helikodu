@@ -72,6 +72,6 @@ A new picture is a step in `crates/ui-gtk/examples/site_shots.rs` and a `{{shot}
 
 ## Publishing
 
-`.github/workflows/pages.yml` runs when a release is tagged and can be started by hand from the Actions tab. It runs `build.py` and deploys the result with GitHub Pages. In the repository settings, Pages must use "GitHub Actions" as its source.
+`.github/workflows/pages.yml` runs once a release has been published from a pushed tag, and can be started by hand from the Actions tab (for the latest release). It runs `build.py`, adds Helikodu's Flatpak repository in `repo/`, made from the release's Flatpak bundles ([docs/dev/flatpak.md](../dev/flatpak.md#the-flatpak-repository)), and deploys the result with GitHub Pages. `build.py` also writes `helikodu.flatpakref` and `helikodu.flatpakrepo`, which add that repository, from its public key `packaging/flatpak/helikodu-repo.gpg`. In the repository settings, Pages must use "GitHub Actions" as its source.
 
 The pages, the styles and the pictures are licensed under CC-BY-SA-4.0, the two scripts under GPL-3.0-or-later.

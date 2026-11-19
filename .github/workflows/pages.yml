@@ -1,10 +1,14 @@
-# Publishes the website (docs/site) to GitHub Pages at https://sorrelfox.github.io/helikodu/.
+# Publishes the website (docs/site) to GitHub Pages at https://sorrelfox.github.io/helikodu/,
+# with Helikodu's Flatpak repository in repo/ (docs/dev/flatpak.md).
 name: Pages
 
-# Runs for release tags and when started by hand, to save shared CI resources.
+# Runs when a release has been published and when started by hand, to save
+# shared CI resources. It waits for the release because the repository is made
+# from the release's Flatpak bundles.
 on:
-  push:
-    tags: ["v*"]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -18,18 +22,79 @@ concurrency:
 
 jobs:
   deploy:
-    name: Build and deploy the website
+    name: Build and deploy the website and the Flatpak repository
+    # After a release from a pushed tag that succeeded; not after a dry run.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The released commit after a release, otherwise the branch.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
       - uses: actions/configure-pages@v5
       - name: Build the site
-        # The pages, the user guide, the release notes and the pictures. The
-        # script names the version of Cargo.toml and fails on a broken link.
+        # The pages, the user guide, the release notes, the pictures and the
+        # .flatpakref and .flatpakrepo files. The script names the version of
+        # Cargo.toml and fails on a broken link.
         run: python3 docs/site/build.py --out _site
+      - name: Install Flatpak and OSTree
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends flatpak ostree
+      - name: Build the Flatpak repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          # The release's tag after a release; the latest release otherwise.
+          TAG: ${{ github.event.workflow_run.head_branch }}
+          FLATPAK_REPO_GPG_KEY: ${{ secrets.FLATPAK_REPO_GPG_KEY }}
+        run: |
+          set -eu
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list --exclude-drafts --limit 1 --json tagName --jq '.[0].tagName')
+          fi
+          echo "the bundles of $TAG"
+          gh release download "$TAG" --pattern '*.flatpak' --dir "$RUNNER_TEMP/bundles"
+          ls -l "$RUNNER_TEMP/bundles"
+          # The signing key, and that it is the one whose public half the
+          # .flatpakref, the .flatpakrepo and the bundles carry.
+          if [ -z "$FLATPAK_REPO_GPG_KEY" ]; then
+            echo "the secret FLATPAK_REPO_GPG_KEY is not set (docs/dev/flatpak.md)" >&2
+            exit 1
+          fi
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          printf '%s\n' "$FLATPAK_REPO_GPG_KEY" | gpg --batch --quiet --import
+          key=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')
+          public=$(gpg --show-keys --with-colons packaging/flatpak/helikodu-repo.gpg | awk -F: '/^fpr/ { print $10; exit }')
+          if [ "$key" != "$public" ]; then
+            echo "the secret key $key is not the key of packaging/flatpak/helikodu-repo.gpg ($public)" >&2
+            exit 1
+          fi
+          set -x
+          repo=_site/repo
+          ostree init --mode=archive --repo="$repo"
+          for bundle in "$RUNNER_TEMP"/bundles/*.flatpak; do
+            flatpak build-import-bundle --no-update-summary "$repo" "$bundle"
+          done
+          # Sign every commit before the summary and the static deltas are
+          # made: a delta carries the signatures its commit had then. The
+          # release signs its bundles, and their signature comes along; older
+          # bundles are signed here.
+          for ref in $(ostree refs --repo="$repo"); do
+            if ! ostree show --repo="$repo" --gpg-homedir="$GNUPGHOME" "$ref" | grep -q "key ID ${key:(-16)}"; then
+              ostree gpg-sign --repo="$repo" --gpg-homedir="$GNUPGHOME" "$ref" "$key"
+            fi
+          done
+          flatpak build-update-repo --gpg-sign="$key" --gpg-homedir="$GNUPGHOME" \
+            --title=Helikodu --default-branch=master --generate-static-deltas --prune "$repo"
+          ostree refs --repo="$repo"
+          du -sh "$repo"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

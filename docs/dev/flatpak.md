@@ -63,10 +63,11 @@ flatpak-builder --user --force-clean --disable-rofiles-fuse --install-deps-from=
     --state-dir=STATE --repo=REPO BUILD packaging/flatpak/io.github.sorrelfox.Helikodu.yml
 flatpak-builder-lint --exceptions --user-exceptions EXCEPTIONS.json repo REPO
 flatpak build-bundle --arch=ARCH --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
-    REPO helikodu-<version>-ARCH.flatpak io.github.sorrelfox.Helikodu
+    --repo-url=https://sorrelfox.github.io/helikodu/repo/ --gpg-keys=packaging/flatpak/helikodu-repo.gpg \
+    --gpg-sign=KEY REPO helikodu-<version>-ARCH.flatpak io.github.sorrelfox.Helikodu
 ```
 
-The `dir` source takes the checked-out tag. The linter may report only the two screenshot findings described above; anything else stops the release. The job then installs the bundle in its container, checks that `flatpak info` shows the release's version and architecture, and runs `helikodu --version` and `helikodu-cli --version` in it with `flatpak run`.
+The `dir` source takes the checked-out tag. The linter may report only the two screenshot findings described above; anything else stops the release. The bundle is signed with the key of [Helikodu's Flatpak repository](#the-flatpak-repository) and names the repository and its public key. The job then installs the bundle in its container, checks that `flatpak info` shows the release's version and architecture and that the repository became its origin, and runs `helikodu --version` and `helikodu-cli --version` in it with `flatpak run`.
 
 `--runtime-repo` puts Flathub's `.flatpakrepo` into the bundle. When a user installs it, Flatpak offers to add the Flathub remote (if it is missing) and installs `org.gnome.Platform//51` and its extensions from there, so the bundle needs nothing installed beforehand except Flatpak:
 
@@ -74,7 +75,34 @@ The `dir` source takes the checked-out tag. The linter may report only the two s
 flatpak install --user --bundle helikodu-<version>-x86_64.flatpak
 ```
 
-The bundle holds only the application (about 16 MB); the runtime is a separate download of several hundred megabytes the first time. A bundle does not update itself: the next release's bundle is installed over it the same way. The installation's origin remote has no URL, so `flatpak update` does not touch the application (it updates the runtime).
+The bundle holds only the application (about 16 MB); the runtime is a separate download of several hundred megabytes the first time. `--repo-url` and `--gpg-keys` make the installation's origin remote (`helikodu-origin`) Helikodu's Flatpak repository, so `flatpak update` and the software centres update it from there. The bundles of 0.9.2 and earlier carry no repository: their origin has no URL and they are never updated; the user guide's installing page says how to switch such an installation to the repository.
+
+## The Flatpak repository
+
+Helikodu has a Flatpak repository of its own, published with the website at <https://sorrelfox.github.io/helikodu/repo/>. Users add it with the `.flatpakref` file the website build writes (`helikodu.flatpakref`: installs Helikodu and adds the repository; software centres open it) or the `.flatpakrepo` file (`helikodu.flatpakrepo`, for `flatpak remote-add`), and the release's bundles add it when they are installed. It holds Helikodu only (`app/io.github.sorrelfox.Helikodu/{x86_64,aarch64}/master`, the branch of the bundles, and the AppStream data); the GNOME runtime comes from Flathub (`RuntimeRepo` of the `.flatpakref`, `--runtime-repo` of the bundles).
+
+The [Pages workflow](../../.github/workflows/pages.yml) runs after each release has been published from a pushed tag (and when started by hand, for the latest release). After building the site it makes the repository afresh, in `repo/` of the site, from the release's two bundles:
+
+```sh
+ostree init --mode=archive --repo=REPO
+flatpak build-import-bundle --no-update-summary REPO helikodu-<version>-ARCH.flatpak   # both architectures
+ostree gpg-sign --repo=REPO REF KEY          # each commit not yet signed with KEY
+flatpak build-update-repo --gpg-sign=KEY --title=Helikodu --default-branch=master \
+    --generate-static-deltas --prune REPO
+```
+
+The commits are those of the bundles, so an installation from a bundle and one from the repository are the same commit and nothing is downloaded twice. Every commit is signed before the static deltas are made: a delta carries the signatures its commit had when it was made. Only the latest release is in the repository (about 46 MB for both architectures); clients update from whatever commit they have. GitHub Pages allows a site of 1 GB and a soft limit of 100 GB of traffic a month.
+
+**The key.** The repository, its summary and the bundles are signed with one GPG key kept for nothing else. Its public half is [`packaging/flatpak/helikodu-repo.gpg`](../../packaging/flatpak/helikodu-repo.gpg) (in the `.flatpakref`, the `.flatpakrepo` and the bundles); its private half, ASCII-armoured and without a passphrase, is the Actions secret `FLATPAK_REPO_GPG_KEY`. Both workflows check that the secret is the key of that file and stop otherwise, and the release stops when the secret is missing. To make the key:
+
+```sh
+export GNUPGHOME=$(mktemp -d)
+gpg --batch --pinentry-mode loopback --passphrase '' --quick-gen-key "Helikodu Flatpak repository" rsa4096 sign never
+gpg --export "Helikodu Flatpak repository" > packaging/flatpak/helikodu-repo.gpg
+gpg --armor --export-secret-keys "Helikodu Flatpak repository" | gh secret set FLATPAK_REPO_GPG_KEY
+```
+
+Keep a copy of the private key offline. A new key cannot be rolled out quietly: installations verify updates with the key they were given, so after a change every user has to add the repository again (`flatpak remote-modify --gpg-import=…` or a new `.flatpakref`).
 
 ## What is built
 

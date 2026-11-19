@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Helikodu's own Flatpak repository, published with the website: **Install with Flatpak** on the website (or `flatpak install --user --from https://sorrelfox.github.io/helikodu/helikodu.flatpakref`) installs Helikodu from it, and new versions then come with the other Flatpak updates. The repository is signed. The `.flatpak` file of a release adds the same repository when it is installed, so software centres no longer say that it comes without a software repository. An installation from the file of 0.9.2 or earlier is switched to the repository as the user guide's installing page describes.
+
 ### Fixed
 
 - The tray menu in KDE Plasma could show items in the wrong form after it changed (another track, Play turned into Pause): a check box on Previous, entries drawn as headings, Quit twice. Plasma keeps menu items by their number and updates only what it is sent again; each change of the menu now numbers its items afresh.
