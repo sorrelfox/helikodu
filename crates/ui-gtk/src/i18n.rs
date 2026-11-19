@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Translations through gettext. Every string the user sees goes through
-//! [`tr`] or [`ntr`]; templates mark theirs `translatable="yes"`.
+//! `tr` or `ntr`; templates mark theirs `translatable="yes"`.
 //!
 //! The interface language is the desktop's, or the one chosen in Settings ›
 //! Appearance (`[appearance] language`). gettext, for Helikodu's strings and

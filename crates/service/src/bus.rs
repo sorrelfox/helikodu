@@ -12,8 +12,9 @@
 //! A front end with a main loop attaches a [`Waker`]: it is called after each event
 //! is queued for that subscriber, from the publishing thread, and should only wake
 //! the main loop (a GLib front end calls `MainContext::wakeup` or schedules an idle
-//! source that drains [`Subscription::try_iter`]). A command-line tool simply blocks
-//! on [`Subscription::recv`].
+//! source that drains [`Receiver::try_iter`](std::sync::mpsc::Receiver::try_iter) through the
+//! subscription). A command-line tool simply blocks on
+//! [`Receiver::recv`](std::sync::mpsc::Receiver::recv).
 //!
 //! A subscription ends when it is dropped; the bus forgets it at its next event.
 

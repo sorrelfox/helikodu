@@ -116,8 +116,7 @@ pub use helikodu_library::{FileSection, YearSpan, YearSummary};
 pub use helikodu_library::{HistoryAction, HistoryError, HistoryReport, UndoHistory};
 pub use helikodu_library::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 /// The undo journal of tag edits: [`MusicLibrary::edit_tags`] records each
-/// save, [`MusicLibrary::undo_tags`] and [`MusicLibrary::redo_tags`] step through
-/// them.
+/// save, and [`MusicLibrary::step_tags`] undoes them or does them again.
 pub use helikodu_library::{
     RatingOutcome, StepProblem, TagEditReport, TagHistory, TagStep, TagStepId, TagStepReport,
 };

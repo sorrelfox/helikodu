@@ -111,7 +111,7 @@ impl Shared {
     }
 }
 
-/// Makes thumbnails on worker threads. See the [module documentation](self).
+/// Makes thumbnails on worker threads. The module documentation explains more.
 pub struct ArtworkPool {
     shared: Arc<Shared>,
     threads: Vec<JoinHandle<()>>,

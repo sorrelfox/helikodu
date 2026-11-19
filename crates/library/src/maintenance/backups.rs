@@ -335,7 +335,7 @@ pub fn cancel_restore(database: &Path) -> Result<(), BackupError> {
 
 impl Library {
     /// Makes a backup in `backups`, dated `now`, and removes the oldest beyond the
-    /// kept number. See the [module documentation](self).
+    /// kept number. The module documentation explains more.
     pub fn back_up(&self, backups: &Backups, now: SystemTime) -> Result<BackupFile, BackupError> {
         fs::create_dir_all(backups.folder()).map_err(io_error(backups.folder()))?;
         let target = backups.name_for(now, "");

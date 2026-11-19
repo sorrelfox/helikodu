@@ -135,7 +135,7 @@ pub struct Removed {
     pub bytes: u64,
 }
 
-/// The thumbnail files on disk. See the [module documentation](self).
+/// The thumbnail files on disk. The module documentation explains more.
 ///
 /// Shared between threads; every method takes `&self`.
 #[derive(Debug)]

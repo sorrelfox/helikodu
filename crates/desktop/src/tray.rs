@@ -11,7 +11,7 @@
 //! text stays translated on its side.
 //!
 //! Whether a host is there can change at any time: the watcher may start after
-//! the program, or go away when the panel restarts. [`TrayHooks::host`] is
+//! the program, or go away when the panel restarts. `TrayHooks::host` is
 //! called with `true` or `false` each time that changes (and once after
 //! starting); the item registers again whenever a watcher appears. Without a
 //! host there is no icon, and the front end hides its tray settings;
