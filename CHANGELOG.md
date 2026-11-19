@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- The tray menu in KDE Plasma could show items in the wrong form after it changed (another track, Play turned into Pause): a check box on Previous, entries drawn as headings, Quit twice. Plasma keeps menu items by their number and updates only what it is sent again; each change of the menu now numbers its items afresh.
+
 ## [0.9.2] - 2026-11-19
 
 The release candidate with fixes found while preparing the Flathub submission, and screenshots for Flathub and the software centres.

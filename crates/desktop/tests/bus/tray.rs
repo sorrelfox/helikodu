@@ -249,8 +249,17 @@ fn registers_when_a_watcher_appears_and_serves_the_menu() {
             .is_none()
     );
 
-    // Clicks: the info line does nothing, the items reach the hook.
-    for id in [1i32, 4, 6] {
+    // Clicks: the info line does nothing, the items reach the hook. The ids
+    // are the layout's: each revision numbers its items afresh.
+    let ids: Vec<i32> = layout
+        .2
+        .iter()
+        .map(|child| {
+            let (id, _, _): Node = child.try_clone().unwrap().try_into().unwrap();
+            id
+        })
+        .collect();
+    for id in [ids[0], ids[3], ids[5]] {
         call(
             &client,
             &name,
@@ -279,6 +288,41 @@ fn registers_when_a_watcher_appears_and_serves_the_menu() {
     );
     let missing: Vec<i32> = reply.body().deserialize().unwrap();
     assert_eq!(missing, [99]);
+
+    // A changed menu numbers its items afresh: no id of the old layout comes
+    // back, so a host that keeps items by id cannot mix them up, and a click
+    // on an old id is an unknown item.
+    let mut changed = menu();
+    changed.remove(0);
+    tray.set_content(TrayContent {
+        tooltip: "Shoreline, 6 a.m. · Mari Kask".into(),
+        menu: changed,
+    });
+    assert!(signals.next("LayoutUpdated", WAIT).is_some());
+    let reply = call(
+        &client,
+        &name,
+        MENU_PATH,
+        MENU_INTERFACE,
+        "GetLayout",
+        &(0i32, -1i32, Vec::<String>::new()),
+    );
+    let (_, relaid): (u32, Node) = reply.body().deserialize().unwrap();
+    assert_eq!(labels(&relaid).len(), ids.len() - 1);
+    for child in &relaid.2 {
+        let (id, _, _): Node = child.try_clone().unwrap().try_into().unwrap();
+        assert!(!ids.contains(&id), "id {id} was used by the old layout");
+    }
+    let reply = call(
+        &client,
+        &name,
+        MENU_PATH,
+        MENU_INTERFACE,
+        "EventGroup",
+        &(vec![(ids[3], "clicked", zbus::Variant::from(0i32), 0u32)],),
+    );
+    let missing: Vec<i32> = reply.body().deserialize().unwrap();
+    assert_eq!(missing, [ids[3]]);
 
     // The icon itself: click, scroll and the tooltip.
     call(

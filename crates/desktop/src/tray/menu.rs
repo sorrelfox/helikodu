@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The tray menu as `com.canonical.dbusmenu`: one level under the root, whose
-//! id is 0; the items are numbered from 1 in the order given. Every change of
-//! the menu is announced with `LayoutUpdated` and a new revision, after which
-//! hosts fetch the whole layout again.
+//! id is 0. Every change of the menu is announced with `LayoutUpdated` and a
+//! new revision, after which hosts fetch the whole layout again.
+//!
+//! Each revision numbers its items afresh, in a range of its own: hosts keep
+//! the items they know by id and update only the properties they are sent
+//! again (libdbusmenu-qt in KDE Plasma does), so an id that meant another item
+//! before would keep that item's separator type or check box. An event for an
+//! id of an older revision is reported as an unknown item.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -14,9 +19,15 @@ use zbus::{OwnedVariant, Variant, fdo, interface};
 
 use super::{Shared, TrayMenuItem, no_item};
 
-/// The number of a menu item: its position in the menu, counted from 1; 0 is
-/// the root.
+/// The number of a menu item: its revision's range plus its position in the
+/// menu, counted from 1; 0 is the root.
 pub type MenuItemId = i32;
+
+/// The ids of one revision: `SPAN` of them, of which the first is not used.
+const SPAN: i32 = 1000;
+/// How many revisions have ranges of their own before the ranges are used
+/// again.
+const RANGES: u32 = (i32::MAX / SPAN - 1) as u32;
 
 /// The properties of one item, as the protocol names them.
 type Properties = HashMap<String, OwnedVariant>;
@@ -73,12 +84,24 @@ fn properties(item: Option<&TrayMenuItem>, names: &[String]) -> Properties {
     all
 }
 
-fn index(id: i32) -> Option<usize> {
-    usize::try_from(id).ok()?.checked_sub(1)
+/// The first id of `revision`'s range.
+fn base(revision: u32) -> i32 {
+    // RANGES is below i32::MAX / SPAN, so the product fits.
+    i32::try_from(revision % RANGES).unwrap_or(0) * SPAN
 }
 
-fn id_of(index: usize) -> i32 {
-    i32::try_from(index + 1).unwrap_or(i32::MAX)
+/// The position of the item `id` of `revision`, if it is one of its ids.
+fn index(revision: u32, id: i32) -> Option<usize> {
+    let offset = id.checked_sub(base(revision))?;
+    if !(1..SPAN).contains(&offset) {
+        return None;
+    }
+    usize::try_from(offset - 1).ok()
+}
+
+/// The id of the item at `index` in `revision`.
+fn id_of(revision: u32, index: usize) -> i32 {
+    base(revision) + i32::try_from(index + 1).unwrap_or(SPAN - 1).min(SPAN - 1)
 }
 
 /// The menu object.
@@ -87,11 +110,11 @@ pub(super) struct Menu {
 }
 
 impl Menu {
-    fn item(menu: &[TrayMenuItem], id: i32) -> fdo::Result<Option<&TrayMenuItem>> {
+    fn item(menu: &[TrayMenuItem], revision: u32, id: i32) -> fdo::Result<Option<&TrayMenuItem>> {
         if id == 0 {
             return Ok(None);
         }
-        index(id)
+        index(revision, id)
             .and_then(|i| menu.get(i))
             .map(Some)
             .ok_or_else(|| no_item(id))
@@ -99,8 +122,8 @@ impl Menu {
 
     /// Acts on one event; whether the item exists.
     fn event_on(&self, id: i32, event: &str) -> bool {
-        let (content, _) = self.shared.content();
-        let Ok(item) = Self::item(&content.menu, id) else {
+        let (content, revision) = self.shared.content();
+        let Ok(item) = Self::item(&content.menu, revision, id) else {
             return false;
         };
         if event == "clicked"
@@ -125,12 +148,12 @@ impl Menu {
         property_names: Vec<String>,
     ) -> fdo::Result<(u32, Node)> {
         let (content, revision) = self.shared.content();
-        let parent = Self::item(&content.menu, parent_id)?;
+        let parent = Self::item(&content.menu, revision, parent_id)?;
         let mut children = Vec::new();
         if parent.is_none() && recursion_depth != 0 {
             for (i, item) in content.menu.iter().enumerate() {
                 let node: Node = (
-                    id_of(i),
+                    id_of(revision, i),
                     properties(Some(item), &property_names),
                     Vec::new(),
                 );
@@ -148,23 +171,25 @@ impl Menu {
         ids: Vec<i32>,
         property_names: Vec<String>,
     ) -> Vec<(i32, Properties)> {
-        let (content, _) = self.shared.content();
+        let (content, revision) = self.shared.content();
         let ids = if ids.is_empty() {
-            (0..=content.menu.len()).map(id_of_or_root).collect()
+            (0..=content.menu.len())
+                .map(|n| id_of_or_root(revision, n))
+                .collect()
         } else {
             ids
         };
         ids.into_iter()
             .filter_map(|id| {
-                let item = Self::item(&content.menu, id).ok()?;
+                let item = Self::item(&content.menu, revision, id).ok()?;
                 Some((id, properties(item, &property_names)))
             })
             .collect()
     }
 
     fn get_property(&self, id: i32, name: String) -> fdo::Result<OwnedVariant> {
-        let (content, _) = self.shared.content();
-        let item = Self::item(&content.menu, id)?;
+        let (content, revision) = self.shared.content();
+        let item = Self::item(&content.menu, revision, id)?;
         properties(item, std::slice::from_ref(&name))
             .remove(&name)
             .ok_or_else(|| fdo::Error::InvalidArgs(format!("no property {name}")))
@@ -235,9 +260,9 @@ impl Menu {
     ) -> zbus::Result<()>;
 }
 
-/// The root for 0, otherwise the item at `n - 1`.
-fn id_of_or_root(n: usize) -> i32 {
-    if n == 0 { 0 } else { id_of(n - 1) }
+/// The root for 0, otherwise the item at `n - 1` of `revision`.
+fn id_of_or_root(revision: u32, n: usize) -> i32 {
+    if n == 0 { 0 } else { id_of(revision, n - 1) }
 }
 
 #[cfg(test)]
@@ -284,12 +309,24 @@ mod tests {
     }
 
     #[test]
-    fn ids_count_from_one() {
-        assert_eq!(index(0), None);
-        assert_eq!(index(1), Some(0));
-        assert_eq!(index(-3), None);
-        assert_eq!(id_of(0), 1);
-        assert_eq!(id_of_or_root(0), 0);
-        assert_eq!(id_of_or_root(2), 2);
+    fn each_revision_numbers_its_items_afresh() {
+        assert_eq!(id_of(0, 0), 1);
+        assert_eq!(index(0, 1), Some(0));
+        assert_eq!(index(0, 0), None);
+        assert_eq!(index(0, -3), None);
+        assert_eq!(id_of_or_root(0, 0), 0);
+        assert_eq!(id_of_or_root(0, 2), 2);
+        // The same position in the next revision is another id, and the ids
+        // of the old revision are no longer items.
+        assert_eq!(id_of(1, 0), 1001);
+        assert_eq!(index(1, 1001), Some(0));
+        assert_eq!(index(1, 1), None);
+        assert_eq!(index(2, 1001), None);
+        assert_eq!(index(1, 2000), None);
+        // The ranges stay within i32 and start over after RANGES revisions.
+        assert!(id_of(RANGES - 1, 998) > 0);
+        assert_eq!(id_of(RANGES, 0), 1);
+        assert_eq!(id_of(u32::MAX, 0), base(u32::MAX) + 1);
+        assert!(base(u32::MAX) >= 0);
     }
 }
