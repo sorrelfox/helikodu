@@ -26,6 +26,7 @@ The release candidate with Helikodu's own Flatpak repository and fixes for narro
 - Search results no longer run off the page in a narrow window: the query syntax and saved searches go under the results when there is no room beside them, and the table of a query fits a narrow page in every language (its Length column was cut off in a 1440-pixel window with the queue panel open).
 - Artists, Genres, Composers, Years and Folders fit a narrow window: the list gets narrower down to 200 pixels, and the buttons of the page's header go under the title instead of cutting off its right side or shortening the name to a few letters. A long artist name continues on a second line.
 - The album and audiobook pages fit a narrow window: the format badges continue on a second line, the Details column goes under the tracks, and the cover no longer stretches into an empty frame when the buttons take several lines.
+- Identical copies found in one scan get their main copy by the documented rule, the shorter path and then the lower one, instead of by whichever file the scan happened to write first.
 - Albums fits a narrow window in French: its quick filter and sort button continue on a second line. A playlist's name is no longer shortened to a few letters in a narrow window: its buttons go under it.
 
 ## [0.9.2] - 2026-11-19

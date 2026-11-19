@@ -443,8 +443,12 @@ fn upsert_file(
     }
     let id = c
         .prepare_cached(
-            "INSERT INTO files (dir_id, name, name_text, size, mtime_ns, inode, quick_hash)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) RETURNING id",
+            // A new file enters at `now`, the time of its scan, and not when the
+            // writer gets to it: copies read in one scan entered together, and the
+            // shorter or lower path decides their main copy.
+            "INSERT INTO files (dir_id, name, name_text, size, mtime_ns, inode, quick_hash,
+                                added_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) RETURNING id",
         )?
         .query_row(
             params![
@@ -454,7 +458,8 @@ fn upsert_file(
                 size,
                 stamp.mtime_ns,
                 inode,
-                stamp.quick_hash
+                stamp.quick_hash,
+                now
             ],
             |row| row.get(0),
         )?;
