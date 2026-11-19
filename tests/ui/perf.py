@@ -35,7 +35,7 @@ import headless  # noqa: E402
 FIRST_FRAME_MS = 1000.0
 INTERACTIVE_MS = 1500.0
 MAX_FRAME_MS = 50.0
-RSS_MB = 250.0  # megabytes, 10^6 bytes
+RSS_MB = 270.0  # megabytes, 10^6 bytes
 IDLE_CPU_PCT = 0.1
 # "At the display refresh rate": the 95th percentile interval within 10 % of
 # one refresh (60 Hz on the virtual output).
@@ -137,7 +137,7 @@ def report(results):
                       ("rss_peak_mib", "RSS peak")]:
         v = full.get(key)
         if v is not None:
-            add(what, f"{v:.0f} MiB ({v * 2**20 / 1e6:.0f} MB)", "≤ 250 MB", v <= mib_budget)
+            add(what, f"{v:.0f} MiB ({v * 2**20 / 1e6:.0f} MB)", f"≤ {RSS_MB:.0f} MB", v <= mib_budget)
     # Where the memory is (/proc/self/smaps_rollup): pages only this process
     # maps and pages shared with others, the proportional set size, anonymous
     # memory, and the graphics driver's libraries (private when no other

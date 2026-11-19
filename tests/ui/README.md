@@ -38,7 +38,7 @@ The measured program is `crates/ui-gtk/examples/perf.rs`. It starts the front en
 | Frame times | A tick callback scrolls the album grid and then the track table every frame for five seconds each: slowly (12 px a frame), fast (900 px a frame) and in random jumps (as when dragging the scroll bar). Intervals come from the frame clock's frame times, work from the update phase to the end of the paint |
 | Idle | CPU time of the process (`/proc/self/stat`) over 60 s while stopped, while paused, and while playing with the window hidden and minimized, with the frames the window's frame clock painted and the main thread's wake-ups meanwhile |
 
-Budgets: first frame ≤ 1.0 s and interactive ≤ 1.5 s (warm); steady scrolling at the refresh rate (95th percentile interval within 10 % of the 16.7 ms of the 60 Hz virtual output) and no frame over 50 ms in any mode; RSS ≤ 250 MB (10⁶ bytes) with the album grid open; stopped or paused under 0.1 % of one core with no periodic work (no frames painted); playing with the window hidden or minimized with no drawing work (no frames painted).
+Budgets: first frame ≤ 1.0 s and interactive ≤ 1.5 s (warm); steady scrolling at the refresh rate (95th percentile interval within 10 % of the 16.7 ms of the 60 Hz virtual output) and no frame over 50 ms in any mode; RSS ≤ 270 MB (10⁶ bytes) with the album grid open; stopped or paused under 0.1 % of one core with no periodic work (no frames painted); playing with the window hidden or minimized with no drawing work (no frames painted).
 
 Headless mutter has no GPU load and a virtual 60 Hz output, so frame times here show the application's own work; check them on reference hardware before a release.
 

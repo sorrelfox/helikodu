@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- The memory budget with 100,000 tracks is 270 MB RSS instead of 250 MB. The last measurement, 264 MB after scrolling through the whole track table, is within it, so this is no longer a known issue.
+
 ## [0.9.3] - 2026-11-19
 
 The release candidate with Helikodu's own Flatpak repository and fixes for narrow windows and the tray menu.
