@@ -11,7 +11,8 @@
 //! tracks it selects in a table instead. A query that cannot be read keeps the
 //! last one that could, with a notice that says what fails.
 //!
-//! A side column shows examples of the query syntax and the saved searches.
+//! A side column shows examples of the query syntax and the saved searches,
+//! beside the results or, when the page is narrow, under them.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -32,8 +33,18 @@ use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
 use crate::views::tracks::TracksView;
 use crate::widgets::avatar::Avatar;
+use crate::widgets::pane_layouts::{BesideLayout, divider};
 use crate::widgets::{CoverArt, TitleLine, WrapBox, label, view_note, view_title};
 use crate::window::Page;
+
+/// The width of the side column beside the results; its captions wrap.
+const SIDE_WIDTH: i32 = 300;
+
+/// The least width of the results beside the side column, that of the
+/// narrowest content area: below it, the side column goes under the results,
+/// taking at most two fifths of the height. The table of a query fits it in
+/// the longer languages too.
+const RESULTS_LEAST: i32 = 560;
 
 /// The examples of the side column: a query and what it shows.
 fn examples() -> [(&'static str, String); 4] {
@@ -55,11 +66,12 @@ fn examples() -> [(&'static str, String); 4] {
 }
 
 /// The columns of the query results: Title, Artist, Album, Genre, Added and
-/// Length.
+/// Length. The widths of the first three are their least: they share the
+/// room left, and together with the others fit a narrow page.
 const QUERY_COLUMNS: &[(TrackColumn, i32, bool)] = &[
-    (TrackColumn::Title, 130, true),
-    (TrackColumn::Artist, 96, true),
-    (TrackColumn::Album, 100, true),
+    (TrackColumn::Title, 100, true),
+    (TrackColumn::Artist, 76, true),
+    (TrackColumn::Album, 76, true),
     (TrackColumn::Genre, 80, false),
     (TrackColumn::Added, 90, false),
     (TrackColumn::Length, 80, false),
@@ -281,7 +293,6 @@ impl SearchView {
         // The side column: the query syntax and the saved searches.
         let side = gtk::Box::new(gtk::Orientation::Vertical, 0);
         side.add_css_class("hk-search-side");
-        side.set_size_request(300, -1);
         let syntax = label(&tr("Query syntax"), &["hk-section-label"]);
         syntax.set_accessible_role(gtk::AccessibleRole::Heading);
         side.append(&syntax);
@@ -310,11 +321,14 @@ impl SearchView {
         let side_scroller = gtk::ScrolledWindow::new();
         side_scroller.set_hscrollbar_policy(gtk::PolicyType::Never);
         side_scroller.set_child(Some(&side));
-        side_scroller.add_css_class("hk-search-side-pane");
 
+        // The side column beside the results, or under them when the page is
+        // too narrow for both.
         let root = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         root.append(&stack);
+        root.append(&divider());
         root.append(&side_scroller);
+        BesideLayout::install(&root, RESULTS_LEAST, 40, SIDE_WIDTH);
 
         let view = Rc::new(Self {
             root,
@@ -360,6 +374,9 @@ impl SearchView {
             });
             chips.append(&chip);
             let caption = label(&caption, &["hk-query-caption"]);
+            caption.set_ellipsize(pango::EllipsizeMode::None);
+            caption.set_single_line_mode(false);
+            caption.set_wrap(true);
             chips.append(&caption);
         }
         view.connect_query();

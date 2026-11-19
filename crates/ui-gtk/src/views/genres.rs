@@ -18,25 +18,35 @@ use crate::playback::Playback;
 use crate::views::AlbumsView;
 use crate::views::actions::{self, Target};
 use crate::widgets::empty_state::empty_state;
-use crate::widgets::label;
+use crate::widgets::pane_layouts::{HeadLayout, ListDetailLayout};
+use crate::widgets::{label, view_note, view_title};
 
 type Open = Box<dyn Fn(GenreKey)>;
+
+/// The width of the list pane, and the least it gives way to.
+const LIST_WIDTH: (i32, i32) = (264, 200);
+/// The width the detail beside the list pane keeps at least before the pane
+/// gives way, here and in Folders.
+pub(crate) const DETAIL_LEAST: i32 = 360;
+
+/// Lays out `root`, a list pane (see [`list_pane`]) and the detail: the pane
+/// is 264 wide, or narrower down to 200 when the detail would be narrower
+/// than [`DETAIL_LEAST`].
+pub(crate) fn list_and_detail(root: &gtk::Box) {
+    ListDetailLayout::install(root, LIST_WIDTH.0, LIST_WIDTH.1, DETAIL_LEAST);
+}
 
 /// The list pane shared by Genres and Artists: a header with the view title,
 /// the count and a button, then a scrolled list.
 pub(crate) fn list_pane(title: &str, button: &gtk::Widget) -> (gtk::Box, gtk::Label, gtk::ListBox) {
     let pane = gtk::Box::new(gtk::Orientation::Vertical, 0);
     pane.add_css_class("hk-list-pane");
-    pane.set_size_request(264, -1);
     pane.set_hexpand(false);
     let head = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     head.add_css_class("hk-pane-header");
-    let heading = label(title, &["hk-view-title"]);
-    heading.set_accessible_role(gtk::AccessibleRole::Heading);
-    head.append(&heading);
-    let count = label("", &["hk-t3", "hk-numeric"]);
-    count.set_hexpand(true);
-    count.set_valign(gtk::Align::Baseline);
+    // The title keeps its whole text in a narrower pane: the count gives way.
+    head.append(&view_title(title));
+    let count = view_note(&["hk-t3", "hk-numeric"]);
     head.append(&count);
     button.set_valign(gtk::Align::Center);
     head.append(button);
@@ -161,6 +171,7 @@ impl GenresView {
             buttons.append(w);
         }
         header.append(&buttons);
+        HeadLayout::install(&header);
         page.append(&header);
         let albums = AlbumsView::default();
         albums.bind(backend, playback, covers, open_album);
@@ -178,6 +189,7 @@ impl GenresView {
         );
         detail.set_visible_child_name("none");
         root.append(&detail);
+        list_and_detail(&root);
 
         let view = Rc::new(Self {
             root,

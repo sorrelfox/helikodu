@@ -27,6 +27,7 @@ use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
 use crate::views::artists::button;
 use crate::widgets::empty_state::empty_state;
+use crate::widgets::pane_layouts::{HeadLayout, ListDetailLayout};
 use crate::widgets::{PlayingIndicator, WrapBox, label};
 
 mod imp {
@@ -176,8 +177,6 @@ impl FoldersView {
         let root = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         let pane = gtk::Box::new(gtk::Orientation::Vertical, 0);
         pane.add_css_class("hk-list-pane");
-        pane.set_size_request(300, -1);
-        // Spare room goes to the folder's page, not to the tree.
         pane.set_hexpand(false);
         let head = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         head.add_css_class("hk-pane-header");
@@ -277,6 +276,7 @@ impl FoldersView {
             buttons.append(b);
         }
         header.append(&buttons);
+        HeadLayout::install(&header);
         page.append(&header);
         let table_header = gtk::Box::new(gtk::Orientation::Horizontal, 16);
         table_header.add_css_class("hk-table-header");
@@ -331,6 +331,9 @@ impl FoldersView {
         );
         detail.set_visible_child_name("none");
         root.append(&detail);
+        // The tree is 300 wide, or narrower down to 200 when the folder's page
+        // is short of room; spare room goes to the folder's page.
+        ListDetailLayout::install(&root, 300, 200, crate::views::genres::DETAIL_LEAST);
 
         let view = Rc::new(Self {
             root,

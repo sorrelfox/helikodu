@@ -12,6 +12,8 @@ The sidebar lists the views of your library (**Home**, **Albums**, **Artists**, 
 
 When the window is too narrow for the content to keep 560 pixels beside the panes, the panes leave the row and open over the content instead: first the queue panel (below a window width of about 1100 pixels at the usual pane widths), then the sidebar (below about 800 pixels). With the sidebar hidden (**F9**), the queue panel stays beside the content down to about 880 pixels. The header then starts with a sidebar button, without the **Forward** button, and has a queue button at the right. An open pane covers the rest of the content with a dark layer; a click beside it, **Esc**, its key (**F9** for the sidebar) or choosing a view closes it. The player deck stays in use.
 
+The pages make room in a narrow content area too: the list of Artists, Genres, Composers, Years and Folders gets narrower, the buttons of a page's header go under its title, the **Details** column of an album goes under the tracks, and the query syntax and saved searches go under the search results.
+
 Below 720 pixels the deck is compact: the cover, title and artist at the left, **Previous**, **Play** and **Next** in the middle, and at the right a volume button, whose slider opens above it, and the output button with only its lamp and the output's rate and bits. Shuffle and repeat are then in the menu of the **Play** button (right-click or long press).
 
 ## Search
@@ -56,7 +58,7 @@ On the album page, **Play** plays the album from the start, **Shuffle** in rando
 
 Select a track to see its own facts below the album's: its artist when it differs from the album artist, composer, number, length, format, track gain, plays, when it was last played, rating, when it was added, whether it has lyrics, its copies, its file size and its file. With a track selected, **Open folder** shows that track's folder.
 
-Drag the left border of the **Details** column to make it wider or narrower. The width is kept for every album and audiobook page and the next time Helikodu starts.
+Drag the left border of the **Details** column to make it wider or narrower; when the page is too narrow for it beside the tracks, it is under them. The width is kept for every album and audiobook page and the next time Helikodu starts.
 
 ## Artists
 

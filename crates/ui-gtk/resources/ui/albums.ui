@@ -50,6 +50,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
           <object class="GtkLabel" id="count">
             <property name="valign">baseline-center</property>
             <property name="hexpand">True</property>
+            <!-- Gives way first when the toolbar is narrow. -->
+            <property name="ellipsize">end</property>
+            <property name="max-width-chars">1</property>
             <property name="xalign">0</property>
             <style>
               <class name="hk-t3"/>
@@ -57,42 +60,52 @@ SPDX-License-Identifier: GPL-3.0-or-later
             </style>
           </object>
         </child>
+        <!-- The quick filter and the sort button continue on a second line
+             when they do not fit beside the title. -->
         <child>
-          <object class="GtkBox" id="filters">
+          <object class="HkWrapBox">
             <property name="valign">center</property>
-            <property name="spacing">2</property>
-            <accessibility>
-              <property name="label" translatable="yes">Quick filter</property>
-            </accessibility>
-            <style><class name="hk-seg"/></style>
+            <property name="spacing">10</property>
+            <property name="row-spacing">8</property>
+            <property name="baseline">True</property>
             <child>
-              <object class="GtkToggleButton" id="filter_all">
-                <property name="label" translatable="yes">All</property>
-                <property name="active">True</property>
+              <object class="GtkBox" id="filters">
+                <property name="valign">center</property>
+                <property name="spacing">2</property>
+                <accessibility>
+                  <property name="label" translatable="yes">Quick filter</property>
+                </accessibility>
+                <style><class name="hk-seg"/></style>
+                <child>
+                  <object class="GtkToggleButton" id="filter_all">
+                    <property name="label" translatable="yes">All</property>
+                    <property name="active">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="filter_lossless">
+                    <property name="label" translatable="yes">Lossless</property>
+                    <property name="group">filter_all</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkToggleButton" id="filter_hires">
+                    <property name="label" translatable="yes">Hi-res</property>
+                    <property name="group">filter_all</property>
+                  </object>
+                </child>
               </object>
             </child>
             <child>
-              <object class="GtkToggleButton" id="filter_lossless">
-                <property name="label" translatable="yes">Lossless</property>
-                <property name="group">filter_all</property>
+              <object class="GtkMenuButton" id="sort_button">
+                <property name="valign">center</property>
+                <property name="menu-model">sort_menu</property>
+                <property name="always-show-arrow">True</property>
+                <property name="label" translatable="yes">Album artist</property>
+                <property name="tooltip-text" translatable="yes">Sort order</property>
+                <style><class name="hk-sort"/></style>
               </object>
             </child>
-            <child>
-              <object class="GtkToggleButton" id="filter_hires">
-                <property name="label" translatable="yes">Hi-res</property>
-                <property name="group">filter_all</property>
-              </object>
-            </child>
-          </object>
-        </child>
-        <child>
-          <object class="GtkMenuButton" id="sort_button">
-            <property name="valign">center</property>
-            <property name="menu-model">sort_menu</property>
-            <property name="always-show-arrow">True</property>
-            <property name="label" translatable="yes">Album artist</property>
-            <property name="tooltip-text" translatable="yes">Sort order</property>
-            <style><class name="hk-sort"/></style>
           </object>
         </child>
       </object>

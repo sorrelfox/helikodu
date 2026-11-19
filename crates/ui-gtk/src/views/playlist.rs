@@ -33,6 +33,7 @@ use crate::views::actions::{self, Origin, Target};
 use crate::views::artists::button;
 use crate::views::drag::DraggedTracks;
 use crate::views::table::{TableCell, cell_at, selected_positions};
+use crate::widgets::pane_layouts::HeadLayout;
 use crate::widgets::{CoverArt, PlayingIndicator, TitleLine, WrapBox, label};
 
 /// "edited yesterday", from when a playlist last changed.
@@ -224,6 +225,7 @@ impl PlaylistView {
             buttons.append(b);
         }
         hero.append(&buttons);
+        HeadLayout::install(&hero);
         root.append(&hero);
 
         let header = gtk::Box::new(gtk::Orientation::Horizontal, 16);

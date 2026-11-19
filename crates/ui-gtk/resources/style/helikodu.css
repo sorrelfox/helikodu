@@ -293,7 +293,9 @@ menubar > item:hover, menubar > item:selected { background-color: var(--hk-seg);
 /* ---- 8. Album page ------------------------------------------------------ */
 
 .hk-hero { padding: 28px 32px 24px; border-bottom: 1px solid var(--hk-line); }
-.hk-details { padding: 24px 20px; border-left: 1px solid var(--hk-line); }
+.hk-details { padding: 24px 20px; }
+/* The line between a page's content and its side column, upright or across. */
+.hk-pane-divider { background-color: var(--hk-line); }
 .hk-now-playing { padding: 16px; border-bottom: 1px solid var(--hk-line); }
 .hk-panel-footer { min-height: 43px; padding: 0 8px 0 16px; border-top: 1px solid var(--hk-line); }
 

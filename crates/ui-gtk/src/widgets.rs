@@ -15,6 +15,7 @@ pub(crate) mod level_meter;
 pub(crate) mod lyric_lines;
 pub(crate) mod menu_names;
 pub(crate) mod now_links;
+pub(crate) mod pane_layouts;
 pub(crate) mod playing_indicator;
 pub(crate) mod rating_stars;
 pub(crate) mod side_column;

@@ -147,6 +147,10 @@ mod imp {
                 child.allocate(width, height, baseline, None);
             }
             if let Some(grip) = self.grip.borrow().as_ref() {
+                // A column as wide as its parent is under the content, not
+                // beside it: there is no width to drag.
+                let beside = self.obj().parent().is_none_or(|p| width < p.width());
+                grip.set_child_visible(beside);
                 // Half outside the column, so the grip lies across its border.
                 let at = gsk_offset(-(GRIP / 2));
                 grip.allocate(GRIP, height, -1, Some(at));

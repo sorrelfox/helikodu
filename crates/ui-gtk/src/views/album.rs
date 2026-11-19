@@ -26,6 +26,7 @@ use crate::models::CoverCache;
 use crate::playback::{Change, Playback, PlayingKeys};
 use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
+use crate::widgets::pane_layouts::{BesideLayout, divider};
 use crate::widgets::side_column::SideColumn;
 use crate::widgets::{CoverArt, PlayingIndicator, RatingStars, TitleLine, label};
 use crate::window::MainWindow;
@@ -33,7 +34,8 @@ use crate::window::MainWindow;
 /// The details column's default width and its limits.
 const DETAILS_WIDTH: (i32, (i32, i32)) = (260, (220, 520));
 /// How wide dragging the details column leaves the track table at least, so
-/// its columns stay readable.
+/// its columns stay readable; in a narrower page the column goes under the
+/// tracks.
 const TRACKS_MIN_WIDTH: i32 = 440;
 
 mod imp {
@@ -79,7 +81,7 @@ mod imp {
         #[template_child]
         pub(super) meta: TemplateChild<gtk::Label>,
         #[template_child]
-        pub(super) badges: TemplateChild<gtk::Box>,
+        pub(super) badges: TemplateChild<crate::widgets::WrapBox>,
         #[template_child]
         pub(super) play: TemplateChild<gtk::Button>,
         #[template_child]
@@ -137,11 +139,15 @@ mod imp {
             self.cover.add_css_class("hero");
             let obj = self.obj();
             // The details column keeps the width chosen for it; its text wraps.
+            // It goes under the tracks when the page is too narrow for both.
             let details_box = self.details_box.get();
             self.body.remove(&details_box);
             let column = SideColumn::new(&details_box, DETAILS_WIDTH.0, DETAILS_WIDTH.1);
-            column.set_beside_min(TRACKS_MIN_WIDTH);
+            // The tracks and the line between.
+            column.set_beside_min(TRACKS_MIN_WIDTH + 1);
+            self.body.append(&divider());
             self.body.append(&column);
+            BesideLayout::install(&self.body, TRACKS_MIN_WIDTH, 100, 0);
             self.details_column.replace(Some(column));
             for (button, shuffle) in [(self.play.get(), false), (self.shuffle.get(), true)] {
                 let weak = obj.downgrade();

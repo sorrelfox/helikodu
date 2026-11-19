@@ -93,6 +93,7 @@ mod imp {
         type ParentType = gtk::Box;
 
         fn class_init(klass: &mut Self::Class) {
+            crate::widgets::WrapBox::ensure_type();
             klass.bind_template();
         }
 

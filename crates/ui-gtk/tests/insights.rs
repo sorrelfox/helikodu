@@ -23,7 +23,7 @@ use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use helikodu_ui_gtk::backend::{Backend, FacetField, sample};
+use helikodu_ui_gtk::backend::{AlbumQuery, Backend, FacetField, sample};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display, snapshot};
 
@@ -349,6 +349,67 @@ fn a_hidden_sidebar_leaves_its_room_to_the_panel(app: &gtk::Application) {
 
 /// Calls `method` of the application's interface on `application` and waits
 /// for the reply.
+/// The widgets of `window` given less width than they need, which are cut
+/// off: their type, style classes and the widths. Icons that ask for a little
+/// more than their size are left out.
+fn cut_off(window: &MainWindow) -> Vec<String> {
+    descendants(window.upcast_ref())
+        .into_iter()
+        .filter(|w| w.is_drawable() && w.width() > 0)
+        .filter(|w| {
+            !matches!(
+                w.type_().name(),
+                "GtkImage" | "GtkGizmo" | "GtkBuiltinIcon" | "GtkWindowControls"
+            )
+        })
+        .filter_map(|w| {
+            let (min, ..) = w.measure(gtk::Orientation::Horizontal, -1);
+            let bounds = w.compute_bounds(&w)?;
+            let have = bounds.width() as i32 + w.margin_start() + w.margin_end();
+            (min > have + 1)
+                .then(|| format!("{} {:?}: {min} > {have}", w.type_().name(), w.css_classes()))
+        })
+        .collect()
+}
+
+fn pages_fit_the_narrowest_content(app: &gtk::Application) {
+    // 788 - 228 = 560: the narrowest content beside the sidebar, the panel
+    // over it.
+    let (window, backend) = window_sized(app, 788);
+    wait_for("the narrow layout", 3, || {
+        window.narrow_state() == (false, true, false)
+    });
+    let check = |page: &str| {
+        spin(400);
+        let cut = cut_off(&window);
+        assert!(cut.is_empty(), "{page} is cut off: {cut:#?}");
+    };
+    for page in [
+        "home",
+        "albums",
+        "artists",
+        "genres",
+        "composers",
+        "years",
+        "folders",
+    ] {
+        window.open_page(page);
+        check(page);
+    }
+    let albums = backend
+        .library()
+        .album_keys(&AlbumQuery::default())
+        .unwrap();
+    window.open_album(albums[0]);
+    check("album");
+    window.search_text("harbour");
+    check("search");
+    window.search_text("genre:jazz -genre:fusion");
+    check("query");
+    window.search_text("");
+    window.destroy();
+}
+
 fn call(
     application: &gtk::Application,
     method: &str,
@@ -443,6 +504,10 @@ const TESTS: &[(&str, Test)] = &[
         a_hidden_sidebar_leaves_its_room_to_the_panel,
     ),
     ("the_dbus_interface_answers", the_dbus_interface_answers),
+    (
+        "pages_fit_the_narrowest_content",
+        pages_fit_the_narrowest_content,
+    ),
 ];
 
 fn main() -> ExitCode {

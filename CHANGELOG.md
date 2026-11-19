@@ -17,6 +17,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Library statistics no longer cut short the large figures (Size, Playing time, listened) in a narrower window: the tiles and the listening figures continue on further rows, and Formats and Quality, and the most played artists and albums, go one under the other.
 - Page titles such as History, Results, Tracks and Library statistics are no longer cut short in a narrower window: the count beside the title gives way first, the Tracks filter gets narrower, and the controls of History and of query results continue on a second line.
 - With the sidebar hidden, the queue panel stays beside the content as long as there is room for both, instead of opening over it as if the sidebar were still there; showing or hiding the sidebar lays the panes out again.
+- Search results no longer run off the page in a narrow window: the query syntax and saved searches go under the results when there is no room beside them, and the table of a query fits a narrow page in every language (its Length column was cut off in a 1440-pixel window with the queue panel open).
+- Artists, Genres, Composers, Years and Folders fit a narrow window: the list gets narrower down to 200 pixels, and the buttons of the page's header go under the title instead of cutting off its right side or shortening the name to a few letters. A long artist name continues on a second line.
+- The album and audiobook pages fit a narrow window: the format badges continue on a second line, the Details column goes under the tracks, and the cover no longer stretches into an empty frame when the buttons take several lines.
+- Albums fits a narrow window in French: its quick filter and sort button continue on a second line. A playlist's name is no longer shortened to a few letters in a narrow window: its buttons go under it.
 
 ## [0.9.2] - 2026-11-19
 

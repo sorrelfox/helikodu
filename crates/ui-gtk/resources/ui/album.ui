@@ -19,7 +19,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
                 <property name="spacing">28</property>
                 <style><class name="hk-hero"/></style>
                 <child>
-                  <object class="HkCoverArt" id="cover"/>
+                  <object class="HkCoverArt" id="cover">
+                    <property name="valign">start</property>
+                  </object>
                 </child>
                 <child>
                   <object class="GtkBox">
@@ -65,8 +67,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
                       </object>
                     </child>
                     <child>
-                      <object class="GtkBox" id="badges">
+                      <object class="HkWrapBox" id="badges">
                         <property name="spacing">6</property>
+                        <property name="row-spacing">6</property>
                         <property name="margin-top">14</property>
                       </object>
                     </child>
@@ -190,6 +193,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
                             </child>
                             <child>
                               <object class="GtkLabel" id="heard_text">
+                                <property name="wrap">True</property>
+                                <property name="xalign">0</property>
                                 <style>
                                   <class name="hk-t3"/>
                                   <class name="hk-numeric"/>

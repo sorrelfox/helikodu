@@ -29,9 +29,10 @@ use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
 use crate::playback::Playback;
 use crate::views::AlbumsView;
-use crate::views::genres::{list_pane, sort_button};
+use crate::views::genres::{list_and_detail, list_pane, sort_button};
 use crate::widgets::empty_state::empty_state;
 use crate::widgets::label;
+use crate::widgets::pane_layouts::HeadLayout;
 
 /// Which list the view shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -264,6 +265,7 @@ impl CategoryView {
             buttons.append(w);
         }
         header.append(&buttons);
+        HeadLayout::install(&header);
         page.append(&header);
         let albums = AlbumsView::default();
         albums.bind(backend, playback, covers, open_album);
@@ -276,6 +278,7 @@ impl CategoryView {
         );
         detail.set_visible_child_name("none");
         root.append(&detail);
+        list_and_detail(&root);
 
         let view = Rc::new(Self {
             root,

@@ -30,6 +30,7 @@ use crate::views::genres::list_pane;
 use crate::views::tracks::TracksView;
 use crate::widgets::avatar::Avatar;
 use crate::widgets::empty_state::empty_state;
+use crate::widgets::pane_layouts::HeadLayout;
 use crate::widgets::{TitleLine, WrapBox, label};
 
 type Open = Box<dyn Fn(ArtistKey)>;
@@ -148,6 +149,11 @@ impl ArtistsView {
         titles.append(&label(&tr("Album artist"), &["hk-section-label"]));
         let name = label("", &["hk-hero-title"]);
         name.set_accessible_role(gtk::AccessibleRole::Heading);
+        // A long name continues on a second line before it is cut short.
+        name.set_single_line_mode(false);
+        name.set_wrap(true);
+        name.set_wrap_mode(gtk::pango::WrapMode::WordChar);
+        name.set_lines(2);
         titles.append(&name);
         let summary = label("", &["hk-t3"]);
         summary.set_wrap(true);
@@ -179,6 +185,7 @@ impl ArtistsView {
         buttons.append(&shuffle);
         buttons.append(&more);
         hero.append(&buttons);
+        HeadLayout::install(&hero);
         page.append(&hero);
 
         let tabs = gtk::Box::new(gtk::Orientation::Horizontal, 22);
@@ -264,6 +271,7 @@ impl ArtistsView {
         );
         detail.set_visible_child_name("none");
         root.append(&detail);
+        crate::views::genres::list_and_detail(&root);
 
         let view = Rc::new(Self {
             root,

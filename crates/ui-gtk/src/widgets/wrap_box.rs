@@ -22,6 +22,10 @@ mod imp {
         pub(super) spacing: Cell<i32>,
         /// The gap between lines.
         pub(super) row_spacing: Cell<i32>,
+        /// Whether one line reports its children's baseline, so that the row
+        /// around it lines them up with its labels as it would the children
+        /// themselves.
+        pub(super) baseline: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -45,15 +49,16 @@ mod imp {
                         .minimum(0)
                         .default_value(0)
                         .build(),
+                    glib::ParamSpecBoolean::builder("baseline").build(),
                 ]
             })
         }
 
         fn set_property(&self, _id: usize, value: &glib::Value, pspec: &glib::ParamSpec) {
-            let v = value.get::<i32>().unwrap_or(0);
             match pspec.name() {
-                "spacing" => self.spacing.set(v),
-                _ => self.row_spacing.set(v),
+                "spacing" => self.spacing.set(value.get().unwrap_or(0)),
+                "baseline" => self.baseline.set(value.get().unwrap_or(false)),
+                _ => self.row_spacing.set(value.get().unwrap_or(0)),
             }
             self.obj().queue_resize();
         }
@@ -61,6 +66,7 @@ mod imp {
         fn property(&self, _id: usize, pspec: &glib::ParamSpec) -> glib::Value {
             match pspec.name() {
                 "spacing" => self.spacing.get().to_value(),
+                "baseline" => self.baseline.get().to_value(),
                 _ => self.row_spacing.get().to_value(),
             }
         }
@@ -90,15 +96,27 @@ mod imp {
                 let lines = self.lines(&children, width);
                 let height = lines.iter().map(|line| line.height).sum::<i32>();
                 let total = height + self.row_spacing.get() * (lines.len() as i32 - 1).max(0);
-                (total, total, -1, -1)
+                let baseline = match lines.as_slice() {
+                    [line] if self.baseline.get() => line.baseline,
+                    _ => -1,
+                };
+                (total, total, baseline, baseline)
             }
         }
 
-        fn size_allocate(&self, width: i32, _height: i32, _baseline: i32) {
+        fn size_allocate(&self, width: i32, height: i32, _baseline: i32) {
             let children = self.children();
             let rtl = self.obj().direction() == gtk::TextDirection::Rtl;
             let mut y = 0;
-            for line in self.lines(&children, width) {
+            let mut lines = self.lines(&children, width);
+            if let [line] = lines.as_mut_slice()
+                && self.baseline.get()
+            {
+                // One line has the whole height, where the children align
+                // themselves as they would in the row around it.
+                line.height = line.height.max(height);
+            }
+            for line in lines {
                 let mut x = 0;
                 for (child, w) in &line.items {
                     let left = if rtl { width - x - w } else { x };
@@ -114,6 +132,8 @@ mod imp {
     pub(super) struct Line {
         pub(super) items: Vec<(gtk::Widget, i32)>,
         pub(super) height: i32,
+        /// The lowest baseline of its children, or -1.
+        pub(super) baseline: i32,
     }
 
     impl WrapBox {
@@ -147,12 +167,14 @@ mod imp {
                     lines.push(Line {
                         items: Vec::new(),
                         height: 0,
+                        baseline: -1,
                     });
                     used = w;
                 }
-                let (_, h, ..) = child.measure(gtk::Orientation::Vertical, w);
+                let (_, h, _, baseline) = child.measure(gtk::Orientation::Vertical, w);
                 let line = lines.last_mut().expect("a line was pushed");
                 line.height = line.height.max(h);
+                line.baseline = line.baseline.max(baseline);
                 line.items.push((child.clone(), w));
             }
             lines

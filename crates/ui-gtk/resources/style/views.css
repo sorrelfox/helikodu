@@ -149,7 +149,6 @@ popover.menu modelbutton check:checked { -gtk-icon-source: -gtk-icontheme("helik
 /* ---- Query language and saved searches ---------------------------------- */
 
 searchentry.hk-query text, entry.hk-query text { font-family: monospace; font-size: 12px; font-feature-settings: "liga" 0, "calt" 0; }
-.hk-search-side-pane { min-width: 300px; border-left: 1px solid var(--hk-line); }
 .hk-search-side { padding: 22px 18px 16px; }
 .hk-search-side .hk-section-label { margin-bottom: 10px; }
 .hk-search-side .hk-saved-title { margin-top: 18px; }
