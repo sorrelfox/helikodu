@@ -31,6 +31,12 @@ helikodu-cli stats                 # library totals and most played tracks
 helikodu-cli loudness --library    # measure the loudness of the tracks not yet measured
 helikodu-cli analyze               # analyse the tracks not yet analysed, as the app does
 helikodu-cli duplicates            # list the copies of files in the library (lists only)
+helikodu-cli import PLAYER         # import plays, ratings and playlists from another player
+helikodu-cli undo-import           # undo the newest import
+helikodu-cli export-user-data FILE # write ratings, plays, history and playlists to a file
+helikodu-cli import-user-data FILE # read such a file into the library
+helikodu-cli carry-stats           # carry statistics from replaced files to their replacements
+helikodu-cli write-stats           # write changed play counts and ratings into the files
 ```
 
 Some examples:
@@ -49,6 +55,8 @@ helikodu-cli search miles davis --limit 10 --json
 ```
 
 While `play` runs in a terminal, Space pauses, `n` and `p` go to the next and previous file, the arrow keys seek by 5 seconds, `+` and `-` change the volume, `o` moves playback to the next output device, and `q` quits.
+
+`import`, `import-user-data` and `carry-stats` only show what they would change unless you add `--apply`; [Moving from another player](moving-from-another-player.md) describes them and `export-user-data`, `undo-import` and `write-stats`.
 
 `scan`, `search`, `info`, `stats`, `loudness` and `duplicates` use the same library as the application, so you can scan from the command line and browse the result in the window. Most commands take `--json` for output that scripts can read.
 

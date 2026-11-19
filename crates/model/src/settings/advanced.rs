@@ -14,6 +14,7 @@ use super::{SettingsError, check_range};
 /// id3_version = "2.4"                 # 2.3 | 2.4, for new ID3 tags in MP3 files
 /// in_place_tag_write_above_mib = 2048 # larger files get their tags changed in place
 /// write_ratings_to_tags = false
+/// write_play_counts_to_tags = false
 /// log_detail = "off"                  # off | normal | full (debug builds: normal)
 /// developer_mode = false
 /// ```
@@ -28,6 +29,9 @@ pub struct AdvancedSettings {
     /// Whether ratings are also written to the tags of the files (applied from a
     /// later version).
     pub write_ratings_to_tags: bool,
+    /// Whether play counts are also written to the tags of the files, in
+    /// batches (not after every play).
+    pub write_play_counts_to_tags: bool,
     /// How much the log records.
     pub log_detail: LogDetail,
     /// Whether the test outputs (null and WAV file) are offered.
@@ -40,6 +44,7 @@ impl Default for AdvancedSettings {
             id3_version: Id3Version::V2_4,
             in_place_tag_write_above_mib: 2048,
             write_ratings_to_tags: false,
+            write_play_counts_to_tags: false,
             log_detail: LogDetail::default(),
             developer_mode: false,
         }

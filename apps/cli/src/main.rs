@@ -19,6 +19,10 @@ use clap::{Parser, Subcommand};
 use self::offline::analyze::AnalyzeArgs;
 use self::offline::duplicates::DuplicatesArgs;
 use self::offline::info::InfoArgs;
+use self::offline::interchange::{
+    CarryStatsArgs, ExportUserDataArgs, ImportArgs, ImportUserDataArgs, UndoImportArgs,
+    WriteStatsArgs,
+};
 use self::offline::list_outputs::ListOutputsArgs;
 use self::offline::loudness::LoudnessArgs;
 use self::offline::play::PlayArgs;
@@ -69,6 +73,22 @@ enum Command {
     Analyze(AnalyzeArgs),
     /// List the groups of copies (byte-identical files) in the music library.
     Duplicates(DuplicatesArgs),
+    /// Import play counts, ratings and playlists from another player (its files
+    /// are only read). Shows what would change; --apply imports.
+    Import(ImportArgs),
+    /// Undo the newest import (or carried statistics), or list the imports.
+    UndoImport(UndoImportArgs),
+    /// Write ratings, play counts, history, playlists, favourites and saved
+    /// searches to a JSON file, to move them to another installation.
+    ExportUserData(ExportUserDataArgs),
+    /// Read a file written by export-user-data into the library. Shows what
+    /// would change; --apply imports.
+    ImportUserData(ImportUserDataArgs),
+    /// List missing files whose statistics a file of the same recording could
+    /// take over; --apply carries them.
+    CarryStats(CarryStatsArgs),
+    /// Write the play counts and ratings that changed into the files' tags.
+    WriteStats(WriteStatsArgs),
     /// Show what the running application plays.
     Status(JsonArgs),
     /// Show the queue of the running application.
@@ -128,6 +148,12 @@ fn main() -> ExitCode {
         Command::Loudness(args) => offline::loudness::run(args),
         Command::Analyze(args) => offline::analyze::run(&args),
         Command::Duplicates(args) => offline::duplicates::run(&args),
+        Command::Import(args) => offline::interchange::import(&args),
+        Command::UndoImport(args) => offline::interchange::undo_import(&args),
+        Command::ExportUserData(args) => offline::interchange::export_user_data(&args),
+        Command::ImportUserData(args) => offline::interchange::import_user_data(&args),
+        Command::CarryStats(args) => offline::interchange::carry_stats(&args),
+        Command::WriteStats(args) => offline::interchange::write_stats(&args),
         Command::Status(args) => remote::commands::status(&args),
         Command::Queue(args) => remote::commands::queue(&args),
         Command::Playlists(args) => remote::commands::playlists(&args),

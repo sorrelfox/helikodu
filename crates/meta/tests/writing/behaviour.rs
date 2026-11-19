@@ -269,6 +269,59 @@ fn ratings_use_popm_fmps_and_rating() {
 }
 
 #[test]
+fn play_counts_use_the_popm_counter_and_fmps_playcount() {
+    let dir = folder("play-counts");
+    let Some(mp3) = encode(&dir, "a.mp3", MP3, &metadata(&[("title", "x")])) else {
+        return;
+    };
+    let popm = |path: &std::path::Path| {
+        let parsed = MpegFile::read_from(&mut File::open(path).expect("open"), ParseOptions::new())
+            .expect("parses");
+        let tag = parsed.id3v2().expect("an ID3v2 tag");
+        let frame = tag.into_iter().find_map(|f| match f {
+            Frame::Popularimeter(p) => Some((p.rating, p.counter)),
+            _ => None,
+        });
+        (
+            frame,
+            tag.get_user_text("FMPS_Playcount").map(str::to_owned),
+        )
+    };
+    // A play count alone: a frame with no rating.
+    let mut c = TagChanges::new();
+    c.play_count = Some(Some(7));
+    write_tags(&mp3, &c, None, &WriteOptions::default()).expect("written");
+    assert_eq!(popm(&mp3), (Some((0, 7)), Some("7".to_owned())));
+    // A rating keeps the counter, and a new count keeps the rating.
+    let mut c = TagChanges::new();
+    c.rating = Some(Rating::from_half_stars(10));
+    write_tags(&mp3, &c, None, &WriteOptions::default()).expect("written");
+    assert_eq!(popm(&mp3), (Some((255, 7)), Some("7".to_owned())));
+    let mut c = TagChanges::new();
+    c.play_count = Some(Some(9));
+    write_tags(&mp3, &c, None, &WriteOptions::default()).expect("written");
+    assert_eq!(popm(&mp3), (Some((255, 9)), Some("9".to_owned())));
+    // Removing both removes the frame.
+    let mut c = TagChanges::new();
+    c.play_count = Some(None);
+    c.rating = Some(None);
+    write_tags(&mp3, &c, None, &WriteOptions::default()).expect("written");
+    assert_eq!(popm(&mp3), (None, None));
+
+    let flac = encode(&dir, "a.flac", FLAC, &metadata(&[("title", "x")])).expect("encoded");
+    let mut c = TagChanges::new();
+    c.play_count = Some(Some(12));
+    write_tags(&flac, &c, None, &WriteOptions::default()).expect("written");
+    let read = lofty::flac::FlacFile::read_from(
+        &mut File::open(&flac).expect("open"),
+        ParseOptions::new(),
+    )
+    .expect("parses");
+    let comments = read.vorbis_comments().expect("comments");
+    assert_eq!(comments.get("FMPS_PLAYCOUNT"), Some("12"));
+}
+
+#[test]
 fn a_selection_shows_mixed_values_and_a_batch_writes_each_file() {
     let dir = folder("batch");
     let mut paths = Vec::new();

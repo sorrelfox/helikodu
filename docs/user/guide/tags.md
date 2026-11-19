@@ -63,6 +63,6 @@ In **Tracks**, press **F2** to edit a cell of the selected row: the column you l
 
 ## Ratings
 
-The **Rating** you give in the tag editor, like **Rate** in the track menu or the stars in the tables, is kept in Helikodu's library. With **Settings → Advanced → Also write ratings to the tags of the files** (off by default), it is also written into the file, so that other players can read it: as `POPM` and `FMPS_Rating` in ID3 tags, `FMPS_RATING` and `RATING` in Vorbis comments and APEv2 tags, and `FMPS_Rating` and `RATING` in MP4 files. A track of a CUE sheet shares its file with other tracks, so its rating stays in the library.
+The **Rating** you give in the tag editor, like **Rate** in the track menu or the stars in the tables, is kept in Helikodu's library. With **Settings → Advanced → Also write ratings to the tags of the files** (off by default), it is also written into the file, so that other players can read it: as `POPM` and `FMPS_Rating` in ID3 tags, `FMPS_RATING` and `RATING` in Vorbis comments and APEv2 tags, and `FMPS_Rating` and `RATING` in MP4 files. A track of a CUE sheet shares its file with other tracks, so its rating stays in the library. Play counts can be written into the files too; see [Moving from another player](moving-from-another-player.md#writing-play-counts-and-ratings-into-the-files).
 
 In **Settings → Advanced**, **Tags in MP3 files** chooses the ID3 version of new tags in MP3 files (ID3v2.4 by default; ID3v2.3 for old car stereos and portable players).

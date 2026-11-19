@@ -256,6 +256,13 @@ impl TagEditor for Mp4Editor<'_> {
         Ok(())
     }
 
+    fn set_play_count(&mut self, count: Option<u64>) -> Result<(), Skip> {
+        self.set_custom(
+            rating_values::FMPS_PLAYCOUNT,
+            &rating_values::play_count(count),
+        )
+    }
+
     fn set_cover(&mut self, change: &CoverChange) -> Result<(), Skip> {
         // `covr` pictures have no types: the front cover is every picture.
         self.tag.remove_pictures();

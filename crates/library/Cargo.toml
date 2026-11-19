@@ -21,16 +21,17 @@ icu_collator.workspace = true
 icu_locale_core.workspace = true
 icu_normalizer.workspace = true
 notify.workspace = true
+quick-xml.workspace = true
 regex.workspace = true
 rusqlite.workspace = true
 rustix.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-# Reading the corpus manifest in tests/corpus.
-serde.workspace = true
 toml.workspace = true
 
 [[bench]]

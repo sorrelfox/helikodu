@@ -46,6 +46,16 @@ impl DatabaseArgs {
     }
 }
 
+/// The application's settings, as its settings file has them (the defaults
+/// when there is none).
+pub(crate) fn app_settings() -> helikodu_model::settings::Settings {
+    AppDirs::from_env()
+        .ok()
+        .and_then(|dirs| std::fs::read(dirs.config.join(SETTINGS_FILE)).ok())
+        .map(|bytes| read_settings(&bytes).0)
+        .unwrap_or_default()
+}
+
 /// The interface language of the application (`[appearance] language` in its
 /// settings file; empty for the environment's locale), so that the library is
 /// sorted as the application sorts it and its sort indexes are not built again

@@ -432,6 +432,10 @@ pub struct TagChanges {
     /// The rating, when it changes: `Some(None)` removes it. Written as described
     /// in the [`rating`](crate::tags::rating) module (`POPM`, `FMPS_RATING`, `RATING`).
     pub rating: Option<Option<Rating>>,
+    /// The play count, when it changes: `Some(None)` removes it. Written as the
+    /// counter of this program's ID3v2 `POPM` frame and `FMPS_PLAYCOUNT` (a
+    /// `TXXX` frame, a Vorbis comment, an APEv2 item or an MP4 freeform atom).
+    pub play_count: Option<Option<u64>>,
 }
 
 impl TagChanges {
@@ -490,6 +494,7 @@ impl TagChanges {
             && self.cover.is_none()
             && self.lyrics.is_none()
             && self.rating.is_none()
+            && self.play_count.is_none()
     }
 
     /// The changes in their checked form: values trimmed, empty sets turned into
@@ -523,6 +528,7 @@ impl TagChanges {
             cover: self.cover.clone(),
             lyrics,
             rating: self.rating,
+            play_count: self.play_count,
         })
     }
 }
@@ -534,6 +540,7 @@ pub(crate) struct Normalized {
     pub(crate) cover: Option<CoverChange>,
     pub(crate) lyrics: Option<Option<String>>,
     pub(crate) rating: Option<Option<Rating>>,
+    pub(crate) play_count: Option<Option<u64>>,
 }
 
 impl Normalized {

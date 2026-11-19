@@ -50,7 +50,7 @@ pub(crate) use found::{find_playlist_files, imported_sources, store_found};
 pub(crate) use history::history_step;
 pub(crate) use import::{imported_name, match_entries};
 pub(crate) use items::{
-    append_tracks, dead_items, insert_tracks, item_page, move_items, remove_items,
+    append_tracks, dead_items, insert_rows, insert_tracks, item_page, move_items, remove_items,
 };
 pub(crate) use maintain::{cleanup_counts, remove_duplicates, remove_missing, shuffle};
 pub use pins::{Pin, PinTarget};
@@ -59,9 +59,9 @@ pub(crate) use smart::{
     added_times, all_smart_tracks, create_smart, set_query, smart_query, smart_tracks,
 };
 pub(crate) use store::{
-    create, create_folder, delete, duplicate, favourite_tracks, favourites, insert_imported,
-    is_favourite, move_to, playlist, playlist_tree, playlists, rename, set_favourite, set_grouped,
-    set_locked,
+    create, create_folder, create_row, delete, duplicate, favourite_tracks, favourites,
+    insert_imported, is_favourite, move_to, playlist, playlist_tree, playlists, rename,
+    set_favourite, set_grouped, set_locked,
 };
 
 /// A playlist.

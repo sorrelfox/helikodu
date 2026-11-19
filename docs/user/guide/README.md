@@ -17,11 +17,12 @@ This guide describes the current version. Helikodu is young: some menu entries a
 9. [Editing tags](tags.md)
 10. [Converting, syncing and covers](converting-and-sync.md)
 11. [Organizing, checking and finding files](file-tools.md)
-12. [Settings](settings.md)
-13. [Keyboard shortcuts](keyboard-shortcuts.md)
-14. [The command line](command-line.md)
-15. [Where Helikodu keeps its files](files.md)
-16. [Troubleshooting](troubleshooting.md)
-17. [Expressions in naming patterns](expressions.md)
+12. [Expressions in naming patterns](expressions.md)
+13. [Moving from another player](moving-from-another-player.md)
+14. [Settings](settings.md)
+15. [Keyboard shortcuts](keyboard-shortcuts.md)
+16. [The command line](command-line.md)
+17. [Where Helikodu keeps its files](files.md)
+18. [Troubleshooting](troubleshooting.md)
 
 See also the [FAQ](../faq.md) and the manual pages `helikodu(1)`, `helikodu-cli(1)` and `helikodu-scan-worker(1)`.

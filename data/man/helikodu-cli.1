@@ -65,6 +65,58 @@ helikodu\-cli \- play audio files, query the Helikodu library and control the ap
 .RB [ \-\-database
 .IR path ]
 .br
+.B helikodu\-cli import
+.I player
+.RB [ \-\-path
+.IR path ]
+.RB [ \-\-map
+.IR from = to ]...
+.RB [ \-\-replace\-ratings ]
+.RB [ \-\-no\-playlists ]
+.RB [ \-\-preview | \-\-apply ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli undo\-import
+.RB [ \-\-list ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli export\-user\-data
+.I file
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli import\-user\-data
+.I file
+.RB [ \-\-map
+.IR from = to ]...
+.RB [ \-\-replace\-ratings ]
+.RB [ \-\-no\-playlists ]
+.RB [ \-\-preview | \-\-apply ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli carry\-stats
+.RB [ \-\-from
+.I path
+.B \-\-to
+.IR path ]
+.RB [ \-\-apply ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli write\-stats
+.RB [ \-\-ratings ]
+.RB [ \-\-play\-counts ]
+.RB [ \-\-worker
+.IR path ]
+.RB [ \-\-database
+.IR path ]
+.br
 .B helikodu\-cli status
 .RB [ \-\-json ]
 .br
@@ -323,6 +375,81 @@ A summary line gives the number of groups and the size of the copies besides
 the main copies.
 Nothing is moved or deleted; the application's Find Duplicates window does
 that.
+.SS import
+Imports play counts, ratings and playlists from another player:
+.BR rhythmbox ,
+.BR strawberry ,
+.BR clementine ,
+.B lollypop
+or
+.B itunes
+(an exported Library.xml).
+The player's files are only read; its databases are read from a copy.
+Without
+.B \-\-path
+the file is looked for where the player keeps it, Flatpak folders included.
+Entries are matched to library tracks by path, then by artist, title, album,
+track number and a length within 2 seconds.
+Without
+.B \-\-apply
+the command only shows what would change.
+Play and skip counts are added (importing the same file again adds only the
+plays made since); ratings are taken for unrated tracks only; the earliest
+first and the latest last play win.
+.TP
+.BI \-\-path " path"
+The player's library file, or the folder holding it.
+.TP
+.BI \-\-map " from" = to
+A path prefix of the other library and the folder it is now.
+A prefix with a drive letter is matched without regard to case.
+May be given several times.
+.TP
+.B \-\-replace\-ratings
+Takes the imported rating also for tracks that have one.
+.TP
+.B \-\-no\-playlists
+Leaves the playlists out.
+.TP
+.B \-\-apply
+Carries out the import, in one transaction.
+.SS undo\-import
+Undoes the newest import or carried statistics: counts lose what it added,
+other values go back where they still hold what it set, and the playlists it
+made are deleted.
+.B \-\-list
+lists the imports instead.
+.SS export\-user\-data
+Writes the ratings, play counts, history, playlists, smart playlists,
+Favourites and saved searches to a JSON file, keyed by path and tags.
+.SS import\-user\-data
+Reads a file written by
+.B export\-user\-data
+into the library, with the options of
+.BR import .
+Counts take the higher value, so importing a file twice changes nothing.
+.SS carry\-stats
+Lists the missing files whose statistics, history and playlist entries a file
+of the same recording (the same title and artist, a length within 2 seconds)
+could take over.
+With
+.BR \-\-apply ,
+carries them where there is one replacement; with
+.B \-\-from
+and
+.BR \-\-to ,
+carries them between the two files named.
+.SS write\-stats
+Writes the play counts and ratings that changed since they were last written
+into the files' tags, as the
+.B write_ratings_to_tags
+and
+.B write_play_counts_to_tags
+settings say, or as
+.B \-\-ratings
+and
+.B \-\-play\-counts
+say.
 .SH COMMANDS FOR THE RUNNING APPLICATION
 These commands talk to the running Helikodu window through its D-Bus
 interface,

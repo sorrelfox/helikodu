@@ -192,6 +192,12 @@ impl Library {
         }
         let written = write_rating(&details.path, rating, &settings.write);
         if written.is_ok() {
+            // The lazy writer of statistics need not write it again.
+            let half = rating.map(|r| i64::from(r.half_stars()));
+            let id = crate::catalog::sql_track_id(track);
+            self.database()
+                .writer()?
+                .write(move |c| crate::interchange::record_rating(c, id, half))?;
             outcome.refresh = Some(self.refresh_files(std::slice::from_ref(&details.path), scan));
         }
         outcome.file = Some(written);

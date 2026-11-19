@@ -417,10 +417,33 @@ impl TagEditor for Id3Editor<'_> {
             ),
             _ => true,
         });
-        let Some(rating) = rating else {
-            return Ok(());
-        };
-        if let Some(value) = rating_values::popm(rating) {
+        let value = rating.and_then(rating_values::popm);
+        // A frame without a rating (0) still carries the play count.
+        if value.is_some() || counter > 0 {
+            self.tag
+                .insert(Frame::Popularimeter(PopularimeterFrame::new(
+                    rating_values::POPM_EMAIL,
+                    value.unwrap_or(0),
+                    counter,
+                )));
+        }
+        if let Some(rating) = rating {
+            self.push_user_text("FMPS_Rating", &[rating_values::fmps(rating)]);
+        }
+        Ok(())
+    }
+
+    fn set_play_count(&mut self, count: Option<u64>) -> Result<(), Skip> {
+        let mut value = 0;
+        self.tag.retain(|frame| match frame {
+            Frame::Popularimeter(f) if f.email.eq_ignore_ascii_case(rating_values::POPM_EMAIL) => {
+                value = f.rating;
+                false
+            }
+            _ => true,
+        });
+        let counter = count.unwrap_or(0);
+        if value > 0 || counter > 0 {
             self.tag
                 .insert(Frame::Popularimeter(PopularimeterFrame::new(
                     rating_values::POPM_EMAIL,
@@ -428,8 +451,10 @@ impl TagEditor for Id3Editor<'_> {
                     counter,
                 )));
         }
-        self.push_user_text("FMPS_Rating", &[rating_values::fmps(rating)]);
-        Ok(())
+        self.set_custom(
+            rating_values::FMPS_PLAYCOUNT,
+            &rating_values::play_count(count),
+        )
     }
 
     fn set_cover(&mut self, change: &CoverChange) -> Result<(), Skip> {

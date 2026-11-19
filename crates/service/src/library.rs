@@ -38,6 +38,7 @@ mod query;
 mod service;
 mod sorting;
 mod source;
+mod stats_import;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -69,7 +70,11 @@ pub use self::service::{
     LibraryEvent, LibraryService, LibraryServiceOptions, QueueItemInfo, WatchSettings,
 };
 pub use self::source::TrackSource;
+pub use self::stats_import::{STATS_BATCH, stats_to_files};
 pub use helikodu_library::PlayKeys;
+/// Imports from other players and of exported user data, statistics carried to a
+/// replacement, and statistics written into the files.
+pub use helikodu_library::interchange;
 /// What a tag editor needs: the files as they are opened for editing, the values a
 /// selection shares, and the changes written by [`MusicLibrary::write_tags`] and
 /// [`LibraryService::write_tags`].
@@ -162,6 +167,9 @@ pub enum LibraryError {
     /// A scan was asked for without folders, and the library has none.
     #[error("the library has no folders yet; name the folders to scan")]
     NoFolders,
+    /// An import, an export of the user data or an undo of an import failed.
+    #[error(transparent)]
+    Import(#[from] helikodu_library::interchange::ImportError),
     /// An artist photo could not be set or removed.
     #[error(transparent)]
     ArtistPhoto(#[from] helikodu_library::ArtistPhotoError),

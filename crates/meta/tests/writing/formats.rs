@@ -81,6 +81,7 @@ fn full_changes(cover: &[u8]) -> TagChanges {
         .set(custom(), ["first", "second"]);
     c.lyrics = Some(Some("Line one\nLine two".into()));
     c.rating = Some(Rating::from_half_stars(8));
+    c.play_count = Some(Some(42));
     c.cover = Some(CoverChange::SetFront(cover.to_vec()));
     c
 }
@@ -138,6 +139,7 @@ fn check_full(tags: &TrackTags, name: &str) {
     expect(custom(), &["first", "second"]);
     assert!(tags.has_lyrics, "{name}: lyrics");
     assert_eq!(tags.rating, Rating::from_half_stars(8), "{name}: rating");
+    expect(FieldKey::Custom("FMPS_PLAYCOUNT".into()), &["42"]);
 }
 
 fn round_trip(format: Format) {

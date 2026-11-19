@@ -19,6 +19,7 @@ mod db;
 mod details;
 mod expressions;
 mod history;
+pub mod interchange;
 mod library;
 mod loudness;
 mod maintenance;

@@ -408,6 +408,35 @@ impl LibraryService {
         Ok(report)
     }
 
+    /// Writes the play counts and ratings that changed since they were last
+    /// written into the files (a batch of at most
+    /// [`STATS_BATCH`](super::stats_import::STATS_BATCH) files), as the `[advanced]`
+    /// settings of `settings` ask, on the worker thread; announces
+    /// [`LibraryEvent::Changed`] when a file was written. Meant for idle moments
+    /// and the end of a session, not for every play.
+    pub fn write_stats_to_files(&self, settings: &Settings) -> Result<(), LibraryError> {
+        let library = settings.library.clone();
+        let advanced = settings.advanced;
+        let worker = self.worker_program.clone();
+        let bus = self.bus.clone();
+        self.run(
+            move |l| {
+                let report = l.write_stats_to_files(
+                    &library,
+                    &advanced,
+                    worker.as_deref(),
+                    super::stats_import::STATS_BATCH,
+                    &helikodu_library::CancelToken::new(),
+                )?;
+                if report.written > 0 {
+                    bus.publish(&Event::Library(LibraryEvent::Changed));
+                }
+                Ok(())
+            },
+            |_| {},
+        )
+    }
+
     /// Writes tags as [`write_tags`](Self::write_tags) does and records the
     /// change in the undo journal of tag edits; announces
     /// [`LibraryEvent::Changed`] when a file was read again. Blocks.

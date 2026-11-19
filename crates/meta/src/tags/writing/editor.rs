@@ -150,6 +150,11 @@ pub(crate) trait TagEditor {
     /// Writes or removes the rating.
     fn set_rating(&mut self, rating: Option<Rating>) -> Result<(), Skip>;
 
+    /// Writes or removes the play count.
+    fn set_play_count(&mut self, _count: Option<u64>) -> Result<(), Skip> {
+        Err("the tag cannot hold it")
+    }
+
     /// Changes the pictures, when the tag holds them.
     fn set_cover(&mut self, change: &CoverChange) -> Result<(), Skip>;
 }
@@ -157,7 +162,8 @@ pub(crate) trait TagEditor {
 /// A change the main tag did not take.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkippedChange {
-    /// What was not written: a field name, `lyrics`, `rating` or `cover`.
+    /// What was not written: a field name, `lyrics`, `rating`, `play count` or
+    /// `cover`.
     pub what: String,
     /// Why.
     pub reason: &'static str,
@@ -187,6 +193,10 @@ pub(crate) fn apply(editor: &mut dyn TagEditor, plan: &Plan<'_>) -> Vec<SkippedC
     if let Some(lyrics) = &plan.changes.lyrics {
         note("lyrics", editor.set_lyrics(lyrics.as_deref()));
     }
+    // Before the rating: the ID3v2 rating keeps the counter it finds.
+    if let Some(count) = plan.changes.play_count {
+        note("play count", editor.set_play_count(count));
+    }
     if let Some(rating) = plan.changes.rating {
         note("rating", editor.set_rating(rating));
     }
@@ -215,6 +225,15 @@ pub(crate) mod rating_values {
             4 => Some(196),
             _ => Some(255),
         }
+    }
+
+    /// The name of the play count field (`FMPS_PLAYCOUNT`), as `TXXX` frames and
+    /// MP4 freeform atoms spell it.
+    pub(crate) const FMPS_PLAYCOUNT: &str = "FMPS_Playcount";
+
+    /// The `FMPS_PLAYCOUNT` values of `count`: none to remove it.
+    pub(crate) fn play_count(count: Option<u64>) -> Vec<String> {
+        count.map(|c| c.to_string()).into_iter().collect()
     }
 
     /// The `FMPS_RATING` value, 0.0 to 1.0.

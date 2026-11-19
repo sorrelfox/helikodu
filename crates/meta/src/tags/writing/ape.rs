@@ -126,6 +126,10 @@ impl TagEditor for ApeEditor<'_> {
         }
     }
 
+    fn set_play_count(&mut self, count: Option<u64>) -> Result<(), Skip> {
+        self.set_custom("FMPS_PLAYCOUNT", &rating_values::play_count(count))
+    }
+
     fn set_cover(&mut self, change: &CoverChange) -> Result<(), Skip> {
         match change {
             CoverChange::RemoveAll => self.remove_where(|k| {
