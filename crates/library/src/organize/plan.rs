@@ -167,38 +167,34 @@ fn load(c: &Connection, tracks: Option<&[TrackId]>) -> rusqlite::Result<Vec<File
     Ok(out)
 }
 
-/// The names in `role` of `track`, joined.
-fn people(c: &Connection, track: i64, role: i64) -> rusqlite::Result<Option<String>> {
-    let names: Vec<String> = c
-        .prepare_cached(
-            "SELECT p.name FROM track_people tp JOIN people p ON p.id = tp.person_id
+/// The names in `role` of `track`, in order.
+fn people(c: &Connection, track: i64, role: i64) -> rusqlite::Result<Vec<String>> {
+    c.prepare_cached(
+        "SELECT p.name FROM track_people tp JOIN people p ON p.id = tp.person_id
              WHERE tp.track_id = ?1 AND tp.role = ?2 ORDER BY tp.position",
-        )?
-        .query_map(params![track, role], |row| row.get(0))?
-        .collect::<rusqlite::Result<_>>()?;
-    Ok((!names.is_empty()).then(|| names.join(", ")))
+    )?
+    .query_map(params![track, role], |row| row.get(0))?
+    .collect()
 }
 
-fn genres(c: &Connection, track: i64) -> rusqlite::Result<Option<String>> {
-    let names: Vec<String> = c
-        .prepare_cached(
-            "SELECT g.name FROM track_genres tg JOIN genres g ON g.id = tg.genre_id
+/// The genres of `track`, in order.
+fn genres(c: &Connection, track: i64) -> rusqlite::Result<Vec<String>> {
+    c.prepare_cached(
+        "SELECT g.name FROM track_genres tg JOIN genres g ON g.id = tg.genre_id
              WHERE tg.track_id = ?1 ORDER BY tg.position",
-        )?
-        .query_map([track], |row| row.get(0))?
-        .collect::<rusqlite::Result<_>>()?;
-    Ok((!names.is_empty()).then(|| names.join(", ")))
+    )?
+    .query_map([track], |row| row.get(0))?
+    .collect()
 }
 
-fn other_tag(c: &Connection, track: i64, key: &str) -> rusqlite::Result<Option<String>> {
-    let values: Vec<String> = c
-        .prepare_cached(
-            "SELECT value FROM track_tags WHERE track_id = ?1 AND upper(key) = ?2
+/// The values of the tag `key` of `track`, in order.
+fn other_tag(c: &Connection, track: i64, key: &str) -> rusqlite::Result<Vec<String>> {
+    c.prepare_cached(
+        "SELECT value FROM track_tags WHERE track_id = ?1 AND upper(key) = ?2
              ORDER BY rowid",
-        )?
-        .query_map(params![track, key], |row| row.get(0))?
-        .collect::<rusqlite::Result<_>>()?;
-    Ok((!values.is_empty()).then(|| values.join(", ")))
+    )?
+    .query_map(params![track, key], |row| row.get(0))?
+    .collect()
 }
 
 /// The highest disc number and number of discs of each album.
@@ -231,19 +227,26 @@ fn values_of(
             .and_then(to_u32),
         ..FieldMap::default()
     };
-    match fields {
-        Some(fields) => {
-            for field in fields {
-                if let Some(value) = value_of(c, facts, field)? {
+    let put = |map: &mut FieldMap, field: &Field| -> rusqlite::Result<()> {
+        match list_of(c, facts, field)? {
+            Some(list) => map.set_list(field.clone(), list),
+            None => {
+                if let Some(value) = value_of(facts, field) {
                     map.set(field.clone(), value);
                 }
             }
         }
+        Ok(())
+    };
+    match fields {
+        Some(fields) => {
+            for field in fields {
+                put(&mut map, field)?;
+            }
+        }
         None => {
             for field in Field::named() {
-                if let Some(value) = value_of(c, facts, &field)? {
-                    map.set(field, value);
-                }
+                put(&mut map, &field)?;
             }
             let tags: Vec<(String, String)> = c
                 .prepare_cached(
@@ -259,16 +262,33 @@ fn values_of(
                 }
             }
             for (key, values) in joined {
-                map.set(Field::Tag(key), values.join(", "));
+                map.set_list(Field::Tag(key), values);
             }
         }
     }
     Ok(map)
 }
 
+/// The values of `field` for `facts` when it is a field of several values.
+fn list_of(
+    c: &Connection,
+    facts: &FileFacts,
+    field: &Field,
+) -> rusqlite::Result<Option<Vec<String>>> {
+    Ok(Some(match field {
+        Field::Composer => people(c, facts.track, 2)?,
+        Field::Performer => people(c, facts.track, 3)?,
+        Field::Conductor => people(c, facts.track, 4)?,
+        Field::Lyricist => people(c, facts.track, 5)?,
+        Field::Genre => genres(c, facts.track)?,
+        Field::Tag(key) => other_tag(c, facts.track, key)?,
+        _ => return Ok(None),
+    }))
+}
+
 /// The value of `field` for `facts`, numbers as plain numbers.
-fn value_of(c: &Connection, facts: &FileFacts, field: &Field) -> rusqlite::Result<Option<String>> {
-    Ok(match field {
+fn value_of(facts: &FileFacts, field: &Field) -> Option<String> {
+    match field {
         Field::Track => facts.track_no.map(|n| n.to_string()),
         Field::Disc => facts.disc_no.map(|n| n.to_string()),
         Field::Title => facts
@@ -282,12 +302,6 @@ fn value_of(c: &Connection, facts: &FileFacts, field: &Field) -> rusqlite::Resul
                     .file_stem()
                     .map(|s| s.to_string_lossy().into_owned())
             }),
-        Field::Composer => people(c, facts.track, 2)?,
-        Field::Performer => people(c, facts.track, 3)?,
-        Field::Conductor => people(c, facts.track, 4)?,
-        Field::Lyricist => people(c, facts.track, 5)?,
-        Field::Genre => genres(c, facts.track)?,
-        Field::Tag(key) => other_tag(c, facts.track, key)?,
         Field::Filename => facts
             .path
             .file_stem()
@@ -298,7 +312,7 @@ fn value_of(c: &Connection, facts: &FileFacts, field: &Field) -> rusqlite::Resul
             .and_then(|p| p.file_name())
             .map(|s| s.to_string_lossy().into_owned()),
         other => facts.values.get(other.name().as_ref()).cloned(),
-    })
+    }
 }
 
 /// The values of every field and tag of each of `tracks` that the library has,
@@ -306,6 +320,15 @@ fn value_of(c: &Connection, facts: &FileFacts, field: &Field) -> rusqlite::Resul
 pub(super) fn naming_values(
     c: &Connection,
     tracks: &[TrackId],
+) -> rusqlite::Result<Vec<(TrackId, FieldMap)>> {
+    naming_values_of(c, tracks, None)
+}
+
+/// [`naming_values`] of only `fields` (every field and tag when `None`).
+pub(crate) fn naming_values_of(
+    c: &Connection,
+    tracks: &[TrackId],
+    fields: Option<&[Field]>,
 ) -> rusqlite::Result<Vec<(TrackId, FieldMap)>> {
     let discs = album_discs(c)?;
     let mut statement = c.prepare_cached(&format!("SELECT {COLUMNS} {FROM_TRACK}"))?;
@@ -315,7 +338,7 @@ pub(super) fn naming_values(
             .query_row([sql_track_id(track)], facts)
             .optional()?
         {
-            out.push((track, values_of(c, &facts, &discs, None)?));
+            out.push((track, values_of(c, &facts, &discs, fields)?));
         }
     }
     Ok(out)

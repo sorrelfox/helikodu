@@ -44,6 +44,33 @@ pub(crate) fn naming_problem(error: &PatternError) -> String {
         PatternProblem::NestedField => tr("A field name cannot hold {."),
         PatternProblem::EmptyFolder => tr("A folder name would be empty."),
         PatternProblem::TooDeep => tr("Square brackets are nested too deeply."),
+        PatternProblem::TooComplex => tr("The expression is nested too deeply."),
+        PatternProblem::UnclosedQuote => tr("A quote is not closed."),
+        PatternProblem::UnclosedParenthesis => tr("A ( is not closed with )."),
+        PatternProblem::UnknownFunction(name) => {
+            fill(&tr("There is no function called {}."), &[name])
+        }
+        PatternProblem::Arguments { function, min, max } => match max {
+            Some(max) if max == min => fill(
+                // Translators: {} are a function's name and a number.
+                &tr("{} takes {} values."),
+                &[*function, &min.to_string()],
+            ),
+            Some(max) => fill(
+                // Translators: {} are a function's name and two numbers.
+                &tr("{} takes {} to {} values."),
+                &[*function, &min.to_string(), &max.to_string()],
+            ),
+            None => fill(
+                // Translators: {} are a function's name and a number.
+                &tr("{} takes at least {} values."),
+                &[*function, &min.to_string()],
+            ),
+        },
+        PatternProblem::MissingValue => tr("A value is missing."),
+        PatternProblem::Unexpected(text) => fill(&tr("{} does not belong here."), &[text]),
+        PatternProblem::NameExpected => tr("let needs a name first."),
+        PatternProblem::FieldExpected => tr("raw needs a field."),
     };
     fill(
         &tr("{} At character {}."),

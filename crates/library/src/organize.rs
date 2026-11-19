@@ -42,6 +42,7 @@ pub use helikodu_meta::naming::{
 use helikodu_model::library::TrackId;
 
 pub use patterns::SavedPattern;
+pub(crate) use plan::naming_values_of;
 
 use crate::Library;
 use crate::copies::FileId;

@@ -626,3 +626,84 @@ fn missing_files_are_found_by_content_relinked_and_removed() {
     assert!(library.track_at(&tide, 0).unwrap().is_none());
     let _ = tide_id;
 }
+
+#[test]
+fn expressions_name_evaluate_sort_and_group_tracks() {
+    use helikodu_model::expression::Template;
+    if !have_ffmpeg() {
+        return;
+    }
+    let (root, library) = untidy("organize-expressions");
+    let planned = plan(
+        &library,
+        "{initial(albumartist)}/{albumartist}/{if(year < 2021, 'Old', 'New')} {upper(album)}/{track} {title}",
+    );
+    let by_from: BTreeMap<PathBuf, &PlannedMove> =
+        planned.iter().map(|p| (p.from.clone(), p)).collect();
+    assert_eq!(
+        by_from[&root.join("Okto/Night Ferry/02 - night ferry.flac")].to,
+        root.join("O/Okto/Old NIGHT FERRY/02 Night Ferry.flac")
+    );
+    assert_eq!(
+        by_from[&root.join("Incoming/Mari Kask - Tidewater Rooms/01 Tidewater.flac")].to,
+        root.join("M/Mari Kask/New TIDEWATER ROOMS/01 Tidewater.flac")
+    );
+
+    let tide = track(
+        &library,
+        &root.join("Incoming/Mari Kask - Tidewater Rooms/01 Tidewater.flac"),
+    );
+    let harbour = track(
+        &library,
+        &root.join("Incoming/Mari Kask - Tidewater Rooms/02 Glass Harbour.flac"),
+    );
+    let ferry = track(
+        &library,
+        &root.join("Okto/Night Ferry/02 - night ferry.flac"),
+    );
+    let tracks = [tide, harbour, ferry];
+
+    let row =
+        Template::parse("{artist} – {title} ({time(duration)}, {plays} plays, {kind})").unwrap();
+    let rows = library.evaluate_expression(&row, &tracks).unwrap();
+    assert_eq!(rows.len(), 3);
+    assert_eq!(rows[0].0, tide);
+    assert_eq!(rows[0].1, "Mari Kask – Tidewater (0:01, 0 plays, music)");
+    let added = Template::parse("{year(added)}").unwrap();
+    let years = library.evaluate_expression(&added, &[ferry]).unwrap();
+    assert_eq!(years[0].1.len(), 4, "{years:?}");
+
+    let by_title = Template::parse("{title}").unwrap();
+    assert_eq!(
+        library
+            .sort_by_expression(&by_title, &tracks, false)
+            .unwrap(),
+        [harbour, ferry, tide]
+    );
+    assert_eq!(
+        library
+            .sort_by_expression(&by_title, &tracks, true)
+            .unwrap(),
+        [tide, ferry, harbour]
+    );
+    let by_artist = Template::parse("{albumartist}").unwrap();
+    assert_eq!(
+        library.group_by_expression(&by_artist, &tracks).unwrap(),
+        [
+            ("Mari Kask".to_owned(), vec![tide, harbour]),
+            ("Okto".to_owned(), vec![ferry])
+        ]
+    );
+    let all = library.expression_values(&[ferry], None).unwrap();
+    let values = &all[0].1;
+    use helikodu_library::FieldValues;
+    use helikodu_model::query::Field;
+    assert_eq!(values.value(&Field::Album).as_deref(), Some("Night Ferry"));
+    assert!(
+        values
+            .value(&Field::Path)
+            .unwrap()
+            .ends_with("02 - night ferry.flac")
+    );
+    assert_eq!(values.value(&Field::Plays).as_deref(), Some("0"));
+}

@@ -121,6 +121,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "expression"
+path = "fuzz_targets/expression.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "playlist_sniff"
 path = "fuzz_targets/playlist_sniff.rs"
 test = false

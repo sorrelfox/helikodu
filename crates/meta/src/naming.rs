@@ -5,15 +5,17 @@
 //! files and folders from their tags. All three read and write patterns here, so
 //! one pattern gives one name for one track in every tool.
 //!
-//! The syntax:
+//! A pattern is a path template of the expression language
+//! ([`helikodu_model::expression`]), which also reads the older syntax unchanged:
 //!
 //! - `{field}` is the value of a field, named as the query language names it
-//!   (`{albumartist}`, `{year}`, `{track}`, `{tag:MOOD}`);
+//!   (`{albumartist}`, `{year}`, `{track}`, `{tag:MOOD}`); the braces may hold
+//!   any expression (`{if(composer, composer, artist)}`, `{upper(album)}`);
 //! - `/` starts a folder;
-//! - text in square brackets is left out when a field inside it is empty
-//!   (`[{disc}-]{track}`); brackets may nest, an inner bracket is left out on its
-//!   own, and a bracket may hold a `/` (`[{disc}/]` makes a folder per disc only
-//!   on albums of several discs);
+//! - text in square brackets is left out when an expression directly inside it
+//!   gives nothing (`[{disc}-]{track}`); brackets may nest, an inner bracket is
+//!   left out on its own, and a bracket may hold a `/` (`[{disc}/]` makes a
+//!   folder per disc only on albums of several discs);
 //! - everything else is written as it is.
 //!
 //! Numbers: `{track}` has two digits (three on an album of a hundred tracks or
@@ -22,26 +24,23 @@
 //! `[{disc}-]{track}` for that.
 //!
 //! The file extension is never part of a pattern: the caller keeps the file's
-//! own. A field that is empty outside square brackets is written as a word the
-//! caller gives (such as "Unknown"), so that no name is ever empty.
+//! own. An expression that gives nothing outside square brackets is written as a
+//! word the caller gives (such as "Unknown"), so that no name is ever empty.
 //!
 //! Names are then cleaned for the file system by a [`CharacterSet`]: a value can
 //! never start a folder of its own (a `/` inside a value is replaced), the
 //! characters that the chosen set does not allow are replaced too, and each name
 //! is cut to [`MAX_NAME_BYTES`] bytes, the file name with room for its extension.
 
-use std::collections::HashMap;
-use std::fmt;
 use std::path::PathBuf;
 
+use helikodu_model::expression::{Piece, Template};
 use helikodu_model::query::Field;
+
+pub use helikodu_model::expression::{FieldMap, FieldValues, MAX_BRACKET_DEPTH};
 
 /// The longest name of one file or folder, in bytes, on the file systems of Linux.
 pub const MAX_NAME_BYTES: usize = 255;
-
-/// The deepest square brackets may nest. Deeper nesting is refused, so that a
-/// pattern (from a hand-edited file, say) cannot exhaust the stack.
-pub const MAX_BRACKET_DEPTH: usize = 16;
 
 /// The character that stands in for one that a name may not hold.
 const REPLACEMENT: char = '_';
@@ -82,186 +81,19 @@ impl CharacterSet {
     }
 }
 
-/// The values of one track's fields, as a pattern asks for them.
-pub trait FieldValues {
-    /// The value of `field`, or `None` (or an empty text) when it is empty.
-    /// Numbers as plain numbers: the pattern pads them.
-    fn value(&self, field: &Field) -> Option<String>;
-
-    /// The number of tracks of the track's disc, when known: three digits for
-    /// `{track}` from a hundred on.
-    fn track_count(&self) -> Option<u32> {
-        None
-    }
-
-    /// The number of discs of the track's album (or its highest disc number),
-    /// when known: `{disc}` is empty unless it is more than one.
-    fn disc_count(&self) -> Option<u32> {
-        None
-    }
-}
-
-impl<F: Fn(&Field) -> Option<String>> FieldValues for F {
-    fn value(&self, field: &Field) -> Option<String> {
-        self(field)
-    }
-}
-
-/// [`FieldValues`] from a map.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct FieldMap {
-    /// The values.
-    pub values: HashMap<Field, String>,
-    /// The number of tracks of the disc.
-    pub track_count: Option<u32>,
-    /// The number of discs of the album.
-    pub disc_count: Option<u32>,
-}
-
-impl FieldMap {
-    /// Sets `field` to `value`; an empty value is left out.
-    #[must_use]
-    pub fn with(mut self, field: Field, value: impl Into<String>) -> Self {
-        self.set(field, value);
-        self
-    }
-
-    /// Sets `field` to `value`; an empty value is left out.
-    pub fn set(&mut self, field: Field, value: impl Into<String>) {
-        let value = value.into();
-        if !value.trim().is_empty() {
-            self.values.insert(field, value);
-        }
-    }
-}
-
-impl FieldValues for FieldMap {
-    fn value(&self, field: &Field) -> Option<String> {
-        self.values.get(field).cloned()
-    }
-
-    fn track_count(&self) -> Option<u32> {
-        self.track_count
-    }
-
-    fn disc_count(&self) -> Option<u32> {
-        self.disc_count
-    }
-}
-
-/// The number of digits of `n`.
-fn digits(n: u32) -> usize {
-    n.max(1).to_string().len()
-}
-
-/// The text of `field` for a name: empty as `None`, numbers padded, the disc
-/// only on albums of several discs.
-fn field_text(field: &Field, values: &dyn FieldValues) -> Option<String> {
-    let value = values.value(field)?;
-    let value = value.trim();
-    if value.is_empty() {
-        return None;
-    }
-    match field {
-        Field::Track => Some(match value.parse::<u32>() {
-            Ok(n) => {
-                let width = values.track_count().map_or(2, |t| digits(t).max(2));
-                format!("{n:0width$}")
-            }
-            Err(_) => value.to_owned(),
-        }),
-        Field::Disc => {
-            let n = value.parse::<u32>().ok();
-            let most = values.disc_count().unwrap_or(1).max(n.unwrap_or(1));
-            if most <= 1 {
-                return None;
-            }
-            Some(match n {
-                Some(n) => {
-                    let width = digits(most);
-                    format!("{n:0width$}")
-                }
-                None => value.to_owned(),
-            })
-        }
-        _ => Some(value.to_owned()),
-    }
-}
-
-/// One piece of a pattern.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Part {
-    /// Text written as it is.
-    Text(String),
-    /// A field's value.
-    Field(Field),
-    /// A folder starts here.
-    Folder,
-    /// Parts left out when a field among them is empty.
-    Optional(Vec<Part>),
-}
-
-/// A naming pattern that has been read. See the module documentation.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NamingPattern {
-    text: String,
-    parts: Vec<Part>,
-}
-
-/// Why a pattern cannot be read.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PatternProblem {
-    /// The pattern is empty.
-    Empty,
-    /// A `{` without its `}`.
-    UnclosedField,
-    /// `{}` without a name.
-    EmptyField,
-    /// A field name the query language does not know.
-    UnknownField(String),
-    /// A `[` without its `]`.
-    UnclosedBracket,
-    /// A `]` or `}` without its opening half.
-    UnexpectedClose(char),
-    /// A `{` inside a field name.
-    NestedField,
-    /// The pattern starts or ends with `/`, or has two in a row: a folder name
-    /// would be empty.
-    EmptyFolder,
-    /// Square brackets nested deeper than [`MAX_BRACKET_DEPTH`].
-    TooDeep,
-}
+/// Why a pattern cannot be read: the problems of the expression language.
+pub use helikodu_model::expression::Problem as PatternProblem;
 
 /// A pattern that cannot be read: what is wrong and where, in characters from the
 /// start of the pattern.
+pub use helikodu_model::expression::Error as PatternError;
+
+/// A naming pattern that has been read: a path template of the expression
+/// language. See the module documentation.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PatternError {
-    /// What is wrong.
-    pub problem: PatternProblem,
-    /// The first character of the problem, counted from 0.
-    pub start: usize,
-    /// The character after the problem.
-    pub end: usize,
+pub struct NamingPattern {
+    template: Template,
 }
-
-impl fmt::Display for PatternError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.problem {
-            PatternProblem::Empty => write!(f, "the pattern is empty"),
-            PatternProblem::UnclosedField => write!(f, "a field is not closed with }}"),
-            PatternProblem::EmptyField => write!(f, "{{}} names no field"),
-            PatternProblem::UnknownField(name) => write!(f, "there is no field {name}"),
-            PatternProblem::UnclosedBracket => write!(f, "a [ is not closed with ]"),
-            PatternProblem::UnexpectedClose(c) => write!(f, "{c} closes nothing"),
-            PatternProblem::NestedField => write!(f, "a field name cannot hold {{"),
-            PatternProblem::EmptyFolder => write!(f, "a folder name would be empty"),
-            PatternProblem::TooDeep => write!(f, "square brackets are nested too deeply"),
-        }?;
-        write!(f, " (at character {})", self.start + 1)
-    }
-}
-
-impl std::error::Error for PatternError {}
 
 impl NamingPattern {
     /// The pattern the converter and folder sync start with.
@@ -269,39 +101,28 @@ impl NamingPattern {
 
     /// Reads `text`.
     pub fn parse(text: &str) -> Result<Self, PatternError> {
-        let chars: Vec<char> = text.chars().collect();
-        if text.trim().is_empty() {
-            return Err(PatternError {
-                problem: PatternProblem::Empty,
-                start: 0,
-                end: chars.len(),
-            });
-        }
-        let mut position = 0;
-        let parts = parse_parts(&chars, &mut position, None, 0)?;
-        check_folders(&chars)?;
-        Ok(Self {
-            text: text.to_owned(),
-            parts,
-        })
+        Template::parse_path(text).map(|template| Self { template })
     }
 
     /// The pattern as written.
     pub fn text(&self) -> &str {
-        &self.text
+        self.template.text()
+    }
+
+    /// The template the pattern is.
+    pub fn template(&self) -> &Template {
+        &self.template
     }
 
     /// The fields the pattern uses, in order, each once.
     pub fn fields(&self) -> Vec<Field> {
-        let mut fields = Vec::new();
-        collect_fields(&self.parts, &mut fields);
-        fields
+        self.template.fields()
     }
 
     /// The folders and the file name (without its extension) for a track whose
-    /// field values `values` gives, cleaned by `set`. An empty field outside
-    /// brackets is written as `unknown`. The last name is kept short enough for
-    /// `extension` (with its dot) to fit.
+    /// field values `values` gives, cleaned by `set`. An expression that gives
+    /// nothing outside brackets is written as `unknown`. The last name is kept
+    /// short enough for `extension` (with its dot) to fit.
     pub fn render(
         &self,
         values: &dyn FieldValues,
@@ -310,7 +131,14 @@ impl NamingPattern {
         extension: &str,
     ) -> Vec<String> {
         let mut names = vec![String::new()];
-        render_parts(&self.parts, values, set, unknown, &mut names);
+        self.template.pieces(values, &mut |piece| match piece {
+            Piece::Text(text) => push(&mut names, text),
+            Piece::Value(value) => {
+                let text = value.unwrap_or_else(|| unknown.to_owned());
+                push(&mut names, &clean_value(&text, set));
+            }
+            Piece::Folder => names.push(String::new()),
+        });
         let count = names.len();
         names
             .into_iter()
@@ -363,8 +191,7 @@ impl Default for NamingPattern {
     /// [`NamingPattern::DEFAULT`].
     fn default() -> Self {
         Self::parse(Self::DEFAULT).unwrap_or_else(|_| Self {
-            text: Self::DEFAULT.to_owned(),
-            parts: Vec::new(),
+            template: Template::literal(Self::DEFAULT),
         })
     }
 }
@@ -377,204 +204,6 @@ pub fn clean_file_name(name: &str, set: CharacterSet) -> String {
     }
     let cleaned = clean_name(&clean_value(name, set), set, false);
     shorten(&cleaned, MAX_NAME_BYTES - 8)
-}
-
-fn collect_fields(parts: &[Part], out: &mut Vec<Field>) {
-    for part in parts {
-        match part {
-            Part::Field(field) if !out.contains(field) => out.push(field.clone()),
-            Part::Optional(inner) => collect_fields(inner, out),
-            _ => {}
-        }
-    }
-}
-
-/// Reads parts until the end or the `]` that closes the bracket opened at `open`.
-fn parse_parts(
-    chars: &[char],
-    position: &mut usize,
-    open: Option<usize>,
-    depth: usize,
-) -> Result<Vec<Part>, PatternError> {
-    let mut parts = Vec::new();
-    let mut text = String::new();
-    let flush = |text: &mut String, parts: &mut Vec<Part>| {
-        if !text.is_empty() {
-            parts.push(Part::Text(std::mem::take(text)));
-        }
-    };
-    while let Some(&c) = chars.get(*position) {
-        match c {
-            '{' => {
-                flush(&mut text, &mut parts);
-                let start = *position;
-                let mut name = String::new();
-                *position += 1;
-                loop {
-                    match chars.get(*position) {
-                        None => {
-                            return Err(PatternError {
-                                problem: PatternProblem::UnclosedField,
-                                start,
-                                end: chars.len(),
-                            });
-                        }
-                        Some('}') => break,
-                        Some('{') => {
-                            return Err(PatternError {
-                                problem: PatternProblem::NestedField,
-                                start: *position,
-                                end: *position + 1,
-                            });
-                        }
-                        Some(&c) => name.push(c),
-                    }
-                    *position += 1;
-                }
-                *position += 1;
-                let trimmed = name.trim();
-                if trimmed.is_empty() {
-                    return Err(PatternError {
-                        problem: PatternProblem::EmptyField,
-                        start,
-                        end: *position,
-                    });
-                }
-                let Some(field) = Field::from_name(trimmed) else {
-                    return Err(PatternError {
-                        problem: PatternProblem::UnknownField(trimmed.to_owned()),
-                        start,
-                        end: *position,
-                    });
-                };
-                parts.push(Part::Field(field));
-            }
-            '[' => {
-                flush(&mut text, &mut parts);
-                let start = *position;
-                if depth >= MAX_BRACKET_DEPTH {
-                    return Err(PatternError {
-                        problem: PatternProblem::TooDeep,
-                        start,
-                        end: start + 1,
-                    });
-                }
-                *position += 1;
-                let inner = parse_parts(chars, position, Some(start), depth + 1)?;
-                parts.push(Part::Optional(inner));
-            }
-            ']' => {
-                if open.is_some() {
-                    flush(&mut text, &mut parts);
-                    *position += 1;
-                    return Ok(parts);
-                }
-                return Err(PatternError {
-                    problem: PatternProblem::UnexpectedClose(']'),
-                    start: *position,
-                    end: *position + 1,
-                });
-            }
-            '}' => {
-                return Err(PatternError {
-                    problem: PatternProblem::UnexpectedClose('}'),
-                    start: *position,
-                    end: *position + 1,
-                });
-            }
-            '/' => {
-                flush(&mut text, &mut parts);
-                parts.push(Part::Folder);
-                *position += 1;
-            }
-            c => {
-                text.push(c);
-                *position += 1;
-            }
-        }
-    }
-    if let Some(start) = open {
-        return Err(PatternError {
-            problem: PatternProblem::UnclosedBracket,
-            start,
-            end: chars.len(),
-        });
-    }
-    flush(&mut text, &mut parts);
-    Ok(parts)
-}
-
-/// Refuses a pattern whose folder names would always be empty: a `/` at the
-/// start or the end, or two with nothing between them but brackets and spaces.
-fn check_folders(chars: &[char]) -> Result<(), PatternError> {
-    let mut last_slash: Option<usize> = None;
-    let mut seen_content = false;
-    let mut in_field = false;
-    for (i, &c) in chars.iter().enumerate() {
-        match c {
-            '{' => {
-                in_field = true;
-                seen_content = true;
-            }
-            '}' => in_field = false,
-            '/' if !in_field => {
-                if !seen_content {
-                    return Err(PatternError {
-                        problem: PatternProblem::EmptyFolder,
-                        start: last_slash.unwrap_or(i),
-                        end: i + 1,
-                    });
-                }
-                last_slash = Some(i);
-                seen_content = false;
-            }
-            '[' | ']' => {}
-            c if c.is_whitespace() => {}
-            _ => seen_content = true,
-        }
-    }
-    if !seen_content {
-        let start = last_slash.unwrap_or(0);
-        return Err(PatternError {
-            problem: PatternProblem::EmptyFolder,
-            start,
-            end: chars.len(),
-        });
-    }
-    Ok(())
-}
-
-/// Whether every field among `parts` has a value (those in inner brackets do not
-/// count: an inner bracket is left out on its own).
-fn all_present(parts: &[Part], values: &dyn FieldValues) -> bool {
-    parts.iter().all(|part| match part {
-        Part::Field(field) => field_text(field, values).is_some(),
-        _ => true,
-    })
-}
-
-fn render_parts(
-    parts: &[Part],
-    values: &dyn FieldValues,
-    set: CharacterSet,
-    unknown: &str,
-    names: &mut Vec<String>,
-) {
-    for part in parts {
-        match part {
-            Part::Text(text) => push(names, text),
-            Part::Field(field) => {
-                let text = field_text(field, values).unwrap_or_else(|| unknown.to_owned());
-                push(names, &clean_value(&text, set));
-            }
-            Part::Folder => names.push(String::new()),
-            Part::Optional(inner) => {
-                if all_present(inner, values) {
-                    render_parts(inner, values, set, unknown, names);
-                }
-            }
-        }
-    }
 }
 
 fn push(names: &mut [String], text: &str) {
@@ -1031,5 +660,33 @@ mod tests {
         );
         assert_eq!(names[0], "a".repeat(252));
         assert!(names[1].len() + ".flac".len() <= MAX_NAME_BYTES);
+    }
+
+    #[test]
+    fn expressions_name_files_with_the_same_cleaning() {
+        assert_eq!(
+            render(
+                "{initial(albumartist)}/{if(composer, composer, artist)} - {upper(title)}",
+                CharacterSet::Windows
+            ),
+            ["M", "AC_DC - SHORELINE, 6 A.M."],
+            "a value from a function never starts a folder"
+        );
+        assert_eq!(
+            render("{'a/b'}/{if(composer, 'x')}", CharacterSet::AsIs),
+            ["a_b", "Unknown"],
+            "an expression that gives nothing is the given word"
+        );
+        assert_eq!(
+            render(
+                "[{if(composer, 'x')}/]{num(track, 3)}",
+                CharacterSet::Windows
+            ),
+            ["003"]
+        );
+        assert_eq!(
+            NamingPattern::parse("{upper(nope)}").unwrap_err().problem,
+            PatternProblem::UnknownField("nope".into())
+        );
     }
 }

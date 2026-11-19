@@ -17,6 +17,7 @@ Every parser of untrusted input and the FFmpeg bridge have a fuzz target in [`fu
 | M3U, M3U8, PLS and XSPF playlists, by format and sniffed as the automatic import reads them | `playlist_m3u`, `playlist_pls`, `playlist_xspf`, `playlist_sniff` |
 | The query language | `query_parse` |
 | Naming patterns of the organizer, the converter and folder sync | `naming_pattern` |
+| The expression language, compared with the naming patterns of before | `expression` |
 | AutoEQ `ParametricEQ.txt` files | `autoeq_parse` |
 | `settings.toml`, `ui-state.toml`, `export.toml` | `settings_toml`, `ui_state_toml`, `export_toml` |
 | The manifest of a sync destination, `.helikodu-sync.json` | `sync_manifest` |
@@ -81,3 +82,7 @@ Findings, each fixed with a regression test:
 Found by review while writing the targets, and fixed with tests: the sync manifest could name paths outside the destination (absolute or with `..`), which a sync would have removed; naming patterns nested without limit could exhaust the stack, and a folder name cut to length could end in a dot or a space; preset bit rates and identifiers near the integer limits overflowed.
 
 Known and left: seeking in a MIDI file renders from the start, so a seek far into a file that claims to be very long takes seconds (about 5 s to the middle of a 74-minute file); the long-tail targets seek at most a minute in.
+
+## Run of 19 November 2026: the expression language
+
+The new `expression` target ran for 5 minutes in four workers (about 11.6 million inputs, 30,600 corpus entries, seeded with the patterns of the user guide and examples of every function). It found nothing: no panic, no error span outside the text, no value over the length limit, and no text that the naming patterns of before read differently.

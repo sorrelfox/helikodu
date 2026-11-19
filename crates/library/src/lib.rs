@@ -17,6 +17,7 @@ mod cover_facts;
 mod covers;
 mod db;
 mod details;
+mod expressions;
 mod history;
 mod library;
 mod loudness;

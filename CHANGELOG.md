@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - Helikodu analyses your library tracks in the background after a scan: where each track's sound starts and ends, its silent stretches and how its loudness changes. It works on one track at a time at the lowest priority, slows down while music plays from the same disk, pauses during scans and on battery, and carries on where it stopped after a restart. Nothing is written to the files. Tracks without any loudness tags are measured in the same pass, albums as a whole, so they are evened out like tagged ones. Later versions use the analysis for smoother transitions and for skipping silence. `helikodu-cli analyze` runs it from the command line.
+- Naming patterns are now written in an expression language: the braces can hold functions, conditions, comparisons and names bound with `let`, such as `{if(composer, composer, artist)}`, `{initial(noarticle(albumartist))}` or `{num(raw(track), 3)}`. Every pattern written before reads and names files exactly as it did. The organizer, the converter and folder sync all use it, and a new page of the user guide, Expressions, describes it.
 
 ### Changed
 

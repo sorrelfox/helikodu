@@ -30,6 +30,8 @@ A pattern says where a file goes and what it is called, from its tags. The conve
 
 The default, `{albumartist}/{album}/[{disc}-]{track} {title}`, gives `Mari Kask/Tidewater Rooms/01 Tidewater.opus`. Characters that file names on memory sticks and phones cannot hold are replaced by `_`, and a name is cut to 255 bytes. When two tracks would get the same name, the second gets ` (2)`. A pattern that cannot be read is explained under the entry, with the character where the problem is.
 
+The braces can also hold functions and conditions, such as `{upper(album)}` or `{if(year < 2000, "Old", "New")}`; see [Expressions](expressions.md).
+
 ## Sync and export
 
 **Sync and Export…** keeps a folder (a phone, a memory stick, another player) in step with chosen playlists and searches.

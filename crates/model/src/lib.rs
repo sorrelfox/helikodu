@@ -11,6 +11,7 @@
 pub mod analysis;
 pub mod audio;
 pub mod eq;
+pub mod expression;
 pub mod library;
 mod path_serde;
 pub mod player;

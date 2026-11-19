@@ -17,6 +17,7 @@ This folder is outside the Cargo workspace because fuzzing needs a nightly toolc
 | `cover_decode` | `helikodu-meta`'s cover decoder: format sniffing, header probing, decoding within the size, dimension and pixel limits, and scaling into a thumbnail, checking that a decoded picture stays within the limits and agrees with its header |
 | `lyrics_parse` | `helikodu-meta`'s LRC parser: time, metadata and word tags, the line bounds, time order, word offsets inside their line, and the current-line lookup at extreme positions and offsets |
 | `naming_pattern` | `helikodu-meta`'s naming patterns (the organizer, the converter and folder sync): parsing, error spans, and rendering with arbitrary field values in every character set, checking that no name is empty, `.` or `..`, holds `/` or NUL, is too long for a file system, or breaks the Windows rules of the sets that keep them |
+| `expression` | `helikodu-model`'s expression language: reading arbitrary text as a template and as a path template, error spans, evaluation with arbitrary field values of one or several values within the length limits, and the same fields and pieces as the naming patterns of before (`crates/model/src/expression/legacy.rs`) for every text those read |
 | `playlist_sniff` | `helikodu-meta`'s playlist parsers as the automatic import uses them: the format sniffed from the bytes, then the checks of the other playlist targets |
 | `tags_read` | The scan worker's reader (`helikodu-meta`): the quick hash, the tags through lofty and the FFmpeg fallback, the embedded CUE sheet, chapters and the embedded cover; the report must travel through the worker protocol unchanged |
 | `worker_message` | `helikodu-meta`'s scanner–worker protocol: decoding arbitrary messages and frame streams; whatever decodes must encode back to the same bytes |
@@ -47,7 +48,8 @@ cargo +nightly fuzz run gme_open
 cargo +nightly fuzz run sid_open
 cargo +nightly fuzz run midi_open
 cargo +nightly fuzz run query_parse
-cargo +nightly fuzz run naming_pattern   # and so on for every target above
+cargo +nightly fuzz run naming_pattern
+cargo +nightly fuzz run expression       # and so on for every target above
 ```
 
 Without it, `campaign.sh` builds every target with the same compiler flags (libFuzzer, coverage, AddressSanitizer, overflow checks) using only a nightly toolchain, and runs a campaign:

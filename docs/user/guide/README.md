@@ -22,5 +22,6 @@ This guide describes the current version. Helikodu is young: some menu entries a
 14. [The command line](command-line.md)
 15. [Where Helikodu keeps its files](files.md)
 16. [Troubleshooting](troubleshooting.md)
+17. [Expressions in naming patterns](expressions.md)
 
 See also the [FAQ](../faq.md) and the manual pages `helikodu(1)`, `helikodu-cli(1)` and `helikodu-scan-worker(1)`.

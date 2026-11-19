@@ -29,6 +29,8 @@ The organizer, the [converter and folder sync](converting-and-sync.md#naming-pat
 - A field that is empty outside brackets is written as "Unknown"; a track without a title is named by its file name.
 - Each folder and file name is cut to 255 bytes, leaving room for the extension.
 
+The braces can hold more than a field: functions, conditions and comparisons such as `{if(composer, composer, artist)}` or `{initial(noarticle(albumartist))}`. See [Expressions](expressions.md).
+
 A pattern that cannot be read is explained under the entry, with the character where the problem is.
 
 ## Renaming one file and moving files to the trash
