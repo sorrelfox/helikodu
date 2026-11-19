@@ -96,7 +96,8 @@ list.hk-tracks > row.disc { min-height: 0; padding: 14px 12px 6px; }
 list.hk-tracks > row.disc:hover { background: none; }
 .hk-table-header { min-height: 33px; padding: 0 12px; border-bottom: 1px solid var(--hk-line); }
 
-gridview.hk-grid { background: none; padding: 0 14px 12px; color: var(--hk-t1); }
+/* 4px at the top: room for the ring of the album that plays (.hk-cover.playing), which the grid would cut. */
+gridview.hk-grid { background: none; padding: 4px 14px 12px; color: var(--hk-t1); }
 gridview.hk-grid > child { padding: 0 10px 22px; border-radius: 6px; background: none; }
 gridview.hk-grid > child:selected { background: none; }
 gridview.hk-grid > child:focus-visible { outline: none; }
@@ -105,7 +106,8 @@ gridview.hk-grid > child:focus-visible .hk-cover { outline: 2px solid var(--hk-a
 .hk-cover { border-radius: 6px; }
 .hk-cover.hero { border-radius: 8px; box-shadow: 0 10px 24px -8px rgba(0,0,0,0.45); }
 .hk-cover.small { border-radius: 4px; }
-.hk-cover.playing { box-shadow: 0 0 0 2px var(--hk-pane), 0 0 0 4px var(--hk-accent-fill); }
+/* A 2px gap in the pane colour, then a 2px accent ring. GTK paints the shadows in the order listed, the last on top, so the gap comes last. */
+.hk-cover.playing { box-shadow: 0 0 0 4px var(--hk-accent-fill), 0 0 0 2px var(--hk-pane); }
 
 .hk-placeholder { border-radius: 6px; border: 1px solid var(--hk-line); background-color: var(--hk-win); }
 .hk-placeholder-bars { color: var(--hk-line); }

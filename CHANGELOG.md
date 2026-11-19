@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- The ring around the cover of the album that plays is drawn as designed, a gap in the background colour and then the accent ring, and it is no longer cut off along the top of the first row of the Albums page.
 - The Favourite button's heart is Helikodu's own icon. GNOME's icon theme has no heart, so on GNOME and in the Flatpak the button showed a stand-in picture instead of the outline heart seen on KDE Plasma.
 - With Now Playing open, the window could not be made shorter than about 740 pixels, and opening Now Playing made a shorter window taller: the cover and the analyzer kept their full height. The cover now shrinks with the window, and the analyzer scrolls like the lyrics and the queue.
 
