@@ -58,9 +58,9 @@ The pictures are not photographs of a desktop. The example `site_shots` of `heli
 docs/site/shots.py --store
 ```
 
-The same example draws the pictures that the metainfo (`data/io.github.sorrelfox.Helikodu.metainfo.xml`) lists for Flathub and other app stores. It writes them as PNG files into `assets/screenshots/`: `<name>.png` in the light scheme and `<name>-dark.png` in the dark one. `STORE` at the top of `shots.py` names them. They follow Flathub's quality guidelines:
+The same example draws the pictures that the metainfo (`data/io.github.sorrelfox.Helikodu.metainfo.xml`) lists for Flathub and other app stores. It writes them as PNG files into `assets/screenshots/`: `<name>.png` in the light scheme and `<name>-dark.png` in the dark one. `STORE` at the top of `shots.py` names them. They follow Flathub's quality guidelines, except for the size: the guidelines ask for windows of at most 1000 × 700, where Helikodu's three panes are cramped, and the pictures show the window at its usual size instead.
 
-- each window is at most 1000 × 700 logical pixels (2000 × 1400 pixels), drawn with its own shadow and rounded corners and not maximized;
+- each window has the size of the website's pictures (the main window 1440 × 900 logical pixels) at two pixels for each logical pixel, drawn with its own shadow and rounded corners and not maximized;
 - the main window has the default, integrated style, with the window buttons in its header;
 - the light pictures come first, and one dark picture shows the dark style.
 

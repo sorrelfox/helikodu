@@ -18,9 +18,10 @@ to the site is shared. The Home view is drawn once more for each language of
 LANGUAGES below, as `home-<language>`, from the translations in `po/`.
 
 With --store it renders the pictures for app stores such as Flathub instead,
-the ones the metainfo lists: the windows at 1000 x 700 at most, with their
-shadow and rounded corners, as PNG files in `docs/site/assets/screenshots/`
-(STORE below says which, in the light scheme and in the dark one).
+the ones the metainfo lists: the windows at the same size and scale, drawn
+with their frame (the shadow and the rounded corners), as PNG files in
+`docs/site/assets/screenshots/` (STORE below says which, in the light scheme
+and in the dark one).
 
 The pictures use the font and the settings of the desktop the script runs on.
 Run it before a release when the interface has changed, look at the result,

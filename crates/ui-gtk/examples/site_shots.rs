@@ -17,8 +17,8 @@
 //! (default dark), `--scale N` (default 1: N pixels for each logical pixel),
 //! `--only NAME[,NAME…]` to render some of the pictures (the steps of the
 //! others are left out) and `--store` for the pictures of app stores such as
-//! Flathub: windows of at most 1000 x 700, drawn with their shadow and
-//! rounded corners. Each picture is written as `<name>.png`; the names
+//! Flathub: the windows drawn with their frame, the shadow and the rounded
+//! corners. Each picture is written as `<name>.png`; the names
 //! are printed as they are written.
 //!
 //! The windows are in the language of the environment where translations are
@@ -95,11 +95,6 @@ impl Shots {
         }
     }
 
-    /// The size of the main window: at most 1000 x 700 for the stores.
-    fn main_size(&self) -> (i32, i32) {
-        if self.store { STORE_SIZE } else { (1440, 900) }
-    }
-
     /// A snapshot that draws `widget` at the scale of the pictures.
     fn draw(&self, widget: &gtk::Widget) -> gtk::Snapshot {
         let snapshot = gtk::Snapshot::new();
@@ -118,27 +113,9 @@ impl Shots {
             return;
         }
         let window = window.upcast_ref::<gtk::Window>();
-        if self.store {
-            // The stores take windows of at most 1000 x 700.
-            let (most_w, most_h) = STORE_SIZE;
-            let (w, h) = window.default_size();
-            let (w, h) = (w.max(window.width()), h.max(window.height()));
-            if w > most_w || h > most_h {
-                window.set_default_size(w.min(most_w), h.min(most_h));
-            }
-        }
-        // Pages that need the width: drawn with the sidebar hidden (F9).
-        let roomy = self.store && ROOMY.contains(&name);
-        if roomy {
-            let _ = WidgetExt::activate_action(window, "win.toggle-sidebar", None);
-        }
         spin(400);
         let region = graphene::Rect::new(0.0, 0.0, window.width() as f32, window.height() as f32);
         let snapshot = self.draw(window.upcast_ref());
-        if roomy {
-            let _ = WidgetExt::activate_action(window, "win.toggle-sidebar", None);
-            spin(300);
-        }
         if !self.store {
             self.write(name, window.renderer(), snapshot, &region);
             return;
@@ -292,12 +269,8 @@ impl Shots {
     }
 }
 
-/// The largest window the stores take, in logical pixels.
-const STORE_SIZE: (i32, i32) = (1000, 700);
-
-/// The pictures for the stores whose page needs the width of the window: in
-/// a window of 1000 pixels they are drawn with the sidebar hidden.
-const ROOMY: &[&str] = &["query", "smart-playlist"];
+/// The size of the main window, in logical pixels.
+const MAIN_SIZE: (i32, i32) = (1440, 900);
 
 /// How far around a window its shadow may reach, in logical pixels.
 const SHADOW: f32 = 64.0;
@@ -422,7 +395,7 @@ fn shoot_library(application: &gtk::Application, shots: &Shots) {
         return;
     }
     let backend = sample::backend(&playing(sample::SampleOptions::default().albums));
-    let main = main_window(application, &backend, shots.main_size());
+    let main = main_window(application, &backend, MAIN_SIZE);
     let library = backend.library();
     let albums = library
         .album_keys(&AlbumQuery::default())
@@ -604,7 +577,7 @@ fn shoot_windows(application: &gtk::Application, shots: &Shots) {
         return;
     }
     let backend = sample::backend(&playing(120));
-    let main = main_window(application, &backend, shots.main_size());
+    let main = main_window(application, &backend, MAIN_SIZE);
     let library = backend.library();
     let albums = library
         .album_keys(&AlbumQuery::default())
@@ -720,7 +693,7 @@ fn shoot_dsp(application: &gtk::Application, shots: &Shots) {
         return;
     }
     let (backend, updates) = sample::backend_with_updates(&playing(120));
-    let main = main_window(application, &backend, shots.main_size());
+    let main = main_window(application, &backend, MAIN_SIZE);
     let filter = |kind, frequency_hz, gain_db, q| ParametricFilter {
         kind,
         frequency_hz,
@@ -801,7 +774,7 @@ fn shoot_tools(application: &gtk::Application, shots: &Shots) {
         albums: 120,
         playing: None,
     });
-    let main = main_window(application, &backend, shots.main_size());
+    let main = main_window(application, &backend, MAIN_SIZE);
 
     for (action, name) in [
         ("convert", "converter"),
@@ -875,7 +848,7 @@ fn shoot_other(application: &gtk::Application, shots: &Shots) {
             albums: 300,
             playing: None,
         });
-        let main = main_window(application, &backend, shots.main_size());
+        let main = main_window(application, &backend, MAIN_SIZE);
         if backend
             .library()
             .set_album_kind(AlbumKey(2), MediaKind::Audiobook)
@@ -898,7 +871,7 @@ fn shoot_other(application: &gtk::Application, shots: &Shots) {
 
     if shots.wanted("first-run") {
         let backend = sample::first_run_backend(&playing(120));
-        let main = main_window(application, &backend, shots.main_size());
+        let main = main_window(application, &backend, MAIN_SIZE);
         shots.window("first-run", &main);
         main.destroy();
     }
