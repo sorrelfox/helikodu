@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 06:08-0500\n"
+"POT-Creation-Date: 2026-11-19 12:44-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Japanese <https://github.com/sorrelfox/helikodu>\n"
@@ -215,24 +215,48 @@ msgid "Your music library in the dark style"
 msgstr "ダークスタイルで表示した音楽ライブラリ"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:127
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:138
 msgid "Fixes for the release candidate:"
 msgstr "リリース候補版の修正:"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+msgid ""
+"The Flatpak file installs Helikodu from its own signed repository, so that "
+"it gets updates"
+msgstr ""
+"Flatpak ファイルは Helikodu 独自の署名付きリポジトリからインストールするた"
+"め、更新を受け取れます"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+msgid ""
+"The tray menu in KDE Plasma no longer shows wrong items after it changes"
+msgstr ""
+"KDE Plasma のシステムトレイメニューが、変更後に誤った項目を表示しなくなりまし"
+"た"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+msgid "Every page fits a narrow window"
+msgstr "すべてのページが狭いウィンドウに収まります"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+msgid "Helikodu uses less memory"
+msgstr "Helikodu のメモリー使用量が減りました"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:140
 msgid "With Now Playing open, the window can be made as small as elsewhere"
 msgstr ""
 "再生中画面を開いていても、ほかの画面と同じ大きさまでウィンドウを小さくできま"
 "す"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:141
 msgid "The Favourite button shows the same heart on every desktop"
 msgstr "お気に入りボタンはどのデスクトップでも同じハートを表示します"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
 msgid "The ring around the cover of the playing album is drawn whole"
 msgstr "再生中のアルバムのカバーを囲む枠が欠けずに描かれます"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:138
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:149
 msgid ""
 "The release candidate for 1.0: smart playlists and a query language for "
 "search, lyrics, a play history, Home and a mini player, tag tools with undo, "
@@ -245,7 +269,7 @@ msgstr ""
 "ルダー同期、カバーマネージャー、波形シークバー、ライブラリのバックアップ、オ"
 "フラインのユーザーガイド、スクリーンリーダーとキーボード操作への対応の改善。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:149
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:160
 msgid ""
 "The first beta: graphic and parametric equalizers, crossfeed, channel mixing "
 "and a limiter, crossfades and fades, loudness measurement, a signal path "
@@ -257,7 +281,7 @@ msgstr ""
 "ス測定、信号経路の表示、PulseAudio と JACK への出力、そしてトラッカーモジュー"
 "ル、ゲーム音楽、SID チューン、MIDI ファイルへの対応。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:159
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:170
 msgid ""
 "The first alpha: a music library with albums, artists, genres, folders, "
 "tracks, search and playlists, gapless and bit-perfect playback with "
@@ -272,108 +296,108 @@ msgid "Sort by"
 msgstr "並べ替え"
 
 #: crates/ui-gtk/resources/ui/albums.ui:12
-#: crates/ui-gtk/resources/ui/albums.ui:93
-#: crates/ui-gtk/src/views/albums.rs:142
+#: crates/ui-gtk/resources/ui/albums.ui:104
+#: crates/ui-gtk/src/views/albums.rs:143
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:45
-#: crates/ui-gtk/src/views/artists.rs:148 crates/ui-gtk/src/views/genres.rs:147
-#: crates/ui-gtk/src/views/genres.rs:154 crates/ui-gtk/src/views/genres.rs:264
+#: crates/ui-gtk/src/views/artists.rs:149 crates/ui-gtk/src/views/genres.rs:157
+#: crates/ui-gtk/src/views/genres.rs:164 crates/ui-gtk/src/views/genres.rs:276
 #: crates/ui-gtk/src/tools/tag_preview.rs:158
 #: crates/ui-gtk/src/tools/organizer.rs:71
 #: crates/ui-gtk/src/popovers/query_completion.rs:42
-#: crates/ui-gtk/src/views/category.rs:250
-#: crates/ui-gtk/src/views/category.rs:573
+#: crates/ui-gtk/src/views/category.rs:251
+#: crates/ui-gtk/src/views/category.rs:576
 #: crates/ui-gtk/src/views/smart_rules.rs:198
 #: crates/ui-gtk/src/views/facet_browser.rs:50
 msgid "Album artist"
 msgstr "アルバムアーティスト"
 
 #: crates/ui-gtk/resources/ui/albums.ui:17
-#: crates/ui-gtk/resources/ui/album.ui:232 crates/ui-gtk/src/views/album.rs:754
-#: crates/ui-gtk/src/views/albums.rs:139
+#: crates/ui-gtk/resources/ui/album.ui:237 crates/ui-gtk/src/views/album.rs:760
+#: crates/ui-gtk/src/views/albums.rs:140
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:43
-#: crates/ui-gtk/src/views/folders.rs:287 crates/ui-gtk/src/views/genres.rs:148
-#: crates/ui-gtk/src/views/genres.rs:261 crates/ui-gtk/src/views/playlist.rs:71
+#: crates/ui-gtk/src/views/folders.rs:287 crates/ui-gtk/src/views/genres.rs:158
+#: crates/ui-gtk/src/views/genres.rs:273 crates/ui-gtk/src/views/playlist.rs:72
 #: crates/ui-gtk/src/views/tracks.rs:66
 #: crates/ui-gtk/src/tools/tag_preview.rs:156
 #: crates/ui-gtk/src/tools/organizer.rs:74
-#: crates/ui-gtk/src/views/history.rs:383
-#: crates/ui-gtk/src/views/category.rs:251
-#: crates/ui-gtk/src/views/category.rs:570
-#: crates/ui-gtk/src/views/smart_playlist.rs:44
-#: crates/ui-gtk/src/views/smart_playlist.rs:52
-#: crates/ui-gtk/src/views/smart_playlist.rs:1434
+#: crates/ui-gtk/src/views/history.rs:384
+#: crates/ui-gtk/src/views/category.rs:252
+#: crates/ui-gtk/src/views/category.rs:573
+#: crates/ui-gtk/src/views/smart_playlist.rs:48
+#: crates/ui-gtk/src/views/smart_playlist.rs:56
+#: crates/ui-gtk/src/views/smart_playlist.rs:1589
 #: crates/ui-gtk/src/views/smart_rules.rs:196
 #: crates/ui-gtk/src/views/smart_rules.rs:548
 msgid "Title"
 msgstr "タイトル"
 
 #: crates/ui-gtk/resources/ui/albums.ui:22
-#: crates/ui-gtk/src/views/albums.rs:140
+#: crates/ui-gtk/src/views/albums.rs:141
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:50
-#: crates/ui-gtk/src/views/genres.rs:149 crates/ui-gtk/src/views/genres.rs:262
+#: crates/ui-gtk/src/views/genres.rs:159 crates/ui-gtk/src/views/genres.rs:274
 #: crates/ui-gtk/src/views/tracks.rs:69
 #: crates/ui-gtk/src/tools/tag_preview.rs:164
 #: crates/ui-gtk/src/tools/organizer.rs:77
-#: crates/ui-gtk/src/views/category.rs:178
-#: crates/ui-gtk/src/views/category.rs:252
-#: crates/ui-gtk/src/views/category.rs:571
+#: crates/ui-gtk/src/views/category.rs:179
+#: crates/ui-gtk/src/views/category.rs:253
+#: crates/ui-gtk/src/views/category.rs:574
 #: crates/ui-gtk/src/views/smart_rules.rs:215
 #: crates/ui-gtk/src/views/facet_browser.rs:54
 msgid "Year"
 msgstr "年"
 
 #: crates/ui-gtk/resources/ui/albums.ui:27
-#: crates/ui-gtk/src/views/albums.rs:141 crates/ui-gtk/src/views/genres.rs:150
-#: crates/ui-gtk/src/views/genres.rs:263
-#: crates/ui-gtk/src/views/category.rs:253
-#: crates/ui-gtk/src/views/category.rs:572
+#: crates/ui-gtk/src/views/albums.rs:142 crates/ui-gtk/src/views/genres.rs:160
+#: crates/ui-gtk/src/views/genres.rs:275
+#: crates/ui-gtk/src/views/category.rs:254
+#: crates/ui-gtk/src/views/category.rs:575
 #: crates/ui-gtk/src/views/smart_rules.rs:232
 msgid "Date added"
 msgstr "追加日"
 
 #: crates/ui-gtk/resources/ui/albums.ui:44
-#: crates/ui-gtk/resources/ui/albums.ui:115
+#: crates/ui-gtk/resources/ui/albums.ui:128
 #: crates/ui-gtk/src/window/sidebar.rs:50
-#: crates/ui-gtk/src/views/artists.rs:654 crates/ui-gtk/src/views/search.rs:575
-#: crates/ui-gtk/src/play_modes.rs:69 crates/ui-gtk/src/views/statistics.rs:613
+#: crates/ui-gtk/src/views/artists.rs:662 crates/ui-gtk/src/views/search.rs:593
+#: crates/ui-gtk/src/play_modes.rs:69 crates/ui-gtk/src/views/statistics.rs:615
 #: crates/ui-gtk/src/tools/cover_manager.rs:727
 msgid "Albums"
 msgstr "アルバム"
 
-#: crates/ui-gtk/resources/ui/albums.ui:65
+#: crates/ui-gtk/resources/ui/albums.ui:76
 msgid "Quick filter"
 msgstr "クイックフィルター"
 
-#: crates/ui-gtk/resources/ui/albums.ui:70
+#: crates/ui-gtk/resources/ui/albums.ui:81
 #: crates/ui-gtk/src/views/history.rs:165
 msgid "All"
 msgstr "すべて"
 
-#: crates/ui-gtk/resources/ui/albums.ui:76
+#: crates/ui-gtk/resources/ui/albums.ui:87
 #: crates/ui-gtk/src/tools/converter.rs:162
 msgid "Lossless"
 msgstr "ロスレス"
 
-#: crates/ui-gtk/resources/ui/albums.ui:82
+#: crates/ui-gtk/resources/ui/albums.ui:93
 msgid "Hi-res"
 msgstr "ハイレゾ"
 
-#: crates/ui-gtk/resources/ui/albums.ui:94
+#: crates/ui-gtk/resources/ui/albums.ui:105
 msgid "Sort order"
 msgstr "並び順"
 
-#: crates/ui-gtk/resources/ui/album.ui:31 crates/ui-gtk/src/views/album.rs:744
+#: crates/ui-gtk/resources/ui/album.ui:33 crates/ui-gtk/src/views/album.rs:750
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:51
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:46
-#: crates/ui-gtk/src/views/artists.rs:218
-#: crates/ui-gtk/src/views/playlist.rs:78 crates/ui-gtk/src/views/tracks.rs:68
-#: crates/ui-gtk/src/views/tracks.rs:841
+#: crates/ui-gtk/src/views/artists.rs:225
+#: crates/ui-gtk/src/views/playlist.rs:79 crates/ui-gtk/src/views/tracks.rs:68
+#: crates/ui-gtk/src/views/tracks.rs:839
 #: crates/ui-gtk/src/tools/tag_preview.rs:159
 #: crates/ui-gtk/src/tools/organizer.rs:73
 #: crates/ui-gtk/src/views/history.rs:251
-#: crates/ui-gtk/src/views/history.rs:385
-#: crates/ui-gtk/src/views/smart_playlist.rs:54
-#: crates/ui-gtk/src/views/smart_playlist.rs:1438
+#: crates/ui-gtk/src/views/history.rs:386
+#: crates/ui-gtk/src/views/smart_playlist.rs:58
+#: crates/ui-gtk/src/views/smart_playlist.rs:1593
 #: crates/ui-gtk/src/views/smart_rules.rs:199
 #: crates/ui-gtk/src/views/smart_rules.rs:554
 #: crates/ui-gtk/src/views/facet_browser.rs:51
@@ -381,14 +405,14 @@ msgstr "並び順"
 msgid "Album"
 msgstr "アルバム"
 
-#: crates/ui-gtk/resources/ui/album.ui:94
+#: crates/ui-gtk/resources/ui/album.ui:97
 #: crates/ui-gtk/resources/ui/deck.ui:147
 #: crates/ui-gtk/resources/ui/deck.ui:149
 #: crates/ui-gtk/src/views/actions.rs:190
-#: crates/ui-gtk/src/views/folders.rs:263
-#: crates/ui-gtk/src/views/playlist.rs:191 crates/ui-gtk/src/deck/modes.rs:225
+#: crates/ui-gtk/src/views/folders.rs:262
+#: crates/ui-gtk/src/views/playlist.rs:192 crates/ui-gtk/src/deck/modes.rs:225
 #: crates/ui-gtk/src/play_modes.rs:261
-#: crates/ui-gtk/src/views/smart_playlist.rs:223
+#: crates/ui-gtk/src/views/smart_playlist.rs:374
 #: crates/ui-gtk/src/window/playlists.rs:228
 #: crates/ui-gtk/src/window/playlists.rs:232
 #: crates/ui-gtk/src/mini_player.rs:181 crates/ui-gtk/src/mini_player.rs:504
@@ -396,52 +420,52 @@ msgstr "アルバム"
 msgid "Play"
 msgstr "再生"
 
-#: crates/ui-gtk/resources/ui/album.ui:114
+#: crates/ui-gtk/resources/ui/album.ui:117
 #: crates/ui-gtk/resources/ui/deck.ui:120
 #: crates/ui-gtk/resources/ui/deck.ui:122
-#: crates/ui-gtk/src/views/artists.rs:160 crates/ui-gtk/src/views/genres.rs:141
-#: crates/ui-gtk/src/views/playlist.rs:193
-#: crates/ui-gtk/src/views/category.rs:244
-#: crates/ui-gtk/src/views/smart_playlist.rs:225
+#: crates/ui-gtk/src/views/artists.rs:166 crates/ui-gtk/src/views/genres.rs:151
+#: crates/ui-gtk/src/views/playlist.rs:194
+#: crates/ui-gtk/src/views/category.rs:245
+#: crates/ui-gtk/src/views/smart_playlist.rs:376
 #: crates/ui-gtk/src/shortcuts.rs:102 crates/ui-gtk/src/deck/compact.rs:68
 msgid "Shuffle"
 msgstr "シャッフル"
 
-#: crates/ui-gtk/resources/ui/album.ui:136
+#: crates/ui-gtk/resources/ui/album.ui:139
 msgid "Start again"
 msgstr "最初から再生"
 
-#: crates/ui-gtk/resources/ui/album.ui:157
+#: crates/ui-gtk/resources/ui/album.ui:160
 #: crates/ui-gtk/src/views/actions.rs:193
-#: crates/ui-gtk/src/views/artists.rs:171
-#: crates/ui-gtk/src/views/folders.rs:264
+#: crates/ui-gtk/src/views/artists.rs:177
+#: crates/ui-gtk/src/views/folders.rs:263
 msgid "Add to queue"
 msgstr "キューに追加"
 
-#: crates/ui-gtk/resources/ui/album.ui:168
-#: crates/ui-gtk/resources/ui/album.ui:170
-#: crates/ui-gtk/src/views/artists.rs:167
-#: crates/ui-gtk/src/views/artists.rs:168
-#: crates/ui-gtk/src/views/playlist.rs:209
+#: crates/ui-gtk/resources/ui/album.ui:171
+#: crates/ui-gtk/resources/ui/album.ui:173
+#: crates/ui-gtk/src/views/artists.rs:173
+#: crates/ui-gtk/src/views/artists.rs:174
 #: crates/ui-gtk/src/views/playlist.rs:210
+#: crates/ui-gtk/src/views/playlist.rs:211
 #: crates/ui-gtk/src/window/panel/lyrics.rs:179
 #: crates/ui-gtk/src/window/panel/lyrics.rs:180
-#: crates/ui-gtk/src/views/smart_playlist.rs:233
-#: crates/ui-gtk/src/views/smart_playlist.rs:234
+#: crates/ui-gtk/src/views/smart_playlist.rs:384
+#: crates/ui-gtk/src/views/smart_playlist.rs:385
 msgid "More"
 msgstr "その他"
 
-#: crates/ui-gtk/resources/ui/album.ui:240 crates/ui-gtk/src/views/album.rs:758
-#: crates/ui-gtk/src/views/album.rs:922
+#: crates/ui-gtk/resources/ui/album.ui:245 crates/ui-gtk/src/views/album.rs:764
+#: crates/ui-gtk/src/views/album.rs:928
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1540
-#: crates/ui-gtk/src/views/artists.rs:219 crates/ui-gtk/src/views/tracks.rs:72
+#: crates/ui-gtk/src/views/artists.rs:226 crates/ui-gtk/src/views/tracks.rs:72
 #: crates/ui-gtk/src/tools/duplicates.rs:718
 #: crates/ui-gtk/src/views/smart_rules.rs:226
 #: crates/ui-gtk/src/views/home.rs:367
 msgid "Plays"
 msgstr "再生回数"
 
-#: crates/ui-gtk/resources/ui/album.ui:248 crates/ui-gtk/src/views/album.rs:928
+#: crates/ui-gtk/resources/ui/album.ui:253 crates/ui-gtk/src/views/album.rs:934
 #: crates/ui-gtk/src/widgets/rating_stars.rs:200
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:773
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:820
@@ -450,44 +474,44 @@ msgstr "再生回数"
 msgid "Rating"
 msgstr "評価"
 
-#: crates/ui-gtk/resources/ui/album.ui:256 crates/ui-gtk/src/views/album.rs:903
+#: crates/ui-gtk/resources/ui/album.ui:261 crates/ui-gtk/src/views/album.rs:909
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1479
-#: crates/ui-gtk/src/views/artists.rs:220
+#: crates/ui-gtk/src/views/artists.rs:227
 #: crates/ui-gtk/src/views/folders.rs:288
-#: crates/ui-gtk/src/views/playlist.rs:76
-#: crates/ui-gtk/src/views/playlist.rs:79 crates/ui-gtk/src/views/tracks.rs:73
+#: crates/ui-gtk/src/views/playlist.rs:77
+#: crates/ui-gtk/src/views/playlist.rs:80 crates/ui-gtk/src/views/tracks.rs:73
 #: crates/ui-gtk/src/popovers/query_completion.rs:73
-#: crates/ui-gtk/src/views/smart_playlist.rs:57
-#: crates/ui-gtk/src/views/smart_playlist.rs:1451
+#: crates/ui-gtk/src/views/smart_playlist.rs:61
+#: crates/ui-gtk/src/views/smart_playlist.rs:1606
 #: crates/ui-gtk/src/views/smart_rules.rs:229
 msgid "Length"
 msgstr "長さ"
 
-#: crates/ui-gtk/resources/ui/album.ui:270
-#: crates/ui-gtk/src/window/sidebar.rs:52 crates/ui-gtk/src/views/search.rs:595
-#: crates/ui-gtk/src/views/tracks.rs:196 crates/ui-gtk/src/views/tracks.rs:252
-#: crates/ui-gtk/src/views/tracks.rs:306 crates/ui-gtk/src/window/pages.rs:442
-#: crates/ui-gtk/src/play_modes.rs:68 crates/ui-gtk/src/views/statistics.rs:601
+#: crates/ui-gtk/resources/ui/album.ui:275
+#: crates/ui-gtk/src/window/sidebar.rs:52 crates/ui-gtk/src/views/search.rs:613
+#: crates/ui-gtk/src/views/tracks.rs:196 crates/ui-gtk/src/views/tracks.rs:250
+#: crates/ui-gtk/src/views/tracks.rs:304 crates/ui-gtk/src/window/pages.rs:442
+#: crates/ui-gtk/src/play_modes.rs:68 crates/ui-gtk/src/views/statistics.rs:603
 msgid "Tracks"
 msgstr "トラック"
 
-#: crates/ui-gtk/resources/ui/album.ui:284 crates/ui-gtk/src/window.rs:467
+#: crates/ui-gtk/resources/ui/album.ui:289 crates/ui-gtk/src/window.rs:469
 #: crates/ui-gtk/src/dialogs/maintenance.rs:285
 msgid "Details"
 msgstr "詳細"
 
-#: crates/ui-gtk/resources/ui/album.ui:307
+#: crates/ui-gtk/resources/ui/album.ui:312
 #: crates/ui-gtk/src/views/smart_rules.rs:214
 msgid "Kind"
 msgstr "種類"
 
-#: crates/ui-gtk/resources/ui/album.ui:335
+#: crates/ui-gtk/resources/ui/album.ui:340
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1657
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1711
 msgid "Edit tags"
 msgstr "タグを編集"
 
-#: crates/ui-gtk/resources/ui/album.ui:345
+#: crates/ui-gtk/resources/ui/album.ui:350
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:125
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1416
 #: crates/ui-gtk/src/window/pages.rs:1005
@@ -528,7 +552,7 @@ msgstr "前へ"
 #: crates/ui-gtk/resources/ui/deck.ui:178
 #: crates/ui-gtk/resources/ui/deck.ui:180
 #: crates/ui-gtk/resources/ui/main_window.ui:85 crates/ui-gtk/src/deck.rs:599
-#: crates/ui-gtk/src/window.rs:806 crates/ui-gtk/src/play_modes.rs:269
+#: crates/ui-gtk/src/window.rs:808 crates/ui-gtk/src/play_modes.rs:269
 #: crates/ui-gtk/src/window/desktop.rs:432
 msgid "Next"
 msgstr "次へ"
@@ -669,7 +693,7 @@ msgstr "再スキャン"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:108
 #: crates/ui-gtk/src/window/panel.rs:347 crates/ui-gtk/src/views/history.rs:350
-#: crates/ui-gtk/src/views/history.rs:774 crates/ui-gtk/src/views/home.rs:349
+#: crates/ui-gtk/src/views/history.rs:775 crates/ui-gtk/src/views/home.rs:349
 msgid "History"
 msgstr "履歴"
 
@@ -758,7 +782,7 @@ msgid "Forward"
 msgstr "進む"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:256
-#: crates/ui-gtk/src/window/narrow.rs:349
+#: crates/ui-gtk/src/window/narrow.rs:373
 msgid "Search artists, albums, tracks"
 msgstr "アーティスト、アルバム、トラックを検索"
 
@@ -789,7 +813,7 @@ msgstr "パネル"
 msgid "Queue"
 msgstr "キュー"
 
-#: crates/ui-gtk/resources/ui/panel.ui:33 crates/ui-gtk/src/views/album.rs:939
+#: crates/ui-gtk/resources/ui/panel.ui:33 crates/ui-gtk/src/views/album.rs:945
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1315
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1757
 #: crates/ui-gtk/src/views/now_playing.rs:232
@@ -815,7 +839,7 @@ msgid "The queue is empty. Play an album to fill it."
 msgstr "キューは空です。アルバムを再生するとキューに追加されます。"
 
 #: crates/ui-gtk/resources/ui/panel.ui:202
-#: crates/ui-gtk/src/views/history.rs:371
+#: crates/ui-gtk/src/views/history.rs:372
 msgid "Save as playlist"
 msgstr "プレイリストとして保存"
 
@@ -831,57 +855,57 @@ msgstr "クリア"
 msgid "Remove everything but the playing track"
 msgstr "再生中のトラック以外をすべて削除"
 
-#: crates/ui-gtk/src/backend/service.rs:334
-#: crates/ui-gtk/src/backend/service.rs:1010
+#: crates/ui-gtk/src/backend/service.rs:358
+#: crates/ui-gtk/src/backend/service.rs:1018
 #: crates/ui-gtk/src/backend/service/browse.rs:139
 msgid "Unknown title"
 msgstr "不明なタイトル"
 
-#: crates/ui-gtk/src/backend/service.rs:442
+#: crates/ui-gtk/src/backend/service.rs:466
 msgid "The playlist is gone."
 msgstr "プレイリストはもう存在しません。"
 
-#: crates/ui-gtk/src/backend/service.rs:457
-#: crates/ui-gtk/src/backend/service.rs:932
+#: crates/ui-gtk/src/backend/service.rs:481
+#: crates/ui-gtk/src/backend/service.rs:940
 msgid "There is no library."
 msgstr "ライブラリがありません。"
 
-#: crates/ui-gtk/src/backend/service.rs:471
+#: crates/ui-gtk/src/backend/service.rs:495
 #: crates/ui-gtk/src/backend/service/insights.rs:114
 msgid "Unknown album"
 msgstr "不明なアルバム"
 
-#: crates/ui-gtk/src/backend/service.rs:475
+#: crates/ui-gtk/src/backend/service.rs:499
 #: crates/ui-gtk/src/backend/service/insights.rs:115
 msgid "Various artists"
 msgstr "さまざまなアーティスト"
 
-#: crates/ui-gtk/src/backend/service.rs:948
+#: crates/ui-gtk/src/backend/service.rs:956
 #: crates/ui-gtk/src/backend/service/services.rs:539
 #: crates/ui-gtk/src/backend/service/services.rs:864
 msgid "The library has stopped."
 msgstr "ライブラリが停止しました。"
 
-#: crates/ui-gtk/src/backend/service.rs:966
+#: crates/ui-gtk/src/backend/service.rs:974
 #: crates/ui-gtk/src/backend/service/mpris.rs:63
 #: crates/ui-gtk/src/backend/sample/playlists.rs:160
 msgid "Favourites"
 msgstr "お気に入り"
 
-#: crates/ui-gtk/src/backend/service.rs:1560
+#: crates/ui-gtk/src/backend/service.rs:1568
 msgid "The player has stopped. Restart Helikodu to play again."
 msgstr "プレーヤーが停止しました。再生するには Helikodu を再起動してください。"
 
-#: crates/ui-gtk/src/backend/service.rs:1895
+#: crates/ui-gtk/src/backend/service.rs:1903
 msgid "No sound (null output)"
 msgstr "無音（ヌル出力）"
 
-#: crates/ui-gtk/src/backend/service.rs:1896
+#: crates/ui-gtk/src/backend/service.rs:1904
 #: crates/ui-gtk/src/popovers/output_switcher.rs:37
 msgid "WAV file"
 msgstr "WAV ファイル"
 
-#: crates/ui-gtk/src/backend/service.rs:1898
+#: crates/ui-gtk/src/backend/service.rs:1906
 #: crates/ui-gtk/src/dialogs/first_run.rs:231
 #: crates/ui-gtk/src/dialogs/settings/output.rs:127
 #: crates/ui-gtk/src/dialogs/settings/output.rs:158
@@ -889,39 +913,39 @@ msgstr "WAV ファイル"
 msgid "System default"
 msgstr "システムの既定"
 
-#: crates/ui-gtk/src/backend/service.rs:1900
+#: crates/ui-gtk/src/backend/service.rs:1908
 #, rust-format
 msgid "Default device ({})"
 msgstr "既定のデバイス（{}）"
 
-#: crates/ui-gtk/src/backend/service.rs:2268
+#: crates/ui-gtk/src/backend/service.rs:2276
 #, rust-format
 msgid "Cannot play {}: {}"
 msgstr "{} を再生できません: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2278
+#: crates/ui-gtk/src/backend/service.rs:2286
 msgid ""
 "Helikodu did not end normally last time. The queue was restored, paused."
 msgstr ""
 "前回、Helikodu は正常に終了しませんでした。キューは一時停止した状態で復元され"
 "ました。"
 
-#: crates/ui-gtk/src/backend/service.rs:2281
+#: crates/ui-gtk/src/backend/service.rs:2289
 #, rust-format
 msgid "Cannot play this: {}"
 msgstr "再生できません: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2284
+#: crates/ui-gtk/src/backend/service.rs:2292
 #, rust-format
 msgid "The queue could not be saved: {}"
 msgstr "キューを保存できませんでした: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2287
+#: crates/ui-gtk/src/backend/service.rs:2295
 #, rust-format
 msgid "The playback settings of the track could not be saved: {}"
 msgstr "トラックの再生設定を保存できませんでした: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2509
+#: crates/ui-gtk/src/backend/service.rs:2517
 msgid "Playing music"
 msgstr "音楽を再生中"
 
@@ -931,13 +955,13 @@ msgstr "プレーヤー"
 
 #: crates/ui-gtk/src/deck.rs:250 crates/ui-gtk/src/views/album_tile.rs:261
 #: crates/ui-gtk/src/window/panel.rs:171 crates/ui-gtk/src/window/panel.rs:306
-#: crates/ui-gtk/src/window.rs:802 crates/ui-gtk/src/views/artists.rs:792
-#: crates/ui-gtk/src/views/genres.rs:378
-#: crates/ui-gtk/src/views/playlist.rs:486
-#: crates/ui-gtk/src/views/playlist.rs:1078
-#: crates/ui-gtk/src/views/playlist.rs:1082
-#: crates/ui-gtk/src/views/search.rs:567 crates/ui-gtk/src/views/search.rs:580
-#: crates/ui-gtk/src/views/search.rs:602 crates/ui-gtk/src/views/tracks.rs:868
+#: crates/ui-gtk/src/window.rs:804 crates/ui-gtk/src/views/artists.rs:800
+#: crates/ui-gtk/src/views/genres.rs:390
+#: crates/ui-gtk/src/views/playlist.rs:488
+#: crates/ui-gtk/src/views/playlist.rs:1080
+#: crates/ui-gtk/src/views/playlist.rs:1084
+#: crates/ui-gtk/src/views/search.rs:585 crates/ui-gtk/src/views/search.rs:598
+#: crates/ui-gtk/src/views/search.rs:620 crates/ui-gtk/src/views/tracks.rs:866
 #: crates/ui-gtk/src/views/now_playing.rs:190
 #: crates/ui-gtk/src/views/now_playing.rs:758
 #: crates/ui-gtk/src/tools/duplicates.rs:202
@@ -945,9 +969,9 @@ msgstr "プレーヤー"
 #: crates/ui-gtk/src/window/tag_undo.rs:192
 #: crates/ui-gtk/src/tools/file_tools.rs:182
 #: crates/ui-gtk/src/tools/organizer.rs:528
-#: crates/ui-gtk/src/views/category.rs:489
-#: crates/ui-gtk/src/views/category.rs:515
-#: crates/ui-gtk/src/views/smart_playlist.rs:1502
+#: crates/ui-gtk/src/views/category.rs:492
+#: crates/ui-gtk/src/views/category.rs:518
+#: crates/ui-gtk/src/views/smart_playlist.rs:1657
 #: crates/ui-gtk/src/mini_player.rs:694 crates/ui-gtk/src/views/home.rs:652
 #: crates/ui-gtk/src/views/home.rs:740 crates/ui-gtk/src/window/desktop.rs:404
 #: crates/ui-gtk/src/window/desktop.rs:410
@@ -998,7 +1022,7 @@ msgstr "「再生中」を表示"
 msgid "Next: {}"
 msgstr "次: {}"
 
-#: crates/ui-gtk/src/format.rs:46 crates/ui-gtk/src/views/statistics.rs:38
+#: crates/ui-gtk/src/format.rs:46 crates/ui-gtk/src/views/statistics.rs:40
 #, rust-format
 msgid "{} h {} min"
 msgstr "{} 時間 {} 分"
@@ -1007,7 +1031,7 @@ msgstr "{} 時間 {} 分"
 #. every number.
 #: crates/ui-gtk/src/format.rs:50 crates/ui-gtk/src/popovers/sleep_timer.rs:43
 #: crates/ui-gtk/src/tools/verify_files.rs:353
-#: crates/ui-gtk/src/views/statistics.rs:42
+#: crates/ui-gtk/src/views/statistics.rs:44
 #, rust-format
 msgid "{} min"
 msgstr "{} 分"
@@ -1070,64 +1094,64 @@ msgctxt "thousands separator"
 msgid ","
 msgstr ","
 
-#: crates/ui-gtk/src/views/album.rs:254
+#: crates/ui-gtk/src/views/album.rs:260
 #, rust-format
 msgid "Track {}: {}"
 msgstr "トラック {}: {}"
 
-#: crates/ui-gtk/src/views/album.rs:258
+#: crates/ui-gtk/src/views/album.rs:264
 #: crates/ui-gtk/src/views/album/book.rs:181
 #, rust-format
 msgid "{}, playing"
 msgstr "{}、再生中"
 
-#: crates/ui-gtk/src/views/album.rs:429
+#: crates/ui-gtk/src/views/album.rs:435
 msgid "Album not found"
 msgstr "アルバムが見つかりません"
 
-#: crates/ui-gtk/src/views/album.rs:449
+#: crates/ui-gtk/src/views/album.rs:455
 #, rust-format
 msgid "{} chapter"
 msgid_plural "{} chapters"
 msgstr[0] "{} チャプター"
 
-#: crates/ui-gtk/src/views/album.rs:454
+#: crates/ui-gtk/src/views/album.rs:460
 #: crates/ui-gtk/src/views/album_tile.rs:256
 #: crates/ui-gtk/src/dialogs/settings/library.rs:60
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1713
-#: crates/ui-gtk/src/views/artists.rs:644 crates/ui-gtk/src/views/genres.rs:374
-#: crates/ui-gtk/src/views/playlist.rs:488
-#: crates/ui-gtk/src/views/playlist.rs:726
-#: crates/ui-gtk/src/views/playlist.rs:933
-#: crates/ui-gtk/src/views/playlist.rs:1069
-#: crates/ui-gtk/src/views/search.rs:560 crates/ui-gtk/src/views/search.rs:942
-#: crates/ui-gtk/src/views/search.rs:1248 crates/ui-gtk/src/views/tracks.rs:730
+#: crates/ui-gtk/src/views/artists.rs:652 crates/ui-gtk/src/views/genres.rs:386
+#: crates/ui-gtk/src/views/playlist.rs:490
+#: crates/ui-gtk/src/views/playlist.rs:728
+#: crates/ui-gtk/src/views/playlist.rs:935
+#: crates/ui-gtk/src/views/playlist.rs:1071
+#: crates/ui-gtk/src/views/search.rs:578 crates/ui-gtk/src/views/search.rs:960
+#: crates/ui-gtk/src/views/search.rs:1266 crates/ui-gtk/src/views/tracks.rs:728
 #: crates/ui-gtk/src/tools/missing_files.rs:233
-#: crates/ui-gtk/src/views/category.rs:486
-#: crates/ui-gtk/src/views/smart_playlist.rs:1411
-#: crates/ui-gtk/src/views/smart_playlist.rs:1492
+#: crates/ui-gtk/src/views/category.rs:489
+#: crates/ui-gtk/src/views/smart_playlist.rs:1566
+#: crates/ui-gtk/src/views/smart_playlist.rs:1647
 #: crates/ui-gtk/src/tools/converter.rs:540
 #, rust-format
 msgid "{} track"
 msgid_plural "{} tracks"
 msgstr[0] "{} 曲"
 
-#: crates/ui-gtk/src/views/album.rs:460
+#: crates/ui-gtk/src/views/album.rs:466
 #, rust-format
 msgid "read by {}"
 msgstr "朗読: {}"
 
-#: crates/ui-gtk/src/views/album.rs:486
+#: crates/ui-gtk/src/views/album.rs:492
 msgid "Author"
 msgstr "著者"
 
-#: crates/ui-gtk/src/views/album.rs:488
+#: crates/ui-gtk/src/views/album.rs:494
 msgid "Read by"
 msgstr "朗読"
 
-#: crates/ui-gtk/src/views/album.rs:491
+#: crates/ui-gtk/src/views/album.rs:497
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:51
-#: crates/ui-gtk/src/views/genres.rs:122 crates/ui-gtk/src/views/tracks.rs:74
+#: crates/ui-gtk/src/views/genres.rs:132 crates/ui-gtk/src/views/tracks.rs:74
 #: crates/ui-gtk/src/tools/tag_preview.rs:165
 #: crates/ui-gtk/src/tools/organizer.rs:79
 #: crates/ui-gtk/src/popovers/query_completion.rs:48
@@ -1137,39 +1161,39 @@ msgstr "朗読"
 msgid "Genre"
 msgstr "ジャンル"
 
-#: crates/ui-gtk/src/views/album.rs:494
+#: crates/ui-gtk/src/views/album.rs:500
 msgid "Released"
 msgstr "リリース日"
 
-#: crates/ui-gtk/src/views/album.rs:497 crates/ui-gtk/src/views/album.rs:936
+#: crates/ui-gtk/src/views/album.rs:503 crates/ui-gtk/src/views/album.rs:942
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1527
 #: crates/ui-gtk/src/views/tracks.rs:75 crates/ui-gtk/src/tools/copies.rs:535
 #: crates/ui-gtk/src/tools/duplicates.rs:719
-#: crates/ui-gtk/src/views/smart_playlist.rs:47
-#: crates/ui-gtk/src/views/smart_playlist.rs:56
-#: crates/ui-gtk/src/views/smart_playlist.rs:479
-#: crates/ui-gtk/src/views/smart_playlist.rs:1449
+#: crates/ui-gtk/src/views/smart_playlist.rs:51
+#: crates/ui-gtk/src/views/smart_playlist.rs:60
+#: crates/ui-gtk/src/views/smart_playlist.rs:634
+#: crates/ui-gtk/src/views/smart_playlist.rs:1604
 #: crates/ui-gtk/src/views/smart_rules.rs:245
 msgid "Added"
 msgstr "追加日"
 
-#: crates/ui-gtk/src/views/album.rs:500 crates/ui-gtk/src/views/album.rs:948
+#: crates/ui-gtk/src/views/album.rs:506 crates/ui-gtk/src/views/album.rs:954
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1408
 #: crates/ui-gtk/src/views/folders.rs:289 crates/ui-gtk/src/tools/copies.rs:534
 #: crates/ui-gtk/src/tools/duplicates.rs:717
-#: crates/ui-gtk/src/views/statistics.rs:637
+#: crates/ui-gtk/src/views/statistics.rs:639
 #: crates/ui-gtk/src/tools/sync_export.rs:704
 msgid "Size"
 msgstr "サイズ"
 
-#: crates/ui-gtk/src/views/album.rs:512 crates/ui-gtk/src/views/album.rs:951
+#: crates/ui-gtk/src/views/album.rs:518 crates/ui-gtk/src/views/album.rs:957
 #: crates/ui-gtk/src/window.rs:103 crates/ui-gtk/src/dialogs/tag_editor.rs:1404
 #: crates/ui-gtk/src/tools/copies.rs:532
 #: crates/ui-gtk/src/tools/duplicates.rs:715
 msgid "File"
 msgstr "ファイル"
 
-#: crates/ui-gtk/src/views/album.rs:514
+#: crates/ui-gtk/src/views/album.rs:520
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1407
 #: crates/ui-gtk/src/views/smart_rules.rs:212
 #: crates/ui-gtk/src/window/playlists.rs:429
@@ -1178,103 +1202,103 @@ msgstr "ファイル"
 msgid "Folder"
 msgstr "フォルダー"
 
-#: crates/ui-gtk/src/views/album.rs:674
+#: crates/ui-gtk/src/views/album.rs:680
 #, rust-format
 msgid "Disc {}"
 msgstr "ディスク {}"
 
-#: crates/ui-gtk/src/views/album.rs:675
+#: crates/ui-gtk/src/views/album.rs:681
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:49
-#: crates/ui-gtk/src/views/tracks.rs:841
+#: crates/ui-gtk/src/views/tracks.rs:839
 #: crates/ui-gtk/src/tools/tag_preview.rs:162
 msgid "Disc"
 msgstr "ディスク"
 
 #. / The kinds of the Kind dropdown, in its order.
 #. / The names of [`KINDS`].
-#: crates/ui-gtk/src/views/album.rs:742
+#: crates/ui-gtk/src/views/album.rs:748
 #: crates/ui-gtk/src/views/album/book.rs:21
 msgid "Audiobook"
 msgstr "オーディオブック"
 
-#: crates/ui-gtk/src/views/album.rs:754
+#: crates/ui-gtk/src/views/album.rs:760
 msgid "Chapter"
 msgstr "チャプター"
 
-#: crates/ui-gtk/src/views/album.rs:756
+#: crates/ui-gtk/src/views/album.rs:762
 msgid "Starts at"
 msgstr "開始位置"
 
-#: crates/ui-gtk/src/views/album.rs:886
+#: crates/ui-gtk/src/views/album.rs:892
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:44
-#: crates/ui-gtk/src/views/playlist.rs:72 crates/ui-gtk/src/views/tracks.rs:67
-#: crates/ui-gtk/src/views/tracks.rs:841
+#: crates/ui-gtk/src/views/playlist.rs:73 crates/ui-gtk/src/views/tracks.rs:67
+#: crates/ui-gtk/src/views/tracks.rs:839
 #: crates/ui-gtk/src/tools/tag_preview.rs:157
 #: crates/ui-gtk/src/tools/organizer.rs:72
 #: crates/ui-gtk/src/views/history.rs:252
-#: crates/ui-gtk/src/views/history.rs:384
-#: crates/ui-gtk/src/views/smart_playlist.rs:45
-#: crates/ui-gtk/src/views/smart_playlist.rs:53
-#: crates/ui-gtk/src/views/smart_playlist.rs:1436
+#: crates/ui-gtk/src/views/history.rs:385
+#: crates/ui-gtk/src/views/smart_playlist.rs:49
+#: crates/ui-gtk/src/views/smart_playlist.rs:57
+#: crates/ui-gtk/src/views/smart_playlist.rs:1591
 #: crates/ui-gtk/src/views/smart_rules.rs:197
 #: crates/ui-gtk/src/views/smart_rules.rs:550
 #: crates/ui-gtk/src/views/facet_browser.rs:52
 msgid "Artist"
 msgstr "アーティスト"
 
-#: crates/ui-gtk/src/views/album.rs:889
+#: crates/ui-gtk/src/views/album.rs:895
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:52
 #: crates/ui-gtk/src/tools/tag_preview.rs:166
 #: crates/ui-gtk/src/tools/organizer.rs:80
 #: crates/ui-gtk/src/popovers/query_completion.rs:44
-#: crates/ui-gtk/src/views/category.rs:170
+#: crates/ui-gtk/src/views/category.rs:171
 #: crates/ui-gtk/src/views/smart_rules.rs:200
 #: crates/ui-gtk/src/views/facet_browser.rs:53
 msgid "Composer"
 msgstr "作曲者"
 
 #. Translators: the field of the track number, "Track [3] of [12]".
-#: crates/ui-gtk/src/views/album.rs:893 crates/ui-gtk/src/views/album.rs:899
+#: crates/ui-gtk/src/views/album.rs:899 crates/ui-gtk/src/views/album.rs:905
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:48
 #: crates/ui-gtk/src/tools/tag_preview.rs:283
 msgctxt "track number"
 msgid "Track"
 msgstr "トラック"
 
-#: crates/ui-gtk/src/views/album.rs:895
+#: crates/ui-gtk/src/views/album.rs:901
 #, rust-format
 msgid "Disc {}, track {}"
 msgstr "ディスク {}、トラック {}"
 
-#: crates/ui-gtk/src/views/album.rs:907 crates/ui-gtk/src/window/panel.rs:329
+#: crates/ui-gtk/src/views/album.rs:913 crates/ui-gtk/src/window/panel.rs:329
 #, rust-format
 msgid "{} kbit/s"
 msgstr "{} kbit/s"
 
-#: crates/ui-gtk/src/views/album.rs:910
+#: crates/ui-gtk/src/views/album.rs:916
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1449
-#: crates/ui-gtk/src/views/playlist.rs:75 crates/ui-gtk/src/views/tracks.rs:70
+#: crates/ui-gtk/src/views/playlist.rs:76 crates/ui-gtk/src/views/tracks.rs:70
 #: crates/ui-gtk/src/tools/copies.rs:533
 #: crates/ui-gtk/src/tools/duplicates.rs:716
 #: crates/ui-gtk/src/tools/organizer.rs:85
 #: crates/ui-gtk/src/tools/verify_files.rs:677
-#: crates/ui-gtk/src/views/smart_playlist.rs:46
-#: crates/ui-gtk/src/views/smart_playlist.rs:55
-#: crates/ui-gtk/src/views/smart_playlist.rs:540
-#: crates/ui-gtk/src/views/smart_playlist.rs:1440
+#: crates/ui-gtk/src/views/smart_playlist.rs:50
+#: crates/ui-gtk/src/views/smart_playlist.rs:59
+#: crates/ui-gtk/src/views/smart_playlist.rs:695
+#: crates/ui-gtk/src/views/smart_playlist.rs:1595
 #: crates/ui-gtk/src/views/facet_browser.rs:55
 #: crates/ui-gtk/src/tools/converter.rs:903
 #: crates/ui-gtk/src/tools/sync_export.rs:703
 msgid "Format"
 msgstr "フォーマット"
 
-#: crates/ui-gtk/src/views/album.rs:915
+#: crates/ui-gtk/src/views/album.rs:921
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:420
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:494
 msgid "Gain"
 msgstr "ゲイン"
 
-#: crates/ui-gtk/src/views/album.rs:917
+#: crates/ui-gtk/src/views/album.rs:923
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1386
 #: crates/ui-gtk/src/widgets/bipolar_scale.rs:188
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:419
@@ -1288,47 +1312,47 @@ msgstr "ゲイン"
 msgid "{} dB"
 msgstr "{} dB"
 
-#: crates/ui-gtk/src/views/album.rs:924
+#: crates/ui-gtk/src/views/album.rs:930
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1529
 #: crates/ui-gtk/src/views/smart_rules.rs:234
 #: crates/ui-gtk/src/views/home.rs:368
 msgid "Last played"
 msgstr "最終再生"
 
-#: crates/ui-gtk/src/views/album.rs:930
+#: crates/ui-gtk/src/views/album.rs:936
 #: crates/ui-gtk/src/views/smart_rules.rs:381
 #, rust-format
 msgid "{} star"
 msgid_plural "{} stars"
 msgstr[0] "{} つ星"
 
-#: crates/ui-gtk/src/views/album.rs:939
+#: crates/ui-gtk/src/views/album.rs:945
 msgid "Yes"
 msgstr "はい"
 
-#: crates/ui-gtk/src/views/album.rs:943
+#: crates/ui-gtk/src/views/album.rs:949
 #: crates/ui-gtk/src/dialogs/settings/library.rs:642
 #: crates/ui-gtk/src/tools/copies.rs:500 crates/ui-gtk/src/tools/copies.rs:540
 msgid "Copies"
 msgstr "コピー"
 
-#: crates/ui-gtk/src/views/albums.rs:221
+#: crates/ui-gtk/src/views/albums.rs:222
 msgid "The library does not tell formats apart yet"
 msgstr "ライブラリはまだフォーマットを区別していません"
 
-#: crates/ui-gtk/src/views/albums.rs:603
+#: crates/ui-gtk/src/views/albums.rs:604
 msgid "Add music folder"
 msgstr "音楽フォルダーを追加"
 
-#: crates/ui-gtk/src/views/albums.rs:607 crates/ui-gtk/src/window/pages.rs:1007
+#: crates/ui-gtk/src/views/albums.rs:608 crates/ui-gtk/src/window/pages.rs:1007
 msgid "Open files"
 msgstr "ファイルを開く"
 
-#: crates/ui-gtk/src/views/albums.rs:612
+#: crates/ui-gtk/src/views/albums.rs:613
 msgid "Your library is empty"
 msgstr "ライブラリは空です"
 
-#: crates/ui-gtk/src/views/albums.rs:614
+#: crates/ui-gtk/src/views/albums.rs:615
 msgid ""
 "Add a folder with music to build your library. You can also drop files here "
 "to play them without adding them."
@@ -1336,16 +1360,16 @@ msgstr ""
 "音楽の入ったフォルダーを追加して、ライブラリを作成してください。ファイルをこ"
 "こにドロップすれば、ライブラリに追加せずに再生することもできます。"
 
-#: crates/ui-gtk/src/views/albums.rs:621
+#: crates/ui-gtk/src/views/albums.rs:622
 msgid "No albums match"
 msgstr "一致するアルバムはありません"
 
-#: crates/ui-gtk/src/views/albums.rs:622
+#: crates/ui-gtk/src/views/albums.rs:623
 msgid "No album in the library passes this filter."
 msgstr "このフィルターに一致するアルバムはライブラリにありません。"
 
 #: crates/ui-gtk/src/views/album_tile.rs:275
-#: crates/ui-gtk/src/views/artists.rs:696 crates/ui-gtk/src/views/home.rs:570
+#: crates/ui-gtk/src/views/artists.rs:704 crates/ui-gtk/src/views/home.rs:570
 #, rust-format
 msgid "{} by {}"
 msgstr "{}（{}）"
@@ -1378,7 +1402,7 @@ msgid "Seek"
 msgstr "シーク"
 
 #: crates/ui-gtk/src/widgets/waveform_seek_bar.rs:487
-#: crates/ui-gtk/src/views/tracks.rs:929
+#: crates/ui-gtk/src/views/tracks.rs:927
 #: crates/ui-gtk/src/tools/file_tools.rs:94
 #: crates/ui-gtk/src/tools/verify_files.rs:455
 #, rust-format
@@ -1423,12 +1447,12 @@ msgid "{} upcoming · {}"
 msgid_plural "{} upcoming · {}"
 msgstr[0] "この後 {} 曲 · {}"
 
-#: crates/ui-gtk/src/window.rs:463
+#: crates/ui-gtk/src/window.rs:465
 #, rust-format
 msgid "{} was disconnected. Playback is paused."
 msgstr "{} が切断されました。再生を一時停止しています。"
 
-#: crates/ui-gtk/src/window.rs:778
+#: crates/ui-gtk/src/window.rs:780
 #, rust-format
 msgid "The library cannot be read: {}"
 msgstr "ライブラリを読み込めません: {}"
@@ -1438,29 +1462,29 @@ msgid "Home"
 msgstr "ホーム"
 
 #: crates/ui-gtk/src/window/sidebar.rs:51
-#: crates/ui-gtk/src/views/artists.rs:134 crates/ui-gtk/src/views/search.rs:550
-#: crates/ui-gtk/src/views/statistics.rs:625
+#: crates/ui-gtk/src/views/artists.rs:135 crates/ui-gtk/src/views/search.rs:568
+#: crates/ui-gtk/src/views/statistics.rs:627
 msgid "Artists"
 msgstr "アーティスト"
 
-#: crates/ui-gtk/src/window/sidebar.rs:53 crates/ui-gtk/src/views/genres.rs:112
+#: crates/ui-gtk/src/window/sidebar.rs:53 crates/ui-gtk/src/views/genres.rs:122
 msgid "Genres"
 msgstr "ジャンル"
 
 #: crates/ui-gtk/src/window/sidebar.rs:54
-#: crates/ui-gtk/src/views/category.rs:169
+#: crates/ui-gtk/src/views/category.rs:170
 msgid "Composers"
 msgstr "作曲者"
 
 #: crates/ui-gtk/src/window/sidebar.rs:55
-#: crates/ui-gtk/src/views/category.rs:177
+#: crates/ui-gtk/src/views/category.rs:178
 msgid "Years"
 msgstr "年"
 
 #: crates/ui-gtk/src/window/sidebar.rs:56
 #: crates/ui-gtk/src/dialogs/settings/library.rs:635
-#: crates/ui-gtk/src/views/folders.rs:184
-#: crates/ui-gtk/src/views/folders.rs:240 crates/ui-gtk/src/play_modes.rs:70
+#: crates/ui-gtk/src/views/folders.rs:183
+#: crates/ui-gtk/src/views/folders.rs:239 crates/ui-gtk/src/play_modes.rs:70
 msgid "Folders"
 msgstr "フォルダー"
 
@@ -1967,8 +1991,8 @@ msgid "Family"
 msgstr "ファミリー"
 
 #: crates/ui-gtk/src/dialogs/formats.rs:427
-#: crates/ui-gtk/src/views/statistics.rs:174
-#: crates/ui-gtk/src/views/statistics.rs:383
+#: crates/ui-gtk/src/views/statistics.rs:176
+#: crates/ui-gtk/src/views/statistics.rs:380
 msgid "Formats"
 msgstr "フォーマット"
 
@@ -1991,7 +2015,7 @@ msgstr "{} 個のファミリーが利用可能 · {} 個はこのコンピュ�
 
 #: crates/ui-gtk/src/dialogs/formats.rs:467
 #: crates/ui-gtk/src/tools/verify_files.rs:714
-#: crates/ui-gtk/src/views/statistics.rs:280
+#: crates/ui-gtk/src/views/statistics.rs:277
 msgid "Copy as text"
 msgstr "テキストとしてコピー"
 
@@ -2054,7 +2078,7 @@ msgid "Problem"
 msgstr "問題"
 
 #: crates/ui-gtk/src/dialogs/settings.rs:469
-#: crates/ui-gtk/src/views/search.rs:545
+#: crates/ui-gtk/src/views/search.rs:563
 #, rust-format
 msgid "Results for “{}”"
 msgstr "「{}」の検索結果"
@@ -2180,7 +2204,7 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:372
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1795
 #: crates/ui-gtk/src/dialogs/volume_confirm.rs:208
-#: crates/ui-gtk/src/views/search.rs:1174 crates/ui-gtk/src/window/pages.rs:885
+#: crates/ui-gtk/src/views/search.rs:1192 crates/ui-gtk/src/window/pages.rs:885
 #: crates/ui-gtk/src/tools/trash.rs:118
 #: crates/ui-gtk/src/tools/tag_tools.rs:114
 #: crates/ui-gtk/src/tools/rename.rs:59
@@ -3501,8 +3525,8 @@ msgid "Save as a file…"
 msgstr "ファイルとして保存…"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1104
-#: crates/ui-gtk/src/views/smart_playlist.rs:1051
-#: crates/ui-gtk/src/views/smart_playlist.rs:1052
+#: crates/ui-gtk/src/views/smart_playlist.rs:1206
+#: crates/ui-gtk/src/views/smart_playlist.rs:1207
 #: crates/ui-gtk/src/tools/sync_export.rs:526
 #: crates/ui-gtk/src/tools/cover_manager.rs:742
 msgid "Remove"
@@ -3570,9 +3594,9 @@ msgid ""
 msgstr "[01:23.45] のように時刻で始まる行は、音楽に合わせて表示されます。"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1406
-#: crates/ui-gtk/src/views/artists.rs:129 crates/ui-gtk/src/views/genres.rs:104
-#: crates/ui-gtk/src/views/search.rs:1101
-#: crates/ui-gtk/src/views/category.rs:190
+#: crates/ui-gtk/src/views/artists.rs:130 crates/ui-gtk/src/views/genres.rs:114
+#: crates/ui-gtk/src/views/search.rs:1119
+#: crates/ui-gtk/src/views/category.rs:191
 msgid "Name"
 msgstr "名前"
 
@@ -3672,8 +3696,8 @@ msgstr "ファイル"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1604
 #: crates/ui-gtk/src/popovers/output_switcher.rs:516
-#: crates/ui-gtk/src/views/search.rs:674 crates/ui-gtk/src/views/search.rs:715
-#: crates/ui-gtk/src/views/search.rs:1244
+#: crates/ui-gtk/src/views/search.rs:692 crates/ui-gtk/src/views/search.rs:733
+#: crates/ui-gtk/src/views/search.rs:1262
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:560
 #: crates/ui-gtk/src/deck/modes.rs:228
 #, rust-format
@@ -3885,7 +3909,7 @@ msgid "Audio output settings"
 msgstr "オーディオ出力の設定"
 
 #: crates/ui-gtk/src/views/actions.rs:191
-#: crates/ui-gtk/src/views/artists.rs:170
+#: crates/ui-gtk/src/views/artists.rs:176
 msgid "Play next"
 msgstr "次に再生"
 
@@ -4013,74 +4037,74 @@ msgstr "このアーティストには専用のページがありません。"
 msgid "This track has no file to rename."
 msgstr "このトラックには名前を変更できるファイルがありません。"
 
-#: crates/ui-gtk/src/views/artists.rs:130 crates/ui-gtk/src/views/genres.rs:105
-#: crates/ui-gtk/src/views/category.rs:202
+#: crates/ui-gtk/src/views/artists.rs:131 crates/ui-gtk/src/views/genres.rs:115
+#: crates/ui-gtk/src/views/category.rs:203
 msgid "Number of albums"
 msgstr "アルバム数"
 
-#: crates/ui-gtk/src/views/artists.rs:132
 #: crates/ui-gtk/src/views/artists.rs:133
+#: crates/ui-gtk/src/views/artists.rs:134
 msgid "Sort the artists"
 msgstr "アーティストを並べ替え"
 
-#: crates/ui-gtk/src/views/artists.rs:158 crates/ui-gtk/src/views/genres.rs:136
-#: crates/ui-gtk/src/views/category.rs:239
+#: crates/ui-gtk/src/views/artists.rs:164 crates/ui-gtk/src/views/genres.rs:146
+#: crates/ui-gtk/src/views/category.rs:240
 msgid "Play all"
 msgstr "すべて再生"
 
-#: crates/ui-gtk/src/views/artists.rs:187
+#: crates/ui-gtk/src/views/artists.rs:194
 msgid "Releases"
 msgstr "リリース"
 
-#: crates/ui-gtk/src/views/artists.rs:188
+#: crates/ui-gtk/src/views/artists.rs:195
 msgid "All tracks"
 msgstr "すべてのトラック"
 
-#: crates/ui-gtk/src/views/artists.rs:217
-#: crates/ui-gtk/src/views/artists.rs:245 crates/ui-gtk/src/views/home.rs:361
+#: crates/ui-gtk/src/views/artists.rs:224
+#: crates/ui-gtk/src/views/artists.rs:252 crates/ui-gtk/src/views/home.rs:361
 #: crates/ui-gtk/src/views/home.rs:367 crates/ui-gtk/src/views/home.rs:631
 msgid "Most played"
 msgstr "よく再生した曲"
 
-#: crates/ui-gtk/src/views/artists.rs:259
+#: crates/ui-gtk/src/views/artists.rs:266
 msgid "No artist chosen"
 msgstr "アーティストが選択されていません"
 
-#: crates/ui-gtk/src/views/artists.rs:260
+#: crates/ui-gtk/src/views/artists.rs:267
 msgid "Choose an artist to see their releases."
 msgstr "アーティストを選択すると、そのリリースが表示されます。"
 
-#: crates/ui-gtk/src/views/artists.rs:559 crates/ui-gtk/src/views/genres.rs:338
-#: crates/ui-gtk/src/views/category.rs:440
+#: crates/ui-gtk/src/views/artists.rs:567 crates/ui-gtk/src/views/genres.rs:350
+#: crates/ui-gtk/src/views/category.rs:443
 #, rust-format
 msgid "{}, {} album"
 msgid_plural "{}, {} albums"
 msgstr[0] "{}、アルバム {} 枚"
 
-#: crates/ui-gtk/src/views/artists.rs:629 crates/ui-gtk/src/views/genres.rs:370
-#: crates/ui-gtk/src/views/search.rs:556
-#: crates/ui-gtk/src/views/category.rs:482
+#: crates/ui-gtk/src/views/artists.rs:637 crates/ui-gtk/src/views/genres.rs:382
+#: crates/ui-gtk/src/views/search.rs:574
+#: crates/ui-gtk/src/views/category.rs:485
 #: crates/ui-gtk/src/tools/cover_manager.rs:198
 #, rust-format
 msgid "{} album"
 msgid_plural "{} albums"
 msgstr[0] "アルバム {} 枚"
 
-#: crates/ui-gtk/src/views/artists.rs:636
+#: crates/ui-gtk/src/views/artists.rs:644
 #, rust-format
 msgid "{} EP or single"
 msgid_plural "{} EPs and singles"
 msgstr[0] "EP・シングル {} 枚"
 
-#: crates/ui-gtk/src/views/artists.rs:655
+#: crates/ui-gtk/src/views/artists.rs:663
 msgid "EPs and singles"
 msgstr "EP とシングル"
 
-#: crates/ui-gtk/src/views/artists.rs:656
+#: crates/ui-gtk/src/views/artists.rs:664
 msgid "Appears on"
 msgstr "参加作品"
 
-#: crates/ui-gtk/src/views/artists.rs:977
+#: crates/ui-gtk/src/views/artists.rs:985
 #, rust-format
 msgid "Cannot set the artist photo: {}"
 msgstr "アーティストの写真を設定できません: {}"
@@ -4103,24 +4127,24 @@ msgid "Choose a photo of {}"
 msgstr "{} の写真を選択"
 
 #. Translators: the user's home folder, the first place in Folders.
-#: crates/ui-gtk/src/views/folders.rs:106
+#: crates/ui-gtk/src/views/folders.rs:107
 msgctxt "home folder"
 msgid "Home"
 msgstr "ホーム"
 
-#: crates/ui-gtk/src/views/folders.rs:126
+#: crates/ui-gtk/src/views/folders.rs:127
 msgid "File system"
 msgstr "ファイルシステム"
 
-#: crates/ui-gtk/src/views/folders.rs:188
+#: crates/ui-gtk/src/views/folders.rs:187
 msgid "Add a library folder"
 msgstr "ライブラリフォルダーを追加"
 
-#: crates/ui-gtk/src/views/folders.rs:265
+#: crates/ui-gtk/src/views/folders.rs:264
 msgid "Add to library"
 msgstr "ライブラリに追加"
 
-#: crates/ui-gtk/src/views/folders.rs:267
+#: crates/ui-gtk/src/views/folders.rs:266
 msgid "Open in file manager"
 msgstr "ファイルマネージャーで開く"
 
@@ -4142,240 +4166,240 @@ msgstr "フォルダーが選択されていません"
 msgid "Choose a folder to see its audio files."
 msgstr "フォルダーを選択すると、そのオーディオファイルが表示されます。"
 
-#: crates/ui-gtk/src/views/folders.rs:461
+#: crates/ui-gtk/src/views/folders.rs:464
 msgid "in the library"
 msgstr "ライブラリ内"
 
-#: crates/ui-gtk/src/views/folders.rs:467
+#: crates/ui-gtk/src/views/folders.rs:470
 msgid "NFS"
 msgstr "NFS"
 
-#: crates/ui-gtk/src/views/folders.rs:468
+#: crates/ui-gtk/src/views/folders.rs:471
 msgid "not connected"
 msgstr "未接続"
 
-#: crates/ui-gtk/src/views/folders.rs:476
+#: crates/ui-gtk/src/views/folders.rs:479
 #, rust-format
 msgid "{}, not connected"
 msgstr "{}、未接続"
 
-#: crates/ui-gtk/src/views/folders.rs:603
+#: crates/ui-gtk/src/views/folders.rs:606
 msgid "Library folders"
 msgstr "ライブラリフォルダー"
 
-#: crates/ui-gtk/src/views/folders.rs:605
+#: crates/ui-gtk/src/views/folders.rs:608
 msgid "This computer"
 msgstr "このコンピューター"
 
-#: crates/ui-gtk/src/views/folders.rs:663
+#: crates/ui-gtk/src/views/folders.rs:666
 #, rust-format
 msgid "{} audio file"
 msgid_plural "{} audio files"
 msgstr[0] "{} 個のオーディオファイル"
 
-#: crates/ui-gtk/src/views/folders.rs:673
+#: crates/ui-gtk/src/views/folders.rs:676
 #, rust-format
 msgid "{} {} kHz / {}-bit"
 msgstr "{} {} kHz / {} bit"
 
-#: crates/ui-gtk/src/views/folders.rs:684
+#: crates/ui-gtk/src/views/folders.rs:687
 msgid "In the library · watched for changes"
 msgstr "ライブラリ内 · 変更を監視中"
 
-#: crates/ui-gtk/src/views/folders.rs:685
+#: crates/ui-gtk/src/views/folders.rs:688
 msgid "In the library · rescanned now and then"
 msgstr "ライブラリ内 · 定期的に再スキャン"
 
-#: crates/ui-gtk/src/views/folders.rs:686
+#: crates/ui-gtk/src/views/folders.rs:689
 msgid "In the library · not connected"
 msgstr "ライブラリ内 · 未接続"
 
-#: crates/ui-gtk/src/views/folders.rs:688
+#: crates/ui-gtk/src/views/folders.rs:691
 msgid ""
 "Not in the library · plays from here are not counted, and ratings are not "
 "kept"
 msgstr "ライブラリ外 · ここからの再生はカウントされず、評価も保存されません"
 
-#: crates/ui-gtk/src/views/folders.rs:695
+#: crates/ui-gtk/src/views/folders.rs:698
 #, rust-format
 msgid "{} other file not shown"
 msgid_plural "{} other files not shown"
 msgstr[0] "ほかに {} 個のファイルが表示されていません"
 
-#: crates/ui-gtk/src/views/genres.rs:90
+#: crates/ui-gtk/src/views/genres.rs:100
 msgid "Sort"
 msgstr "並べ替え"
 
-#: crates/ui-gtk/src/views/genres.rs:110 crates/ui-gtk/src/views/genres.rs:111
+#: crates/ui-gtk/src/views/genres.rs:120 crates/ui-gtk/src/views/genres.rs:121
 msgid "Sort the genres"
 msgstr "ジャンルを並べ替え"
 
-#: crates/ui-gtk/src/views/genres.rs:173
+#: crates/ui-gtk/src/views/genres.rs:184
 msgid "No genre chosen"
 msgstr "ジャンルが選択されていません"
 
-#: crates/ui-gtk/src/views/genres.rs:174
+#: crates/ui-gtk/src/views/genres.rs:185
 msgid "Choose a genre to see its albums."
 msgstr "ジャンルを選択すると、そのアルバムが表示されます。"
 
-#: crates/ui-gtk/src/views/playlist.rs:55
+#: crates/ui-gtk/src/views/playlist.rs:56
 msgid "edited today"
 msgstr "今日編集"
 
-#: crates/ui-gtk/src/views/playlist.rs:56
+#: crates/ui-gtk/src/views/playlist.rs:57
 msgid "edited yesterday"
 msgstr "昨日編集"
 
-#: crates/ui-gtk/src/views/playlist.rs:58
+#: crates/ui-gtk/src/views/playlist.rs:59
 #, rust-format
 msgid "edited {} day ago"
 msgid_plural "edited {} days ago"
 msgstr[0] "{} 日前に編集"
 
-#: crates/ui-gtk/src/views/playlist.rs:61
+#: crates/ui-gtk/src/views/playlist.rs:62
 #, rust-format
 msgid "edited {}"
 msgstr "{} に編集"
 
-#: crates/ui-gtk/src/views/playlist.rs:184
+#: crates/ui-gtk/src/views/playlist.rs:185
 #: crates/ui-gtk/src/views/history.rs:254
 #: crates/ui-gtk/src/window/playlists.rs:422
 #: crates/ui-gtk/src/tools/sync_export.rs:545
 msgid "Playlist"
 msgstr "プレイリスト"
 
-#: crates/ui-gtk/src/views/playlist.rs:197
+#: crates/ui-gtk/src/views/playlist.rs:198
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:728
 msgid "Export"
 msgstr "エクスポート"
 
-#: crates/ui-gtk/src/views/playlist.rs:202
-#: crates/ui-gtk/src/views/playlist.rs:204
-#: crates/ui-gtk/src/views/playlist.rs:965
-#: crates/ui-gtk/src/views/playlist.rs:1161
+#: crates/ui-gtk/src/views/playlist.rs:203
+#: crates/ui-gtk/src/views/playlist.rs:205
+#: crates/ui-gtk/src/views/playlist.rs:967
+#: crates/ui-gtk/src/views/playlist.rs:1163
 msgid "Lock against changes"
 msgstr "変更できないようにロック"
 
-#: crates/ui-gtk/src/views/playlist.rs:242
+#: crates/ui-gtk/src/views/playlist.rs:244
 msgid "Playlist entries"
 msgstr "プレイリストの項目"
 
-#: crates/ui-gtk/src/views/playlist.rs:389 crates/ui-gtk/src/tools/copies.rs:69
+#: crates/ui-gtk/src/views/playlist.rs:391 crates/ui-gtk/src/tools/copies.rs:69
 #: crates/ui-gtk/src/tools/copies.rs:78
 #: crates/ui-gtk/src/tools/duplicates.rs:100
 msgid "The file is missing"
 msgstr "ファイルが見つかりません"
 
 #. Translators: in place of the length of a track whose file is missing.
-#: crates/ui-gtk/src/views/playlist.rs:546
+#: crates/ui-gtk/src/views/playlist.rs:548
 msgctxt "track"
 msgid "Missing"
 msgstr "欠落"
 
-#: crates/ui-gtk/src/views/playlist.rs:600
+#: crates/ui-gtk/src/views/playlist.rs:602
 msgid "Save as a playlist file…"
 msgstr "プレイリストファイルとして保存…"
 
-#: crates/ui-gtk/src/views/playlist.rs:602
+#: crates/ui-gtk/src/views/playlist.rs:604
 msgid "Copy the files to a folder…"
 msgstr "ファイルをフォルダーにコピー…"
 
-#: crates/ui-gtk/src/views/playlist.rs:772
+#: crates/ui-gtk/src/views/playlist.rs:774
 #, rust-format
 msgid "Moving {} track to position {}"
 msgid_plural "Moving {} tracks to position {}"
 msgstr[0] "{} 曲を位置 {} へ移動中"
 
-#: crates/ui-gtk/src/views/playlist.rs:779
+#: crates/ui-gtk/src/views/playlist.rs:781
 msgid "Esc cancels · Ctrl Z undoes"
 msgstr "Esc でキャンセル · Ctrl Z で元に戻す"
 
-#: crates/ui-gtk/src/views/playlist.rs:963
+#: crates/ui-gtk/src/views/playlist.rs:965
 msgid "Unlock"
 msgstr "ロックを解除"
 
-#: crates/ui-gtk/src/views/playlist.rs:1074
-#: crates/ui-gtk/src/views/tracks.rs:864
-#: crates/ui-gtk/src/views/smart_playlist.rs:1497
+#: crates/ui-gtk/src/views/playlist.rs:1076
+#: crates/ui-gtk/src/views/tracks.rs:862
+#: crates/ui-gtk/src/views/smart_playlist.rs:1652
 #, rust-format
 msgid "{} selected"
 msgid_plural "{} selected"
 msgstr[0] "{} 曲を選択中"
 
-#: crates/ui-gtk/src/views/playlist.rs:1086
+#: crates/ui-gtk/src/views/playlist.rs:1088
 #, rust-format
 msgid "{} file is missing"
 msgid_plural "{} files are missing"
 msgstr[0] "{} 個のファイルが見つかりません"
 
-#: crates/ui-gtk/src/views/playlist.rs:1095
+#: crates/ui-gtk/src/views/playlist.rs:1097
 #: crates/ui-gtk/src/window/playlists.rs:499
 msgid "Grouped by album"
 msgstr "アルバムごとにグループ化"
 
-#: crates/ui-gtk/src/views/playlist.rs:1098
+#: crates/ui-gtk/src/views/playlist.rs:1100
 #: crates/ui-gtk/src/window/playlists.rs:497
 msgid "Locked against changes"
 msgstr "変更できないようにロック中"
 
-#: crates/ui-gtk/src/views/playlist.rs:1100
+#: crates/ui-gtk/src/views/playlist.rs:1102
 msgid "Ctrl Z undoes the last change"
 msgstr "Ctrl Z で最後の変更を元に戻せます"
 
-#: crates/ui-gtk/src/views/playlist.rs:1159
+#: crates/ui-gtk/src/views/playlist.rs:1161
 msgid "Group by album"
 msgstr "アルバムごとにグループ化"
 
-#: crates/ui-gtk/src/views/playlist.rs:1171
+#: crates/ui-gtk/src/views/playlist.rs:1173
 msgid "Shuffle the order…"
 msgstr "順番をシャッフル…"
 
-#: crates/ui-gtk/src/views/playlist.rs:1185
+#: crates/ui-gtk/src/views/playlist.rs:1187
 msgid "Remove duplicates"
 msgstr "重複を削除"
 
-#: crates/ui-gtk/src/views/playlist.rs:1188
+#: crates/ui-gtk/src/views/playlist.rs:1190
 msgid "Remove missing tracks"
 msgstr "見つからないトラックを削除"
 
-#: crates/ui-gtk/src/views/playlist.rs:1303
+#: crates/ui-gtk/src/views/playlist.rs:1305
 #: crates/ui-gtk/src/window/pages.rs:832
 msgid "Playlist name"
 msgstr "プレイリスト名"
 
-#: crates/ui-gtk/src/views/playlist.rs:1305
-#: crates/ui-gtk/src/views/search.rs:1109
+#: crates/ui-gtk/src/views/playlist.rs:1307
+#: crates/ui-gtk/src/views/search.rs:1127
 #: crates/ui-gtk/src/tools/organizer.rs:114
 #: crates/ui-gtk/src/tools/rename.rs:61
 #: crates/ui-gtk/src/window/playlists.rs:751
 msgid "Rename"
 msgstr "名前を変更"
 
-#: crates/ui-gtk/src/views/search.rs:41
+#: crates/ui-gtk/src/views/search.rs:52
 msgid "A field and a range"
 msgstr "フィールドと範囲"
 
-#: crates/ui-gtk/src/views/search.rs:44
+#: crates/ui-gtk/src/views/search.rs:55
 msgid "Compare, and exclude with a minus"
 msgstr "比較と、マイナスによる除外"
 
-#: crates/ui-gtk/src/views/search.rs:48
+#: crates/ui-gtk/src/views/search.rs:59
 msgid "Relative dates and sorting"
 msgstr "相対日付と並べ替え"
 
-#: crates/ui-gtk/src/views/search.rs:52
+#: crates/ui-gtk/src/views/search.rs:63
 msgid "Regular expressions and OR"
 msgstr "正規表現と OR"
 
-#: crates/ui-gtk/src/views/search.rs:183 crates/ui-gtk/src/views/search.rs:238
+#: crates/ui-gtk/src/views/search.rs:195 crates/ui-gtk/src/views/search.rs:251
 msgid "Save search"
 msgstr "検索を保存"
 
-#: crates/ui-gtk/src/views/search.rs:189
+#: crates/ui-gtk/src/views/search.rs:201
 msgid "Search results"
 msgstr "検索結果"
 
-#: crates/ui-gtk/src/views/search.rs:204
+#: crates/ui-gtk/src/views/search.rs:216
 msgid ""
 "Nothing in your library matches. Check the spelling, or try fewer or shorter "
 "words."
@@ -4383,139 +4407,139 @@ msgstr ""
 "ライブラリに一致するものはありません。綴りを確認するか、語を減らしたり短くし"
 "たりしてみてください。"
 
-#: crates/ui-gtk/src/views/search.rs:212
+#: crates/ui-gtk/src/views/search.rs:224
 msgid ""
 "Search looks at titles, artists, albums, genres, composers and file paths."
 msgstr ""
 "タイトル、アーティスト、アルバム、ジャンル、作曲者、ファイルパスを検索しま"
 "す。"
 
-#: crates/ui-gtk/src/views/search.rs:218
+#: crates/ui-gtk/src/views/search.rs:230
 msgid "Clear search"
 msgstr "検索をクリア"
 
-#: crates/ui-gtk/src/views/search.rs:231
+#: crates/ui-gtk/src/views/search.rs:243
 msgid "Results"
 msgstr "結果"
 
-#: crates/ui-gtk/src/views/search.rs:240
+#: crates/ui-gtk/src/views/search.rs:253
 msgid "Save as smart playlist"
 msgstr "スマートプレイリストとして保存"
 
-#: crates/ui-gtk/src/views/search.rs:265
+#: crates/ui-gtk/src/views/search.rs:278
 msgid "The list still shows the last query that could be read."
 msgstr "リストには、最後に解釈できたクエリの結果が表示されたままです。"
 
-#: crates/ui-gtk/src/views/search.rs:284
+#: crates/ui-gtk/src/views/search.rs:296
 msgid "Query syntax"
 msgstr "クエリの構文"
 
-#: crates/ui-gtk/src/views/search.rs:290 crates/ui-gtk/src/views/search.rs:299
+#: crates/ui-gtk/src/views/search.rs:302 crates/ui-gtk/src/views/search.rs:311
 msgid "Saved searches"
 msgstr "保存した検索"
 
-#: crates/ui-gtk/src/views/search.rs:302
+#: crates/ui-gtk/src/views/search.rs:314
 msgid "Save a search to find it here again."
 msgstr "検索を保存すると、ここから再び呼び出せます。"
 
-#: crates/ui-gtk/src/views/search.rs:353
+#: crates/ui-gtk/src/views/search.rs:368
 msgid "Search with this query"
 msgstr "このクエリで検索"
 
-#: crates/ui-gtk/src/views/search.rs:506 crates/ui-gtk/src/views/search.rs:878
+#: crates/ui-gtk/src/views/search.rs:524 crates/ui-gtk/src/views/search.rs:896
 #, rust-format
 msgid "Search for “{}”"
 msgstr "「{}」を検索"
 
-#: crates/ui-gtk/src/views/search.rs:534 crates/ui-gtk/src/views/search.rs:539
+#: crates/ui-gtk/src/views/search.rs:552 crates/ui-gtk/src/views/search.rs:557
 #, rust-format
 msgid "No results for “{}”"
 msgstr "「{}」の検索結果はありません"
 
-#: crates/ui-gtk/src/views/search.rs:638
+#: crates/ui-gtk/src/views/search.rs:656
 #, rust-format
 msgid "Show all {} tracks"
 msgstr "{} 曲をすべて表示"
 
-#: crates/ui-gtk/src/views/search.rs:779
+#: crates/ui-gtk/src/views/search.rs:797
 msgid "Enter to play"
 msgstr "Enter で再生"
 
-#: crates/ui-gtk/src/views/search.rs:780
+#: crates/ui-gtk/src/views/search.rs:798
 msgid "Enter to open"
 msgstr "Enter で開く"
 
-#: crates/ui-gtk/src/views/search.rs:958
+#: crates/ui-gtk/src/views/search.rs:976
 #, rust-format
 msgid "for example {}"
 msgstr "例: {}"
 
-#: crates/ui-gtk/src/views/search.rs:1069
+#: crates/ui-gtk/src/views/search.rs:1087
 #: crates/ui-gtk/src/window/playlists.rs:341
 msgid "Open"
 msgstr "開く"
 
-#: crates/ui-gtk/src/views/search.rs:1071
+#: crates/ui-gtk/src/views/search.rs:1089
 #: crates/ui-gtk/src/window/playlists.rs:237
 #: crates/ui-gtk/src/window/playlists.rs:239 crates/ui-gtk/src/tools.rs:89
 msgid "Rename…"
 msgstr "名前を変更…"
 
-#: crates/ui-gtk/src/views/search.rs:1072 crates/ui-gtk/src/tools.rs:90
+#: crates/ui-gtk/src/views/search.rs:1090 crates/ui-gtk/src/tools.rs:90
 msgid "Delete…"
 msgstr "削除…"
 
-#: crates/ui-gtk/src/views/search.rs:1102
+#: crates/ui-gtk/src/views/search.rs:1120
 msgid "Name of the search"
 msgstr "検索の名前"
 
-#: crates/ui-gtk/src/views/search.rs:1111
+#: crates/ui-gtk/src/views/search.rs:1129
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:655
 #: crates/ui-gtk/src/tools/verify_files.rs:491
 #: crates/ui-gtk/src/tools/cover_manager.rs:748
 msgid "Save"
 msgstr "保存"
 
-#: crates/ui-gtk/src/views/search.rs:1172
+#: crates/ui-gtk/src/views/search.rs:1190
 #, rust-format
 msgid "Delete the saved search “{}”?"
 msgstr "保存した検索「{}」を削除しますか？"
 
-#: crates/ui-gtk/src/views/search.rs:1173
+#: crates/ui-gtk/src/views/search.rs:1191
 msgid "The tracks it finds stay in the library."
 msgstr "この検索で見つかるトラックはライブラリに残ります。"
 
-#: crates/ui-gtk/src/views/search.rs:1174 crates/ui-gtk/src/window/pages.rs:885
+#: crates/ui-gtk/src/views/search.rs:1192 crates/ui-gtk/src/window/pages.rs:885
 #: crates/ui-gtk/src/tools.rs:163
 msgid "Delete"
 msgstr "削除"
 
-#: crates/ui-gtk/src/views/tracks.rs:211 crates/ui-gtk/src/views/tracks.rs:215
+#: crates/ui-gtk/src/views/tracks.rs:206 crates/ui-gtk/src/views/tracks.rs:210
 #: crates/ui-gtk/src/views/facet_browser.rs:287
 msgid "Browse"
 msgstr "ブラウズ"
 
-#: crates/ui-gtk/src/views/tracks.rs:214
+#: crates/ui-gtk/src/views/tracks.rs:209
 msgid "Browse by genre, artist and album"
 msgstr "ジャンル、アーティスト、アルバムでブラウズ"
 
-#: crates/ui-gtk/src/views/tracks.rs:220 crates/ui-gtk/src/views/history.rs:365
+#: crates/ui-gtk/src/views/tracks.rs:215 crates/ui-gtk/src/views/history.rs:366
 msgid "Filter"
 msgstr "フィルター"
 
-#: crates/ui-gtk/src/views/tracks.rs:224
+#: crates/ui-gtk/src/views/tracks.rs:222
 msgid "Filter the tracks"
 msgstr "トラックを絞り込む"
 
-#: crates/ui-gtk/src/views/tracks.rs:227
+#: crates/ui-gtk/src/views/tracks.rs:225
 msgid "Columns"
 msgstr "列"
 
-#: crates/ui-gtk/src/views/tracks.rs:230
+#: crates/ui-gtk/src/views/tracks.rs:228
 msgid "Show or hide columns"
 msgstr "列の表示/非表示"
 
-#: crates/ui-gtk/src/views/tracks.rs:846
+#: crates/ui-gtk/src/views/tracks.rs:844
 #, rust-format
 msgid "Sorted by {}"
 msgstr "並べ替え: {}"
@@ -4856,7 +4880,7 @@ msgstr "出力 · {} {}"
 msgid "{} {}"
 msgstr "{} {}"
 
-#: crates/ui-gtk/src/window/now_playing.rs:137
+#: crates/ui-gtk/src/window/now_playing.rs:124
 msgid "Only tracks of the library can be edited."
 msgstr "編集できるのはライブラリのトラックだけです。"
 
@@ -6434,12 +6458,12 @@ msgid "This is not a regular expression the search can use."
 msgstr "検索に使用できる正規表現ではありません。"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:550
-#: crates/ui-gtk/src/views/smart_playlist.rs:1090
+#: crates/ui-gtk/src/views/smart_playlist.rs:1245
 msgid "Field"
 msgstr "フィールド"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:550
-#: crates/ui-gtk/src/views/smart_playlist.rs:1129
+#: crates/ui-gtk/src/views/smart_playlist.rs:1284
 msgid "Value"
 msgstr "値"
 
@@ -6696,7 +6720,7 @@ msgid "A CUE sheet refers to this file by its name"
 msgstr "CUE シートがこのファイルを名前で参照しています"
 
 #: crates/ui-gtk/src/tools/organizer.rs:193
-#: crates/ui-gtk/src/views/category.rs:77
+#: crates/ui-gtk/src/views/category.rs:78
 #: crates/ui-gtk/src/views/facet_browser.rs:214
 #: crates/ui-gtk/src/backend/service/export.rs:196
 #: crates/ui-gtk/src/backend/service/export.rs:263
@@ -7586,50 +7610,50 @@ msgstr "フォルダー: {}"
 msgid "Period"
 msgstr "期間"
 
-#: crates/ui-gtk/src/views/history.rs:369
+#: crates/ui-gtk/src/views/history.rs:370
 msgid "Filter the history"
 msgstr "履歴を絞り込む"
 
-#: crates/ui-gtk/src/views/history.rs:382
+#: crates/ui-gtk/src/views/history.rs:383
 msgid "Time"
 msgstr "時刻"
 
-#: crates/ui-gtk/src/views/history.rs:386
+#: crates/ui-gtk/src/views/history.rs:387
 msgid "Played from"
 msgstr "再生元"
 
-#: crates/ui-gtk/src/views/history.rs:387
+#: crates/ui-gtk/src/views/history.rs:388
 msgid "Listened"
 msgstr "再生時間"
 
-#: crates/ui-gtk/src/views/history.rs:409
+#: crates/ui-gtk/src/views/history.rs:410
 msgid "Play history"
 msgstr "再生履歴"
 
-#: crates/ui-gtk/src/views/history.rs:420
+#: crates/ui-gtk/src/views/history.rs:421
 msgid "Nothing played"
 msgstr "再生履歴なし"
 
-#: crates/ui-gtk/src/views/history.rs:421
+#: crates/ui-gtk/src/views/history.rs:422
 msgid "Tracks you listen to are listed here by day, with where they came from."
 msgstr "再生したトラックが、再生元とともに日付ごとにここに表示されます。"
 
-#: crates/ui-gtk/src/views/history.rs:577
-#: crates/ui-gtk/src/views/history.rs:645
+#: crates/ui-gtk/src/views/history.rs:578
+#: crates/ui-gtk/src/views/history.rs:646
 msgid "A track no longer in the library"
 msgstr "ライブラリにもうないトラック"
 
-#: crates/ui-gtk/src/views/history.rs:584
-#: crates/ui-gtk/src/views/history.rs:658
+#: crates/ui-gtk/src/views/history.rs:585
+#: crates/ui-gtk/src/views/history.rs:659
 #, rust-format
 msgid "Skipped at {}"
 msgstr "{} でスキップ"
 
-#: crates/ui-gtk/src/views/history.rs:817
+#: crates/ui-gtk/src/views/history.rs:818
 msgid "Nothing played yet"
 msgstr "まだ何も再生していません"
 
-#: crates/ui-gtk/src/views/history.rs:819
+#: crates/ui-gtk/src/views/history.rs:820
 #, rust-format
 msgid "{} play since {}"
 msgid_plural "{} plays since {}"
@@ -7638,34 +7662,34 @@ msgstr[0] "{} 回再生（{} 以降）"
 #. Translators: the date of the first play, as strftime:
 #. "18 Nov 2026"; keep the % codes, change their order
 #. and punctuation as your language writes a date.
-#: crates/ui-gtk/src/views/history.rs:826
+#: crates/ui-gtk/src/views/history.rs:827
 msgid "%e %b %Y"
 msgstr "%Y年%b%e日"
 
-#: crates/ui-gtk/src/views/history.rs:839
+#: crates/ui-gtk/src/views/history.rs:840
 #, rust-format
 msgid "{} skipped"
 msgid_plural "{} skipped"
 msgstr[0] "{} 回スキップ"
 
-#: crates/ui-gtk/src/views/history.rs:861
+#: crates/ui-gtk/src/views/history.rs:862
 #, rust-format
 msgid "History, {}"
 msgstr "履歴（{}）"
 
-#: crates/ui-gtk/src/views/history.rs:881
+#: crates/ui-gtk/src/views/history.rs:882
 #, rust-format
 msgid "Saved {} track as “{}”"
 msgid_plural "Saved {} tracks as “{}”"
 msgstr[0] "{} 曲を「{}」として保存しました"
 
-#: crates/ui-gtk/src/views/history.rs:918
+#: crates/ui-gtk/src/views/history.rs:919
 #, rust-format
 msgid "A play counts after half the track or {} minute"
 msgid_plural "A play counts after half the track or {} minutes"
 msgstr[0] "トラックの半分または {} 分を再生すると、1 回とカウントされます"
 
-#: crates/ui-gtk/src/views/history.rs:927
+#: crates/ui-gtk/src/views/history.rs:928
 #, rust-format
 msgid "A play counts after {} % of the track or {} minute"
 msgid_plural "A play counts after {} % of the track or {} minutes"
@@ -7689,37 +7713,37 @@ msgid "{} listen exported"
 msgid_plural "{} listens exported"
 msgstr[0] "{} 件の再生記録をエクスポートしました"
 
-#: crates/ui-gtk/src/views/category.rs:95
+#: crates/ui-gtk/src/views/category.rs:96
 #, rust-format
 msgid "{}s"
 msgstr "{}年代"
 
-#: crates/ui-gtk/src/views/category.rs:172
+#: crates/ui-gtk/src/views/category.rs:173
 msgid "No composer chosen"
 msgstr "作曲者が選択されていません"
 
-#: crates/ui-gtk/src/views/category.rs:173
+#: crates/ui-gtk/src/views/category.rs:174
 msgid "Choose a composer to see their albums."
 msgstr "作曲者を選択すると、そのアルバムが表示されます。"
 
-#: crates/ui-gtk/src/views/category.rs:180
+#: crates/ui-gtk/src/views/category.rs:181
 msgid "No year chosen"
 msgstr "年が選択されていません"
 
-#: crates/ui-gtk/src/views/category.rs:181
+#: crates/ui-gtk/src/views/category.rs:182
 msgid "Choose a year to see its albums."
 msgstr "年を選択すると、その年のアルバムが表示されます。"
 
-#: crates/ui-gtk/src/views/category.rs:196
+#: crates/ui-gtk/src/views/category.rs:197
 #: crates/ui-gtk/src/views/smart_rules.rs:540
 msgid "Newest first"
 msgstr "新しい順"
 
-#: crates/ui-gtk/src/views/category.rs:210
+#: crates/ui-gtk/src/views/category.rs:211
 msgid "Sort the composers"
 msgstr "作曲者を並べ替え"
 
-#: crates/ui-gtk/src/views/category.rs:211
+#: crates/ui-gtk/src/views/category.rs:212
 msgid "Sort the years"
 msgstr "年を並べ替え"
 
@@ -7764,65 +7788,65 @@ msgstr "{}、再生済み"
 msgid "{}. {}"
 msgstr "{}. {}"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:153
+#: crates/ui-gtk/src/views/smart_playlist.rs:304
 msgid "Tracks of the smart playlist"
 msgstr "スマートプレイリストのトラック"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:185
+#: crates/ui-gtk/src/views/smart_playlist.rs:336
 msgid "Live"
 msgstr "自動更新"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:186
+#: crates/ui-gtk/src/views/smart_playlist.rs:337
 msgid "The tracks follow the library as it changes"
 msgstr "ライブラリの変化に合わせてトラックが更新されます"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:216
+#: crates/ui-gtk/src/views/smart_playlist.rs:367
 #: crates/ui-gtk/src/window/playlists.rs:423
 msgid "Smart playlist"
 msgstr "スマートプレイリスト"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:229
-#: crates/ui-gtk/src/views/smart_playlist.rs:840
+#: crates/ui-gtk/src/views/smart_playlist.rs:380
+#: crates/ui-gtk/src/views/smart_playlist.rs:995
 #: crates/ui-gtk/src/window/playlists.rs:229
 msgid "Edit rules"
 msgstr "ルールを編集"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:285
-#: crates/ui-gtk/src/views/smart_playlist.rs:950
+#: crates/ui-gtk/src/views/smart_playlist.rs:437
+#: crates/ui-gtk/src/views/smart_playlist.rs:1105
 msgid "all"
 msgstr "すべて"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:285
-#: crates/ui-gtk/src/views/smart_playlist.rs:950
+#: crates/ui-gtk/src/views/smart_playlist.rs:437
+#: crates/ui-gtk/src/views/smart_playlist.rs:1105
 msgid "any"
 msgstr "いずれか"
 
 #. Translators: the name a screen reader gives the "all"/"any"
 #. dropdown of "Match {} of these rules".
-#: crates/ui-gtk/src/views/smart_playlist.rs:289
+#: crates/ui-gtk/src/views/smart_playlist.rs:441
 msgid "Which rules must match"
 msgstr "ルールの一致条件"
 
 #. Translators: the first line of the smart playlist editor; {} is a
 #. dropdown with "all" or "any".
-#: crates/ui-gtk/src/views/smart_playlist.rs:293
+#: crates/ui-gtk/src/views/smart_playlist.rs:445
 #, rust-format
 msgid "Match {} of these rules"
 msgstr "次のルールの {} に一致"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:312
+#: crates/ui-gtk/src/views/smart_playlist.rs:464
 msgid "Limit"
 msgstr "上限"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:315
+#: crates/ui-gtk/src/views/smart_playlist.rs:467
 msgid "Limit unit"
 msgstr "上限の単位"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:317
+#: crates/ui-gtk/src/views/smart_playlist.rs:469
 msgid "As written in the text"
 msgstr "テキストの記述どおり"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:321
+#: crates/ui-gtk/src/views/smart_playlist.rs:473
 #: crates/ui-gtk/src/tools/cover_manager.rs:708
 msgid "Order"
 msgstr "並び順"
@@ -7832,95 +7856,95 @@ msgstr "並び順"
 #. start of the line; {0} is a box for a number, {1} the unit (tracks,
 #. minutes, hours, MB, GB), {2} the order (Random, Date added, newest
 #. first, …). Reorder them with {0}, {1} and {2} as needed.
-#: crates/ui-gtk/src/views/smart_playlist.rs:332
+#: crates/ui-gtk/src/views/smart_playlist.rs:484
 #, rust-format
 msgid "Limit to {} {} sorted by {}"
 msgstr "上限 {0} {1}、並び順 {2}"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:346
+#: crates/ui-gtk/src/views/smart_playlist.rs:498
 msgid "The same rules as query text"
 msgstr "クエリテキストで表したルール"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:349
-#: crates/ui-gtk/src/views/smart_playlist.rs:1280
+#: crates/ui-gtk/src/views/smart_playlist.rs:501
+#: crates/ui-gtk/src/views/smart_playlist.rs:1435
 msgid "Edit as text"
 msgstr "テキストとして編集"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:364
+#: crates/ui-gtk/src/views/smart_playlist.rs:516
 msgid "Query text"
 msgstr "クエリテキスト"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:838
+#: crates/ui-gtk/src/views/smart_playlist.rs:993
 msgid "Done editing"
 msgstr "編集を完了"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:935
+#: crates/ui-gtk/src/views/smart_playlist.rs:1090
 msgid "These rules can only be edited as text."
 msgstr "これらのルールはテキストとしてのみ編集できます。"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:952
+#: crates/ui-gtk/src/views/smart_playlist.rs:1107
 msgid "Match in group"
 msgstr "グループ内の条件"
 
 #. Translators: the first line of a group of rules in the
 #. smart playlist editor; {} is a dropdown with "all" or
 #. "any".
-#: crates/ui-gtk/src/views/smart_playlist.rs:969
+#: crates/ui-gtk/src/views/smart_playlist.rs:1124
 #, rust-format
 msgid "{} of these"
 msgstr "次の {} に一致"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:988
+#: crates/ui-gtk/src/views/smart_playlist.rs:1143
 msgid "Add rule to group"
 msgstr "グループにルールを追加"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1008
+#: crates/ui-gtk/src/views/smart_playlist.rs:1163
 msgid "Add rule"
 msgstr "ルールを追加"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1020
+#: crates/ui-gtk/src/views/smart_playlist.rs:1175
 msgid "Add group"
 msgstr "グループを追加"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1112
+#: crates/ui-gtk/src/views/smart_playlist.rs:1267
 msgid "Condition"
 msgstr "条件"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1278
+#: crates/ui-gtk/src/views/smart_playlist.rs:1433
 msgid "Show as rules"
 msgstr "ルールとして表示"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1297
+#: crates/ui-gtk/src/views/smart_playlist.rs:1452
 #, rust-format
 msgid "These rules cannot run: {}"
 msgstr "これらのルールは実行できません: {}"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1309
+#: crates/ui-gtk/src/views/smart_playlist.rs:1464
 #: crates/ui-gtk/src/window/playlists.rs:640
 #, rust-format
 msgid "The text cannot be read: {}"
 msgstr "テキストを解釈できません: {}"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1339
+#: crates/ui-gtk/src/views/smart_playlist.rs:1494
 msgid "Every track of the library"
 msgstr "ライブラリのすべてのトラック"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1361
+#: crates/ui-gtk/src/views/smart_playlist.rs:1516
 #, rust-format
 msgid "{} track matches"
 msgid_plural "{} tracks match"
 msgstr[0] "{} 曲が一致"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1365
+#: crates/ui-gtk/src/views/smart_playlist.rs:1520
 #, rust-format
 msgid "of {}"
 msgstr "（全 {} 曲中）"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1415
+#: crates/ui-gtk/src/views/smart_playlist.rs:1570
 msgid "updates as the library changes"
 msgstr "ライブラリの変化に合わせて更新"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1504
+#: crates/ui-gtk/src/views/smart_playlist.rs:1659
 msgid "The rules set the order. To reorder by hand, save a copy as a playlist."
 msgstr ""
 "並び順はルールで決まります。手動で並べ替えるには、コピーをプレイリストとして"
@@ -8550,7 +8574,7 @@ msgstr "ループの開始点を設定"
 msgid "Set the end of a loop"
 msgstr "ループの終了点を設定"
 
-#: crates/ui-gtk/src/shortcuts.rs:127 crates/ui-gtk/src/window/narrow.rs:344
+#: crates/ui-gtk/src/shortcuts.rs:127 crates/ui-gtk/src/window/narrow.rs:368
 msgid "Search"
 msgstr "検索"
 
@@ -8751,156 +8775,156 @@ msgstr "すべての年"
 msgid "Choose the field of this pane"
 msgstr "このペインのフィールドを選択"
 
-#: crates/ui-gtk/src/views/statistics.rs:35
+#: crates/ui-gtk/src/views/statistics.rs:37
 #, rust-format
 msgid "{} d {} h"
 msgstr "{} 日 {} 時間"
 
-#: crates/ui-gtk/src/views/statistics.rs:50
+#: crates/ui-gtk/src/views/statistics.rs:52
 #, rust-format
 msgid "{} min {} s"
 msgstr "{} 分 {} 秒"
 
-#: crates/ui-gtk/src/views/statistics.rs:143
+#: crates/ui-gtk/src/views/statistics.rs:145
 msgid "Other"
 msgstr "その他"
 
-#: crates/ui-gtk/src/views/statistics.rs:158
-#: crates/ui-gtk/src/views/statistics.rs:272
+#: crates/ui-gtk/src/views/statistics.rs:160
+#: crates/ui-gtk/src/views/statistics.rs:274
 msgid "Library statistics"
 msgstr "ライブラリの統計"
 
-#: crates/ui-gtk/src/views/statistics.rs:160
+#: crates/ui-gtk/src/views/statistics.rs:162
 #, rust-format
 msgid "Tracks: {}"
 msgstr "トラック: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:162
+#: crates/ui-gtk/src/views/statistics.rs:164
 #, rust-format
 msgid "Albums: {}"
 msgstr "アルバム: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:163
+#: crates/ui-gtk/src/views/statistics.rs:165
 #, rust-format
 msgid "Artists: {}"
 msgstr "アーティスト: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:165
+#: crates/ui-gtk/src/views/statistics.rs:167
 #, rust-format
 msgid "Composers: {}"
 msgstr "作曲者: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:169
+#: crates/ui-gtk/src/views/statistics.rs:171
 #, rust-format
 msgid "Playing time: {}"
 msgstr "合計時間: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:172
+#: crates/ui-gtk/src/views/statistics.rs:174
 #, rust-format
 msgid "Size: {}"
 msgstr "サイズ: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:184
-#: crates/ui-gtk/src/views/statistics.rs:405
+#: crates/ui-gtk/src/views/statistics.rs:186
+#: crates/ui-gtk/src/views/statistics.rs:402
 #: crates/ui-gtk/src/tools/converter.rs:904
 msgid "Quality"
 msgstr "品質"
 
-#: crates/ui-gtk/src/views/statistics.rs:193
+#: crates/ui-gtk/src/views/statistics.rs:195
 msgid "Listening this year"
 msgstr "今年の再生"
 
-#: crates/ui-gtk/src/views/statistics.rs:194
+#: crates/ui-gtk/src/views/statistics.rs:196
 #, rust-format
 msgid "  Plays: {}"
 msgstr "  再生回数: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:196
+#: crates/ui-gtk/src/views/statistics.rs:198
 #, rust-format
 msgid "  Listened: {}"
 msgstr "  再生時間: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:199
+#: crates/ui-gtk/src/views/statistics.rs:201
 #, rust-format
 msgid "  Skips: {}"
 msgstr "  スキップ回数: {}"
 
-#: crates/ui-gtk/src/views/statistics.rs:201
+#: crates/ui-gtk/src/views/statistics.rs:203
 #, rust-format
 msgid "  Never played: {} %"
 msgstr "  未再生: {}%"
 
-#: crates/ui-gtk/src/views/statistics.rs:205
-#: crates/ui-gtk/src/views/statistics.rs:460
+#: crates/ui-gtk/src/views/statistics.rs:207
+#: crates/ui-gtk/src/views/statistics.rs:457
 msgid "Most played artists"
 msgstr "よく再生したアーティスト"
 
-#: crates/ui-gtk/src/views/statistics.rs:210
-#: crates/ui-gtk/src/views/statistics.rs:506
+#: crates/ui-gtk/src/views/statistics.rs:212
+#: crates/ui-gtk/src/views/statistics.rs:503
 msgid "Most played albums"
 msgstr "よく再生したアルバム"
 
-#: crates/ui-gtk/src/views/statistics.rs:225
+#: crates/ui-gtk/src/views/statistics.rs:227
 msgid "Lossless, CD quality"
 msgstr "ロスレス、CD 品質"
 
-#: crates/ui-gtk/src/views/statistics.rs:226
+#: crates/ui-gtk/src/views/statistics.rs:228
 msgid "Lossless, hi-res"
 msgstr "ロスレス、ハイレゾ"
 
-#: crates/ui-gtk/src/views/statistics.rs:227
+#: crates/ui-gtk/src/views/statistics.rs:229
 msgid "Lossy"
 msgstr "非可逆"
 
-#: crates/ui-gtk/src/views/statistics.rs:318
+#: crates/ui-gtk/src/views/statistics.rs:315
 msgid "counting…"
 msgstr "集計中…"
 
-#: crates/ui-gtk/src/views/statistics.rs:338
+#: crates/ui-gtk/src/views/statistics.rs:335
 #, rust-format
 msgid "counted today at {}"
 msgstr "今日 {} に集計"
 
 #. Translators: the caption over the numbers of a column of
 #. statistics: these are numbers of tracks.
-#: crates/ui-gtk/src/views/statistics.rs:386
-#: crates/ui-gtk/src/views/statistics.rs:405
+#: crates/ui-gtk/src/views/statistics.rs:383
+#: crates/ui-gtk/src/views/statistics.rs:402
 msgctxt "statistics column"
 msgid "tracks"
 msgstr "曲"
 
-#: crates/ui-gtk/src/views/statistics.rs:450
+#: crates/ui-gtk/src/views/statistics.rs:447
 #, rust-format
 msgid "Show the {} tracks"
 msgstr "{} のトラックを表示"
 
-#: crates/ui-gtk/src/views/statistics.rs:452
+#: crates/ui-gtk/src/views/statistics.rs:449
 #, rust-format
 msgid "{}: {} tracks"
 msgstr "{}: {} 曲"
 
 #. Translators: the caption over the numbers of a column of
 #. statistics: these are numbers of plays.
-#: crates/ui-gtk/src/views/statistics.rs:463
-#: crates/ui-gtk/src/views/statistics.rs:507
+#: crates/ui-gtk/src/views/statistics.rs:460
+#: crates/ui-gtk/src/views/statistics.rs:504
 msgctxt "statistics column"
 msgid "plays"
 msgstr "再生回数"
 
-#: crates/ui-gtk/src/views/statistics.rs:489
+#: crates/ui-gtk/src/views/statistics.rs:486
 #, rust-format
 msgid "{}: {} play"
 msgid_plural "{}: {} plays"
 msgstr[0] "{}: {} 回再生"
 
-#: crates/ui-gtk/src/views/statistics.rs:532
+#: crates/ui-gtk/src/views/statistics.rs:529
 #, rust-format
 msgid "{} by {}: {} play"
 msgid_plural "{} by {}: {} plays"
 msgstr[0] "{}（{}）: {} 回再生"
 
 #. Translators: part of "in 12 folders and 2 drives".
-#: crates/ui-gtk/src/views/statistics.rs:590
+#: crates/ui-gtk/src/views/statistics.rs:592
 #, rust-format
 msgid "{} drive"
 msgid_plural "{} drives"
@@ -8908,73 +8932,73 @@ msgstr[0] "{} 台のドライブ"
 
 #. Translators: under the size of the library: {0} is a number of
 #. folders, {1} a number of drives ("{} drive" or "{} drives").
-#: crates/ui-gtk/src/views/statistics.rs:596
+#: crates/ui-gtk/src/views/statistics.rs:598
 #, rust-format
 msgid "in {} folder and {}"
 msgid_plural "in {} folders and {}"
 msgstr[0] "{} 個のフォルダーと {} に保存"
 
-#: crates/ui-gtk/src/views/statistics.rs:605
+#: crates/ui-gtk/src/views/statistics.rs:607
 #, rust-format
 msgid "{} added this month"
 msgid_plural "{} added this month"
 msgstr[0] "今月 {} 曲を追加"
 
-#: crates/ui-gtk/src/views/statistics.rs:617
+#: crates/ui-gtk/src/views/statistics.rs:619
 #, rust-format
 msgid "{} without a cover"
 msgid_plural "{} without a cover"
 msgstr[0] "{} 枚はカバーなし"
 
-#: crates/ui-gtk/src/views/statistics.rs:628
+#: crates/ui-gtk/src/views/statistics.rs:630
 #, rust-format
 msgid "{} composer"
 msgid_plural "{} composers"
 msgstr[0] "作曲者 {} 人"
 
-#: crates/ui-gtk/src/views/statistics.rs:633
+#: crates/ui-gtk/src/views/statistics.rs:635
 msgid "Playing time"
 msgstr "合計時間"
 
-#: crates/ui-gtk/src/views/statistics.rs:635
+#: crates/ui-gtk/src/views/statistics.rs:637
 #, rust-format
 msgid "{} a track on average"
 msgstr "1 曲あたり平均 {}"
 
 #. / Listening this year: four figures.
-#: crates/ui-gtk/src/views/statistics.rs:655
+#: crates/ui-gtk/src/views/statistics.rs:657
 msgid "Listening"
 msgstr "再生"
 
-#: crates/ui-gtk/src/views/statistics.rs:655
+#: crates/ui-gtk/src/views/statistics.rs:657
 msgid "this year"
 msgstr "今年"
 
 #. Translators: under a number of plays this year; the number is
 #. shown above, larger.
-#: crates/ui-gtk/src/views/statistics.rs:664
+#: crates/ui-gtk/src/views/statistics.rs:665
 msgctxt "statistics caption"
 msgid "play"
 msgid_plural "plays"
 msgstr[0] "再生"
 
-#: crates/ui-gtk/src/views/statistics.rs:666
+#: crates/ui-gtk/src/views/statistics.rs:667
 msgid "listened"
 msgstr "再生時間"
 
 #. Translators: under a number of skips this year; the number is
 #. shown above, larger.
-#: crates/ui-gtk/src/views/statistics.rs:671
+#: crates/ui-gtk/src/views/statistics.rs:672
 msgctxt "statistics caption"
 msgid "skip"
 msgid_plural "skips"
 msgstr[0] "スキップ"
 
-#: crates/ui-gtk/src/views/statistics.rs:675
+#: crates/ui-gtk/src/views/statistics.rs:676
 msgid "never played"
 msgstr "未再生"
 
-#: crates/ui-gtk/src/window/narrow.rs:80 crates/ui-gtk/src/window/narrow.rs:82
+#: crates/ui-gtk/src/window/narrow.rs:87 crates/ui-gtk/src/window/narrow.rs:89
 msgid "Show the sidebar"
 msgstr "サイドバーを表示"
 

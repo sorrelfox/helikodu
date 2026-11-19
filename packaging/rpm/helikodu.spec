@@ -7,11 +7,11 @@
 # See docs/dev/packaging-rpm.md.
 #
 # The Release workflow passes the version of the tag:
-#   rpmbuild -ba --define "upstream_version 0.9.2" helikodu.spec
+#   rpmbuild -ba --define "upstream_version 0.9.3" helikodu.spec
 # A suffix such as 0.9.0-rc1 becomes the RPM version 0.9.0~rc1, which sorts
 # before 0.9.0.
 
-%{!?upstream_version:%global upstream_version 0.9.2}
+%{!?upstream_version:%global upstream_version 0.9.3}
 
 %global app_id io.github.sorrelfox.Helikodu
 

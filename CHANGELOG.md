@@ -4,11 +4,17 @@ All notable changes to Helikodu are recorded in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.3] - 2026-11-19
+
+The release candidate with Helikodu's own Flatpak repository and fixes for narrow windows and the tray menu.
 
 ### Added
 
 - Helikodu's own Flatpak repository, published with the website: **Install with Flatpak** on the website (or `flatpak install --user --from https://sorrelfox.github.io/helikodu/helikodu.flatpakref`) installs Helikodu from it, and new versions then come with the other Flatpak updates. The repository is signed. The `.flatpak` file of a release adds the same repository when it is installed, so software centres no longer say that it comes without a software repository. An installation from the file of 0.9.2 or earlier is switched to the repository as the user guide's installing page describes.
+
+### Changed
+
+- Helikodu uses less memory: Now Playing is built when it is first opened, large sorts of the track table use temporary files instead of memory, and artists' photos are looked up only on the Artists page.
 
 ### Fixed
 

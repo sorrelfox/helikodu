@@ -122,6 +122,17 @@ SPDX-License-Identifier: CC0-1.0
   <translation type="gettext">helikodu</translation>
 
   <releases>
+    <release version="0.9.3" date="2026-11-19" type="development">
+      <description>
+        <p>Fixes for the release candidate:</p>
+        <ul>
+          <li>The Flatpak file installs Helikodu from its own signed repository, so that it gets updates</li>
+          <li>The tray menu in KDE Plasma no longer shows wrong items after it changes</li>
+          <li>Every page fits a narrow window</li>
+          <li>Helikodu uses less memory</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.2" date="2026-11-19" type="development">
       <description>
         <p>Fixes for the release candidate:</p>
