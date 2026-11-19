@@ -29,6 +29,9 @@ thiserror.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+# Reading the corpus manifest in tests/corpus.
+serde.workspace = true
+toml.workspace = true
 
 [[bench]]
 name = "collation"

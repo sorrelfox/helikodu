@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The steps `xtask` performs itself: `copy`, `truncate`, `garbage`, `empty`, and
+//! The steps `xtask` performs itself: `copy`, `truncate`, `garbage`, `empty`;
 //! `write`, which writes one of the long-tail files the project makes itself (the
-//! same writers as the tests use, from `crates/testkit/src/longtail.rs`).
+//! same writers as the tests use, from `crates/testkit/src/longtail.rs`); `tag`,
+//! which writes tags into a copy of its input (see [`super::tagging`]); and
+//! `text`, which writes a text such as a CUE sheet in a given charset.
 
 use std::fs;
 use std::path::Path;
@@ -55,6 +57,11 @@ pub(crate) fn run(recipe: &Sample, input: Option<&Path>, output: &Path) -> Resul
             Some(other) => bail!("`write` cannot make `{other}`"),
             None => bail!("`write` needs `content`"),
         },
+        "tag" => super::tagging::apply(&read_input()?, &recipe.tag)?,
+        "text" => {
+            let text = recipe.text.as_deref().context("`text` needs `text`")?;
+            super::charset::encode(text, recipe.charset.as_deref().unwrap_or("utf-8"))?
+        }
         other => bail!("`{other}` is not a built-in step"),
     };
     fs::write(output, bytes).with_context(|| format!("could not write {}", output.display()))

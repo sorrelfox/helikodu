@@ -15,10 +15,14 @@ use serde::{Deserialize, Serialize};
 use super::names;
 
 /// The tools `xtask` implements itself.
-pub(crate) const BUILTIN_TOOLS: &[&str] = &["copy", "truncate", "garbage", "empty", "write"];
+pub(crate) const BUILTIN_TOOLS: &[&str] = &[
+    "copy", "truncate", "garbage", "empty", "write", "tag", "text",
+];
 
 /// The sets a recipe may belong to; each is a folder in the corpus.
-pub(crate) const SETS: &[&str] = &["formats", "gapless", "video", "broken", "names", "longtail"];
+pub(crate) const SETS: &[&str] = &[
+    "formats", "gapless", "video", "broken", "names", "longtail", "tags", "cue", "scripts",
+];
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -113,6 +117,15 @@ pub(crate) struct Sample {
     /// `psid`, `midi`, `soundfont`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) content: Option<String>,
+    /// `tag`: the tags written into the input, in order of the list.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) tag: Vec<TagBlock>,
+    /// `text`: the text written, such as a CUE sheet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) text: Option<String>,
+    /// `text`: the charset of the written text (see [`super::charset`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) charset: Option<String>,
     /// Pad the file name to exactly this many bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) pad_name_to: Option<usize>,
@@ -122,6 +135,87 @@ pub(crate) struct Sample {
 
 fn is_false(value: &bool) -> bool {
     !*value
+}
+
+/// One tag that the built-in step `tag` writes into a file.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TagBlock {
+    /// `vorbis`, `id3v1`, `id3v23`, `id3v24`, `ape`, `mp4` or `riff`.
+    pub(crate) format: String,
+    /// The charset of the text in ID3v1, ID3v2 Latin-1 frames, APEv2 and RIFF INFO;
+    /// a WHATWG label or `latin1`. Unset: each format's standard encoding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) charset: Option<String>,
+    /// Each field is the key followed by its values. Several values become
+    /// one field per value (Vorbis comments) or one NUL-separated field.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) fields: Vec<Vec<String>>,
+    /// Embedded pictures: square PNG images in one colour.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) pictures: Vec<PictureSpec>,
+}
+
+/// An embedded picture to write.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PictureSpec {
+    /// The ID3v2 picture type: 3 front cover, 4 back cover, 8 artist, …
+    #[serde(rename = "type")]
+    pub(crate) kind: u8,
+    /// Width and height in pixels.
+    pub(crate) size: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) description: Option<String>,
+}
+
+/// One value or a list of values of an expected tag field.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub(crate) enum Values {
+    One(String),
+    Many(Vec<String>),
+}
+
+/// An embedded picture a reader must find.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PictureExpect {
+    /// The picture type; unset for formats without types (MP4).
+    #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
+    pub(crate) kind: Option<u8>,
+    pub(crate) size: u32,
+}
+
+/// The embedded lyrics a reader must find.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct LyricsExpect {
+    /// Whether every line has a time (LRC).
+    pub(crate) synced: bool,
+    pub(crate) lines: u32,
+    pub(crate) first_line: String,
+}
+
+/// One track a CUE sheet must give.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct CueExpect {
+    pub(crate) number: u32,
+    /// The audio file, relative to the sheet's folder, percent-encoded.
+    pub(crate) file: String,
+    /// Start in the file, as CUE time `MM:SS:FF` (75 frames a second).
+    pub(crate) start: String,
+    /// End in the file; unset for the end of the file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) end: Option<String>,
+    /// Where the pregap (`INDEX 00`) starts in the same file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) pregap: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) artist: Option<String>,
 }
 
 /// What `ffprobe` must report for a sample. Unset fields are not checked,
@@ -149,6 +243,40 @@ pub(crate) struct Expect {
     pub(crate) audio_streams: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) video_streams: Option<u32>,
+    /// Tag fields a reader must find, by the name of the field in the tag
+    /// record (`title`, `artists`, `rating`, `track_gain`, …); see
+    /// `tests/corpus/README.md`. Not checked with `ffprobe`.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) tags: BTreeMap<String, Values>,
+    /// The legacy charset a reader must be told for the tags or the sheet to
+    /// read right; unset when it is to be recognised.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) charset: Option<String>,
+    /// The embedded pictures, in file order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) pictures: Vec<PictureExpect>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) lyrics: Option<LyricsExpect>,
+    /// The tracks of a CUE sheet (a `.cue` file or the sheet embedded in the file).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) cue: Vec<CueExpect>,
+    /// The file's position (from 1) among the files of its folder, sorted by
+    /// artist in each locale.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) sort: BTreeMap<String, u32>,
+}
+
+impl Expect {
+    /// Whether anything is to be checked with `ffprobe`.
+    pub(crate) fn needs_probe(&self) -> bool {
+        self.demuxer.is_some()
+            || self.codec.is_some()
+            || self.sample_rate.is_some()
+            || self.channels.is_some()
+            || self.samples.is_some()
+            || self.audio_streams.is_some()
+            || self.video_streams.is_some()
+    }
 }
 
 /// A sample ready to make: parts expanded, names decoded, expectations
@@ -260,6 +388,18 @@ fn expand(sample: &Sample, sources: &BTreeMap<String, &Source>) -> Result<Vec<Jo
     let builtin = BUILTIN_TOOLS.contains(&sample.tool.as_str());
     if !builtin && sample.source.is_none() && sample.tool != "ffmpeg" {
         bail!("an external tool other than ffmpeg needs a `source`");
+    }
+    if (sample.tool == "tag") != !sample.tag.is_empty() {
+        bail!("`tag` tables belong to the built-in step `tag`, which needs at least one");
+    }
+    if sample.tool == "tag" && sample.from.is_none() {
+        bail!("`tag` needs `from`: the file it writes the tags into");
+    }
+    if (sample.tool == "text") != sample.text.is_some() {
+        bail!("`text` belongs to the built-in step `text`, which needs it");
+    }
+    if sample.charset.is_some() && sample.tool != "text" {
+        bail!("`charset` belongs to the built-in step `text`");
     }
     for need in &sample.needs {
         if !(need.starts_with("encoder:") || need.starts_with("muxer:")) {

@@ -21,11 +21,11 @@
 
 mod catalogue;
 mod flac;
-mod ogg;
+pub(crate) mod ogg;
 mod paths;
 mod random;
 mod template;
-mod vorbis;
+pub(crate) mod vorbis;
 mod words;
 
 use std::collections::BTreeMap;

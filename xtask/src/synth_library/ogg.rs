@@ -140,6 +140,70 @@ impl OpusTemplate {
     }
 }
 
+/// An Ogg file of one logical stream whose first `header_packets` packets are
+/// headers, with the second packet (the comment header) replaced by `comment`.
+/// The first header keeps its page; the other headers each start a page of
+/// their own, and the pages after the headers are renumbered.
+pub(crate) fn replace_comment_packet(
+    bytes: &[u8],
+    header_packets: usize,
+    comment: &[u8],
+) -> Result<Vec<u8>> {
+    let pages = pages(bytes)?;
+    let Some(first) = pages.first() else {
+        bail!("the file has no pages");
+    };
+    if first.flags & BEGINNING == 0 || first.lacing.last().is_none_or(|&value| value == 255) {
+        bail!("the first page does not hold exactly the first header");
+    }
+    if pages.iter().any(|page| page.serial != first.serial) {
+        bail!("the file has more than one logical stream");
+    }
+    if header_packets < 2 {
+        bail!("there is no comment header to replace");
+    }
+    // The headers after the first, joined from their pages; the last one must
+    // end its page, as audio starts on a new page.
+    let wanted = header_packets - 1;
+    let mut packets: Vec<Vec<u8>> = Vec::new();
+    let mut current = Vec::new();
+    let mut index = 1;
+    while packets.len() < wanted {
+        let Some(page) = pages.get(index) else {
+            bail!("the file ends inside its headers");
+        };
+        index += 1;
+        let mut offset = 0;
+        for &value in page.lacing {
+            if packets.len() == wanted {
+                bail!("the headers do not end a page");
+            }
+            let length = usize::from(value);
+            current.extend_from_slice(&page.body[offset..offset + length]);
+            offset += length;
+            if value < 255 {
+                packets.push(std::mem::take(&mut current));
+            }
+        }
+    }
+    packets[0] = comment.to_vec();
+
+    let mut out = Vec::with_capacity(bytes.len() + comment.len());
+    out.extend_from_slice(first.raw);
+    let mut sequence = first.sequence + 1;
+    for packet in &packets {
+        sequence = write_packet(&mut out, packet, first.serial, sequence);
+    }
+    for page in &pages[index..] {
+        let start = out.len();
+        out.extend_from_slice(page.raw);
+        out[start + 18..start + 22].copy_from_slice(&sequence.to_le_bytes());
+        set_crc(&mut out[start..]);
+        sequence += 1;
+    }
+    Ok(out)
+}
+
 /// Writes `packet` as one or more header pages starting at `sequence`, and
 /// returns the sequence number of the next page.
 fn write_packet(out: &mut Vec<u8>, packet: &[u8], serial: u32, mut sequence: u32) -> u32 {

@@ -13,11 +13,13 @@
 //! corpus against its manifest without making anything.
 
 mod builtin;
+mod charset;
 pub(crate) mod manifest;
 pub(crate) mod names;
 mod probe;
 mod recipe;
 mod signal;
+mod tagging;
 pub(crate) mod tools;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -334,6 +336,7 @@ fn make(state: &mut Run, index: usize, job: &Job) -> Result<()> {
     }
 
     if let Some(expect) = &job.expect
+        && expect.needs_probe()
         && state.can_probe
     {
         probe::verify(&main_scratch, expect).context("the file is not what the recipe expects")?;

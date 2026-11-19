@@ -1280,8 +1280,10 @@ dependencies = [
  "regex",
  "rusqlite",
  "rustix",
+ "serde",
  "sha2",
  "thiserror 2.0.21",
+ "toml",
 ]
 
 [[package]]
@@ -1296,8 +1298,10 @@ dependencies = [
  "image",
  "lofty",
  "quick-xml",
+ "serde",
  "sha2",
  "thiserror 2.0.21",
+ "toml",
 ]
 
 [[package]]
@@ -3404,6 +3408,7 @@ name = "xtask"
 version = "0.9.3"
 dependencies = [
  "anyhow",
+ "encoding_rs",
  "serde",
  "serde_json",
  "sha2",

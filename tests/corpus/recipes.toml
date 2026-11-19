@@ -120,6 +120,42 @@ signal = "sweep-noise"
 seed = 3
 split = [48017, 112211, 185557]
 
+# Silent sources for the tag, CUE and script sets: what matters there is the
+# tags, and silence keeps the files small. The CUE source is split on CD frame
+# boundaries (588 samples at 44.1 kHz): 00:02:50 and 00:05:25.
+[[source]]
+name = "tags-44"
+sample_rate = 44100
+channels = 2
+encoding = "s16"
+frames = 22050
+signal = "silence"
+
+[[source]]
+name = "tags-48"
+sample_rate = 48000
+channels = 2
+encoding = "s16"
+frames = 24000
+signal = "silence"
+
+[[source]]
+name = "tags-16-mono"
+sample_rate = 16000
+channels = 1
+encoding = "s16"
+frames = 8000
+signal = "silence"
+
+[[source]]
+name = "cue-44"
+sample_rate = 44100
+channels = 2
+encoding = "s16"
+frames = 352800
+signal = "silence"
+split = [117600, 235200]
+
 # ---------------------------------------------------------------------------
 # Formats: one sample per codec and container. Each distinct `format` label
 # counts once; variants (bit depth, channel layout, bit-rate mode) share it.
@@ -1637,3 +1673,1739 @@ name = "truncated.mid"
 from = "longtail/rustysynth/arpeggio.mid"
 tool = "truncate"
 keep = 0.5
+
+# ---------------------------------------------------------------------------
+# Tags: every tag format the library reads, written byte by byte by the
+# built-in step `tag` into untagged files, so that the bytes are exactly what
+# the recipe says (several values, legacy charsets, POPM, APEv2, picture types).
+# `expect.tags` lists what a tag reader must find; see README.md.
+
+# Untagged files: the inputs of the tag recipes. A reader finds no tags.
+[[sample]]
+set = "tags"
+name = "untagged/flac.flac"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "flac"]
+needs = ["encoder:flac", "muxer:flac"]
+[sample.expect]
+demuxer = "flac"
+codec = "flac"
+[sample.expect.tags]
+title = []
+artist = []
+
+[[sample]]
+set = "tags"
+name = "untagged/vorbis.ogg"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "libvorbis", "-q:a", "0"]
+needs = ["encoder:libvorbis", "muxer:ogg"]
+[sample.expect]
+demuxer = "ogg"
+codec = "vorbis"
+[sample.expect.tags]
+title = []
+
+[[sample]]
+set = "tags"
+name = "untagged/opus.opus"
+source = "tags-48"
+tool = "ffmpeg"
+args = ["-c:a", "libopus", "-b:a", "32k"]
+needs = ["encoder:libopus", "muxer:opus"]
+[sample.expect]
+demuxer = "ogg"
+codec = "opus"
+[sample.expect.tags]
+title = []
+
+[[sample]]
+set = "tags"
+name = "untagged/speex.spx"
+source = "tags-16-mono"
+tool = "ffmpeg"
+args = ["-c:a", "libspeex"]
+needs = ["encoder:libspeex", "muxer:spx"]
+[sample.expect]
+demuxer = "ogg"
+codec = "speex"
+
+[[sample]]
+set = "tags"
+name = "untagged/mp3.mp3"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "libmp3lame", "-b:a", "64k", "-id3v2_version", "0"]
+needs = ["encoder:libmp3lame", "muxer:mp3"]
+[sample.expect]
+demuxer = "mp3"
+codec = "mp3"
+[sample.expect.tags]
+title = []
+
+[[sample]]
+set = "tags"
+name = "untagged/adts.aac"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "aac", "-b:a", "64k", "-f", "adts"]
+needs = ["encoder:aac", "muxer:adts"]
+[sample.expect]
+demuxer = "aac"
+codec = "aac"
+
+[[sample]]
+set = "tags"
+name = "untagged/aac.m4a"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "aac", "-b:a", "64k"]
+needs = ["encoder:aac", "muxer:ipod"]
+[sample.expect]
+demuxer = "mov,mp4,m4a,3gp,3g2,mj2"
+codec = "aac"
+[sample.expect.tags]
+title = []
+
+[[sample]]
+set = "tags"
+name = "untagged/wavpack.wv"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "wavpack"]
+needs = ["encoder:wavpack", "muxer:wv"]
+[sample.expect]
+demuxer = "wv"
+codec = "wavpack"
+
+[[sample]]
+set = "tags"
+name = "untagged/tta.tta"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "tta"]
+needs = ["encoder:tta", "muxer:tta"]
+[sample.expect]
+demuxer = "tta"
+codec = "tta"
+
+[[sample]]
+set = "tags"
+name = "untagged/monkeys-audio.ape"
+source = "tags-44"
+tool = "mac"
+args = ["{input}", "{output}", "-c1000"]
+[sample.expect]
+demuxer = "ape"
+codec = "ape"
+
+[[sample]]
+set = "tags"
+name = "untagged/musepack.mpc"
+source = "tags-44"
+tool = "mpcenc"
+args = ["--silent", "--overwrite", "{input}", "{output}"]
+[sample.expect]
+demuxer = "mpc8"
+codec = "musepack8"
+
+[[sample]]
+set = "tags"
+name = "untagged/wav.wav"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s16le"]
+needs = ["encoder:pcm_s16le", "muxer:wav"]
+[sample.expect]
+demuxer = "wav"
+codec = "pcm_s16le"
+
+[[sample]]
+set = "tags"
+name = "untagged/aiff.aiff"
+source = "tags-44"
+tool = "ffmpeg"
+args = ["-c:a", "pcm_s16be"]
+needs = ["encoder:pcm_s16be", "muxer:aiff"]
+[sample.expect]
+demuxer = "aiff"
+codec = "pcm_s16be"
+
+# Vorbis comments in FLAC: a classical track with every field the library
+# reads, several values, sort fields, ReplayGain, FMPS_RATING, LRC lyrics in
+# LYRICS and three pictures (front cover, back cover, artist).
+[[sample]]
+set = "tags"
+name = "vorbis/classical.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect]
+demuxer = "flac"
+codec = "flac"
+[sample.expect.tags]
+title = "Symphony No. 9 in D minor, Op. 125: II. Molto vivace"
+title_sort = "Symphony 9 2"
+artist = "Gundula Janowitz, Berliner Philharmoniker & Herbert von Karajan"
+artists = ["Gundula Janowitz", "Berliner Philharmoniker", "Herbert von Karajan"]
+artist_sort = "Janowitz, Gundula"
+album = "Symphonie Nr. 9"
+album_sort = "Symphonie 9"
+album_artist = "Ludwig van Beethoven"
+album_artist_sort = "Beethoven, Ludwig van"
+composer_sort = "Beethoven, Ludwig van"
+track_number = "2"
+track_total = "4"
+disc_number = "1"
+disc_total = "2"
+date = "1963-10-01"
+original_date = "1962"
+genres = ["Classical", "Orchestral"]
+composers = ["Ludwig van Beethoven"]
+conductors = ["Herbert von Karajan"]
+performers = ["Gundula Janowitz (soprano)"]
+work = "Symphony No. 9 in D minor, Op. 125"
+movement = "Molto vivace"
+movement_number = "2"
+movement_total = "4"
+labels = ["Deutsche Grammophon"]
+catalog_numbers = ["447 401-2"]
+comment = "Generated test file"
+has_lyrics = "true"
+track_gain = "-6.5"
+track_peak = "0.988525"
+album_gain = "-7.25"
+album_peak = "1"
+rating = "8"
+[[sample.expect.pictures]]
+type = 3
+size = 16
+[[sample.expect.pictures]]
+type = 4
+size = 8
+[[sample.expect.pictures]]
+type = 8
+size = 4
+[sample.expect.lyrics]
+synced = true
+lines = 3
+first_line = "Freude, schöner Götterfunken"
+[[sample.tag]]
+format = "vorbis"
+fields = [
+    ["TITLE", "Symphony No. 9 in D minor, Op. 125: II. Molto vivace"],
+    ["TITLESORT", "Symphony 9 2"],
+    ["ARTIST", "Gundula Janowitz, Berliner Philharmoniker & Herbert von Karajan"],
+    ["ARTISTS", "Gundula Janowitz", "Berliner Philharmoniker", "Herbert von Karajan"],
+    ["ARTISTSORT", "Janowitz, Gundula"],
+    ["ALBUM", "Symphonie Nr. 9"],
+    ["ALBUMSORT", "Symphonie 9"],
+    ["ALBUMARTIST", "Ludwig van Beethoven"],
+    ["ALBUMARTISTSORT", "Beethoven, Ludwig van"],
+    ["COMPOSER", "Ludwig van Beethoven"],
+    ["COMPOSERSORT", "Beethoven, Ludwig van"],
+    ["CONDUCTOR", "Herbert von Karajan"],
+    ["PERFORMER", "Gundula Janowitz (soprano)"],
+    ["WORK", "Symphony No. 9 in D minor, Op. 125"],
+    ["MOVEMENTNAME", "Molto vivace"],
+    ["MOVEMENT", "2"],
+    ["MOVEMENTTOTAL", "4"],
+    ["TRACKNUMBER", "2"],
+    ["TRACKTOTAL", "4"],
+    ["DISCNUMBER", "1"],
+    ["DISCTOTAL", "2"],
+    ["DATE", "1963-10-01"],
+    ["ORIGINALDATE", "1962"],
+    ["GENRE", "Classical", "Orchestral"],
+    ["LABEL", "Deutsche Grammophon"],
+    ["CATALOGNUMBER", "447 401-2"],
+    ["COMMENT", "Generated test file"],
+    ["REPLAYGAIN_TRACK_GAIN", "-6.50 dB"],
+    ["REPLAYGAIN_TRACK_PEAK", "0.988525"],
+    ["REPLAYGAIN_ALBUM_GAIN", "-7.25 dB"],
+    ["REPLAYGAIN_ALBUM_PEAK", "1.000000"],
+    ["FMPS_RATING", "0.8"],
+    ["LYRICS", "[00:00.00]Freude, schöner Götterfunken\n[00:00.20]Tochter aus Elysium\n[00:00.40]Wir betreten feuertrunken"],
+]
+pictures = [
+    { type = 3, size = 16, description = "Front" },
+    { type = 4, size = 8, description = "Back" },
+    { type = 8, size = 4, description = "Artist" },
+]
+
+# Vorbis comments in Ogg Vorbis: a RATING in stars, plain lyrics and a
+# picture in METADATA_BLOCK_PICTURE.
+[[sample]]
+set = "tags"
+name = "vorbis/vorbis.ogg"
+from = "tags/untagged/vorbis.ogg"
+tool = "tag"
+[sample.expect]
+demuxer = "ogg"
+codec = "vorbis"
+[sample.expect.tags]
+title = "Ogg Vorbis Title"
+artist = "Ogg Artist One; Ogg Artist Two"
+artists = ["Ogg Artist One", "Ogg Artist Two"]
+album = "Ogg Album"
+genres = ["Electronic", "Ambient"]
+track_number = "5"
+rating = "8"
+compilation = "true"
+grouping = "Night Pieces"
+has_lyrics = "true"
+[[sample.expect.pictures]]
+type = 3
+size = 12
+[sample.expect.lyrics]
+synced = false
+lines = 2
+first_line = "First line of plain lyrics"
+[[sample.tag]]
+format = "vorbis"
+fields = [
+    ["TITLE", "Ogg Vorbis Title"],
+    ["ARTIST", "Ogg Artist One", "Ogg Artist Two"],
+    ["ALBUM", "Ogg Album"],
+    ["GENRE", "Electronic", "Ambient"],
+    ["TRACKNUMBER", "5"],
+    ["RATING", "4"],
+    ["COMPILATION", "1"],
+    ["GROUPING", "Night Pieces"],
+    ["LYRICS", "First line of plain lyrics\nSecond line of plain lyrics"],
+]
+pictures = [{ type = 3, size = 12 }]
+
+# Opus with its R128 gains (Q7.8 dB relative to -23 LUFS) and a RATING out of 100.
+[[sample]]
+set = "tags"
+name = "vorbis/opus.opus"
+from = "tags/untagged/opus.opus"
+tool = "tag"
+[sample.expect]
+demuxer = "ogg"
+codec = "opus"
+[sample.expect.tags]
+title = "Opus Title"
+artist = "Opus Artist"
+album = "Opus Album"
+r128_track_gain = "-1280"
+r128_album_gain = "256"
+rating = "6"
+[[sample.tag]]
+format = "vorbis"
+fields = [
+    ["TITLE", "Opus Title"],
+    ["ARTIST", "Opus Artist"],
+    ["ALBUM", "Opus Album"],
+    ["R128_TRACK_GAIN", "-1280"],
+    ["R128_ALBUM_GAIN", "256"],
+    ["RATING", "60"],
+]
+
+[[sample]]
+set = "tags"
+name = "vorbis/speex.spx"
+from = "tags/untagged/speex.spx"
+tool = "tag"
+[sample.expect]
+demuxer = "ogg"
+codec = "speex"
+[sample.expect.tags]
+title = "Speex Title"
+artist = "Speex Artist"
+album = "Speex Album"
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Speex Title"], ["ARTIST", "Speex Artist"], ["ALBUM", "Speex Album"]]
+
+# ID3v2.4 in MP3, as MusicBrainz Picard writes it: UTF-8 frames, several values
+# separated by NUL, TXXX frames, TMCL, comment, USLT lyrics and three pictures.
+[[sample]]
+set = "tags"
+name = "id3/id3v24.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+codec = "mp3"
+[sample.expect.tags]
+title = "Goldberg Variations, BWV 988: Aria"
+title_sort = "Goldberg Variations 00"
+artist = "Glenn Gould"
+artists = ["Glenn Gould"]
+artist_sort = "Gould, Glenn"
+album = "Bach: The Goldberg Variations"
+album_sort = "Goldberg Variations"
+album_artist = "Johann Sebastian Bach; Glenn Gould"
+album_artists = ["Johann Sebastian Bach", "Glenn Gould"]
+album_artist_sort = "Bach, Johann Sebastian"
+composer_sort = "Bach, Johann Sebastian"
+track_number = "1"
+track_total = "32"
+disc_number = "1"
+disc_total = "1"
+date = "1982-04-30"
+original_date = "1982"
+genres = ["Classical", "Baroque"]
+composers = ["Johann Sebastian Bach"]
+performers = ["Glenn Gould (piano)"]
+work = "Goldberg Variations, BWV 988"
+movement = "Aria"
+movement_number = "1"
+movement_total = "32"
+grouping = "Bach Keyboard"
+comment = "Generated test file"
+has_lyrics = "true"
+track_gain = "-3.1"
+track_peak = "0.5"
+labels = ["CBS Masterworks"]
+"extra:mood" = "Calm"
+[[sample.expect.pictures]]
+type = 3
+size = 16
+[[sample.expect.pictures]]
+type = 4
+size = 8
+[[sample.expect.pictures]]
+type = 7
+size = 4
+[sample.expect.lyrics]
+synced = false
+lines = 1
+first_line = "No words in the aria"
+[[sample.tag]]
+format = "id3v24"
+fields = [
+    ["TIT2", "Goldberg Variations, BWV 988: Aria"],
+    ["TSOT", "Goldberg Variations 00"],
+    ["TPE1", "Glenn Gould"],
+    ["TSOP", "Gould, Glenn"],
+    ["TALB", "Bach: The Goldberg Variations"],
+    ["TSOA", "Goldberg Variations"],
+    ["TPE2", "Johann Sebastian Bach; Glenn Gould"],
+    ["TXXX:ALBUMARTISTS", "Johann Sebastian Bach", "Glenn Gould"],
+    ["TSO2", "Bach, Johann Sebastian"],
+    ["TCOM", "Johann Sebastian Bach"],
+    ["TSOC", "Bach, Johann Sebastian"],
+    ["TMCL", "piano", "Glenn Gould"],
+    ["TIT1", "Goldberg Variations, BWV 988"],
+    ["GRP1", "Bach Keyboard"],
+    ["MVNM", "Aria"],
+    ["MVIN", "1/32"],
+    ["TRCK", "1/32"],
+    ["TPOS", "1/1"],
+    ["TDRC", "1982-04-30"],
+    ["TDOR", "1982"],
+    ["TCON", "Classical", "Baroque"],
+    ["TPUB", "CBS Masterworks"],
+    ["TMOO", "Calm"],
+    ["COMM", "Generated test file"],
+    ["USLT", "No words in the aria"],
+    ["TXXX:REPLAYGAIN_TRACK_GAIN", "-3.10 dB"],
+    ["TXXX:REPLAYGAIN_TRACK_PEAK", "0.500000"],
+]
+pictures = [
+    { type = 3, size = 16, description = "Front" },
+    { type = 4, size = 8, description = "Back" },
+    { type = 7, size = 4, description = "Soloist" },
+]
+
+# ID3v2.3: text outside Latin-1 in UTF-16, the year in TYER, several values
+# separated by NUL as Picard writes them in 2.3.
+[[sample]]
+set = "tags"
+name = "id3/id3v23.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+codec = "mp3"
+[sample.expect.tags]
+title = "Ψ Δ Ω and €"
+artist = "Björk"
+album = "Homogenic"
+album_artist = "Björk"
+date = "1997"
+track_number = "4"
+genres = ["Electronic", "Art Pop"]
+composers = ["Björk", "Mark Bell"]
+conductors = ["Eumir Deodato"]
+[[sample.tag]]
+format = "id3v23"
+fields = [
+    ["TIT2", "Ψ Δ Ω and €"],
+    ["TPE1", "Björk"],
+    ["TALB", "Homogenic"],
+    ["TPE2", "Björk"],
+    ["TYER", "1997"],
+    ["TRCK", "4"],
+    ["TCON", "Electronic", "Art Pop"],
+    ["TCOM", "Björk", "Mark Bell"],
+    ["TPE3", "Eumir Deodato"],
+]
+
+[[sample]]
+set = "tags"
+name = "id3/id3v1.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+codec = "mp3"
+[sample.expect.tags]
+title = "Only ID3v1"
+artist = "Motörhead"
+album = "Ace of Spades"
+date = "1980"
+track_number = "1"
+genres = ["Metal"]
+comment = "ID3v1.1"
+[[sample.tag]]
+format = "id3v1"
+fields = [
+    ["TITLE", "Only ID3v1"],
+    ["ARTIST", "Motörhead"],
+    ["ALBUM", "Ace of Spades"],
+    ["YEAR", "1980"],
+    ["COMMENT", "ID3v1.1"],
+    ["TRACK", "1"],
+    ["GENRE", "9"],
+]
+
+# ID3v2.4, APEv2 and ID3v1 on one MP3: ID3v2 wins, then APEv2, then ID3v1;
+# a field only the later tags have is still read.
+[[sample]]
+set = "tags"
+name = "id3/three-tags.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+codec = "mp3"
+[sample.expect.tags]
+title = "From ID3v2"
+album = "From APEv2"
+artist = "From ID3v1"
+genres = ["Jazz"]
+[[sample.tag]]
+format = "id3v24"
+fields = [["TIT2", "From ID3v2"], ["TCON", "Jazz"]]
+[[sample.tag]]
+format = "ape"
+fields = [["Title", "From APEv2"], ["Album", "From APEv2"], ["Genre", "Blues"]]
+[[sample.tag]]
+format = "id3v1"
+fields = [["TITLE", "From ID3v1"], ["ALBUM", "From ID3v1"], ["ARTIST", "From ID3v1"], ["GENRE", "0"]]
+
+[[sample]]
+set = "tags"
+name = "id3/adts.aac"
+from = "tags/untagged/adts.aac"
+tool = "tag"
+[sample.expect]
+demuxer = "aac"
+codec = "aac"
+[sample.expect.tags]
+title = "ADTS Title"
+artist = "ADTS Artist"
+[[sample.tag]]
+format = "id3v24"
+fields = [["TIT2", "ADTS Title"], ["TPE1", "ADTS Artist"]]
+
+[[sample]]
+set = "tags"
+name = "id3/wav.wav"
+from = "tags/untagged/wav.wav"
+tool = "tag"
+[sample.expect]
+demuxer = "wav"
+codec = "pcm_s16le"
+[sample.expect.tags]
+title = "ID3 in WAV"
+artist = "WAV Artist"
+album = "WAV Album"
+[[sample.tag]]
+format = "id3v24"
+fields = [["TIT2", "ID3 in WAV"], ["TPE1", "WAV Artist"], ["TALB", "WAV Album"]]
+
+[[sample]]
+set = "tags"
+name = "id3/aiff.aiff"
+from = "tags/untagged/aiff.aiff"
+tool = "tag"
+[sample.expect]
+demuxer = "aiff"
+codec = "pcm_s16be"
+[sample.expect.tags]
+title = "ID3 in AIFF"
+artist = "AIFF Artist"
+[[sample.tag]]
+format = "id3v23"
+fields = [["TIT2", "ID3 in AIFF"], ["TPE1", "AIFF Artist"]]
+
+[[sample]]
+set = "tags"
+name = "riff/info.wav"
+from = "tags/untagged/wav.wav"
+tool = "tag"
+[sample.expect]
+demuxer = "wav"
+codec = "pcm_s16le"
+[sample.expect.tags]
+title = "RIFF Title"
+artist = "RIFF Artist"
+album = "RIFF Album"
+date = "2001"
+genres = ["Folk"]
+track_number = "3"
+comment = "RIFF comment"
+[[sample.tag]]
+format = "riff"
+fields = [
+    ["INAM", "RIFF Title"],
+    ["IART", "RIFF Artist"],
+    ["IPRD", "RIFF Album"],
+    ["ICRD", "2001"],
+    ["IGNR", "Folk"],
+    ["ITRK", "3"],
+    ["ICMT", "RIFF comment"],
+]
+
+# APEv2 in WavPack: several values separated by NUL, sort and classical
+# fields, ReplayGain, lyrics and two picture items.
+[[sample]]
+set = "tags"
+name = "ape/wavpack.wv"
+from = "tags/untagged/wavpack.wv"
+tool = "tag"
+[sample.expect]
+demuxer = "wv"
+codec = "wavpack"
+[sample.expect.tags]
+title = "Le Sacre du printemps: Danse sacrale"
+artist = "Pierre Boulez"
+artists = ["Pierre Boulez"]
+artist_sort = "Boulez, Pierre"
+album = "Le Sacre du printemps"
+album_artist = "Igor Stravinsky"
+track_number = "14"
+track_total = "14"
+disc_number = "1"
+date = "1991"
+genres = ["Classical", "Ballet"]
+composers = ["Igor Stravinsky"]
+conductors = ["Pierre Boulez"]
+work = "Le Sacre du printemps"
+movement = "Danse sacrale"
+movement_number = "14"
+track_gain = "2.5"
+album_gain = "1.75"
+rating = "6"
+has_lyrics = "true"
+[[sample.expect.pictures]]
+type = 3
+size = 16
+[[sample.expect.pictures]]
+type = 4
+size = 8
+[[sample.tag]]
+format = "ape"
+fields = [
+    ["Title", "Le Sacre du printemps: Danse sacrale"],
+    ["Artist", "Pierre Boulez"],
+    ["ARTISTSORT", "Boulez, Pierre"],
+    ["Album", "Le Sacre du printemps"],
+    ["Album Artist", "Igor Stravinsky"],
+    ["Track", "14/14"],
+    ["Disc", "1"],
+    ["Year", "1991"],
+    ["Genre", "Classical", "Ballet"],
+    ["Composer", "Igor Stravinsky"],
+    ["Conductor", "Pierre Boulez"],
+    ["WORK", "Le Sacre du printemps"],
+    ["MOVEMENTNAME", "Danse sacrale"],
+    ["MOVEMENT", "14"],
+    ["REPLAYGAIN_TRACK_GAIN", "+2.50 dB"],
+    ["REPLAYGAIN_ALBUM_GAIN", "+1.75 dB"],
+    ["FMPS_RATING", "0.6"],
+    ["Lyrics", "Instrumental"],
+]
+pictures = [{ type = 3, size = 16 }, { type = 4, size = 8 }]
+
+[[sample]]
+set = "tags"
+name = "ape/mp3-ape.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+codec = "mp3"
+[sample.expect.tags]
+title = "APEv2 on MP3"
+artist = "APE Artist"
+[[sample.tag]]
+format = "ape"
+fields = [["Title", "APEv2 on MP3"], ["Artist", "APE Artist"]]
+
+[[sample]]
+set = "tags"
+name = "ape/monkeys-audio.ape"
+from = "tags/untagged/monkeys-audio.ape"
+tool = "tag"
+[sample.expect]
+demuxer = "ape"
+codec = "ape"
+[sample.expect.tags]
+title = "Monkey's Title"
+artist = "Monkey's Artist"
+genres = ["Ambient", "Drone"]
+[[sample.tag]]
+format = "ape"
+fields = [["Title", "Monkey's Title"], ["Artist", "Monkey's Artist"], ["Genre", "Ambient", "Drone"]]
+
+[[sample]]
+set = "tags"
+name = "ape/musepack.mpc"
+from = "tags/untagged/musepack.mpc"
+tool = "tag"
+[sample.expect]
+demuxer = "mpc8"
+codec = "musepack8"
+[sample.expect.tags]
+title = "Musepack Title"
+artist = "Musepack Artist"
+[[sample.tag]]
+format = "ape"
+fields = [["Title", "Musepack Title"], ["Artist", "Musepack Artist"]]
+
+# TTA is read through FFmpeg, which reads its APEv2 tag.
+[[sample]]
+set = "tags"
+name = "ape/tta.tta"
+from = "tags/untagged/tta.tta"
+tool = "tag"
+[sample.expect]
+demuxer = "tta"
+codec = "tta"
+[sample.expect.tags]
+title = "TTA Title"
+artist = "TTA Artist"
+album = "TTA Album"
+[[sample.tag]]
+format = "ape"
+fields = [["Title", "TTA Title"], ["Artist", "TTA Artist"], ["Album", "TTA Album"]]
+
+# MP4 atoms in M4A: text, integer and freeform atoms, several data atoms,
+# sort and classical atoms, lyrics and two cover pictures (MP4 pictures have no type).
+[[sample]]
+set = "tags"
+name = "mp4/aac.m4a"
+from = "tags/untagged/aac.m4a"
+tool = "tag"
+[sample.expect]
+demuxer = "mov,mp4,m4a,3gp,3g2,mj2"
+codec = "aac"
+[sample.expect.tags]
+title = "Menuet"
+title_sort = "Menuet"
+artist = "Claudio Arrau"
+artists = ["Claudio Arrau", "Second Artist"]
+artist_sort = "Arrau, Claudio"
+album = "Le Tombeau de Couperin"
+album_sort = "Le Tombeau de Couperin"
+album_artist = "Maurice Ravel"
+album_artist_sort = "Ravel, Maurice"
+composer_sort = "Ravel, Maurice"
+track_number = "3"
+track_total = "4"
+disc_number = "1"
+disc_total = "1"
+date = "1991-01-01"
+genres = ["Classical"]
+composers = ["Maurice Ravel"]
+conductors = ["No Conductor"]
+work = "Le Tombeau de Couperin"
+movement = "Menuet"
+movement_number = "3"
+movement_total = "4"
+compilation = "false"
+has_lyrics = "true"
+track_gain = "-1.5"
+rating = "8"
+[[sample.expect.pictures]]
+size = 16
+[[sample.expect.pictures]]
+size = 8
+[[sample.tag]]
+format = "mp4"
+fields = [
+    ["©nam", "Menuet"],
+    ["sonm", "Menuet"],
+    ["©ART", "Claudio Arrau"],
+    ["----:com.apple.iTunes:ARTISTS", "Claudio Arrau", "Second Artist"],
+    ["soar", "Arrau, Claudio"],
+    ["©alb", "Le Tombeau de Couperin"],
+    ["soal", "Le Tombeau de Couperin"],
+    ["aART", "Maurice Ravel"],
+    ["soaa", "Ravel, Maurice"],
+    ["©wrt", "Maurice Ravel"],
+    ["soco", "Ravel, Maurice"],
+    ["----:com.apple.iTunes:CONDUCTOR", "No Conductor"],
+    ["trkn", "3/4"],
+    ["disk", "1/1"],
+    ["©day", "1991-01-01"],
+    ["©gen", "Classical"],
+    ["©wrk", "Le Tombeau de Couperin"],
+    ["©mvn", "Menuet"],
+    ["©mvi", "3"],
+    ["©mvc", "4"],
+    ["shwm", "1"],
+    ["cpil", "0"],
+    ["©lyr", "Instrumental"],
+    ["----:com.apple.iTunes:replaygain_track_gain", "-1.50 dB"],
+    ["rate", "80"],
+]
+pictures = [{ type = 3, size = 16 }, { type = 4, size = 8 }]
+
+# Tags FFmpeg writes and reads: Matroska and ASF are read through FFmpeg.
+[[sample]]
+set = "tags"
+name = "ffmpeg/matroska.mka"
+source = "tags-44"
+tool = "ffmpeg"
+args = [
+    "-c:a", "flac",
+    "-metadata", "title=Matroska Title",
+    "-metadata", "artist=Matroska Artist",
+    "-metadata", "album=Matroska Album",
+    "-metadata", "genre=Industrial",
+    "-metadata", "date=2010",
+]
+needs = ["encoder:flac", "muxer:matroska"]
+[sample.expect]
+demuxer = "matroska,webm"
+codec = "flac"
+[sample.expect.tags]
+title = "Matroska Title"
+artist = "Matroska Artist"
+album = "Matroska Album"
+genres = ["Industrial"]
+date = "2010"
+
+[[sample]]
+set = "tags"
+name = "ffmpeg/asf.wma"
+source = "tags-44"
+tool = "ffmpeg"
+args = [
+    "-c:a", "wmav2", "-b:a", "64k",
+    "-metadata", "title=ASF Title",
+    "-metadata", "artist=ASF Artist",
+    "-metadata", "album=ASF Album",
+    "-metadata", "genre=Trip Hop",
+]
+needs = ["encoder:wmav2", "muxer:asf"]
+[sample.expect]
+demuxer = "asf"
+codec = "wmav2"
+[sample.expect.tags]
+title = "ASF Title"
+artist = "ASF Artist"
+album = "ASF Album"
+genres = ["Trip Hop"]
+
+# Ratings as players write them. POPM: the e-mail field names the player,
+# which decides the scale; the first POPM frame wins. FMPS_RATING wins over
+# POPM, POPM over RATING.
+[[sample]]
+set = "tags"
+name = "ratings/popm-windows-media-player.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+rating = "8"
+[[sample.tag]]
+format = "id3v23"
+fields = [["TIT2", "Four stars"], ["POPM:Windows Media Player 9 Series", "196"]]
+
+[[sample]]
+set = "tags"
+name = "ratings/popm-musicbee.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+rating = "7"
+[[sample.tag]]
+format = "id3v23"
+fields = [["TIT2", "Three and a half stars"], ["POPM:MusicBee", "186", "12"]]
+
+[[sample]]
+set = "tags"
+name = "ratings/popm-quod-libet.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+rating = "6"
+[[sample.tag]]
+format = "id3v24"
+fields = [["TIT2", "Three stars"], ["POPM:quodlibet@lists.sacredchao.net", "153"]]
+
+[[sample]]
+set = "tags"
+name = "ratings/popm-several.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+rating = "3"
+[[sample.tag]]
+format = "id3v23"
+fields = [
+    ["TIT2", "Several players"],
+    ["POPM:MusicBee", "54"],
+    ["POPM:Windows Media Player 9 Series", "255"],
+    ["POPM:no@email", "1"],
+]
+
+[[sample]]
+set = "tags"
+name = "ratings/fmps-over-popm.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+rating = "4"
+[[sample.tag]]
+format = "id3v24"
+fields = [
+    ["TIT2", "FMPS over POPM"],
+    ["POPM:Windows Media Player 9 Series", "255"],
+    ["TXXX:FMPS_Rating", "0.4"],
+]
+
+[[sample]]
+set = "tags"
+name = "ratings/rating-stars.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect]
+demuxer = "flac"
+[sample.expect.tags]
+rating = "9"
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Four and a half stars"], ["RATING", "4.5"]]
+
+[[sample]]
+set = "tags"
+name = "ratings/fmps-over-rating.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect]
+demuxer = "flac"
+[sample.expect.tags]
+rating = "2"
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "FMPS over RATING"], ["RATING", "100"], ["FMPS_RATING", "0.2"]]
+
+# Legacy charsets: Windows-1251, Shift-JIS and GBK bytes in ID3v1 and in
+# ID3v2.3 Latin-1 frames, as old taggers wrote them; Windows-1251 in RIFF INFO.
+# Windows-1251 and Shift-JIS are recognised; GBK needs the charset chosen
+# (`expect.charset`).
+[[sample]]
+set = "tags"
+name = "legacy/cp1251-id3v1.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+title = "Группа крови"
+artist = "Кино"
+album = "Группа крови"
+date = "1988"
+[[sample.tag]]
+format = "id3v1"
+charset = "windows-1251"
+fields = [["TITLE", "Группа крови"], ["ARTIST", "Кино"], ["ALBUM", "Группа крови"], ["YEAR", "1988"]]
+
+[[sample]]
+set = "tags"
+name = "legacy/cp1251-id3v23.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+title = "Звезда по имени Солнце"
+artist = "Кино"
+album = "Звезда по имени Солнце"
+genres = ["Rock"]
+[[sample.tag]]
+format = "id3v23"
+charset = "windows-1251"
+fields = [
+    ["TIT2", "Звезда по имени Солнце"],
+    ["TPE1", "Кино"],
+    ["TALB", "Звезда по имени Солнце"],
+    ["TCON", "Rock"],
+]
+
+[[sample]]
+set = "tags"
+name = "legacy/shift-jis-id3v1.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+title = "ひこうき雲"
+artist = "荒井由実"
+album = "ひこうき雲"
+[[sample.tag]]
+format = "id3v1"
+charset = "shift_jis"
+fields = [["TITLE", "ひこうき雲"], ["ARTIST", "荒井由実"], ["ALBUM", "ひこうき雲"], ["YEAR", "1973"]]
+
+[[sample]]
+set = "tags"
+name = "legacy/shift-jis-id3v23.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+[sample.expect.tags]
+title = "真夜中のドア"
+artist = "松原みき"
+album = "ポケットパーク"
+[[sample.tag]]
+format = "id3v23"
+charset = "shift_jis"
+fields = [["TIT2", "真夜中のドア"], ["TPE1", "松原みき"], ["TALB", "ポケットパーク"]]
+
+[[sample]]
+set = "tags"
+name = "legacy/gbk-id3v1.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+charset = "gbk"
+[sample.expect.tags]
+title = "甜蜜蜜"
+artist = "邓丽君"
+album = "甜蜜蜜"
+[[sample.tag]]
+format = "id3v1"
+charset = "gbk"
+fields = [["TITLE", "甜蜜蜜"], ["ARTIST", "邓丽君"], ["ALBUM", "甜蜜蜜"]]
+
+[[sample]]
+set = "tags"
+name = "legacy/gbk-id3v23.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect]
+demuxer = "mp3"
+charset = "gbk"
+[sample.expect.tags]
+title = "月亮代表我的心"
+artist = "邓丽君"
+album = "岛国之情歌第四集"
+[[sample.tag]]
+format = "id3v23"
+charset = "gbk"
+fields = [["TIT2", "月亮代表我的心"], ["TPE1", "邓丽君"], ["TALB", "岛国之情歌第四集"]]
+
+[[sample]]
+set = "tags"
+name = "legacy/cp1251-riff.wav"
+from = "tags/untagged/wav.wav"
+tool = "tag"
+[sample.expect]
+demuxer = "wav"
+[sample.expect.tags]
+title = "Перемен"
+artist = "Кино"
+album = "Последний герой"
+[[sample.tag]]
+format = "riff"
+charset = "windows-1251"
+fields = [["INAM", "Перемен"], ["IART", "Кино"], ["IPRD", "Последний герой"]]
+
+# ---------------------------------------------------------------------------
+# CUE sheets: single-file and multi-file sheets, a sheet embedded in a FLAC
+# file, pregaps (INDEX 00), hidden track one audio, and sheets in Windows-1251,
+# Shift-JIS, Latin-1 and UTF-8 with a byte order mark. The audio is 8 s of
+# silence; the tracks start at 00:00:00, 00:02:50 and 00:05:25 (CUE times are
+# MM:SS:FF, 75 frames a second). `expect.cue` lists the tracks a reader must
+# find, `expect.tags` the album fields every track carries.
+
+[[sample]]
+set = "cue"
+name = "single/album.flac"
+source = "cue-44"
+tool = "ffmpeg"
+args = ["-c:a", "flac"]
+needs = ["encoder:flac", "muxer:flac"]
+expect = { demuxer = "flac", codec = "flac", exact_length = true }
+
+# One file, three tracks; the second has a pregap from 00:02:20.
+[[sample]]
+set = "cue"
+name = "single/album.cue"
+tool = "text"
+text = """
+REM GENRE "Ambient"
+REM DATE 2004
+PERFORMER "Cue Artist"
+TITLE "Single-File Album"
+FILE "album.flac" WAVE
+  TRACK 01 AUDIO
+    TITLE "Opening"
+    INDEX 01 00:00:00
+  TRACK 02 AUDIO
+    TITLE "Middle"
+    PERFORMER "Guest Artist"
+    INDEX 00 00:02:20
+    INDEX 01 00:02:50
+  TRACK 03 AUDIO
+    TITLE "Closing"
+    INDEX 01 00:05:25
+"""
+[sample.expect.tags]
+album = "Single-File Album"
+album_artist = "Cue Artist"
+genres = ["Ambient"]
+date = "2004"
+[[sample.expect.cue]]
+number = 1
+file = "album.flac"
+start = "00:00:00"
+end = "00:02:50"
+title = "Opening"
+artist = "Cue Artist"
+[[sample.expect.cue]]
+number = 2
+file = "album.flac"
+start = "00:02:50"
+end = "00:05:25"
+pregap = "00:02:20"
+title = "Middle"
+artist = "Guest Artist"
+[[sample.expect.cue]]
+number = 3
+file = "album.flac"
+start = "00:05:25"
+title = "Closing"
+artist = "Cue Artist"
+
+# Hidden track one audio: the first second is the pregap of track 1.
+[[sample]]
+set = "cue"
+name = "hidden-track/album.flac"
+from = "cue/single/album.flac"
+tool = "copy"
+
+[[sample]]
+set = "cue"
+name = "hidden-track/album.cue"
+tool = "text"
+text = """
+PERFORMER "Hidden Track Artist"
+TITLE "Hidden Track One Audio"
+FILE "album.flac" WAVE
+  TRACK 01 AUDIO
+    TITLE "After the Hidden Track"
+    INDEX 00 00:00:00
+    INDEX 01 00:01:00
+  TRACK 02 AUDIO
+    TITLE "Second"
+    INDEX 01 00:04:00
+"""
+[sample.expect.tags]
+album = "Hidden Track One Audio"
+[[sample.expect.cue]]
+number = 1
+file = "album.flac"
+start = "00:01:00"
+end = "00:04:00"
+pregap = "00:00:00"
+title = "After the Hidden Track"
+[[sample.expect.cue]]
+number = 2
+file = "album.flac"
+start = "00:04:00"
+title = "Second"
+
+# One file per track. `album.cue` has the gaps appended to the previous file
+# (each INDEX 00 at the end of the file before); `simple.cue` has none.
+[[sample]]
+set = "cue"
+name = "multi/{part}.flac"
+source = "cue-44"
+parts = true
+tool = "ffmpeg"
+args = ["-c:a", "flac"]
+needs = ["encoder:flac", "muxer:flac"]
+expect = { demuxer = "flac", codec = "flac", exact_length = true }
+
+[[sample]]
+set = "cue"
+name = "multi/album.cue"
+tool = "text"
+text = """
+PERFORMER "Multi Artist"
+TITLE "Multi-File Album"
+FILE "part1.flac" WAVE
+  TRACK 01 AUDIO
+    TITLE "Part One"
+    INDEX 01 00:00:00
+  TRACK 02 AUDIO
+    TITLE "Part Two"
+    INDEX 00 00:02:00
+FILE "part2.flac" WAVE
+    INDEX 01 00:00:00
+  TRACK 03 AUDIO
+    TITLE "Part Three"
+    INDEX 00 00:02:40
+FILE "part3.flac" WAVE
+    INDEX 01 00:00:00
+"""
+[sample.expect.tags]
+album = "Multi-File Album"
+album_artist = "Multi Artist"
+[[sample.expect.cue]]
+number = 1
+file = "part1.flac"
+start = "00:00:00"
+title = "Part One"
+[[sample.expect.cue]]
+number = 2
+file = "part2.flac"
+start = "00:00:00"
+title = "Part Two"
+[[sample.expect.cue]]
+number = 3
+file = "part3.flac"
+start = "00:00:00"
+title = "Part Three"
+
+[[sample]]
+set = "cue"
+name = "multi/simple.cue"
+tool = "text"
+text = """
+PERFORMER "Multi Artist"
+TITLE "Multi-File Album Without Gaps"
+FILE "part1.flac" WAVE
+  TRACK 01 AUDIO
+    TITLE "Simple One"
+    INDEX 01 00:00:00
+FILE "part2.flac" WAVE
+  TRACK 02 AUDIO
+    TITLE "Simple Two"
+    INDEX 01 00:00:00
+FILE "part3.flac" WAVE
+  TRACK 03 AUDIO
+    TITLE "Simple Three"
+    INDEX 01 00:00:00
+"""
+[sample.expect.tags]
+album = "Multi-File Album Without Gaps"
+[[sample.expect.cue]]
+number = 1
+file = "part1.flac"
+start = "00:00:00"
+title = "Simple One"
+[[sample.expect.cue]]
+number = 2
+file = "part2.flac"
+start = "00:00:00"
+title = "Simple Two"
+[[sample.expect.cue]]
+number = 3
+file = "part3.flac"
+start = "00:00:00"
+title = "Simple Three"
+
+# A sheet in the CUESHEET Vorbis comment of the FLAC file it splits; the
+# file's own tags fill the album fields.
+[[sample]]
+set = "cue"
+name = "embedded/album.flac"
+from = "cue/single/album.flac"
+tool = "tag"
+[sample.expect]
+demuxer = "flac"
+codec = "flac"
+[sample.expect.tags]
+album = "Embedded Album"
+album_artist = "Embedded Artist"
+[[sample.expect.cue]]
+number = 1
+file = "album.flac"
+start = "00:00:00"
+end = "00:02:50"
+title = "Embedded One"
+[[sample.expect.cue]]
+number = 2
+file = "album.flac"
+start = "00:02:50"
+end = "00:05:25"
+title = "Embedded Two"
+[[sample.expect.cue]]
+number = 3
+file = "album.flac"
+start = "00:05:25"
+title = "Embedded Three"
+[[sample.tag]]
+format = "vorbis"
+fields = [
+    ["ALBUM", "Embedded Album"],
+    ["ALBUMARTIST", "Embedded Artist"],
+    ["DATE", "2020"],
+    ["CUESHEET", """
+PERFORMER "Embedded Artist"
+TITLE "Embedded Album"
+FILE "album.flac" WAVE
+  TRACK 01 AUDIO
+    TITLE "Embedded One"
+    INDEX 01 00:00:00
+  TRACK 02 AUDIO
+    TITLE "Embedded Two"
+    INDEX 01 00:02:50
+  TRACK 03 AUDIO
+    TITLE "Embedded Three"
+    INDEX 01 00:05:25
+"""],
+]
+
+# Sheets in legacy charsets, with Windows line ends. The Windows-1251 sheet
+# names its file in Cyrillic, and the file's name on disk is in Windows-1251
+# too, as a disc ripped on Windows and copied over would be.
+[[sample]]
+set = "cue"
+name = "cp1251/%C0%EB%FC%E1%EE%EC.flac"
+from = "cue/single/album.flac"
+tool = "copy"
+
+[[sample]]
+set = "cue"
+name = "cp1251/album.cue"
+tool = "text"
+charset = "windows-1251"
+text = """
+PERFORMER "Кино"\r
+TITLE "Группа крови"\r
+FILE "Альбом.flac" WAVE\r
+  TRACK 01 AUDIO\r
+    TITLE "Группа крови"\r
+    INDEX 01 00:00:00\r
+  TRACK 02 AUDIO\r
+    TITLE "Закрой за мной дверь"\r
+    INDEX 01 00:02:50\r
+  TRACK 03 AUDIO\r
+    TITLE "Война"\r
+    INDEX 01 00:05:25\r
+"""
+[sample.expect.tags]
+album = "Группа крови"
+album_artist = "Кино"
+[[sample.expect.cue]]
+number = 1
+file = "%C0%EB%FC%E1%EE%EC.flac"
+start = "00:00:00"
+end = "00:02:50"
+title = "Группа крови"
+artist = "Кино"
+[[sample.expect.cue]]
+number = 2
+file = "%C0%EB%FC%E1%EE%EC.flac"
+start = "00:02:50"
+end = "00:05:25"
+title = "Закрой за мной дверь"
+[[sample.expect.cue]]
+number = 3
+file = "%C0%EB%FC%E1%EE%EC.flac"
+start = "00:05:25"
+title = "Война"
+
+[[sample]]
+set = "cue"
+name = "shift-jis/album.flac"
+from = "cue/single/album.flac"
+tool = "copy"
+
+[[sample]]
+set = "cue"
+name = "shift-jis/album.cue"
+tool = "text"
+charset = "shift_jis"
+text = """
+PERFORMER "荒井由実"\r
+TITLE "ひこうき雲"\r
+FILE "album.flac" WAVE\r
+  TRACK 01 AUDIO\r
+    TITLE "ひこうき雲"\r
+    INDEX 01 00:00:00\r
+  TRACK 02 AUDIO\r
+    TITLE "曇り空"\r
+    INDEX 01 00:02:50\r
+  TRACK 03 AUDIO\r
+    TITLE "ベルベット・イースター"\r
+    INDEX 01 00:05:25\r
+"""
+[sample.expect.tags]
+album = "ひこうき雲"
+album_artist = "荒井由実"
+[[sample.expect.cue]]
+number = 1
+file = "album.flac"
+start = "00:00:00"
+end = "00:02:50"
+title = "ひこうき雲"
+[[sample.expect.cue]]
+number = 2
+file = "album.flac"
+start = "00:02:50"
+end = "00:05:25"
+title = "曇り空"
+[[sample.expect.cue]]
+number = 3
+file = "album.flac"
+start = "00:05:25"
+title = "ベルベット・イースター"
+
+[[sample]]
+set = "cue"
+name = "latin1/album.flac"
+from = "cue/single/album.flac"
+tool = "copy"
+
+[[sample]]
+set = "cue"
+name = "latin1/album.cue"
+tool = "text"
+charset = "latin1"
+text = """
+PERFORMER "Françoise Hardy"\r
+TITLE "Tous les garçons et les filles"\r
+FILE "album.flac" WAVE\r
+  TRACK 01 AUDIO\r
+    TITLE "Tous les garçons et les filles"\r
+    INDEX 01 00:00:00\r
+  TRACK 02 AUDIO\r
+    TITLE "Ça a raté"\r
+    INDEX 01 00:02:50\r
+  TRACK 03 AUDIO\r
+    TITLE "J'suis d'accord"\r
+    INDEX 01 00:05:25\r
+"""
+[sample.expect.tags]
+album = "Tous les garçons et les filles"
+album_artist = "Françoise Hardy"
+[[sample.expect.cue]]
+number = 1
+file = "album.flac"
+start = "00:00:00"
+end = "00:02:50"
+title = "Tous les garçons et les filles"
+[[sample.expect.cue]]
+number = 2
+file = "album.flac"
+start = "00:02:50"
+end = "00:05:25"
+title = "Ça a raté"
+[[sample.expect.cue]]
+number = 3
+file = "album.flac"
+start = "00:05:25"
+title = "J'suis d'accord"
+
+[[sample]]
+set = "cue"
+name = "utf8-bom/album.flac"
+from = "cue/single/album.flac"
+tool = "copy"
+
+[[sample]]
+set = "cue"
+name = "utf8-bom/album.cue"
+tool = "text"
+charset = "utf-8-bom"
+text = """
+PERFORMER "Sigur Rós"\r
+TITLE "Ágætis byrjun"\r
+FILE "album.flac" WAVE\r
+  TRACK 01 AUDIO\r
+    TITLE "Svefn-g-englar"\r
+    INDEX 01 00:00:00\r
+  TRACK 02 AUDIO\r
+    TITLE "Starálfur"\r
+    INDEX 01 00:02:50\r
+  TRACK 03 AUDIO\r
+    TITLE "Viðrar vel til loftárása"\r
+    INDEX 01 00:05:25\r
+"""
+[sample.expect.tags]
+album = "Ágætis byrjun"
+album_artist = "Sigur Rós"
+[[sample.expect.cue]]
+number = 1
+file = "album.flac"
+start = "00:00:00"
+end = "00:02:50"
+title = "Svefn-g-englar"
+[[sample.expect.cue]]
+number = 2
+file = "album.flac"
+start = "00:02:50"
+end = "00:05:25"
+title = "Starálfur"
+[[sample.expect.cue]]
+number = 3
+file = "album.flac"
+start = "00:05:25"
+title = "Viðrar vel til loftárása"
+
+# ---------------------------------------------------------------------------
+# Scripts: titles, artists and albums in Chinese, Japanese, Korean, Thai,
+# Cyrillic, Greek, Arabic and Hebrew, in Vorbis comments, ID3v2.3 (UTF-16),
+# ID3v2.4 (UTF-8) and MP4 atoms. In `locales/`, Swedish, German and Estonian
+# names that sort differently by locale: `expect.sort` is each file's position
+# when the folder is sorted by artist in that locale (`und` is the root order).
+
+[[sample]]
+set = "scripts"
+name = "chinese.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+title = "月亮代表我的心"
+artist = "邓丽君"
+album = "島國之情歌第四集"
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "月亮代表我的心"], ["ARTIST", "邓丽君"], ["ALBUM", "島國之情歌第四集"]]
+
+[[sample]]
+set = "scripts"
+name = "japanese.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+title = "ひこうき雲"
+artist = "荒井由実"
+album = "ひこうき雲"
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "ひこうき雲"], ["ARTIST", "荒井由実"], ["ALBUM", "ひこうき雲"]]
+
+[[sample]]
+set = "scripts"
+name = "korean.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+title = "꿈"
+artist = "조용필"
+album = "조용필 13집"
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "꿈"], ["ARTIST", "조용필"], ["ALBUM", "조용필 13집"]]
+
+[[sample]]
+set = "scripts"
+name = "thai.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+title = "ลาวดวงเดือน"
+artist = "สุนทราภรณ์"
+album = "เพลงอมตะ"
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "ลาวดวงเดือน"], ["ARTIST", "สุนทราภรณ์"], ["ALBUM", "เพลงอมตะ"]]
+
+[[sample]]
+set = "scripts"
+name = "cyrillic.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect.tags]
+title = "Звезда по имени Солнце"
+artist = "Кино"
+album = "Звезда по имени Солнце"
+[[sample.tag]]
+format = "id3v23"
+fields = [["TIT2", "Звезда по имени Солнце"], ["TPE1", "Кино"], ["TALB", "Звезда по имени Солнце"]]
+
+[[sample]]
+set = "scripts"
+name = "greek.opus"
+from = "tags/untagged/opus.opus"
+tool = "tag"
+[sample.expect.tags]
+title = "Τα παιδιά του Πειραιά"
+artist = "Μελίνα Μερκούρη"
+album = "Ποτέ την Κυριακή"
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Τα παιδιά του Πειραιά"], ["ARTIST", "Μελίνα Μερκούρη"], ["ALBUM", "Ποτέ την Κυριακή"]]
+
+[[sample]]
+set = "scripts"
+name = "arabic.m4a"
+from = "tags/untagged/aac.m4a"
+tool = "tag"
+[sample.expect.tags]
+title = "أنت عمري"
+artist = "أم كلثوم"
+album = "أنت عمري"
+[[sample.tag]]
+format = "mp4"
+fields = [["©nam", "أنت عمري"], ["©ART", "أم كلثوم"], ["©alb", "أنت عمري"]]
+
+[[sample]]
+set = "scripts"
+name = "hebrew.mp3"
+from = "tags/untagged/mp3.mp3"
+tool = "tag"
+[sample.expect.tags]
+title = "ירושלים של זהב"
+artist = "שולי נתן"
+album = "ירושלים של זהב"
+[[sample.tag]]
+format = "id3v24"
+fields = [["TIT2", "ירושלים של זהב"], ["TPE1", "שולי נתן"], ["TALB", "ירושלים של זהב"]]
+
+[[sample]]
+set = "scripts"
+name = "locales/ahlberg.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+artist = "Ahlberg"
+[sample.expect.sort]
+und = 1
+de = 1
+de-u-co-phonebk = 2
+sv = 1
+et = 1
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Song by Ahlberg"], ["ARTIST", "Ahlberg"], ["ALBUM", "Locale Sorting"]]
+
+[[sample]]
+set = "scripts"
+name = "locales/arzte.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+artist = "Ärzte"
+[sample.expect.sort]
+und = 2
+de = 2
+de-u-co-phonebk = 1
+sv = 6
+et = 6
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Song by Ärzte"], ["ARTIST", "Ärzte"], ["ALBUM", "Locale Sorting"]]
+
+[[sample]]
+set = "scripts"
+name = "locales/oberg.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+artist = "Öberg"
+[sample.expect.sort]
+und = 3
+de = 3
+de-u-co-phonebk = 3
+sv = 7
+et = 7
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Song by Öberg"], ["ARTIST", "Öberg"], ["ALBUM", "Locale Sorting"]]
+
+[[sample]]
+set = "scripts"
+name = "locales/oun.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+artist = "Õun"
+[sample.expect.sort]
+und = 4
+de = 4
+de-u-co-phonebk = 4
+sv = 2
+et = 5
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Song by Õun"], ["ARTIST", "Õun"], ["ALBUM", "Locale Sorting"]]
+
+[[sample]]
+set = "scripts"
+name = "locales/pihlak.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+artist = "Pihlak"
+[sample.expect.sort]
+und = 5
+de = 5
+de-u-co-phonebk = 5
+sv = 3
+et = 2
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Song by Pihlak"], ["ARTIST", "Pihlak"], ["ALBUM", "Locale Sorting"]]
+
+[[sample]]
+set = "scripts"
+name = "locales/tamm.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+artist = "Tamm"
+[sample.expect.sort]
+und = 6
+de = 6
+de-u-co-phonebk = 6
+sv = 4
+et = 4
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Song by Tamm"], ["ARTIST", "Tamm"], ["ALBUM", "Locale Sorting"]]
+
+[[sample]]
+set = "scripts"
+name = "locales/zander.flac"
+from = "tags/untagged/flac.flac"
+tool = "tag"
+[sample.expect.tags]
+artist = "Zander"
+[sample.expect.sort]
+und = 7
+de = 7
+de-u-co-phonebk = 7
+sv = 5
+et = 3
+[[sample.tag]]
+format = "vorbis"
+fields = [["TITLE", "Song by Zander"], ["ARTIST", "Zander"], ["ALBUM", "Locale Sorting"]]
