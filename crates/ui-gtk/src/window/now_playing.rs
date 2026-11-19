@@ -20,7 +20,6 @@ use gtk::subclass::prelude::*;
 
 use super::{MainWindow, WindowStyle};
 use crate::backend::{Backend, PlayerRequest, TrackKey};
-use crate::models::CoverCache;
 use crate::models::lyrics::{LyricsChange, LyricsModel};
 use crate::playback::{Change, Playback};
 use crate::views::now_playing::{NowPlayingView, next_text};
@@ -29,27 +28,15 @@ use crate::views::now_playing::{NowPlayingView, next_text};
 const OFFSET_STEP: i64 = 100;
 
 impl MainWindow {
-    /// Builds Now Playing and the lyrics actions.
+    /// Sets up Now Playing, built when first opened, and the lyrics actions.
     pub(super) fn setup_now_playing(
         &self,
         backend: &Backend,
         playback: &Rc<Playback>,
         lyrics: &Rc<LyricsModel>,
-        covers: &Rc<CoverCache>,
     ) {
         let imp = self.imp();
-        let view = NowPlayingView::new(backend, playback, lyrics, covers);
-        // Beside the panes, in their place while shown.
-        if let Some(parent) = imp.panes_overlay.parent().and_downcast::<gtk::Box>() {
-            parent.insert_child_after(view.widget(), Some(&imp.panes_overlay.get()));
-        }
-        let keys = gtk::ShortcutController::new();
-        keys.add_shortcut(gtk::Shortcut::new(
-            gtk::ShortcutTrigger::parse_string("Escape"),
-            Some(gtk::NamedAction::new("win.now-playing")),
-        ));
-        view.widget().add_controller(keys);
-        imp.now_playing.replace(Some(view));
+        imp.lyrics.replace(Some(lyrics.clone()));
 
         let weak = self.downgrade();
         imp.deck.connect_cover_activated(move || {
@@ -161,10 +148,43 @@ impl MainWindow {
         }
     }
 
+    /// Now Playing, built the first time it is opened.
+    fn now_playing_view(&self) -> Option<Rc<NowPlayingView>> {
+        let imp = self.imp();
+        if let Some(view) = imp.now_playing.borrow().clone() {
+            return Some(view);
+        }
+        let pages = self.pages()?;
+        let lyrics = imp.lyrics.borrow().clone()?;
+        let view = NowPlayingView::new(&pages.backend, &pages.playback, &lyrics, &pages.covers);
+        // What is playing now; later changes come as they happen.
+        let player = pages.playback.view();
+        for change in [Change::Track, Change::Signal] {
+            view.update(&player, change);
+        }
+        // Beside the panes, in their place while shown.
+        if let Some(parent) = imp.panes_overlay.parent().and_downcast::<gtk::Box>() {
+            parent.insert_child_after(view.widget(), Some(&imp.panes_overlay.get()));
+        }
+        let keys = gtk::ShortcutController::new();
+        keys.add_shortcut(gtk::Shortcut::new(
+            gtk::ShortcutTrigger::parse_string("Escape"),
+            Some(gtk::NamedAction::new("win.now-playing")),
+        ));
+        view.widget().add_controller(keys);
+        imp.now_playing.replace(Some(view.clone()));
+        Some(view)
+    }
+
     /// Opens or leaves Now Playing.
     pub fn set_now_playing(&self, shown: bool) {
         let imp = self.imp();
-        let Some(view) = imp.now_playing.borrow().clone() else {
+        let view = if shown {
+            self.now_playing_view()
+        } else {
+            imp.now_playing.borrow().clone()
+        };
+        let Some(view) = view else {
             return;
         };
         if view.is_active() == shown {

@@ -9,7 +9,7 @@ use std::path::Path;
 
 use helikodu_service::library::{ArtistPhoto, PersonId};
 
-use super::super::{ArtistKey, ArtistRow, BackendError, LibrarySource};
+use super::super::{ArtistKey, ArtistRow, BackendError};
 use super::{ServiceLibrary, cover_key, error, lock, person};
 
 /// Gives `row` the photo `photo`, or none.
@@ -55,7 +55,7 @@ impl ServiceLibrary {
             return Ok(row.clone());
         }
         let mut row = self
-            .artists()?
+            .artist_list(false)?
             .into_iter()
             .find(|r| r.key == key)
             .ok_or_else(|| BackendError("the artist is gone".into()))?;

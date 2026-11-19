@@ -310,6 +310,30 @@ impl ServiceLibrary {
         }
     }
 
+    /// Every album artist, kept for search and names. With `look`, the
+    /// artists' folders are looked in for new photos first: that groups every
+    /// track by artist and folder (some 30 MB of sorting at 100,000 tracks),
+    /// so only the Artists page does it; lookups take the photos as known.
+    fn artist_list(&self, look: bool) -> Result<Vec<ArtistRow>, BackendError> {
+        let music = self.library()?;
+        let mut rows = Vec::new();
+        loop {
+            let mut query = ArtistQuery::new(ArtistRole::AlbumArtist);
+            query.page = Page::new(rows.len(), MAX_PAGE);
+            let page = music.artists(&query).map_err(error)?;
+            let got = page.items.len();
+            rows.extend(page.items.iter().map(artist_row));
+            if got == 0 || rows.len() >= page.total {
+                break;
+            }
+        }
+        if let Ok(photos) = music.artist_photos(look) {
+            artist_photos::show_all(&mut rows, &photos);
+        }
+        lock(&self.artist_rows).clone_from(&rows);
+        Ok(rows)
+    }
+
     /// Every album of `query`.
     fn all_albums(&self, query: &AlbumQuery) -> Result<Vec<AlbumRow>, BackendError> {
         let Some(music) = self.music() else {
@@ -653,23 +677,7 @@ impl LibrarySource for ServiceLibrary {
     }
 
     fn artists(&self) -> Result<Vec<ArtistRow>, BackendError> {
-        let music = self.library()?;
-        let mut rows = Vec::new();
-        loop {
-            let mut query = ArtistQuery::new(ArtistRole::AlbumArtist);
-            query.page = Page::new(rows.len(), MAX_PAGE);
-            let page = music.artists(&query).map_err(error)?;
-            let got = page.items.len();
-            rows.extend(page.items.iter().map(artist_row));
-            if got == 0 || rows.len() >= page.total {
-                break;
-            }
-        }
-        if let Ok(photos) = music.artist_photos(true) {
-            artist_photos::show_all(&mut rows, &photos);
-        }
-        lock(&self.artist_rows).clone_from(&rows);
-        Ok(rows)
+        self.artist_list(true)
     }
 
     fn artist(&self, key: ArtistKey) -> Result<Option<ArtistDetail>, BackendError> {
@@ -680,7 +688,7 @@ impl LibrarySource for ServiceLibrary {
             .cloned();
         let row = match known {
             Some(row) => row,
-            None => match self.artists()?.into_iter().find(|a| a.key == key) {
+            None => match self.artist_list(false)?.into_iter().find(|a| a.key == key) {
                 Some(row) => row,
                 None => return Ok(None),
             },
@@ -765,7 +773,7 @@ impl LibrarySource for ServiceLibrary {
                 return Ok(None);
             }
         }
-        let found = find(&self.artists()?);
+        let found = find(&self.artist_list(false)?);
         if found.is_none() {
             let mut missing = lock(&self.not_artists);
             if missing.0 == changes {
@@ -872,7 +880,7 @@ impl LibrarySource for ServiceLibrary {
             words.iter().all(|w| name.contains(w.as_str()))
         };
         if lock(&self.artist_rows).is_empty() {
-            self.artists()?;
+            self.artist_list(false)?;
         }
         if lock(&self.album_rows).is_empty() {
             self.album_keys(&AlbumQuery::default())?;

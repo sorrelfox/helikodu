@@ -545,7 +545,7 @@ impl NowPlayingView {
         }
     }
 
-    fn update(&self, view: &PlayerView, change: Change) {
+    pub(crate) fn update(&self, view: &PlayerView, change: Change) {
         match change {
             Change::Track => {
                 self.show_track(view);

@@ -92,7 +92,6 @@ pub(crate) fn open(
     // Writing a track runs some fifty different statements, and preparing one that
     // fires triggers costs more than running it: keep them all prepared.
     connection.set_prepared_statement_cache_capacity(STATEMENT_CACHE);
-    connection.pragma_update(None, "temp_store", "MEMORY")?;
     match role {
         Role::Writer => {
             // SQLite opens a file it may not write read-only without saying so.
@@ -108,6 +107,7 @@ pub(crate) fn open(
                     return Err(DbError::MissingSqliteFeature("write-ahead logging"));
                 }
             }
+            connection.pragma_update(None, "temp_store", "MEMORY")?;
             // A committed batch survives a power loss, not only a crash. Writes are
             // batched, so the extra sync per commit is cheap.
             connection.pragma_update(None, "synchronous", "FULL")?;
@@ -122,6 +122,13 @@ pub(crate) fn open(
             // page cache anyway, and a reader's cache is kept for the life of
             // the program (in the memory of a front end).
             connection.pragma_update(None, "cache_size", -2_048)?;
+            // Temporary files on disk: with them in memory, SQLite sorts in
+            // memory without a limit, every row in an allocation of its own
+            // (some 30 MB to sort the tracks of a library of 100,000 by
+            // album), which a front end keeps long after the sort. On disk, a
+            // sort keeps at most the cache size in memory and writes the rest
+            // to a temporary file.
+            connection.pragma_update(None, "temp_store", "FILE")?;
         }
     }
     collation.register(&connection)?;

@@ -168,6 +168,8 @@ mod imp {
         pub(super) backend: RefCell<Option<Backend>>,
         pub(super) playback: RefCell<Option<Rc<Playback>>>,
         pub(super) now_playing: RefCell<Option<Rc<crate::views::now_playing::NowPlayingView>>>,
+        /// The lyrics Now Playing shows, kept until it is first opened.
+        pub(super) lyrics: RefCell<Option<Rc<crate::models::lyrics::LyricsModel>>>,
         pub(super) history: RefCell<Vec<Page>>,
         pub(super) index: Cell<usize>,
         pub(super) placeholders: RefCell<HashSet<&'static str>>,
@@ -345,7 +347,7 @@ impl MainWindow {
         imp.panel.bind(backend, &playback, &covers);
         let lyrics = crate::models::lyrics::LyricsModel::follow(&playback);
         imp.panel.bind_lyrics(backend, &playback, &lyrics, &covers);
-        self.setup_now_playing(backend, &playback, &lyrics, &covers);
+        self.setup_now_playing(backend, &playback, &lyrics);
         self.setup_desktop(backend, &playback, &lyrics, &covers);
         let toasts = ToastOverlay::new(&imp.toast_overlay);
         imp.toasts.replace(Some(toasts));

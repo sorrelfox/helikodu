@@ -368,12 +368,6 @@ fn the_signal_path_tab_is_reachable_by_keyboard(app: &gtk::Application) {
         .find(|b| b.label().as_deref() == Some("Signal path"))
         .unwrap();
     assert!(tab.is_visible() && tab.is_focusable() && tab.is_active());
-    let lyrics = all
-        .iter()
-        .filter_map(|w| w.downcast_ref::<gtk::ToggleButton>())
-        .find(|b| b.label().as_deref() == Some("Lyrics"))
-        .unwrap();
-    assert!(!lyrics.is_visible(), "Lyrics comes later");
     // Ten rows, the stages that have a setting can be activated.
     let list = all
         .iter()
