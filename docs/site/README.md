@@ -61,8 +61,10 @@ docs/site/shots.py --store
 The same example draws the pictures that the metainfo (`data/io.github.sorrelfox.Helikodu.metainfo.xml`) lists for Flathub and other app stores. It writes them as PNG files into `assets/screenshots/`: `<name>.png` in the light scheme and `<name>-dark.png` in the dark one. `STORE` at the top of `shots.py` names them. They follow Flathub's quality guidelines:
 
 - each window is at most 1000 × 700 logical pixels (2000 × 1400 pixels), drawn with its own shadow and rounded corners and not maximized;
-- they use GNOME's defaults: the Adwaita style and icons, the Adwaita Sans font and the close button alone;
+- the main window has the default, integrated style, with the window buttons in its header;
 - the light pictures come first, and one dark picture shows the dark style.
+
+Like the website's pictures, they use the font and the icon theme of the desktop they are made on.
 
 The metainfo points at them on the `main` branch, with a caption each; the captions are translated with the rest of the metainfo. When `STORE` changes, change the `<screenshots>` list of the metainfo with it.
 

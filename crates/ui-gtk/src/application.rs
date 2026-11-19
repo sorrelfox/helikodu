@@ -106,7 +106,7 @@ fn check_icons(display: &gtk::gdk::Display) {
         "media-optical-symbolic",
         "audio-x-generic-symbolic",
         "avatar-default-symbolic",
-        "emblem-favorite-symbolic",
+        "helikodu-heart-symbolic",
         "starred-symbolic",
         "helikodu-sidebar-symbolic",
         "helikodu-tag-symbolic",

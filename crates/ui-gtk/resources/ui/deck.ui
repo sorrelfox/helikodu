@@ -97,7 +97,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
             </child>
             <child>
               <object class="GtkButton" id="favourite">
-                <property name="icon-name">emblem-favorite-symbolic</property>
+                <property name="icon-name">helikodu-heart-symbolic</property>
                 <property name="valign">center</property>
                 <property name="sensitive">False</property>
                 <property name="tooltip-text" translatable="yes">Add to Favourites</property>

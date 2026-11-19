@@ -17,8 +17,8 @@
 //! (default dark), `--scale N` (default 1: N pixels for each logical pixel),
 //! `--only NAME[,NAME…]` to render some of the pictures (the steps of the
 //! others are left out) and `--store` for the pictures of app stores such as
-//! Flathub: windows of at most 1000 x 700 with their shadow and rounded
-//! corners, GNOME's default font, icons and window buttons. Each picture is written as `<name>.png`; the names
+//! Flathub: windows of at most 1000 x 700, drawn with their shadow and
+//! rounded corners. Each picture is written as `<name>.png`; the names
 //! are printed as they are written.
 //!
 //! The windows are in the language of the environment where translations are
@@ -979,14 +979,7 @@ fn main() -> ExitCode {
     }
     prepare_display(options.scheme, AccentChoice::Amber);
     if let Some(settings) = gtk::Settings::default() {
-        if options.store {
-            // GNOME's defaults, as the stores ask.
-            settings.set_gtk_decoration_layout(Some("appmenu:close"));
-            settings.set_gtk_font_name(Some("Adwaita Sans 11"));
-            settings.set_gtk_icon_theme_name(Some("Adwaita"));
-        } else {
-            settings.set_gtk_decoration_layout(Some("icon:minimize,maximize,close"));
-        }
+        settings.set_gtk_decoration_layout(Some("icon:minimize,maximize,close"));
     }
     let application = gtk::Application::builder()
         .application_id("io.github.sorrelfox.Helikodu.SiteShots")

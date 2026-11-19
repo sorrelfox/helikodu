@@ -8,10 +8,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- Screenshots in the AppStream metainfo, with captions in every language, for Flathub and the software centres. `docs/site/shots.py --store` draws them over the sample library to Flathub's quality guidelines.
+- Screenshots in the AppStream metainfo, with captions in every language, for Flathub and the software centres. `docs/site/shots.py --store` draws them over the sample library, in the default integrated window style.
 
 ### Fixed
 
+- The Favourite button's heart is Helikodu's own icon. GNOME's icon theme has no heart, so on GNOME and in the Flatpak the button showed a stand-in picture instead of the outline heart seen on KDE Plasma.
 - With Now Playing open, the window could not be made shorter than about 740 pixels, and opening Now Playing made a shorter window taller: the cover and the analyzer kept their full height. The cover now shrinks with the window, and the analyzer scrolls like the lyrics and the queue.
 
 ## [0.9.1] - 2026-11-18
