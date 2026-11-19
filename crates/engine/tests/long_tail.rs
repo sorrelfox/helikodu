@@ -17,6 +17,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
@@ -43,9 +44,18 @@ fn dir() -> &'static Path {
     })
 }
 
+/// Writes `name` whole: tests that run at the same time write the same files
+/// (the SoundFont), and a file written in place could be read half written.
 fn write(name: &str, data: &[u8]) -> PathBuf {
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
     let path = dir().join(name);
-    fs::write(&path, data).unwrap();
+    let part = dir().join(format!(
+        ".{name}.{}.{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::write(&part, data).unwrap();
+    fs::rename(&part, &path).unwrap();
     path
 }
 
