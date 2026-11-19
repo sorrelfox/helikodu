@@ -234,13 +234,18 @@ fn wav_s16(samples: &[i16], rate: u32, channels: u16) -> Vec<u8> {
 
 /// A Matroska file with two audio streams, a loud one (index 0) and a silent one
 /// (index 1), muxed by the `ffmpeg` program; `None` when it is not installed.
-fn two_streams() -> Option<PathBuf> {
+/// Each test names its own files: tests run at the same time, and `ffmpeg`
+/// writing a file another test is reading makes that one fail.
+fn two_streams(name: &str) -> Option<PathBuf> {
     let loud: Vec<i16> = (0..48_000)
         .map(|i| if i % 40 < 20 { 8000 } else { -8000 })
         .collect();
-    let a = write("stream-loud.wav", &wav_s16(&loud, 48_000, 1));
-    let b = write("stream-silent.wav", &wav_s16(&[0; 48_000], 48_000, 1));
-    let out = dir().join("two-streams.mkv");
+    let a = write(&format!("{name}-loud.wav"), &wav_s16(&loud, 48_000, 1));
+    let b = write(
+        &format!("{name}-silent.wav"),
+        &wav_s16(&[0; 48_000], 48_000, 1),
+    );
+    let out = dir().join(format!("{name}.mkv"));
     let status = Command::new("ffmpeg")
         .args(["-v", "error", "-y", "-i"])
         .arg(&a)
@@ -260,7 +265,7 @@ fn two_streams() -> Option<PathBuf> {
 
 #[test]
 fn the_audio_stream_is_chosen_by_index() {
-    let Some(path) = two_streams() else {
+    let Some(path) = two_streams("streams-by-index") else {
         return;
     };
     let registry = DecoderRegistry::with_default_backends();
@@ -357,7 +362,7 @@ fn the_engine_plays_a_subsong() {
 
 #[test]
 fn the_engine_switches_the_audio_stream() {
-    let Some(path) = two_streams() else {
+    let Some(path) = two_streams("streams-switched") else {
         return;
     };
     let out = dir().join("engine-streams.wav");

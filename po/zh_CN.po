@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 05:16-0500\n"
+"POT-Creation-Date: 2026-11-19 06:08-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Chinese (Simplified) <https://github.com/sorrelfox/helikodu>\n"
@@ -96,71 +96,129 @@ msgid ""
 "desktops"
 msgstr "在 GNOME、KDE Plasma 和其他桌面上支持媒体控制、媒体键和通知"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:49
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:30
+#: crates/ui-gtk/src/dialogs/common.rs:448
+msgid ""
+"In the Flatpak, Helikodu has no network access at all and asks only for what "
+"its features need:"
+msgstr "在 Flatpak 中，Helikodu 完全无法访问网络，只请求其功能所需的权限："
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:35
+#: crates/ui-gtk/src/dialogs/common.rs:454
+msgid ""
+"Your Music folder, to read and change it: for the library, the tag editor, "
+"organizing files and cover files. Other folders are added in the settings"
+msgstr ""
+"你的“音乐”文件夹，用于读取和修改：音乐库、标签编辑器、整理文件和封面文件。其"
+"他文件夹可在设置中添加"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:36
+#: crates/ui-gtk/src/dialogs/common.rs:456
+msgid ""
+"The sound system (PipeWire and PulseAudio), to play and to choose the output "
+"device"
+msgstr "声音系统（PipeWire 和 PulseAudio），用于播放和选择输出设备"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:37
+#: crates/ui-gtk/src/dialogs/common.rs:458
+msgid ""
+"Reserving a sound card, so that the sound server hands it over for "
+"exclusive, bit-perfect output"
+msgstr "预留声卡，以便声音服务器将其交出，用于独占的比特完美输出"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:38
+#: crates/ui-gtk/src/dialogs/common.rs:461
+msgid ""
+"The login manager (logind), to pause playback before the computer goes to "
+"sleep or the screen locks"
+msgstr "登录管理器（logind），用于在电脑睡眠或锁屏之前暂停播放"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:39
+#: crates/ui-gtk/src/dialogs/common.rs:463
+msgid "The system tray, for the optional tray icon"
+msgstr "系统托盘，用于可选的托盘图标"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:60
 msgid "music"
 msgstr "音乐"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:50
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:61
 msgid "audio"
 msgstr "音频"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:51
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:62
 msgid "player"
 msgstr "播放器"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:52
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:63
 msgid "library"
 msgstr "音乐库"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:53
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:64
 msgid "gapless"
 msgstr "无缝播放"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:54
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:65
 msgid "offline"
 msgstr "离线"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:69
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:80
 msgid "Your music library and the player"
 msgstr "你的音乐库和播放器"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:73
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:84
 msgid "An album with the details of the selected track"
 msgstr "显示所选曲目详细信息的专辑"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:77
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:88
 msgid "Now Playing with synced lyrics and the signal path"
 msgstr "带同步歌词和信号路径的正在播放界面"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:81
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:92
 msgid "Search the library with a query"
 msgstr "用查询搜索音乐库"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:85
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:96
 msgid "Smart playlists made of rules or query text"
 msgstr "由规则或查询文本构成的智能播放列表"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:89
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:100
 msgid "Choose the sound system, the device and bit-perfect output"
 msgstr "选择声音系统、设备和比特完美输出"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:93
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:104
 msgid "A parametric equalizer that reads AutoEQ presets"
 msgstr "可读取 AutoEQ 预设的参数均衡器"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:97
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:108
 msgid "Edit the tags of several tracks at once"
 msgstr "一次编辑多个曲目的标签"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:101
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:112
 msgid "Convert music for phones and other players"
 msgstr "为手机和其他播放器转换音乐"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:105
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:116
 msgid "Your music library in the dark style"
 msgstr "深色样式下的音乐库"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:117
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:127
+msgid "Fixes for the release candidate:"
+msgstr "候选发布版本的修复："
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+msgid "With Now Playing open, the window can be made as small as elsewhere"
+msgstr "打开“正在播放”时，窗口可以像其他界面一样缩小"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+msgid "The Favourite button shows the same heart on every desktop"
+msgstr "收藏按钮在所有桌面上都显示同样的心形"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+msgid "The ring around the cover of the playing album is drawn whole"
+msgstr "正在播放的专辑封面周围的边框会完整显示"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:138
 msgid ""
 "The release candidate for 1.0: smart playlists and a query language for "
 "search, lyrics, a play history, Home and a mini player, tag tools with undo, "
@@ -172,7 +230,7 @@ msgstr ""
 "迷你播放器、支持撤销的标签工具、文件整理、格式转换和文件夹同步、封面管理器、"
 "波形进度条、音乐库备份、离线用户指南，以及更好的屏幕阅读器和键盘操作支持。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:128
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:149
 msgid ""
 "The first beta: graphic and parametric equalizers, crossfeed, channel mixing "
 "and a limiter, crossfades and fades, loudness measurement, a signal path "
@@ -183,7 +241,7 @@ msgstr ""
 "和淡入淡出、响度测量、信号路径视图、PulseAudio 和 JACK 输出，以及对 Tracker "
 "模块音乐、游戏音乐、SID 音乐和 MIDI 文件的支持。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:138
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:159
 msgid ""
 "The first alpha: a music library with albums, artists, genres, folders, "
 "tracks, search and playlists, gapless and bit-perfect playback with "
@@ -658,7 +716,7 @@ msgid "Supported Formats"
 msgstr "支持的格式"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:166
-#: crates/ui-gtk/src/dialogs/about.rs:260
+#: crates/ui-gtk/src/dialogs/about.rs:283
 msgid "About Helikodu"
 msgstr "关于 Helikodu"
 
@@ -1522,21 +1580,21 @@ msgstr "无法打开音乐库，Helikodu 将在没有音乐库的状态下运行
 msgid "The file was changed since."
 msgstr "该文件在此之后已被更改。"
 
-#: crates/ui-gtk/src/dialogs/about.rs:71
+#: crates/ui-gtk/src/dialogs/about.rs:73
 msgid "system package"
 msgstr "系统软件包"
 
-#: crates/ui-gtk/src/dialogs/about.rs:72
+#: crates/ui-gtk/src/dialogs/about.rs:74
 msgid "built from source"
 msgstr "从源代码构建"
 
-#: crates/ui-gtk/src/dialogs/about.rs:226
 #: crates/ui-gtk/src/dialogs/about.rs:228
-#: crates/ui-gtk/src/dialogs/about.rs:384
+#: crates/ui-gtk/src/dialogs/about.rs:230
+#: crates/ui-gtk/src/dialogs/about.rs:407
 msgid "Licences"
 msgstr "许可证"
 
-#: crates/ui-gtk/src/dialogs/about.rs:234
+#: crates/ui-gtk/src/dialogs/about.rs:236
 msgid ""
 "Helikodu is free software: you can redistribute it and change it under the "
 "terms of the GNU General Public License as published by the Free Software "
@@ -1546,7 +1604,7 @@ msgstr ""
 "Helikodu 是自由软件：您可以依据自由软件基金会发布的 GNU 通用公共许可证条款"
 "（许可证第 3 版，或由您选择的任何更高版本）重新发布和修改它。"
 
-#: crates/ui-gtk/src/dialogs/about.rs:237
+#: crates/ui-gtk/src/dialogs/about.rs:239
 msgid ""
 "It is distributed in the hope that it will be useful, but without any "
 "warranty; without even the implied warranty of merchantability or fitness "
@@ -1556,33 +1614,39 @@ msgstr ""
 "发布它是希望它能有所用处，但不提供任何担保，甚至不包括对适销性或特定用途适用"
 "性的默示担保。详情请参阅 GNU 通用公共许可证。"
 
-#: crates/ui-gtk/src/dialogs/about.rs:240
+#: crates/ui-gtk/src/dialogs/about.rs:242
 msgid ""
 "The libraries Helikodu uses keep their own licences; their texts are "
 "installed with the program."
 msgstr "Helikodu 使用的程序库保留各自的许可证，其许可证文本随程序一起安装。"
 
-#: crates/ui-gtk/src/dialogs/about.rs:263
+#: crates/ui-gtk/src/dialogs/about.rs:262
+#: crates/ui-gtk/src/dialogs/about.rs:267
+#: crates/ui-gtk/src/dialogs/about.rs:418
+msgid "Permissions"
+msgstr "权限"
+
+#: crates/ui-gtk/src/dialogs/about.rs:286
 msgid "About"
 msgstr "关于"
 
-#: crates/ui-gtk/src/dialogs/about.rs:292
+#: crates/ui-gtk/src/dialogs/about.rs:315
 msgid "A music player for Linux that works offline."
 msgstr "一款离线工作的 Linux 音乐播放器。"
 
-#: crates/ui-gtk/src/dialogs/about.rs:314
+#: crates/ui-gtk/src/dialogs/about.rs:337
 msgid "Installed as"
 msgstr "安装方式"
 
-#: crates/ui-gtk/src/dialogs/about.rs:319
+#: crates/ui-gtk/src/dialogs/about.rs:342
 msgid "Supported formats and decoders"
 msgstr "支持的格式和解码器"
 
-#: crates/ui-gtk/src/dialogs/about.rs:345
+#: crates/ui-gtk/src/dialogs/about.rs:368
 msgid "No telemetry, no update checks. Helikodu never goes online."
 msgstr "没有遥测，也不检查更新。Helikodu 从不联网。"
 
-#: crates/ui-gtk/src/dialogs/about.rs:356
+#: crates/ui-gtk/src/dialogs/about.rs:379
 msgid ""
 "© 2026 sorrelfox and Helikodu contributors. Free software under the GNU "
 "General Public License, version 3 or later. It comes with no warranty."
@@ -1590,17 +1654,17 @@ msgstr ""
 "© 2026 sorrelfox 和 Helikodu 贡献者。依据 GNU 通用公共许可证第 3 版或更高版本"
 "发布的自由软件。不提供任何担保。"
 
-#: crates/ui-gtk/src/dialogs/about.rs:366
+#: crates/ui-gtk/src/dialogs/about.rs:389
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:299
 #: crates/ui-gtk/src/window/panel/signal_path.rs:128
 msgid "Copy diagnostics"
 msgstr "复制诊断信息"
 
-#: crates/ui-gtk/src/dialogs/about.rs:374
+#: crates/ui-gtk/src/dialogs/about.rs:397
 msgid "Copied"
 msgstr "已复制"
 
-#: crates/ui-gtk/src/dialogs/about.rs:395
+#: crates/ui-gtk/src/dialogs/about.rs:430
 #: crates/ui-gtk/src/dialogs/common.rs:85
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1722
 #: crates/ui-gtk/src/mini_player.rs:161
@@ -1684,31 +1748,31 @@ msgstr "只播放其中的声音，从不显示画面。"
 msgid "Helikodu works offline. It never connects to the internet."
 msgstr "Helikodu 离线工作，从不连接互联网。"
 
-#: crates/ui-gtk/src/dialogs/first_run.rs:342
+#: crates/ui-gtk/src/dialogs/first_run.rs:349
 msgid "Scan and start"
 msgstr "扫描并开始"
 
-#: crates/ui-gtk/src/dialogs/first_run.rs:347
+#: crates/ui-gtk/src/dialogs/first_run.rs:354
 msgid "Skip for now"
 msgstr "暂时跳过"
 
-#: crates/ui-gtk/src/dialogs/first_run.rs:485
-#: crates/ui-gtk/src/dialogs/first_run.rs:493
+#: crates/ui-gtk/src/dialogs/first_run.rs:492
+#: crates/ui-gtk/src/dialogs/first_run.rs:500
 msgid "Scanning library"
 msgstr "正在扫描音乐库"
 
-#: crates/ui-gtk/src/dialogs/first_run.rs:539
+#: crates/ui-gtk/src/dialogs/first_run.rs:546
 #: crates/ui-gtk/src/dialogs/loudness_footer.rs:82
 #, rust-format
 msgid "{}%"
 msgstr "{}%"
 
-#: crates/ui-gtk/src/dialogs/first_run.rs:552
+#: crates/ui-gtk/src/dialogs/first_run.rs:559
 #, rust-format
 msgid "The scan stopped: {}"
 msgstr "扫描已停止：{}"
 
-#: crates/ui-gtk/src/dialogs/first_run.rs:553
+#: crates/ui-gtk/src/dialogs/first_run.rs:560
 msgid "The library scan is finished."
 msgstr "音乐库扫描已完成。"
 

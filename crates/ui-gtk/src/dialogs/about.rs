@@ -14,7 +14,9 @@
 use gtk::prelude::*;
 use gtk::{gdk, glib};
 
-use super::common::{copy_text, dialog_window, find_open, header_strip, note, tilde};
+use super::common::{
+    copy_text, dialog_window, find_open, header_strip, in_flatpak, note, sandbox_permissions, tilde,
+};
 use crate::backend::Backend;
 use crate::backend::services::{Availability, DeviceSelection};
 use crate::i18n::tr;
@@ -60,7 +62,7 @@ fn gtk_line() -> String {
 
 /// How the program was installed.
 fn installed_as() -> String {
-    if std::env::var_os("FLATPAK_ID").is_some() || std::path::Path::new("/.flatpak-info").exists() {
+    if in_flatpak() {
         return "Flatpak".into();
     }
     // The AppImage runtime names the image file it started from.
@@ -251,6 +253,27 @@ fn licences(parent: &gtk::Window) {
     window.present();
 }
 
+/// What the Flatpak may do and why, the same text as the description in the
+/// software centres.
+fn permissions(parent: &gtk::Window) {
+    let window = dialog_window(
+        Some(parent),
+        "permissions",
+        &tr("Permissions"),
+        (520, 420),
+        true,
+    );
+    let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let (header, _) = header_strip(&window, &tr("Permissions"), None);
+    root.append(&header);
+    let body = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    body.add_css_class("hk-dialog-body");
+    body.append(&sandbox_permissions());
+    root.append(&body);
+    window.set_child(Some(&root));
+    window.present();
+}
+
 /// Opens About over `parent`, or brings it to the front.
 pub(crate) fn open(parent: &gtk::Window, backend: &Backend) -> gtk::Window {
     if let Some(window) = find_open(parent, NAME) {
@@ -390,6 +413,18 @@ pub(crate) fn open(parent: &gtk::Window, backend: &Backend) -> gtk::Window {
         }
     });
     buttons.append(&licence);
+    // In the Flatpak: what it may do and why.
+    if in_flatpak() {
+        let sandbox = gtk::Button::with_label(&tr("Permissions"));
+        sandbox.add_css_class("hk-btn");
+        let weak = window.downgrade();
+        sandbox.connect_clicked(move |_| {
+            if let Some(window) = weak.upgrade() {
+                permissions(&window);
+            }
+        });
+        buttons.append(&sandbox);
+    }
     done.set_hexpand(true);
     buttons.append(&done);
     let close = gtk::Button::with_label(&tr("Close"));

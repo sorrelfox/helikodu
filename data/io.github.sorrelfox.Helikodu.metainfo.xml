@@ -27,6 +27,17 @@ SPDX-License-Identifier: CC0-1.0
       <li>A library built for large collections, with fast search and play statistics</li>
       <li>Media controls, media keys and notifications on GNOME, KDE Plasma and other desktops</li>
     </ul>
+    <p>
+      In the Flatpak, Helikodu has no network access at all and asks only for
+      what its features need:
+    </p>
+    <ul>
+      <li>Your Music folder, to read and change it: for the library, the tag editor, organizing files and cover files. Other folders are added in the settings</li>
+      <li>The sound system (PipeWire and PulseAudio), to play and to choose the output device</li>
+      <li>Reserving a sound card, so that the sound server hands it over for exclusive, bit-perfect output</li>
+      <li>The login manager (logind), to pause playback before the computer goes to sleep or the screen locks</li>
+      <li>The system tray, for the optional tray icon</li>
+    </ul>
   </description>
 
   <launchable type="desktop-id">io.github.sorrelfox.Helikodu.desktop</launchable>
@@ -111,6 +122,16 @@ SPDX-License-Identifier: CC0-1.0
   <translation type="gettext">helikodu</translation>
 
   <releases>
+    <release version="0.9.2" date="2026-11-19" type="development">
+      <description>
+        <p>Fixes for the release candidate:</p>
+        <ul>
+          <li>With Now Playing open, the window can be made as small as elsewhere</li>
+          <li>The Favourite button shows the same heart on every desktop</li>
+          <li>The ring around the cover of the playing album is drawn whole</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.1" date="2026-11-18" type="development"/>
     <release version="0.9.0" date="2026-11-18" type="development">
       <description>

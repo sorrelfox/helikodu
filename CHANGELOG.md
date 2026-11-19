@@ -6,9 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-19
+
+The release candidate with fixes found while preparing the Flathub submission, and screenshots for Flathub and the software centres.
+
 ### Added
 
 - Screenshots in the AppStream metainfo, with captions in every language, for Flathub and the software centres. `docs/site/shots.py --store` draws them over the sample library, in the default integrated window style.
+- Helikodu says which permissions the Flatpak asks for and what each one is for: in the Flatpak on the first-run page, before anything is scanned, and under About ▸ Permissions; in its description in software centres and on Flathub; on the website's download section, in the README and on the Installing page of the user guide. The website's download section and the README also list every way Helikodu is published, since 0.9.1 more than the archives.
 
 ### Fixed
 

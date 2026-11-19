@@ -499,6 +499,9 @@ th:last-child, td:last-child { padding-right: 0; }
   align-items: start;
 }
 .get-grid figure { margin-top: clamp(2rem, 4.5vw, 3rem); }
+.permissions { margin-top: clamp(2rem, 4.5vw, 3rem); max-width: 72ch; }
+.permissions > p { margin: 0 0 1rem; color: var(--t2); line-height: 1.55; }
+.permissions b { color: var(--t1); font-weight: 600; }
 .get .table code { white-space: nowrap; }
 .next {
   margin: 2.5rem 0 0;

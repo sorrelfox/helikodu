@@ -84,29 +84,39 @@ The [website](https://sorrelfox.github.io/helikodu/) shows every part of Helikod
 
 ## Installing
 
-Helikodu is published on the [Releases](https://github.com/sorrelfox/helikodu/releases) page. There are no distribution packages and no Flatpak yet.
+Helikodu is published on the [Releases](https://github.com/sorrelfox/helikodu/releases) page, for every common way of installing software on Linux:
 
 | File | What it is |
 |---|---|
-| `helikodu-<version>-x86_64-linux.tar.xz` | The ready-built programs for 64-bit PCs |
-| `helikodu-<version>-aarch64-linux.tar.xz` | The ready-built programs for 64-bit ARM computers |
+| `helikodu-<version>-x86_64.flatpak` | The Flatpak, for any distribution with Flatpak |
+| `Helikodu-<version>-x86_64.AppImage` | One file that runs without installing |
+| `helikodu-<version>-1.fc45.x86_64.rpm` | The package for Fedora 45 |
+| `helikodu_<version>-1.debian13_amd64.deb`, `helikodu_<version>-1.ubuntu26.04_amd64.deb` | The packages for Debian 13 and Ubuntu 26.04 |
+| `helikodu-<version>-1-x86_64.pkg.tar.zst` | The package for Arch Linux |
+| `helikodu-<version>-x86_64-linux.tar.xz` | The ready-built programs, to unpack anywhere (also as `.tar.gz`) |
 | `helikodu-<version>.tar.xz` | The source code, with everything needed to build it without a network |
 | `SHA256SUMS` | Checksums of the files |
 
-Check the download, unpack it and copy it to `/usr/local`:
+Every file except the Arch package also comes for 64-bit ARM computers (`aarch64`, or `arm64` for the Debian and Ubuntu packages). To install the Flatpak for your user:
 
 ```sh
 sha256sum --check --ignore-missing SHA256SUMS
-tar -xJf helikodu-<version>-x86_64-linux.tar.xz
-cd helikodu-<version>-x86_64-linux
-sudo cp -r bin libexec share /usr/local/
-sudo gtk4-update-icon-cache -q -t -f /usr/local/share/icons/hicolor
-sudo update-desktop-database -q /usr/local/share/applications
+flatpak install --user --bundle helikodu-<version>-x86_64.flatpak
 ```
 
-Helikodu then appears in the application list of your desktop. `INSTALL.txt` in the archive has the same steps and how to uninstall.
+The first time, Flatpak also installs the GNOME runtime from Flathub. Helikodu then appears in the application list of your desktop.
 
-The ready-built programs were built on Debian 13. They need these libraries from your system, or newer versions with the same library names: glibc 2.41, GTK 4.18, FFmpeg 7.1 (`libavformat.so.61`, `libavcodec.so.61`, `libavutil.so.59`), PipeWire 1.2, ALSA, libopenmpt (`libopenmpt.so.0`), libgme (`libgme.so.0`) and libsidplayfp (`libsidplayfp.so.6`). SQLite is built in. Where one of them is missing, install it from your distribution; where only a newer FFmpeg is installed, build from the source instead.
+### What the Flatpak may do, and why
+
+In the Flatpak, Helikodu has no network access at all and asks only for what its features need:
+
+- **Your Music folder**, to read and change it: for the library, the tag editor, organizing files and cover files. Other folders are added in the settings.
+- **The sound system** (PipeWire and PulseAudio), to play and to choose the output device.
+- **Reserving a sound card**, so that the sound server hands it over for exclusive, bit-perfect output.
+- **The login manager** (logind), to pause playback before the computer goes to sleep or the screen locks.
+- **The system tray**, for the optional tray icon.
+
+Software centres list these permissions and may rate them as potentially unsafe, as they do for most music players that manage files. Helikodu shows the same list the first time it starts, and under **About ▸ Permissions**. [docs/dev/flatpak.md](docs/dev/flatpak.md#permissions) has the technical details.
 
 The [user guide](https://sorrelfox.github.io/helikodu/guide/) covers installing, the first run and troubleshooting.
 

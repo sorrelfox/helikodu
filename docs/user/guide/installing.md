@@ -50,6 +50,15 @@ To update, install the next release's file the same way. To remove it, run `flat
 
 The Flatpak has no network access at all, and sees only your `Music` folder. Folders elsewhere are added through the folder dialog in **Settings ▸ Library**; Helikodu then rescans them now and then instead of noticing changes at once. To have such a folder watched like `Music`, grant it with `flatpak override --user --filesystem=/path/to/folder io.github.sorrelfox.Helikodu`. The Flatpak keeps its library and settings apart from other installations, in `~/.var/app/io.github.sorrelfox.Helikodu/`. It comes without a SoundFont: to play MIDI files, choose one under **MIDI files** in the **Playback** settings.
 
+Besides your `Music` folder (read and write: for the library, the tag editor, organizing files and cover files), the Flatpak asks only for what these features need:
+
+- the sound system (PipeWire and PulseAudio), to play and to choose the output device;
+- reserving a sound card, so that the sound server hands it over for exclusive, bit-perfect output;
+- the login manager (logind), to pause playback before the computer goes to sleep or the screen locks;
+- the system tray, for the optional tray icon.
+
+Software centres list these permissions and may rate them as potentially unsafe, as they do for most music players that manage files; the application's description there explains them the same way.
+
 ## The AppImage
 
 The AppImage is a single file that brings its own copies of GTK, FFmpeg and the decoders for tracker modules, game music, SID tunes and game audio streams. It runs on Debian 13, Ubuntu 24.10, Fedora 41 and newer systems (it needs glibc 2.39 and PipeWire 1.2 or newer) and uses the system's sound libraries (PipeWire, PulseAudio, ALSA or JACK), fonts and graphics drivers.

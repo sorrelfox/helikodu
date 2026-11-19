@@ -63,6 +63,14 @@ STORE_DIR = HERE / "assets" / "screenshots"
 SCALE = 2
 # The logical size of the virtual output: room for the 1440 x 900 window.
 OUTPUT = (1920, 1200)
+# The pictures are made in a home folder of their own, so that none of them
+# shows anything of the real one: its Music folder holds this many empty
+# files (the first run counts them), and the desktop's appearance settings
+# are copied into it (the small files) or linked (fonts and icons, only read).
+SAMPLE_FILES = 1240
+COPIED = [".config/gtk-3.0", ".config/gtk-4.0", ".config/kdeglobals", ".config/fontconfig", ".config/dconf",
+          ".config/Trolltech.conf", ".config/xsettingsd"]
+LINKED = [".local/share/fonts", ".local/share/icons"]
 
 
 def target_dir():
@@ -189,6 +197,32 @@ def locale_of(language):
     return "en_US.UTF-8" if "en_US.utf8" in known or "en_US.UTF-8" in known else "C.UTF-8"
 
 
+def sample_home():
+    """Makes the home folder the pictures are made in, afresh."""
+    home = target_dir() / "site-shots" / "home"
+    shutil.rmtree(home, ignore_errors=True)
+    music = home / "Music"
+    music.mkdir(parents=True)
+    for number in range(SAMPLE_FILES):
+        (music / f"{number:04}.flac").touch()
+    real = Path.home()
+    for name in COPIED + LINKED:
+        source = real / name
+        if not source.exists():
+            continue
+        target = home / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if name in LINKED:
+            target.symlink_to(source)
+        elif source.is_dir():
+            shutil.copytree(source, target, symlinks=True)
+        else:
+            shutil.copy2(source, target)
+    (home / ".config").mkdir(exist_ok=True)
+    (home / ".config" / "user-dirs.dirs").write_text('XDG_MUSIC_DIR="$HOME/Music"\n')
+    return home
+
+
 def render(scheme, binary, raw, only="", language="", store=False):
     """Runs the example for `scheme` in a private D-Bus session of its own
     process group, and ends whatever the session left running (the services
@@ -197,6 +231,10 @@ def render(scheme, binary, raw, only="", language="", store=False):
         sys.exit("shots: dbus-run-session is not installed")
     env = dict(os.environ, **{INNER: "1"})
     env.pop("DBUS_SESSION_BUS_ADDRESS", None)
+    # The session, its services and the example live in the sample home.
+    env["HOME"] = str(sample_home())
+    for name in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"):
+        env.pop(name, None)
     command = ["dbus-run-session", "--", sys.executable, str(Path(__file__).resolve()),
                "--scheme", scheme, "--binary", str(binary), "--raw", str(raw)]
     if only:

@@ -15,7 +15,7 @@ use std::rc::Rc;
 use gtk::prelude::*;
 use gtk::{gio, glib};
 
-use super::common::{compact_button, switch_row, tilde};
+use super::common::{compact_button, in_flatpak, sandbox_permissions, switch_row, tilde};
 use super::settings::library::choose_folder;
 use crate::backend::services::{DeviceSelection, ScanStatus};
 use crate::i18n::{fill, tr};
@@ -336,6 +336,13 @@ fn page(main: &MainWindow, integrated: bool) -> (gtk::Box, Rc<FirstRun>) {
         &["hk-t2"],
     ));
     column.append(&offline);
+    // In the Flatpak, what it may do and why, before anything is scanned.
+    if in_flatpak() {
+        let sandbox = sandbox_permissions();
+        sandbox.set_margin_top(14);
+        sandbox.set_margin_start(26);
+        column.append(&sandbox);
+    }
 
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     buttons.set_margin_top(28);

@@ -12,7 +12,7 @@ use gtk::prelude::*;
 use gtk::{gdk, glib};
 
 use crate::i18n::tr;
-use crate::widgets::{icon_button, label};
+use crate::widgets::{icon_button, label, wrapped_label};
 
 /// A dialog window over `parent`: themed, closed by Escape, destroyed with
 /// its parent.
@@ -429,6 +429,49 @@ pub(crate) fn bytes(size: u64) -> String {
 /// Copies `text` to the clipboard of `widget`'s display.
 pub(crate) fn copy_text(widget: &impl IsA<gtk::Widget>, text: &str) {
     widget.as_ref().display().clipboard().set_text(text);
+}
+
+/// Whether Helikodu runs in the Flatpak sandbox.
+pub(crate) fn in_flatpak() -> bool {
+    std::env::var_os("FLATPAK_ID").is_some() || Path::new("/.flatpak-info").exists()
+}
+
+/// What the Flatpak may do, and why: the lead and the list of the
+/// application's description in the software centres (the metainfo), word
+/// for word, so that the user reads the same text here and shares its
+/// translations.
+pub(crate) fn sandbox_permissions() -> gtk::Box {
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    column.add_css_class("hk-permissions");
+    column.append(&wrapped_label(
+        &tr(
+            "In the Flatpak, Helikodu has no network access at all and asks only for what its features need:",
+        ),
+        &["hk-t2"],
+    ));
+    for text in [
+        tr(
+            "Your Music folder, to read and change it: for the library, the tag editor, organizing files and cover files. Other folders are added in the settings",
+        ),
+        tr("The sound system (PipeWire and PulseAudio), to play and to choose the output device"),
+        tr(
+            "Reserving a sound card, so that the sound server hands it over for exclusive, bit-perfect output",
+        ),
+        tr(
+            "The login manager (logind), to pause playback before the computer goes to sleep or the screen locks",
+        ),
+        tr("The system tray, for the optional tray icon"),
+    ] {
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let bullet = label("•", &["hk-t3"]);
+        bullet.set_valign(gtk::Align::Start);
+        row.append(&bullet);
+        let line = wrapped_label(&text, &["hk-t2"]);
+        line.set_hexpand(true);
+        row.append(&line);
+        column.append(&row);
+    }
+    column
 }
 
 #[cfg(test)]

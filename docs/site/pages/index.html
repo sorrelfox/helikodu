@@ -471,7 +471,7 @@ helikodu-cli export-playlist 'Late evening' late-evening.m3u8</code></pre>
       </ul>
     </div>
   </div>
-  <p class="note">The only connections Helikodu makes are local ones on your computer: D-Bus, for media keys and desktop integration, and the sound server.</p>
+  <p class="note">The only connections Helikodu makes are local ones on your computer: D-Bus, for media keys and desktop integration, and the sound server. In the Flatpak, the sandbox enforces it as well: Helikodu has no network permission there (see <a href="#flatpak-permissions">what the Flatpak may do</a>).</p>
   <dl class="points">
     <div><dt>What it knows about you</dt><dd>Only what is on your computer, and it keeps it there. Your library, play history and settings are in your home folder. Logs are off by default, and a crash report is written to a file and never sent.</dd></div>
     <div><dt>Your files change only when you ask</dt><dd>When you save tags, write loudness values, organize files or move copies to the trash. Everything else Helikodu learns stays in its own database.</dd></div>
@@ -483,7 +483,7 @@ helikodu-cli export-playlist 'Late evening' late-evening.m3u8</code></pre>
   <header class="part-head plain">
     <div>
       <h2 id="get-title">Get Helikodu {{version}}</h2>
-      <p>Helikodu is published on GitHub, as ready-built programs and as source code. Version {{version}} is the release candidate for 1.0: the features are frozen, and only fixes, translations and documentation follow.</p>
+      <p>Helikodu is published on GitHub for every common way of installing software on Linux. Version {{version}} is the release candidate for 1.0: the features are frozen, and only fixes, translations and documentation follow.</p>
     </div>
   </header>
   <div class="get-grid">
@@ -492,26 +492,38 @@ helikodu-cli export-playlist 'Late evening' late-evening.m3u8</code></pre>
         <table>
           <thead><tr><th scope="col">File</th><th scope="col">What it is</th></tr></thead>
           <tbody>
-            <tr><td><code>helikodu-{{version}}-x86_64-linux.tar.xz</code></td><td>The ready-built programs for 64-bit PCs</td></tr>
-            <tr><td><code>helikodu-{{version}}-aarch64-linux.tar.xz</code></td><td>The ready-built programs for 64-bit ARM computers</td></tr>
+            <tr><td><code>helikodu-{{version}}-x86_64.flatpak</code></td><td>The Flatpak, for any distribution with Flatpak</td></tr>
+            <tr><td><code>Helikodu-{{version}}-x86_64.AppImage</code></td><td>One file that runs without installing</td></tr>
+            <tr><td><code>helikodu-{{version}}-1.fc45.x86_64.rpm</code></td><td>The package for Fedora 45</td></tr>
+            <tr><td><code>helikodu_{{version}}-1.debian13_amd64.deb</code></td><td>The package for Debian 13; a <code>ubuntu26.04</code> one is for Ubuntu 26.04</td></tr>
+            <tr><td><code>helikodu-{{version}}-1-x86_64.pkg.tar.zst</code></td><td>The package for Arch Linux</td></tr>
+            <tr><td><code>helikodu-{{version}}-x86_64-linux.tar.xz</code></td><td>The ready-built programs, to unpack anywhere (also as <code>.tar.gz</code>)</td></tr>
             <tr><td><code>helikodu-{{version}}.tar.xz</code></td><td>The source code, with everything needed to build it without a network</td></tr>
             <tr><td><code>SHA256SUMS</code></td><td>Checksums of the files</td></tr>
           </tbody>
         </table>
       </div>
       <p class="actions"><a class="button primary" href="{{repository}}/releases">Download from GitHub</a> <a class="button" href="changelog/">Read the release notes</a></p>
-      <p class="note">The ready-built programs were built on Debian 13. They need glibc 2.41, GTK 4.18, FFmpeg 7.1, PipeWire 1.2, ALSA, libopenmpt, libgme and libsidplayfp from your system, or newer versions with the same library names. Where only a newer FFmpeg is installed, <a href="guide/#installing--building-from-the-source-code">build from the source code</a> instead. There are no distribution packages and no Flatpak yet.</p>
+      <p class="note">Every file except the Arch package also comes for 64-bit ARM computers (<code>aarch64</code>, or <code>arm64</code> for the Debian and Ubuntu packages). The Flatpak and the AppImage bring their own libraries; the packages use those of their distribution. The ready-built archives were built on Debian 13 and need FFmpeg 7.1; where only a newer FFmpeg is installed, use the Flatpak or the AppImage instead. <a href="guide/#installing">Installing, step by step</a> says which file suits which system.</p>
     </div>
     <figure>
-      <pre class="term"><code><span class="c"># Check the download, unpack it, copy it to /usr/local</span>
+      <pre class="term"><code><span class="c"># Check the download, then install the Flatpak for your user</span>
 sha256sum --check --ignore-missing SHA256SUMS
-tar -xJf helikodu-{{version}}-x86_64-linux.tar.xz
-cd helikodu-{{version}}-x86_64-linux
-sudo cp -r bin libexec share /usr/local/
-sudo gtk4-update-icon-cache -q -t -f /usr/local/share/icons/hicolor
-sudo update-desktop-database -q /usr/local/share/applications</code></pre>
-      <figcaption>Helikodu then appears in the application list of your desktop. For a 64-bit ARM computer, write <code>aarch64</code> in place of <code>x86_64</code>.</figcaption>
+flatpak install --user --bundle helikodu-{{version}}-x86_64.flatpak
+flatpak run io.github.sorrelfox.Helikodu</code></pre>
+      <figcaption>The first time, Flatpak also installs the GNOME runtime from Flathub. Helikodu then appears in the application list of your desktop.</figcaption>
     </figure>
+  </div>
+  <div class="permissions" id="flatpak-permissions">
+    <h3>What the Flatpak may do, and why</h3>
+    <p>In the Flatpak, Helikodu has no network access at all and asks only for what its features need. Software centres list these permissions and may rate them as potentially unsafe, as they do for most music players that manage files. Helikodu shows the same list the first time it starts, and under <b>About ▸ Permissions</b>.</p>
+    <ul class="plain">
+      <li><b>Your Music folder</b>, to read and change it: for the library, the tag editor, organizing files and cover files. Other folders are added in the settings.</li>
+      <li><b>The sound system</b> (PipeWire and PulseAudio), to play and to choose the output device.</li>
+      <li><b>Reserving a sound card</b>, so that the sound server hands it over for exclusive, bit-perfect output.</li>
+      <li><b>The login manager</b> (logind), to pause playback before the computer goes to sleep or the screen locks.</li>
+      <li><b>The system tray</b>, for the optional tray icon.</li>
+    </ul>
   </div>
   <ul class="next">
     <li><a href="guide/#installing">Installing, step by step</a></li>
