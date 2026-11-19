@@ -490,7 +490,13 @@ def flatpak_files(out):
     if not FLATPAK_KEY.is_file():
         fail(f"{FLATPAK_KEY.relative_to(REPO)} is missing: the public key of the Flatpak "
              "repository (docs/dev/flatpak.md)")
-    key = base64.b64encode(FLATPAK_KEY.read_bytes()).decode("ascii")
+    raw = FLATPAK_KEY.read_bytes()
+    # A binary OpenPGP key starts with a public-key packet: tag 6, in the old
+    # (0x98-0x9b) or the new (0xc6) packet format.
+    if not raw or not (0x98 <= raw[0] <= 0x9B or raw[0] == 0xC6):
+        fail(f"{FLATPAK_KEY.relative_to(REPO)} is not a binary OpenPGP public key: export it "
+             "with `gpg --export` (docs/dev/flatpak.md)")
+    key = base64.b64encode(raw).decode("ascii")
     common = (f"Title=Helikodu\nUrl={FLATPAK_REPO}\nHomepage={ADDRESS}\n"
               "Comment=An offline audio player and music library manager\n"
               f"Icon={ADDRESS}assets/helikodu.svg\n")

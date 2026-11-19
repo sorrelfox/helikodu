@@ -222,7 +222,19 @@ fn events_come_in_order_and_positions_can_be_thinned() {
     }
     // The thinned subscription got the same other events, in the same order, and
     // fewer positions.
-    let thinned: Vec<PlayerEvent> = thinned.try_iter().collect();
+    // It may still be on its way when the first one has ended: read up to its end.
+    let mut rest = Vec::new();
+    loop {
+        let event = thinned
+            .recv_timeout(Duration::from_secs(10))
+            .expect("the thinned subscription ends too");
+        let ended = matches!(event, PlayerEvent::Ended { .. });
+        rest.push(event);
+        if ended {
+            break;
+        }
+    }
+    let thinned = rest;
     let without_positions = |events: &[PlayerEvent]| -> Vec<PlayerEvent> {
         events
             .iter()
