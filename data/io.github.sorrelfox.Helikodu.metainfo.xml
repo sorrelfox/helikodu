@@ -64,7 +64,48 @@ SPDX-License-Identifier: CC0-1.0
     <color type="primary" scheme_preference="dark">#8a5a0c</color>
   </branding>
 
-  <!-- No screenshots yet: they are added with the first release. -->
+  <screenshots>
+    <screenshot type="default">
+      <caption>Your music library and the player</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/albums.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>An album with the details of the selected track</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/album.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Now Playing with synced lyrics and the signal path</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/now-playing.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Search the library with a query</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/query.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Smart playlists made of rules or query text</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/smart-playlist.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Choose the sound system, the device and bit-perfect output</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/settings-output.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>A parametric equalizer that reads AutoEQ presets</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/eq-parametric.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Edit the tags of several tracks at once</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/tag-editor.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Convert music for phones and other players</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/converter.png</image>
+    </screenshot>
+    <screenshot environment="gnome:dark">
+      <caption>Your music library in the dark style</caption>
+      <image>https://raw.githubusercontent.com/sorrelfox/helikodu/main/docs/site/assets/screenshots/albums-dark.png</image>
+    </screenshot>
+  </screenshots>
 
   <content_rating type="oars-1.1"/>
   <translation type="gettext">helikodu</translation>

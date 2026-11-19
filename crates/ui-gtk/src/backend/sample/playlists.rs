@@ -157,7 +157,7 @@ impl SampleLibrary {
                 .collect()
         };
         let mut lists = self.lists();
-        let favourites = lists.add("Favourites", PlaylistType::Static, None);
+        let favourites = lists.add(&crate::i18n::tr("Favourites"), PlaylistType::Static, None);
         if let Ok(list) = lists.get(favourites) {
             list.builtin = true;
         }

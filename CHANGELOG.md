@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Screenshots in the AppStream metainfo, with captions in every language, for Flathub and the software centres. `docs/site/shots.py --store` draws them over the sample library to Flathub's quality guidelines.
+
+### Fixed
+
+- With Now Playing open, the window could not be made shorter than about 740 pixels, and opening Now Playing made a shorter window taller: the cover and the analyzer kept their full height. The cover now shrinks with the window, and the analyzer scrolls like the lyrics and the queue.
+
 ## [0.9.1] - 2026-11-18
 
 The same release candidate as 0.9.0, published in more ways: a Flatpak, an AppImage, packages for Fedora, Debian, Ubuntu and Arch Linux, and archives for any distribution. The known issues of 0.9.0 still apply, except that the Flatpak, the AppImage and the distribution packages no longer need FFmpeg 7.1.

@@ -25,6 +25,10 @@ mod imp {
         pub(super) radius: Cell<f32>,
         /// A fixed side, or 0 to be as tall as the width allows.
         pub(super) side: Cell<i32>,
+        /// With a fixed side: the least the cover asks for, when it is less
+        /// than the side (0: the side). A cover that follows the size of its
+        /// window must not hold that window at the size it has.
+        pub(super) minimum: Cell<i32>,
         /// Draw nothing: the placeholder tile's CSS shows through.
         pub(super) loading: Cell<bool>,
         /// The cover this widget waits for or shows.
@@ -63,7 +67,11 @@ mod imp {
         fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
             let side = self.side.get();
             if side > 0 {
-                return (side, side, -1, -1);
+                let least = match self.minimum.get() {
+                    least if least > 0 && least < side => least,
+                    _ => side,
+                };
+                return (least, side, -1, -1);
             }
             // In the grid: at least the design's tile width, then as tall as wide.
             match orientation {
@@ -132,6 +140,13 @@ impl CoverArt {
     pub(crate) fn set_shape(&self, side: i32, radius: f32) {
         self.imp().side.set(side);
         self.imp().radius.set(radius);
+        self.queue_resize();
+    }
+
+    /// Lets a cover of a fixed side be given down to `least` pixels, so that
+    /// its window can shrink (0: never less than the side).
+    pub(crate) fn set_minimum(&self, least: i32) {
+        self.imp().minimum.set(least);
         self.queue_resize();
     }
 

@@ -13,6 +13,7 @@ The site is plain HTML and CSS. It uses no JavaScript, no web fonts, no CDN and 
 | `layout.html` | The frame of every page: the head, the header with the links, the footer |
 | `assets/site.css` | The styles. The colours are the application's own, light and dark as the visitor's desktop asks |
 | `assets/shots/` | The screenshots, each in the light and in the dark scheme, as lossless WebP at two pixels for each logical pixel |
+| `assets/screenshots/` | The pictures for app stores such as Flathub, as PNG (see [Pictures for app stores](#pictures-for-app-stores)) |
 | `assets/social.jpg` | The picture shown when a link to the site is shared |
 | `build.py` | Builds the site |
 | `shots.py` | Renders the screenshots |
@@ -50,6 +51,20 @@ docs/site/shots.py --only albums,home   # some of them
 ```
 
 The pictures are not photographs of a desktop. The example `site_shots` of `helikodu-ui-gtk` draws the real windows over the sample library (invented albums, artists and tracks, and a player that only pretends to play), and `shots.py` runs it for each colour scheme under a headless compositor on a private D-Bus session, then writes the pictures into `assets/shots/`. The Home view is drawn once more in each language listed at the top of `shots.py`, from the translations in `po/`, as `home-<language>`. The script needs cargo, `dbus-run-session`, `msgfmt` (gettext), Python 3 with Pillow, and `kwin_wayland` or `mutter`.
+
+### Pictures for app stores
+
+```sh
+docs/site/shots.py --store
+```
+
+The same example draws the pictures that the metainfo (`data/io.github.sorrelfox.Helikodu.metainfo.xml`) lists for Flathub and other app stores. It writes them as PNG files into `assets/screenshots/`: `<name>.png` in the light scheme and `<name>-dark.png` in the dark one. `STORE` at the top of `shots.py` names them. They follow Flathub's quality guidelines:
+
+- each window is at most 1000 × 700 logical pixels (2000 × 1400 pixels), drawn with its own shadow and rounded corners and not maximized;
+- they use GNOME's defaults: the Adwaita style and icons, the Adwaita Sans font and the close button alone;
+- the light pictures come first, and one dark picture shows the dark style.
+
+The metainfo points at them on the `main` branch, with a caption each; the captions are translated with the rest of the metainfo. When `STORE` changes, change the `<screenshots>` list of the metainfo with it.
 
 A new picture is a step in `crates/ui-gtk/examples/site_shots.rs` and a `{{shot}}` or `{{tab}}` mark on a page. Run `shots.py` before a release when the interface has changed, look at the pictures, and commit those that changed. They use the font and the desktop settings of the computer they are made on.
 

@@ -256,6 +256,9 @@ impl NowPlayingView {
         left.set_valign(gtk::Align::Center);
         left.set_size_request(COVER_MIN, -1);
         let cover = CoverArt::new(COVER_MAX, 10.0);
+        // The side follows the window (below); it must not keep the window
+        // from becoming smaller.
+        cover.set_minimum(COVER_MIN);
         cover.add_css_class("hk-np-cover");
         cover.set_halign(gtk::Align::Start);
         left.append(&cover);
@@ -323,7 +326,12 @@ impl NowPlayingView {
         queue_scroller.set_child(Some(&queue));
         pages.add_named(&queue_scroller, Some("queue"));
         let (analyzer_page, spectrum, meter) = analyzer_page();
-        pages.add_named(&analyzer_page, Some("analyzer"));
+        // Scrolled as the other pages are, so that its height does not set
+        // the least height of the window.
+        let analyzer_scroller = gtk::ScrolledWindow::new();
+        analyzer_scroller.set_hscrollbar_policy(gtk::PolicyType::Never);
+        analyzer_scroller.set_child(Some(&analyzer_page));
+        pages.add_named(&analyzer_scroller, Some("analyzer"));
         body.append(&pages);
         content.append(&body);
 

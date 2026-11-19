@@ -52,7 +52,7 @@ flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest packagin
 flatpak run --filesystem=/tmp/helikodu-flatpak --command=flatpak-builder-lint org.flatpak.Builder repo /tmp/helikodu-flatpak/repo
 ```
 
-The manifest check passes without findings. Newer releases of the linter (as in Flathub's CI image) also report `finish-args-login1-system-talk-name` and `finish-args-own-name-wildcard-org.freedesktop.ReserveDevice1`; both permissions are deliberate (see the permission list above), the release workflow lists them as exceptions with their reasons, and the Flathub submission must ask for the same exceptions. The repository check (on a repository made with `flatpak-builder --repo=…`) reports only `metainfo-missing-screenshots` and `appstream-screenshots-not-mirrored-in-ostree`: the metainfo has no screenshots yet; they are added for the Flathub submission (see below), and Flathub's build mirrors them. The linter runs in a sandbox of its own: for a repository outside your home folder, add `--filesystem=<that folder>` after `flatpak run`.
+The manifest check passes without findings. Newer releases of the linter (as in Flathub's CI image) also report `finish-args-login1-system-talk-name` and `finish-args-own-name-wildcard-org.freedesktop.ReserveDevice1`; both permissions are deliberate (see the permission list above), the release workflow lists them as exceptions with their reasons, and the Flathub submission must ask for the same exceptions. The repository check (on a repository made with `flatpak-builder --repo=…`) reports only `appstream-external-screenshot-url` and `appstream-screenshots-not-mirrored-in-ostree`: the metainfo's screenshots point at GitHub, and only Flathub's own build copies them to Flathub's servers (see below). The linter runs in a sandbox of its own: for a repository outside your home folder, add `--filesystem=<that folder>` after `flatpak run`.
 
 ## The release bundle
 
@@ -179,6 +179,6 @@ Flathub builds from its own repository, `flathub/io.github.sorrelfox.Helikodu`, 
    ```
 
    (or the release's source tarball as an `archive` with its SHA-256), and keep `cargo-sources.json` from the same tag.
-2. The metainfo needs a `<release>` entry for that version and screenshots taken from the running application (`<screenshots>` with image URLs on GitHub, for example the website's pictures); the content rating is already there. `flatpak-builder-lint repo` reports what is still missing.
+2. The metainfo needs a `<release>` entry for that version. The screenshots and the content rating are already there: the `<screenshots>` list points at the PNG files of `docs/site/assets/screenshots/` on the `main` branch, drawn by `docs/site/shots.py --store` to Flathub's quality guidelines ([docs/site/README.md](../site/README.md#pictures-for-app-stores)); they must be pushed before Flathub builds. `flatpak-builder-lint repo` reports what is still missing.
 3. Open a pull request against `flathub/flathub` (branch `new-pr`) as the Flathub submission guide describes. Expect questions about `xdg-run/pipewire-0`, the `ReserveDevice1` wildcards and `org.freedesktop.login1`; the table above has the reasons.
 4. `io.github.*` IDs are verified through the GitHub account that owns `github.com/sorrelfox`; no website or DNS record is needed.

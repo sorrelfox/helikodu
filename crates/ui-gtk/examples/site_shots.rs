@@ -14,9 +14,11 @@
 //! ```
 //!
 //! Options: `--out DIR` (default `target/site-shots`), `--scheme dark|light`
-//! (default dark), `--scale N` (default 1: N pixels for each logical pixel)
-//! and `--only NAME[,NAME…]` to render some of the pictures; the steps of the
-//! others are left out. Each picture is written as `<name>.png`; the names
+//! (default dark), `--scale N` (default 1: N pixels for each logical pixel),
+//! `--only NAME[,NAME…]` to render some of the pictures (the steps of the
+//! others are left out) and `--store` for the pictures of app stores such as
+//! Flathub: windows of at most 1000 x 700 with their shadow and rounded
+//! corners, GNOME's default font, icons and window buttons. Each picture is written as `<name>.png`; the names
 //! are printed as they are written.
 //!
 //! The windows are in the language of the environment where translations are
@@ -47,6 +49,7 @@ struct Shots {
     scheme: SchemeChoice,
     scale: f32,
     only: Vec<String>,
+    store: bool,
     failed: Cell<bool>,
 }
 
@@ -92,6 +95,11 @@ impl Shots {
         }
     }
 
+    /// The size of the main window: at most 1000 x 700 for the stores.
+    fn main_size(&self) -> (i32, i32) {
+        if self.store { STORE_SIZE } else { (1440, 900) }
+    }
+
     /// A snapshot that draws `widget` at the scale of the pictures.
     fn draw(&self, widget: &gtk::Widget) -> gtk::Snapshot {
         let snapshot = gtk::Snapshot::new();
@@ -109,15 +117,59 @@ impl Shots {
         if !self.wanted(name) {
             return;
         }
-        spin(400);
         let window = window.upcast_ref::<gtk::Window>();
+        if self.store {
+            // The stores take windows of at most 1000 x 700.
+            let (most_w, most_h) = STORE_SIZE;
+            let (w, h) = window.default_size();
+            let (w, h) = (w.max(window.width()), h.max(window.height()));
+            if w > most_w || h > most_h {
+                window.set_default_size(w.min(most_w), h.min(most_h));
+            }
+        }
+        // Pages that need the width: drawn with the sidebar hidden (F9).
+        let roomy = self.store && ROOMY.contains(&name);
+        if roomy {
+            let _ = WidgetExt::activate_action(window, "win.toggle-sidebar", None);
+        }
+        spin(400);
         let region = graphene::Rect::new(0.0, 0.0, window.width() as f32, window.height() as f32);
-        self.write(
-            name,
-            window.renderer(),
-            self.draw(window.upcast_ref()),
-            &region,
+        let snapshot = self.draw(window.upcast_ref());
+        if roomy {
+            let _ = WidgetExt::activate_action(window, "win.toggle-sidebar", None);
+            spin(300);
+        }
+        if !self.store {
+            self.write(name, window.renderer(), snapshot, &region);
+            return;
+        }
+        // The window with its frame: what is drawn around it (the shadow),
+        // as far as a shadow reaches.
+        let Some(node) = snapshot.to_node() else {
+            eprintln!("site-shots: {name}: nothing was drawn");
+            self.failed.set(true);
+            return;
+        };
+        let snapshot = gtk::Snapshot::new();
+        self.frame(window, &snapshot);
+        snapshot.append_node(&node);
+        let Some(node) = snapshot.to_node() else {
+            return;
+        };
+        let b = node.bounds();
+        let drawn = graphene::Rect::new(
+            b.x() / self.scale,
+            b.y() / self.scale,
+            b.width() / self.scale,
+            b.height() / self.scale,
         );
+        let framed = region
+            .inset_r(-SHADOW, -SHADOW)
+            .intersection(&drawn)
+            .unwrap_or(region);
+        let snapshot = gtk::Snapshot::new();
+        snapshot.append_node(&node);
+        self.write(name, window.renderer(), snapshot, &framed);
     }
 
     /// A part of `window`: `width` pixels from `x`, and the lowest `height`
@@ -141,6 +193,55 @@ impl Shots {
             self.draw(window.upcast_ref()),
             &region,
         );
+    }
+
+    /// Draws the frame of `window` as GTK draws it on the desktop: the
+    /// shadow and the outline of `window.csd` in GTK's own theme
+    /// (`Default-light.css` and `Default-dark.css`), around the rounded
+    /// corners. A window's paintable is cut to the window, so the frame,
+    /// which lies outside, is not in it.
+    fn frame(&self, window: &gtk::Window, snapshot: &gtk::Snapshot) {
+        if !window.has_css_class("csd") || window.is_maximized() || window.is_fullscreen() {
+            return;
+        }
+        let (top, bottom) = if window.has_css_class("hk-mini-window") {
+            (14.0, 14.0)
+        } else {
+            (8.0, 0.0)
+        };
+        let outline = gtk::gsk::RoundedRect::new(
+            graphene::Rect::new(0.0, 0.0, window.width() as f32, window.height() as f32),
+            graphene::Size::new(top, top),
+            graphene::Size::new(top, top),
+            graphene::Size::new(bottom, bottom),
+            graphene::Size::new(bottom, bottom),
+        );
+        let line = if self.scheme == SchemeChoice::Dark {
+            0.75
+        } else {
+            0.23
+        };
+        snapshot.save();
+        snapshot.scale(self.scale, self.scale);
+        // `box-shadow: 0 3px 9px 1px rgba(0, 0, 0, 0.5), 0 0 0 1px …`: the
+        // last shadow is drawn first.
+        snapshot.append_outset_shadow(
+            &outline,
+            &gtk::gdk::RGBA::new(0.0, 0.0, 0.0, line),
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+        );
+        snapshot.append_outset_shadow(
+            &outline,
+            &gtk::gdk::RGBA::new(0.0, 0.0, 0.0, 0.5),
+            0.0,
+            3.0,
+            1.0,
+            9.0,
+        );
+        snapshot.restore();
     }
 
     /// An open popover alone, cut to its frame.
@@ -190,6 +291,16 @@ impl Shots {
         self.write(name, window.renderer(), snapshot, &region);
     }
 }
+
+/// The largest window the stores take, in logical pixels.
+const STORE_SIZE: (i32, i32) = (1000, 700);
+
+/// The pictures for the stores whose page needs the width of the window: in
+/// a window of 1000 pixels they are drawn with the sidebar hidden.
+const ROOMY: &[&str] = &["query", "smart-playlist"];
+
+/// How far around a window its shadow may reach, in logical pixels.
+const SHADOW: f32 = 64.0;
 
 /// Runs the main loop for `ms` milliseconds.
 fn spin(ms: u64) {
@@ -257,8 +368,7 @@ fn button(root: &impl IsA<gtk::Widget>, text: &str) -> Option<gtk::Button> {
 fn main_window(
     application: &gtk::Application,
     backend: &Backend,
-    width: i32,
-    height: i32,
+    (width, height): (i32, i32),
 ) -> MainWindow {
     install_actions(application, backend);
     let window = MainWindow::new(application, backend, WindowStyle::Integrated);
@@ -312,7 +422,7 @@ fn shoot_library(application: &gtk::Application, shots: &Shots) {
         return;
     }
     let backend = sample::backend(&playing(sample::SampleOptions::default().albums));
-    let main = main_window(application, &backend, 1440, 900);
+    let main = main_window(application, &backend, shots.main_size());
     let library = backend.library();
     let albums = library
         .album_keys(&AlbumQuery::default())
@@ -494,7 +604,7 @@ fn shoot_windows(application: &gtk::Application, shots: &Shots) {
         return;
     }
     let backend = sample::backend(&playing(120));
-    let main = main_window(application, &backend, 1440, 900);
+    let main = main_window(application, &backend, shots.main_size());
     let library = backend.library();
     let albums = library
         .album_keys(&AlbumQuery::default())
@@ -610,7 +720,7 @@ fn shoot_dsp(application: &gtk::Application, shots: &Shots) {
         return;
     }
     let (backend, updates) = sample::backend_with_updates(&playing(120));
-    let main = main_window(application, &backend, 1440, 900);
+    let main = main_window(application, &backend, shots.main_size());
     let filter = |kind, frequency_hz, gain_db, q| ParametricFilter {
         kind,
         frequency_hz,
@@ -691,7 +801,7 @@ fn shoot_tools(application: &gtk::Application, shots: &Shots) {
         albums: 120,
         playing: None,
     });
-    let main = main_window(application, &backend, 1440, 900);
+    let main = main_window(application, &backend, shots.main_size());
 
     for (action, name) in [
         ("convert", "converter"),
@@ -765,7 +875,7 @@ fn shoot_other(application: &gtk::Application, shots: &Shots) {
             albums: 300,
             playing: None,
         });
-        let main = main_window(application, &backend, 1440, 900);
+        let main = main_window(application, &backend, shots.main_size());
         if backend
             .library()
             .set_album_kind(AlbumKey(2), MediaKind::Audiobook)
@@ -788,14 +898,14 @@ fn shoot_other(application: &gtk::Application, shots: &Shots) {
 
     if shots.wanted("first-run") {
         let backend = sample::first_run_backend(&playing(120));
-        let main = main_window(application, &backend, 1440, 900);
+        let main = main_window(application, &backend, shots.main_size());
         shots.window("first-run", &main);
         main.destroy();
     }
 
     if shots.any(&["narrow", "narrow-sidebar"]) {
         let backend = sample::backend(&playing(sample::SampleOptions::default().albums));
-        let main = main_window(application, &backend, 640, 900);
+        let main = main_window(application, &backend, (640, 900));
         shots.window("narrow", &main);
         let _ = WidgetExt::activate_action(&main, "win.toggle-sidebar", None);
         spin(400);
@@ -809,6 +919,7 @@ struct Options {
     scheme: SchemeChoice,
     scale: f32,
     only: Vec<String>,
+    store: bool,
 }
 
 fn options() -> Result<Options, String> {
@@ -817,6 +928,7 @@ fn options() -> Result<Options, String> {
         scheme: SchemeChoice::Dark,
         scale: 1.0,
         only: Vec::new(),
+        store: false,
     };
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -838,6 +950,7 @@ fn options() -> Result<Options, String> {
                     .ok_or("--scale is a number from 1 to 4")?;
             }
             "--only" => options.only = value()?.split(',').map(str::to_owned).collect(),
+            "--store" => options.store = true,
             other => return Err(format!("unknown option {other}")),
         }
     }
@@ -866,7 +979,14 @@ fn main() -> ExitCode {
     }
     prepare_display(options.scheme, AccentChoice::Amber);
     if let Some(settings) = gtk::Settings::default() {
-        settings.set_gtk_decoration_layout(Some("icon:minimize,maximize,close"));
+        if options.store {
+            // GNOME's defaults, as the stores ask.
+            settings.set_gtk_decoration_layout(Some("appmenu:close"));
+            settings.set_gtk_font_name(Some("Adwaita Sans 11"));
+            settings.set_gtk_icon_theme_name(Some("Adwaita"));
+        } else {
+            settings.set_gtk_decoration_layout(Some("icon:minimize,maximize,close"));
+        }
     }
     let application = gtk::Application::builder()
         .application_id("io.github.sorrelfox.Helikodu.SiteShots")
@@ -877,6 +997,7 @@ fn main() -> ExitCode {
         scheme: options.scheme,
         scale: options.scale,
         only: options.only,
+        store: options.store,
         failed: Cell::new(false),
     });
     let s = shots.clone();

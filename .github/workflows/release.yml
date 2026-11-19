@@ -299,13 +299,13 @@ jobs:
       - name: Lint
         run: |
           set -eux
-          # The metainfo has no screenshots until the Flathub submission;
-          # every other finding fails the release.
+          # Only Flathub's own build mirrors the screenshots; every other
+          # finding fails the release.
           cat > "$RUNNER_TEMP/lint-exceptions.json" <<'EOF'
           {
             "io.github.sorrelfox.Helikodu": {
-              "metainfo-missing-screenshots": "Screenshots are added for the Flathub submission",
-              "appstream-screenshots-not-mirrored-in-ostree": "Screenshots are added for the Flathub submission",
+              "appstream-external-screenshot-url": "Flathub's build mirrors the screenshots; this build does not",
+              "appstream-screenshots-not-mirrored-in-ostree": "Flathub's build mirrors the screenshots; this build does not",
               "finish-args-login1-system-talk-name": "Pauses playback before suspend and on screen lock through logind (docs/dev/flatpak.md)",
               "finish-args-own-name-wildcard-org.freedesktop.ReserveDevice1": "Reserves a sound card for exclusive ALSA output; the card name is part of the bus name (docs/dev/flatpak.md)"
             }

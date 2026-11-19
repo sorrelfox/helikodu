@@ -121,3 +121,4 @@ crates/ui-gtk/src/dialogs/user_guide.rs
 crates/ui-gtk/src/views/table.rs
 crates/ui-gtk/src/backend/sample/services.rs
 crates/ui-gtk/src/backend/service/mpris.rs
+crates/ui-gtk/src/backend/sample/playlists.rs

@@ -5,6 +5,7 @@
 """Renders the screenshots of the website.
 
     docs/site/shots.py [--scheme dark|light] [--only NAME,NAME] [--keep-png]
+    docs/site/shots.py --store [--only NAME,NAME]
 
 Builds the `site_shots` example of helikodu-ui-gtk and runs it once for each
 colour scheme under a headless compositor on a private D-Bus session, so
@@ -15,6 +16,12 @@ as `docs/site/assets/shots/<name>-<scheme>.webp`, lossless, and the dark
 Albums view also becomes `assets/social.jpg`, the picture shown when a link
 to the site is shared. The Home view is drawn once more for each language of
 LANGUAGES below, as `home-<language>`, from the translations in `po/`.
+
+With --store it renders the pictures for app stores such as Flathub instead,
+the ones the metainfo lists: the windows at 1000 x 700 at most, with their
+shadow and rounded corners, in GNOME's default font, icons and window buttons,
+as PNG files in `docs/site/assets/screenshots/` (STORE below says which, in the
+light scheme and in the dark one).
 
 The pictures use the font and the settings of the desktop the script runs on.
 Run it before a release when the interface has changed, look at the result,
@@ -44,6 +51,14 @@ SCHEMES = {"dark": "Adwaita:dark", "light": "Adwaita"}
 # gives it its dates and numbers where the computer has that locale.
 LANGUAGES = {"de": "de_DE", "ru": "ru_RU", "ja": "ja_JP", "ko": "ko_KR"}
 LOCALIZED = "home"
+# The pictures for app stores, best first, in each scheme. The light ones come
+# first: the stores want the default look, and some dark ones beside it.
+STORE = {
+    "light": ["albums", "album", "now-playing", "query", "smart-playlist",
+              "settings-output", "eq-parametric", "tag-editor", "converter"],
+    "dark": ["albums"],
+}
+STORE_DIR = HERE / "assets" / "screenshots"
 # Pixels for each logical pixel.
 SCALE = 2
 # The logical size of the virtual output: room for the 1440 x 900 window.
@@ -110,11 +125,17 @@ def inner(args):
             LC_ALL="C.UTF-8",
             LANGUAGE="en",
         )
+        if args.store:
+            # Decorations drawn by the window, with their shadow and rounded
+            # corners, as on GNOME; KWin would draw its own.
+            env.update(GTK_CSD="1")
         if args.language:
             env.update(LANGUAGE=args.language, LC_ALL=locale_of(args.language),
                        HELIKODU_LOCALEDIR=str(catalogues()))
         command = [args.binary, "--out", args.raw, "--scheme", args.scheme,
                    "--scale", str(SCALE)]
+        if args.store:
+            command.append("--store")
         if args.only:
             command += ["--only", args.only]
         # GTK's warnings go to a file beside the pictures; the example's own
@@ -168,7 +189,7 @@ def locale_of(language):
     return "en_US.UTF-8" if "en_US.utf8" in known or "en_US.UTF-8" in known else "C.UTF-8"
 
 
-def render(scheme, binary, raw, only="", language=""):
+def render(scheme, binary, raw, only="", language="", store=False):
     """Runs the example for `scheme` in a private D-Bus session of its own
     process group, and ends whatever the session left running (the services
     D-Bus started for it)."""
@@ -182,6 +203,8 @@ def render(scheme, binary, raw, only="", language=""):
         command += ["--only", only]
     if language:
         command += ["--language", language]
+    if store:
+        command.append("--store")
     session = subprocess.Popen(command, env=env, start_new_session=True,
                                stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -220,11 +243,46 @@ def social(raw):
         image.save(SOCIAL, "JPEG", quality=88, optimize=True, progressive=True)
 
 
+def store(binary, only):
+    """Renders the pictures for app stores as `docs/site/assets/screenshots/
+    <name>.png`, and `<name>-dark.png` in the dark scheme. Returns the exit
+    status."""
+    from PIL import Image
+    STORE_DIR.mkdir(parents=True, exist_ok=True)
+    failed = False
+    for scheme, names in STORE.items():
+        if only:
+            names = [name for name in names if name in only.split(",")]
+        if not names:
+            continue
+        raw = target_dir() / "site-shots" / f"store-{scheme}"
+        shutil.rmtree(raw, ignore_errors=True)
+        raw.mkdir(parents=True)
+        status = render(scheme, binary, raw, only=",".join(names), store=True)
+        suffix = "" if scheme == "light" else f"-{scheme}"
+        for name in names:
+            png = raw / f"{name}.png"
+            if not png.exists():
+                print(f"shots: no {scheme} picture {name}", file=sys.stderr)
+                failed = True
+                continue
+            with Image.open(png) as image:
+                image.save(STORE_DIR / f"{name}{suffix}.png", "PNG", optimize=True)
+        if status != 0:
+            print(f"shots: the {scheme} pictures are incomplete (exit status {status})",
+                  file=sys.stderr)
+            failed = True
+    print(f"shots: store pictures in {STORE_DIR.relative_to(REPO)}")
+    return 1 if failed else 0
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--scheme", choices=sorted(SCHEMES), help="render one scheme only")
     p.add_argument("--only", default="", help="render these pictures only, separated by commas")
     p.add_argument("--keep-png", action="store_true", help="keep the PNG files the example wrote")
+    p.add_argument("--store", action="store_true",
+                   help="render the pictures for app stores (Flathub) instead")
     p.add_argument("--binary", help=argparse.SUPPRESS)
     p.add_argument("--raw", help=argparse.SUPPRESS)
     p.add_argument("--language", default="", help=argparse.SUPPRESS)
@@ -238,6 +296,8 @@ def main():
     except ImportError:
         sys.exit("shots: needs Pillow (python3-pillow)")
     binary = build()
+    if args.store:
+        sys.exit(store(binary, args.only))
     wanted = [name for name in args.only.split(",") if name]
     languages = [language for language in LANGUAGES
                  if not wanted or f"{LOCALIZED}-{language}" in wanted]

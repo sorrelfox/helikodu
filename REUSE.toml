@@ -28,9 +28,9 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 sorrelfox and Helikodu contributors"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
-# The pictures of the website.
+# The pictures of the website and of the app stores.
 [[annotations]]
-path = ["docs/site/assets/shots/**", "docs/site/assets/social.jpg"]
+path = ["docs/site/assets/shots/**", "docs/site/assets/screenshots/**", "docs/site/assets/social.jpg"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 sorrelfox and Helikodu contributors"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
