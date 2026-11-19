@@ -22,6 +22,7 @@ pub(crate) mod signal_lamp;
 pub(crate) mod signal_path_chain;
 pub(crate) mod signal_path_list;
 pub(crate) mod spectrum_view;
+pub(crate) mod tile_grid;
 pub(crate) mod title_line;
 pub(crate) mod waveform_seek_bar;
 pub(crate) mod wrap_box;
@@ -36,6 +37,7 @@ pub(crate) use playing_indicator::{
 };
 pub(crate) use rating_stars::RatingStars;
 pub(crate) use signal_lamp::SignalLamp;
+pub(crate) use tile_grid::TileGrid;
 pub(crate) use title_line::TitleLine;
 pub(crate) use waveform_seek_bar::WaveformSeekBar;
 pub(crate) use wrap_box::WrapBox;
@@ -74,6 +76,27 @@ pub(crate) fn label(text: &str, classes: &[&str]) -> gtk::Label {
         label.add_css_class(class);
     }
     label
+}
+
+/// The title of a page's header. It keeps its whole text: what follows it on
+/// the line gives way first (see [`view_note`]).
+pub(crate) fn view_title(text: &str) -> gtk::Label {
+    let title = label(text, &["hk-view-title"]);
+    title.set_ellipsize(gtk::pango::EllipsizeMode::None);
+    title.set_hexpand(false);
+    title.set_accessible_role(gtk::AccessibleRole::Heading);
+    title
+}
+
+/// The count or note after a page's title, with `classes`: it takes the room
+/// left on the line, and is the first to give way when the line is narrow,
+/// before the title and the controls.
+pub(crate) fn view_note(classes: &[&str]) -> gtk::Label {
+    let note = label("", classes);
+    note.set_valign(gtk::Align::Baseline);
+    note.set_hexpand(true);
+    note.set_max_width_chars(1);
+    note
 }
 
 /// Fills `line` with a translated sentence that holds widgets: the texts of

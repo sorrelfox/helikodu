@@ -13,6 +13,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - The tray menu in KDE Plasma could show items in the wrong form after it changed (another track, Play turned into Pause): a check box on Previous, entries drawn as headings, Quit twice. Plasma keeps menu items by their number and updates only what it is sent again; each change of the menu now numbers its items afresh.
+- The smart playlist editor fits the room it has: in a narrower window, or with the queue panel open in German and French, its right edge (Done editing, the menu button and the matching tracks) was cut off. The rules pane gives way a little first, and when the page is too narrow for both, the matching tracks go under the rules.
+- Library statistics no longer cut short the large figures (Size, Playing time, listened) in a narrower window: the tiles and the listening figures continue on further rows, and Formats and Quality, and the most played artists and albums, go one under the other.
+- Page titles such as History, Results, Tracks and Library statistics are no longer cut short in a narrower window: the count beside the title gives way first, the Tracks filter gets narrower, and the controls of History and of query results continue on a second line.
+- With the sidebar hidden, the queue panel stays beside the content as long as there is room for both, instead of opening over it as if the sidebar were still there; showing or hiding the sidebar lays the panes out again.
 
 ## [0.9.2] - 2026-11-19
 
@@ -159,7 +163,7 @@ The release candidate. This version brings everything planned for 1.0: smart pla
 ### Known issues
 
 - With a library of 100,000 tracks, memory use reaches about 264 MB after scrolling through the whole track table in the headless measurement, above the 250 MB budget (some 61 MB of it is the software GL driver's, which a GPU driver replaces). Start-up and the album grid stay under 250 MB. See `docs/dev/performance.md`.
-- In German and French, with the queue panel open in a 1440-pixel-wide window, the smart playlist page is about 40 pixels wider than the space left for it and its right edge is cut off; closing the panel or widening the window shows it whole. Some narrow column headers (Plays in the copy tables, Length in the folder table) are shortened in the longer translations; their tooltips show the whole word.
+- Some narrow column headers (Plays in the copy tables, Length in the folder table) are shortened in the longer translations; their tooltips show the whole word.
 - vgmstream (game audio streams) is off in the default build and in the ready-built programs.
 - No SoundFont is included; MIDI files play only with a SoundFont you choose or one installed on the system.
 - HES (PC Engine) game music is not played (see Changed).

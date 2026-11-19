@@ -22,10 +22,12 @@ use crate::format;
 use crate::i18n::{fill, ntr, ntrc, tr, trc};
 use crate::models::CoverCache;
 use crate::views::facet_browser::codec_name;
-use crate::widgets::{CoverArt, label};
+use crate::widgets::{CoverArt, TileGrid, label, view_note, view_title};
 
 /// How many formats are listed by name; the rest are "Other".
 const FORMAT_ROWS: usize = 6;
+/// The least width of a tile, so that its caption is not cut too short.
+const TILE_WIDTH: i32 = 150;
 
 /// A length in days and hours (`52 d 7 h`), hours and minutes, or minutes.
 pub(crate) fn long_duration(d: Duration) -> String {
@@ -269,13 +271,8 @@ impl StatisticsView {
         root.add_css_class("hk-statistics-view");
         let toolbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
         toolbar.add_css_class("hk-toolbar");
-        let title = label(&tr("Library statistics"), &["hk-view-title"]);
-        title.set_hexpand(false);
-        title.set_accessible_role(gtk::AccessibleRole::Heading);
-        toolbar.append(&title);
-        let counted = label("", &["hk-t3"]);
-        counted.set_valign(gtk::Align::Baseline);
-        counted.set_hexpand(true);
+        toolbar.append(&view_title(&tr("Library statistics")));
+        let counted = view_note(&["hk-t3"]);
         toolbar.append(&counted);
         let copy = gtk::Button::with_label(&tr("Copy as text"));
         copy.add_css_class("hk-btn");
@@ -555,11 +552,17 @@ fn plays_label(plays: u64) -> gtk::Label {
     plays
 }
 
-/// Two columns with 48 px between them.
-fn columns() -> gtk::Box {
-    let row = gtk::Box::new(gtk::Orientation::Horizontal, 48);
-    row.set_homogeneous(true);
-    row
+/// Two columns with 48 px between them, one under the other when they do not
+/// fit side by side.
+fn columns() -> TileGrid {
+    TileGrid::new(48, 24, 0)
+}
+
+/// A large figure, never cut short: its tile or cell is at least as wide.
+fn figure(text: &str, classes: &[&str]) -> gtk::Label {
+    let figure = label(text, classes);
+    figure.set_ellipsize(gtk::pango::EllipsizeMode::None);
+    figure
 }
 
 /// A section with its head: the title and a caption at the right.
@@ -576,10 +579,9 @@ fn section(title: &str, caption: &str) -> gtk::Box {
     section
 }
 
-/// The five tiles.
-fn tiles(stats: &LibraryStats) -> gtk::Box {
-    let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-    row.set_homogeneous(true);
+/// The five tiles, on further rows when they do not fit in one.
+fn tiles(stats: &LibraryStats) -> TileGrid {
+    let row = TileGrid::new(12, 12, TILE_WIDTH);
     let average = if stats.tracks > 0 {
         stats.duration / u32::try_from(stats.tracks).unwrap_or(u32::MAX)
     } else {
@@ -639,7 +641,7 @@ fn tiles(stats: &LibraryStats) -> gtk::Box {
         let tile = gtk::Box::new(gtk::Orientation::Vertical, 2);
         tile.add_css_class("hk-stat");
         tile.append(&label(&title, &["hk-section-label"]));
-        tile.append(&label(&figure, &["figure", "hk-numeric"]));
+        tile.append(&self::figure(&figure, &["figure", "hk-numeric"]));
         tile.append(&label(&caption, &["caption"]));
         tile.set_accessible_role(gtk::AccessibleRole::Group);
         tile.update_property(&[gtk::accessible::Property::Label(&format!(
@@ -653,8 +655,7 @@ fn tiles(stats: &LibraryStats) -> gtk::Box {
 /// Listening this year: four figures.
 fn listening(stats: &LibraryStats) -> gtk::Box {
     let section = section(&tr("Listening"), &tr("this year"));
-    let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-    row.set_homogeneous(true);
+    let row = TileGrid::new(12, 10, 0);
     row.set_margin_top(10);
     for (figure, caption) in [
         (
@@ -676,7 +677,7 @@ fn listening(stats: &LibraryStats) -> gtk::Box {
         ),
     ] {
         let cell = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        cell.append(&label(&figure, &["hk-stat-figure", "hk-numeric"]));
+        cell.append(&self::figure(&figure, &["hk-stat-figure", "hk-numeric"]));
         cell.append(&label(&caption, &["hk-stat-caption"]));
         row.append(&cell);
     }

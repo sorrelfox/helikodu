@@ -27,7 +27,7 @@ use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::table::{PlayingRows, TableCell, cell_at, selected_positions};
 use crate::widgets::empty_state::empty_state;
-use crate::widgets::{CoverArt, PlayingIndicator, label};
+use crate::widgets::{CoverArt, PlayingIndicator, WrapBox, label, view_note, view_title};
 
 /// One column: a fixed width, or a share of what is left.
 #[derive(Debug, Clone, Copy)]
@@ -347,18 +347,19 @@ impl HistoryView {
         root.add_css_class("hk-history-view");
         let toolbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
         toolbar.add_css_class("hk-toolbar");
-        let title = label(&tr("History"), &["hk-view-title"]);
-        title.set_hexpand(false);
-        title.set_accessible_role(gtk::AccessibleRole::Heading);
-        toolbar.append(&title);
-        let subtitle = label("", &["hk-t3", "hk-numeric"]);
-        subtitle.set_valign(gtk::Align::Baseline);
-        subtitle.set_hexpand(true);
+        toolbar.append(&view_title(&tr("History")));
+        let subtitle = view_note(&["hk-t3", "hk-numeric"]);
         toolbar.append(&subtitle);
+        // The controls continue on a second line when the page is too narrow
+        // for them beside the title.
+        let controls = WrapBox::new(10);
+        controls.set_valign(gtk::Align::Center);
+        toolbar.append(&controls);
         let names: Vec<String> = Period::ALL.iter().map(|p| p.label()).collect();
         let (periods, period_buttons) = segmented(&names);
         periods.update_property(&[gtk::accessible::Property::Label(&tr("Period"))]);
-        toolbar.append(&periods);
+        periods.set_valign(gtk::Align::Center);
+        controls.append(&periods);
         let filter = gtk::Entry::new();
         filter.add_css_class("hk-input");
         filter.add_css_class("hk-history-filter");
@@ -367,12 +368,12 @@ impl HistoryView {
         filter.set_size_request(200, -1);
         filter.set_valign(gtk::Align::Center);
         filter.update_property(&[gtk::accessible::Property::Label(&tr("Filter the history"))]);
-        toolbar.append(&filter);
+        controls.append(&filter);
         let save = gtk::Button::with_label(&tr("Save as playlist"));
         save.add_css_class("hk-btn");
         save.add_css_class("small");
         save.set_valign(gtk::Align::Center);
-        toolbar.append(&save);
+        controls.append(&save);
         root.append(&toolbar);
 
         let header = columns_box();

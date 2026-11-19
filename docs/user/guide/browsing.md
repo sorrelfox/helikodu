@@ -10,7 +10,7 @@ The sidebar lists the views of your library (**Home**, **Albums**, **Artists**, 
 
 ### A narrow window
 
-When the window is too narrow for the content to keep 560 pixels beside the panes, the panes leave the row and open over the content instead: first the queue panel (below a window width of about 1100 pixels at the usual pane widths), then the sidebar (below about 800 pixels). The header then starts with a sidebar button, without the **Forward** button, and has a queue button at the right. An open pane covers the rest of the content with a dark layer; a click beside it, **Esc**, its key (**F9** for the sidebar) or choosing a view closes it. The player deck stays in use.
+When the window is too narrow for the content to keep 560 pixels beside the panes, the panes leave the row and open over the content instead: first the queue panel (below a window width of about 1100 pixels at the usual pane widths), then the sidebar (below about 800 pixels). With the sidebar hidden (**F9**), the queue panel stays beside the content down to about 880 pixels. The header then starts with a sidebar button, without the **Forward** button, and has a queue button at the right. An open pane covers the rest of the content with a dark layer; a click beside it, **Esc**, its key (**F9** for the sidebar) or choosing a view closes it. The player deck stays in use.
 
 Below 720 pixels the deck is compact: the cover, title and artist at the left, **Previous**, **Play** and **Next** in the middle, and at the right a volume button, whose slider opens above it, and the output button with only its lamp and the output's rate and bits. Shuffle and repeat are then in the menu of the **Play** button (right-click or long press).
 

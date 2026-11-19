@@ -273,6 +273,80 @@ fn a_narrow_window_lays_the_panes_over_the_content(app: &gtk::Application) {
     wide.destroy();
 }
 
+fn a_hidden_sidebar_leaves_its_room_to_the_panel(app: &gtk::Application) {
+    let toggle = |window: &MainWindow, action: &str| {
+        WidgetExt::activate_action(window, action, None).unwrap();
+        spin(50);
+    };
+    // At 1000 px the panel goes over the content while the sidebar is shown
+    // (1000 - 228 - 320 < 560) and comes back beside it when the sidebar is
+    // hidden (1000 - 320 >= 560).
+    let (window, _) = window_sized(app, 1000);
+    wait_for("the narrow layout", 3, || {
+        window.narrow_state() == (false, true, false)
+    });
+    assert_eq!(window.panes_shown(), (true, false));
+    toggle(&window, "win.toggle-sidebar");
+    assert_eq!(window.narrow_state(), (false, false, false));
+    assert_eq!(window.panes_shown(), (false, true));
+    assert_eq!(window.narrow_overlay_open(), (false, false));
+    // Shown again, the sidebar takes the room back: the panel goes over the
+    // content, closed.
+    toggle(&window, "win.toggle-sidebar");
+    assert_eq!(window.narrow_state(), (false, true, false));
+    assert_eq!(window.panes_shown(), (true, false));
+    assert_eq!(window.narrow_overlay_open(), (false, false));
+    // The panel opened over the content stays open when hiding the sidebar
+    // brings it into the row.
+    toggle(&window, "win.toggle-panel");
+    assert_eq!(window.narrow_overlay_open(), (true, true));
+    toggle(&window, "win.toggle-sidebar");
+    assert_eq!(window.narrow_state(), (false, false, false));
+    assert_eq!(window.panes_shown(), (false, true));
+    assert_eq!(window.narrow_overlay_open(), (false, false));
+    // The panel hidden in the row stays hidden over the content and back.
+    toggle(&window, "win.toggle-panel");
+    assert_eq!(window.panes_shown(), (false, false));
+    toggle(&window, "win.toggle-sidebar");
+    assert_eq!(window.narrow_state(), (false, true, false));
+    toggle(&window, "win.toggle-sidebar");
+    assert_eq!(window.narrow_state(), (false, false, false));
+    assert_eq!(window.panes_shown(), (false, false));
+    toggle(&window, "win.toggle-panel");
+    assert_eq!(window.panes_shown(), (false, true));
+
+    // Narrower than the content beside the panel alone: the panel stays over
+    // the content whether the sidebar is shown or not.
+    window.set_default_size(820, 900);
+    wait_for("the panel over the content", 3, || {
+        window.narrow_state() == (false, true, false)
+    });
+    toggle(&window, "win.toggle-sidebar");
+    assert_eq!(window.narrow_state(), (false, true, false));
+    assert_eq!(window.panes_shown(), (true, false));
+    assert_eq!(window.narrow_overlay_open(), (false, false));
+
+    // Narrower still, the sidebar goes over the content too, and F9 opens it
+    // there whether or not it was shown before.
+    window.set_default_size(700, 900);
+    wait_for("both panes over the content", 3, || {
+        window.narrow_state() == (true, true, true)
+    });
+    toggle(&window, "win.toggle-sidebar");
+    assert_eq!(window.narrow_state(), (true, true, true));
+    assert_eq!(window.narrow_overlay_open(), (true, true));
+    toggle(&window, "win.toggle-sidebar");
+    assert_eq!(window.narrow_overlay_open(), (false, false));
+
+    // Wide again, both panes are back in the row as they were.
+    window.set_default_size(1440, 900);
+    wait_for("the wide layout", 3, || {
+        window.narrow_state() == (false, false, false)
+    });
+    assert_eq!(window.panes_shown(), (true, true));
+    window.destroy();
+}
+
 /// Calls `method` of the application's interface on `application` and waits
 /// for the reply.
 fn call(
@@ -363,6 +437,10 @@ const TESTS: &[(&str, Test)] = &[
     (
         "a_narrow_window_lays_the_panes_over_the_content",
         a_narrow_window_lays_the_panes_over_the_content,
+    ),
+    (
+        "a_hidden_sidebar_leaves_its_room_to_the_panel",
+        a_hidden_sidebar_leaves_its_room_to_the_panel,
     ),
     ("the_dbus_interface_answers", the_dbus_interface_answers),
 ];

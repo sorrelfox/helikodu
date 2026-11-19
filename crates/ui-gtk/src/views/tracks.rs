@@ -32,7 +32,7 @@ use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
 use crate::views::facet_browser::FacetBrowser;
 use crate::views::table::{PlayingRows, TableCell, cell_at, selected_positions};
-use crate::widgets::{PlayingIndicator, RatingStars, label};
+use crate::widgets::{PlayingIndicator, RatingStars, label, view_note, view_title};
 
 /// How many tracks from the activated one a play request takes along.
 const PLAY_WINDOW: usize = 1000;
@@ -193,13 +193,8 @@ impl TracksView {
         root.add_css_class("hk-tracks-view");
         let toolbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
         toolbar.add_css_class("hk-toolbar");
-        let title = label(&tr("Tracks"), &["hk-view-title"]);
-        title.set_hexpand(false);
-        title.set_accessible_role(gtk::AccessibleRole::Heading);
-        toolbar.append(&title);
-        let count = label("", &["hk-t3", "hk-numeric"]);
-        count.set_valign(gtk::Align::Baseline);
-        count.set_hexpand(true);
+        toolbar.append(&view_title(&tr("Tracks")));
+        let count = view_note(&["hk-t3", "hk-numeric"]);
         toolbar.append(&count);
         // The facet browser's button, before the filter.
         let browse = gtk::ToggleButton::new();
@@ -219,7 +214,10 @@ impl TracksView {
         filter.add_css_class("hk-filter");
         filter.set_placeholder_text(Some(&tr("Filter")));
         filter.set_primary_icon_name(Some("helikodu-funnel-symbolic"));
-        filter.set_width_chars(24);
+        // 24 characters wide when there is room; narrower before the title
+        // is cut short.
+        filter.set_width_chars(8);
+        filter.set_max_width_chars(24);
         filter.set_valign(gtk::Align::Center);
         filter.update_property(&[gtk::accessible::Property::Label(&tr("Filter the tracks"))]);
         toolbar.append(&filter);

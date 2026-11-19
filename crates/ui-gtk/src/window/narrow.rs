@@ -5,7 +5,8 @@
 //!
 //! - When the content would be narrower than [`MIN_CONTENT`] with the queue
 //!   panel beside it, the panel leaves the row and opens over the content from
-//!   the right; the header's queue button opens it.
+//!   the right; the header's queue button opens it. A hidden sidebar leaves its
+//!   width to the content, so the panel stays beside it longer.
 //! - When the content would be narrower than that even without the panel, the
 //!   sidebar does the same from the left; a sidebar button starts the header and
 //!   the forward button is left out.
@@ -17,7 +18,8 @@
 //!
 //! The width is followed through an empty drawing area over the panes, whose
 //! `resize` signal comes only when the size changes; nothing runs while the
-//! window keeps its size.
+//! window keeps its size. Showing or hiding the sidebar lays the panes out
+//! again too.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -37,7 +39,10 @@ pub(crate) const COMPACT_DECK: i32 = 720;
 const MIN_WINDOW: i32 = 400;
 
 /// Which panes are drawn over the content, and whether the deck is compact,
-/// at a window `width` with the given pane widths.
+/// at a window `width` with the given pane widths. A sidebar that is hidden
+/// counts as 0 wide for the panel; whether the sidebar itself goes over the
+/// content is decided with its own width, so that showing it in a narrow
+/// window opens it over the content.
 pub(crate) fn layout(width: i32, sidebar: i32, panel: i32) -> (bool, bool, bool) {
     let sidebar_over = width - sidebar < MIN_CONTENT;
     let beside = if sidebar_over { 0 } else { sidebar };
@@ -62,6 +67,8 @@ pub(crate) struct Narrow {
     /// The last width seen, and whether a layout pass is waiting.
     width: Cell<i32>,
     pending: Cell<bool>,
+    /// Whether a layout pass is running (moving a pane shows or hides it).
+    busy: Cell<bool>,
 }
 
 impl MainWindow {
@@ -94,6 +101,7 @@ impl MainWindow {
             panel_was_wanted: Cell::new(true),
             width: Cell::new(0),
             pending: Cell::new(false),
+            busy: Cell::new(false),
         });
         imp.narrow.replace(Some(narrow.clone()));
 
@@ -137,6 +145,14 @@ impl MainWindow {
                 }
             });
         }
+        // Showing or hiding the sidebar in the row changes the room for the
+        // panel: at once, so that the content never has less than its room.
+        let weak = self.downgrade();
+        imp.sidebar_revealer.connect_reveal_child_notify(move |_| {
+            if let Some(window) = weak.upgrade() {
+                window.apply_narrow();
+            }
+        });
 
         // The window state keeps the panes as they are in a wide window, not
         // whether one is open over the content now. (The window saves its
@@ -227,9 +243,14 @@ impl MainWindow {
     fn apply_narrow(&self) {
         let Some(narrow) = self.narrow() else { return };
         let width = narrow.width.get();
-        if width <= 0 {
+        if width <= 0 || narrow.busy.replace(true) {
             return;
         }
+        self.apply_narrow_now(&narrow, width);
+        narrow.busy.set(false);
+    }
+
+    fn apply_narrow_now(&self, narrow: &Narrow, width: i32) {
         let (sidebar, panel) = {
             let handles = self.imp().handles.borrow();
             (
@@ -237,12 +258,15 @@ impl MainWindow {
                 handles.get(1).map_or(320, |h| h.width()),
             )
         };
-        let (sidebar_over, panel_over, compact) = layout(width, sidebar, panel);
+        let (sidebar_over, _, compact) = layout(width, sidebar, panel);
         if narrow.sidebar_over.get() != sidebar_over {
-            self.set_sidebar_over(&narrow, sidebar_over);
+            self.set_sidebar_over(narrow, sidebar_over);
         }
+        // The panel has the room the sidebar leaves in the row.
+        let in_row = !sidebar_over && self.imp().sidebar_revealer.reveals_child();
+        let (_, panel_over, _) = layout(width, if in_row { sidebar } else { 0 }, panel);
         if narrow.panel_over.get() != panel_over {
-            self.set_panel_over(&narrow, panel_over);
+            self.set_panel_over(narrow, panel_over);
         }
         if narrow.compact.replace(compact) != compact {
             self.imp().deck.set_compact(compact);
@@ -463,5 +487,23 @@ mod tests {
         assert_eq!(layout(640, 228, 320), (true, true, true));
         // A narrower panel stays in the row longer.
         assert_eq!(layout(1100, 228, 260), (false, false, false));
+    }
+
+    #[test]
+    fn a_hidden_sidebar_leaves_its_room_to_the_panel() {
+        // A hidden sidebar counts as 0 wide for the panel: at 1000 px the
+        // panel stays beside the content (1000 - 320 = 680).
+        assert_eq!(layout(1000, 228, 320), (false, true, false));
+        assert_eq!(layout(1000, 0, 320), (false, false, false));
+        // Down to the content's least width beside the panel alone.
+        assert_eq!(layout(880, 0, 320), (false, false, false));
+        assert_eq!(layout(879, 0, 320), (false, true, false));
+        // The sidebar goes over the content by its own width, hidden or not
+        // (`apply_narrow` asks with its width for that); then the panel has
+        // the whole window.
+        assert_eq!(layout(780, 228, 320), (true, true, false));
+        assert_eq!(layout(780, 0, 320), (false, true, false));
+        // The compact deck does not depend on the panes.
+        assert_eq!(layout(700, 0, 320), (false, true, true));
     }
 }

@@ -16,7 +16,7 @@ button.hk-rule-chip:hover { background-color: var(--hk-hover); }
 
 /* The rule builder: the rules pane and the results pane. */
 .hk-rule-editor { border-top: 1px solid var(--hk-line); }
-.hk-rules-scroller { border-right: 1px solid var(--hk-line); }
+.hk-rules-divider { background-color: var(--hk-line); }
 .hk-rules-pane { padding: 20px 20px 24px 24px; }
 .hk-rule-row { min-height: 40px; }
 .hk-rule-group { margin-left: 12px; padding-left: 16px; border-left: 1px solid var(--hk-line2); }

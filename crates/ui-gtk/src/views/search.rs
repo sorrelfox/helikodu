@@ -32,7 +32,7 @@ use crate::views::actions::{self, Target};
 use crate::views::drag::DraggedTracks;
 use crate::views::tracks::TracksView;
 use crate::widgets::avatar::Avatar;
-use crate::widgets::{CoverArt, TitleLine, label};
+use crate::widgets::{CoverArt, TitleLine, WrapBox, label, view_note, view_title};
 use crate::window::Page;
 
 /// The examples of the side column: a query and what it shows.
@@ -173,12 +173,12 @@ impl SearchView {
         page.add_css_class("hk-search");
         let head = gtk::Box::new(gtk::Orientation::Horizontal, 10);
         head.add_css_class("hk-search-head");
+        // The title holds the words searched for, which can be long: it is
+        // cut short only after the count.
         let title = label("", &["hk-view-title"]);
         title.set_accessible_role(gtk::AccessibleRole::Heading);
         head.append(&title);
-        let total = label("", &["hk-t3", "hk-numeric"]);
-        total.set_valign(gtk::Align::Baseline);
-        total.set_hexpand(true);
+        let total = view_note(&["hk-t3", "hk-numeric"]);
         head.append(&total);
         let plain_save = save_button(&tr("Save search"), Some("user-bookmarks-symbolic"));
         head.append(&plain_save);
@@ -228,22 +228,23 @@ impl SearchView {
         query_page.add_css_class("hk-query-results");
         let head = gtk::Box::new(gtk::Orientation::Horizontal, 10);
         head.add_css_class("hk-search-head");
-        let query_title = label(&tr("Results"), &["hk-view-title"]);
-        query_title.set_accessible_role(gtk::AccessibleRole::Heading);
-        head.append(&query_title);
-        let query_count = label("", &["hk-t3", "hk-numeric"]);
-        query_count.set_valign(gtk::Align::Baseline);
-        query_count.set_hexpand(true);
+        head.append(&view_title(&tr("Results")));
+        let query_count = view_note(&["hk-t3", "hk-numeric"]);
         head.append(&query_count);
+        // The buttons continue on a second line when they do not fit beside
+        // the title.
+        let buttons = WrapBox::new(10);
+        buttons.set_valign(gtk::Align::Center);
+        head.append(&buttons);
         let query_save = save_button(&tr("Save search"), Some("user-bookmarks-symbolic"));
-        head.append(&query_save);
+        buttons.append(&query_save);
         let smart_save = save_button(&tr("Save as smart playlist"), None);
         // Offered by the smart playlists, when they are there.
         smart_save.set_action_name(Some("win.new-smart-playlist"));
         // The action takes the query text; give it one from the start so that
         // the button's target always has the action's parameter type.
         smart_save.set_action_target_value(Some(&"".to_variant()));
-        head.append(&smart_save);
+        buttons.append(&smart_save);
         query_page.append(&head);
         let notice = gtk::Box::new(gtk::Orientation::Horizontal, 10);
         notice.add_css_class("hk-notice");

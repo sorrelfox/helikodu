@@ -12,6 +12,10 @@
 //! be read keeps the last rules and says why under the box. The tracks follow
 //! the library: they are read again whenever it changes. A click on a header
 //! sorts the table for this visit; the rules keep their order.
+//!
+//! The rules pane is 560 wide beside the results, or a little narrower so
+//! that the results keep their least width; when the page is too narrow for
+//! both side by side, the results go under the rules.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -72,6 +76,153 @@ fn date(time: Option<SystemTime>) -> String {
         .and_then(|d| d.format("%-d %b %Y").ok())
         .map(|s| s.to_string())
         .unwrap_or_default()
+}
+
+/// The width of the rules pane beside the results.
+const RULES_WIDTH: i32 = 560;
+/// The least width of the rules pane beside the results: below it, the
+/// results go under the rules.
+const RULES_LEAST: i32 = 480;
+
+mod imp {
+    use super::*;
+    use gtk::subclass::prelude::*;
+
+    #[derive(Debug, Default)]
+    pub(crate) struct EditorLayout;
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for EditorLayout {
+        const NAME: &'static str = "HkSmartEditorLayout";
+        type Type = super::EditorLayout;
+        type ParentType = gtk::LayoutManager;
+    }
+
+    impl ObjectImpl for EditorLayout {}
+
+    impl LayoutManagerImpl for EditorLayout {
+        fn request_mode(&self, _widget: &gtk::Widget) -> gtk::SizeRequestMode {
+            gtk::SizeRequestMode::HeightForWidth
+        }
+
+        fn measure(
+            &self,
+            widget: &gtk::Widget,
+            orientation: gtk::Orientation,
+            for_size: i32,
+        ) -> (i32, i32, i32, i32) {
+            let Some(parts) = Parts::of(widget) else {
+                return (0, 0, -1, -1);
+            };
+            let (rules_min, _) = parts.rules_width();
+            let (results_min, results_nat, ..) =
+                parts.results.measure(gtk::Orientation::Horizontal, -1);
+            if orientation == gtk::Orientation::Horizontal {
+                // At least either pane, one under the other; at best side by
+                // side.
+                let min = rules_min.max(results_min);
+                let nat = rules_min.max(RULES_WIDTH) + 1 + results_nat;
+                return (min, nat.max(min), -1, -1);
+            }
+            let (rules_h, ..) = parts.rules.measure(gtk::Orientation::Vertical, -1);
+            let (results_h, ..) = parts.results.measure(gtk::Orientation::Vertical, -1);
+            if for_size < 0 || parts.rules_beside(for_size).is_some() {
+                let min = rules_h.max(results_h);
+                (min, min, -1, -1)
+            } else {
+                let natural = parts.rules_height(for_size) + 1 + results_h;
+                (rules_h + 1 + results_h, natural, -1, -1)
+            }
+        }
+
+        fn allocate(&self, widget: &gtk::Widget, width: i32, height: i32, _baseline: i32) {
+            let Some(parts) = Parts::of(widget) else {
+                return;
+            };
+            let rtl = widget.direction() == gtk::TextDirection::Rtl;
+            let place = |child: &gtk::Widget, x: i32, y: i32, w: i32, h: i32| {
+                let left = if rtl { width - x - w } else { x };
+                child.size_allocate(&gtk::Allocation::new(left, y, w, h.max(0)), -1);
+            };
+            if let Some(rules) = parts.rules_beside(width) {
+                place(&parts.rules, 0, 0, rules, height);
+                place(&parts.divider, rules, 0, 1, height);
+                place(&parts.results, rules + 1, 0, width - rules - 1, height);
+            } else {
+                // The rules as tall as they are, while the results keep at
+                // least two fifths of the height.
+                let (rules_min, ..) = parts.rules.measure(gtk::Orientation::Vertical, width);
+                let (results_min, ..) = parts.results.measure(gtk::Orientation::Vertical, width);
+                let room = height - 1 - results_min.max(height * 2 / 5);
+                let rules = parts.rules_height(width).min(room).max(rules_min);
+                place(&parts.rules, 0, 0, width, rules);
+                place(&parts.divider, 0, rules, width, 1);
+                place(&parts.results, 0, rules + 1, width, height - rules - 1);
+            }
+        }
+    }
+
+    /// The children: the rules pane (scrolled), the line between, the
+    /// results.
+    struct Parts {
+        rules: gtk::Widget,
+        divider: gtk::Widget,
+        results: gtk::Widget,
+    }
+
+    impl Parts {
+        fn of(widget: &gtk::Widget) -> Option<Self> {
+            let rules = widget.first_child()?;
+            let divider = rules.next_sibling()?;
+            let results = divider.next_sibling()?;
+            Some(Self {
+                rules,
+                divider,
+                results,
+            })
+        }
+
+        /// What the rules pane scrolls.
+        fn content(&self) -> gtk::Widget {
+            self.rules
+                .downcast_ref::<gtk::ScrolledWindow>()
+                .and_then(gtk::ScrolledWindow::child)
+                .unwrap_or_else(|| self.rules.clone())
+        }
+
+        /// The rules pane's own widths: those of what it scrolls.
+        fn rules_width(&self) -> (i32, i32) {
+            let content = self.content();
+            let (min, nat, ..) = content.measure(gtk::Orientation::Horizontal, -1);
+            (min, nat)
+        }
+
+        /// The height the rules pane's content asks for at `width`.
+        fn rules_height(&self, width: i32) -> i32 {
+            let content = self.content();
+            let (min, ..) = content.measure(gtk::Orientation::Horizontal, -1);
+            content
+                .measure(gtk::Orientation::Vertical, width.max(min))
+                .1
+        }
+
+        /// The width of the rules pane beside the results in `width`: 560,
+        /// or less down to [`RULES_LEAST`] so that the results have their
+        /// least width; none when the results go under the rules.
+        fn rules_beside(&self, width: i32) -> Option<i32> {
+            let (results, ..) = self.results.measure(gtk::Orientation::Horizontal, -1);
+            let (rules_min, _) = self.rules_width();
+            let room = width - 1 - results;
+            (room >= rules_min.max(RULES_LEAST)).then(|| room.min(rules_min.max(RULES_WIDTH)))
+        }
+    }
+}
+
+glib::wrapper! {
+    /// Lays out the rule editor: the rules pane beside the results, or above
+    /// them when the page is too narrow for both.
+    pub(crate) struct EditorLayout(ObjectSubclass<imp::EditorLayout>)
+        @extends gtk::LayoutManager;
 }
 
 /// One table: its header, list and the rows it shows.
@@ -278,6 +429,7 @@ impl SmartPlaylistView {
 
         // Editing: the rules pane and the results pane.
         let editing = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        editing.set_layout_manager(Some(glib::Object::new::<EditorLayout>()));
         editing.add_css_class("hk-rule-editor");
         let pane = gtk::Box::new(gtk::Orientation::Vertical, 8);
         pane.add_css_class("hk-rules-pane");
@@ -369,10 +521,13 @@ impl SmartPlaylistView {
         problem.set_visible(false);
         pane.append(&problem);
         let pane_scroller = scrolled(&pane);
-        pane_scroller.set_size_request(560, -1);
         pane_scroller.set_hexpand(false);
         pane_scroller.add_css_class("hk-rules-scroller");
         editing.append(&pane_scroller);
+        // The line between the panes, upright or across.
+        let divider = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        divider.add_css_class("hk-rules-divider");
+        editing.append(&divider);
         let results_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
         results_box.set_hexpand(true);
         let results_head = gtk::Box::new(gtk::Orientation::Horizontal, 8);
