@@ -9,6 +9,7 @@
 
 #![forbid(unsafe_code)]
 
+mod analysis;
 mod artist_photos;
 mod catalog;
 mod copies;
@@ -36,6 +37,9 @@ mod tag_writes;
 mod track_source;
 mod watch;
 
+pub use analysis::{
+    AnalysisCoverage, AnalysisOutcome, AnalysisPlan, AnalysisTarget, AnalysisUnit, StoredAnalysis,
+};
 pub use artist_photos::{ArtistPhoto, ArtistPhotoError};
 pub use catalog::{
     AlbumDetail, AlbumFilter, AlbumFormat, AlbumId, AlbumQuality, AlbumQuery, AlbumSort,

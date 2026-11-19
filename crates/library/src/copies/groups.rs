@@ -232,11 +232,21 @@ fn mark_for_read(c: &Connection, file: i64, work: &mut Work) -> rusqlite::Result
 }
 
 /// Moves the tracks of `from` to `to`, which has none, as when a file moves: the
-/// tracks keep their ids and identities. The measurements move with them.
+/// tracks keep their ids and identities. The measurements and analyses move with
+/// them.
 fn transfer(c: &Connection, from: i64, to: i64, work: &mut Work) -> rusqlite::Result<()> {
     work.regroup.add_tracks_where(c, "file_id = ?1", from)?;
     c.prepare_cached(
         "UPDATE loudness SET
+             file_size = (SELECT size FROM files WHERE id = ?2),
+             file_mtime_ns = (SELECT mtime_ns FROM files WHERE id = ?2)
+         WHERE track_id IN (SELECT id FROM tracks WHERE file_id = ?1)
+           AND file_size IS (SELECT size FROM files WHERE id = ?1)
+           AND file_mtime_ns IS (SELECT mtime_ns FROM files WHERE id = ?1)",
+    )?
+    .execute(params![from, to])?;
+    c.prepare_cached(
+        "UPDATE track_analysis SET
              file_size = (SELECT size FROM files WHERE id = ?2),
              file_mtime_ns = (SELECT mtime_ns FROM files WHERE id = ?2)
          WHERE track_id IN (SELECT id FROM tracks WHERE file_id = ?1)

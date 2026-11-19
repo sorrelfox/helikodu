@@ -3,6 +3,7 @@
 
 //! Commands that use the core directly, without a running application.
 
+pub(crate) mod analyze;
 pub(crate) mod duplicates;
 pub(crate) mod info;
 pub(crate) mod list_outputs;

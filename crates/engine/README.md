@@ -268,6 +268,8 @@ let album = album_loudness(&tracks);   // the tracks as one programme
 
 A finished `TrackMeasurement` keeps only the meter's histograms (its audio buffer is shrunk), so the tracks of a large album can wait for the album measurement without holding their audio.
 
+The track analysis (`analysis::track`, `analyze_source`) decodes a source once and finds where its sound starts and ends (10 ms windows below −60 dBFS RMS are silent), its silent stretches of 2 s or more, the loudness of each second as a `LoudnessEnvelope`, the loudness of the first and last 5 s of sound, and where a fade-in ends and a fade-out starts. With `measure_loudness` the same pass also yields the `TrackMeasurement` of the loudness scanner. `TrackAnalyzer` does the same on samples fed to it; `ANALYSIS_VERSION` changes when its results change. See `docs/dev/track-analysis.md`.
+
 ## Tests
 
 ```sh

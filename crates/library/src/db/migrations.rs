@@ -61,6 +61,7 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
     migration!(15, "0015", "artist_photos"),
     migration!(16, "0016", "undo_order"),
     migration!(17, "0017", "favourites"),
+    migration!(18, "0018", "track_analysis"),
 ];
 
 /// The schema version this build creates and understands.

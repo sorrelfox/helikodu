@@ -1,6 +1,6 @@
 # helikodu-cli
 
-Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness, duplicates; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
+Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness, analyze, duplicates; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
 
 - **May depend on:** `model`, `service`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
@@ -21,6 +21,7 @@ helikodu-cli info FILE|TRACK-ID [--json] [--database PATH]
 helikodu-cli stats [--top N] [--json] [--database PATH]
 helikodu-cli loudness [--album|--library] [--write-tags] [--threads N] [--worker PATH]
                       [--json] [--database PATH] [FILE|TRACK-ID...]
+helikodu-cli analyze [--no-loudness] [--json] [--database PATH]
 helikodu-cli duplicates [--json] [--database PATH]
 helikodu-cli status|queue|playlists [--json]
 helikodu-cli play-pause|pause|resume|stop|next|previous
@@ -208,6 +209,19 @@ Measures library tracks, given as files or track numbers, with the EBU R128 / Re
 ```
 
 `integrated_lufs` and the gains are `null` for silence; peaks are linear. `album` is `null` when the track was measured without its whole album. `tags` is `not_asked`, `written`, `skipped` or `failed`, with `tags_reason`. A track that cannot be measured has `loudness` `null` and `error`.
+
+#### analyze
+
+Analyses every library track that has no current analysis, one at a time, as the application does in the background: where its sound starts and ends, its silent stretches and its loudness envelope (see `docs/dev/track-analysis.md`). The same pass measures the loudness of tracks without any loudness values (no tags, no measurement), an album as one programme; `--no-loudness` leaves that out. Each track's result is stored at once, so an interrupted run loses at most one track; a file that cannot be decoded is recorded and not tried again until it changes. Progress goes to standard error. With `--json`:
+
+```json
+{
+  "analyzed": 120, "failed": 1, "loudness_measured": 118, "cancelled": false,
+  "library": {"tracks": 5000, "analyzed": 4999, "failed": 1, "remaining": 0}
+}
+```
+
+The exit code is 1 when a track could not be analysed.
 
 ### The commands for the running application
 

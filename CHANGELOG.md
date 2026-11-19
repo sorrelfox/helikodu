@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Helikodu analyses your library tracks in the background after a scan: where each track's sound starts and ends, its silent stretches and how its loudness changes. It works on one track at a time at the lowest priority, slows down while music plays from the same disk, pauses during scans and on battery, and carries on where it stopped after a restart. Nothing is written to the files. Tracks without any loudness tags are measured in the same pass, albums as a whole, so they are evened out like tagged ones. Later versions use the analysis for smoother transitions and for skipping silence. `helikodu-cli analyze` runs it from the command line.
+
 ### Changed
 
 - The memory budget with 100,000 tracks is 270 MB RSS instead of 250 MB. The last measurement, 264 MB after scrolling through the whole track table, is within it, so this is no longer a known issue.

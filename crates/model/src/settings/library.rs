@@ -22,6 +22,7 @@ use super::{SettingsError, check_range};
 /// hide_missing_drives = true
 /// missing_grace_days = 30        # a missing track leaves the library after this
 /// import_playlists = false       # pick up playlist files found in the folders
+/// analyze_in_background = true   # the track analysis after scans
 ///
 /// [library.duplicates]
 /// on_scan = "add"                # or "skip": copies get no tracks of their own
@@ -60,6 +61,9 @@ pub struct LibrarySettings {
     /// Whether playlist files (M3U, M3U8, PLS, XSPF) found in the library folders
     /// become playlists that follow their files.
     pub import_playlists: bool,
+    /// Whether the tracks are analysed in the background (silence and loudness
+    /// envelope), one at a time at the lowest priority, after scans and at start.
+    pub analyze_in_background: bool,
     /// How copies (byte-identical files) are treated.
     pub duplicates: DuplicateSettings,
     /// Size limits of the caches and stores.
@@ -78,6 +82,7 @@ impl Default for LibrarySettings {
             hide_missing_drives: true,
             missing_grace_days: 30,
             import_playlists: false,
+            analyze_in_background: true,
             duplicates: DuplicateSettings::default(),
             storage: StorageLimits::default(),
         }

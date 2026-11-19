@@ -29,6 +29,7 @@ helikodu-cli search TEXT...        # find tracks in the library
 helikodu-cli info FILE|TRACK-ID    # show a file's or track's tags and properties
 helikodu-cli stats                 # library totals and most played tracks
 helikodu-cli loudness --library    # measure the loudness of the tracks not yet measured
+helikodu-cli analyze               # analyse the tracks not yet analysed, as the app does
 helikodu-cli duplicates            # list the copies of files in the library (lists only)
 ```
 

@@ -31,7 +31,8 @@ use crate::event::{Event, SubscribeOptions, subscribe};
 use crate::files::AppDirs;
 use crate::library::backups::{BackupScheduler, StartNotice};
 use crate::library::{
-    DATABASE_FILE, LibraryError, LibraryService, LibraryServiceOptions, MusicLibrary,
+    BackgroundAnalysisOptions, DATABASE_FILE, LibraryError, LibraryService, LibraryServiceOptions,
+    MusicLibrary,
 };
 use crate::lyrics::{LocalLyrics, LyricsService};
 use crate::player::{
@@ -79,6 +80,9 @@ pub struct ServiceConfig {
     /// How long after the start the default library's first daily backup is
     /// considered; `None` makes no backups by themselves.
     pub backups_after: Option<Duration>,
+    /// How the background track analysis behaves (the `[library]
+    /// analyze_in_background` setting turns it on).
+    pub analysis: BackgroundAnalysisOptions,
 }
 
 impl ServiceConfig {
@@ -95,6 +99,7 @@ impl ServiceConfig {
             shuffle_seed: None,
             reservation: SharedReservation::default(),
             backups_after: Some(Duration::from_secs(120)),
+            analysis: BackgroundAnalysisOptions::default(),
         }
     }
 }
@@ -181,6 +186,7 @@ impl Service {
                     thumbnail_bytes: u64::from(current.library.storage.covers_mib) << 20,
                     worker_program: config.worker_program,
                     language: current.appearance.language.clone(),
+                    analysis: config.analysis,
                 },
             )?),
             None => None,
@@ -189,6 +195,7 @@ impl Service {
         if let Some(library) = &library {
             library.apply_duplicate_settings(&current.library);
             library.set_import_playlists(&current.library);
+            library.set_background_analysis(&current.library);
         }
         let mut session = SessionConfig::new(&dirs.state);
         session.restore = current.playback.on_start == StartAction::Restore;

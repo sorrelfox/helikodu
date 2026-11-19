@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod analysis;
 pub mod audio;
 pub mod eq;
 pub mod library;

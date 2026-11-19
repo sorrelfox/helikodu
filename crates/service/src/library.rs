@@ -23,6 +23,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+mod analysis;
 mod artist_photos;
 pub mod backups;
 mod duplicates;
@@ -54,6 +55,7 @@ use helikodu_model::player::TrackFlags;
 use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
 use std::collections::HashMap;
 
+pub use self::analysis::{AnalysisProgress, AnalysisState, BackgroundAnalysisOptions, PauseReason};
 pub use self::artist_photos::ARTIST_PHOTO_FOLDER;
 pub use self::history_export::{ExportedListen, HistoryFormat, write_history};
 pub use self::info::{LibraryEntry, TagOrigin, TrackInfo, read_file_info};
@@ -94,6 +96,7 @@ pub use helikodu_library::{
     AlbumMeasurement, CancelToken, LoudnessCoverage, LoudnessSelection, LoudnessTarget,
     MeasuredLoudness, StoredLoudness,
 };
+pub use helikodu_library::{AnalysisCoverage, AnalysisOutcome, StoredAnalysis};
 /// Artist photos chosen in the app or found in the artists' folders.
 pub use helikodu_library::{ArtistPhoto, ArtistPhotoError};
 pub use helikodu_library::{
@@ -810,6 +813,17 @@ impl MusicLibrary {
         track: TrackId,
     ) -> Result<Option<StoredLoudness>, LibraryError> {
         Ok(self.library.measured_loudness(track)?)
+    }
+
+    /// The track analysis of `track`, current or not; `None` if it was never
+    /// analysed.
+    pub fn track_analysis(&self, track: TrackId) -> Result<Option<StoredAnalysis>, LibraryError> {
+        Ok(self.library.track_analysis(track)?)
+    }
+
+    /// How many tracks have a current track analysis.
+    pub fn analysis_coverage(&self) -> Result<AnalysisCoverage, LibraryError> {
+        crate::jobs::analysis::coverage(self)
     }
 
     /// How many tracks have loudness values from their tags or measured.

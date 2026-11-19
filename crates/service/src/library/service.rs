@@ -22,6 +22,7 @@ use helikodu_library::{RatingOutcome, TagEditReport, TagHistory, TagStepReport, 
 use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::settings::{LibrarySettings, Settings};
 
+use super::analysis::{AnalysisProgress, BackgroundAnalysis, BackgroundAnalysisOptions};
 use super::duplicates::DuplicateApplier;
 use super::playlists::PlaylistFinder;
 use super::sorting::LanguageSorter;
@@ -72,6 +73,9 @@ pub enum LibraryEvent {
     /// library: what had to be read (when copies get tracks again), or why it
     /// failed. [`LibraryEvent::Changed`] follows.
     DuplicatesApplied(Result<ScanSummary, String>),
+    /// How far the background track analysis is, and what it does: when its
+    /// state changes, and every few seconds while it works.
+    Analysis(AnalysisProgress),
 }
 
 /// How the library service starts.
@@ -88,6 +92,9 @@ pub struct LibraryServiceOptions {
     /// language` setting; empty for the environment's locale). When the setting
     /// changes, the library is sorted for the new language in the background.
     pub language: String,
+    /// How the background track analysis behaves. It runs only once
+    /// [`LibraryService::set_background_analysis`] turns it on.
+    pub analysis: BackgroundAnalysisOptions,
 }
 
 impl Default for LibraryServiceOptions {
@@ -97,6 +104,7 @@ impl Default for LibraryServiceOptions {
             thumbnail_bytes: helikodu_library::DEFAULT_CACHE_BYTES,
             worker_program: None,
             language: String::new(),
+            analysis: BackgroundAnalysisOptions::default(),
         }
     }
 }
@@ -170,6 +178,7 @@ pub struct LibraryService {
     loudness: Mutex<Option<LoudnessJob>>,
     duplicates: DuplicateApplier,
     sorting: LanguageSorter,
+    analysis: BackgroundAnalysis,
     pub(super) bus: EventBus<Event>,
     worker_program: Option<PathBuf>,
     pub(super) finder: PlaylistFinder,
@@ -232,6 +241,7 @@ impl LibraryService {
             DuplicateApplier::start(library.clone(), bus.clone(), options.worker_program.clone());
         let sorting = LanguageSorter::start(library.clone(), bus.clone(), &options.language);
         let finder = PlaylistFinder::new(library.clone());
+        let analysis = BackgroundAnalysis::start(library.clone(), bus.clone(), options.analysis);
         Ok(Self {
             finder,
             library,
@@ -243,6 +253,7 @@ impl LibraryService {
             loudness: Mutex::new(None),
             duplicates,
             sorting,
+            analysis,
             bus,
             worker_program: options.worker_program,
         })
@@ -671,6 +682,24 @@ impl LibraryService {
         }
     }
 
+    /// Turns the background track analysis on or off as the `[library]
+    /// analyze_in_background` setting of `settings` says. The service does this at
+    /// start; afterwards the analysis follows changes of the setting itself.
+    pub fn set_background_analysis(&self, settings: &LibrarySettings) {
+        self.analysis.apply(settings);
+    }
+
+    /// Starts the background track analysis now, if it is on, without waiting
+    /// for the delay after the start or a scan.
+    pub fn analyze_now(&self) {
+        self.analysis.wake();
+    }
+
+    /// How far the background track analysis is, and what it does.
+    pub fn analysis_progress(&self) -> AnalysisProgress {
+        self.analysis.progress()
+    }
+
     /// Cancels the running scan, if any, and waits until it has stopped.
     pub fn cancel_scan(&self) {
         if let Some(running) = lock(&self.scan).take() {
@@ -735,6 +764,7 @@ impl LibraryService {
 
 impl Drop for LibraryService {
     fn drop(&mut self) {
+        self.analysis.stop();
         self.duplicates.stop();
         self.sorting.stop();
         self.stop_loudness();

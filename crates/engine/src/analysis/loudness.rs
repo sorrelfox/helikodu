@@ -156,11 +156,26 @@ impl fmt::Debug for LoudnessMeter {
 impl LoudnessMeter {
     /// A meter for audio at `rate` with the channels of `layout`.
     pub fn new(rate: SampleRate, layout: ChannelLayout) -> Result<Self, AnalysisError> {
+        Self::with_mode(rate, layout, mode())
+    }
+
+    /// A meter of the integrated loudness and short windows only, without the
+    /// loudness range and the peaks: what the track analysis needs when the
+    /// loudness is not measured with it.
+    pub(crate) fn light(rate: SampleRate, layout: ChannelLayout) -> Result<Self, AnalysisError> {
+        Self::with_mode(rate, layout, Mode::I | Mode::HISTOGRAM)
+    }
+
+    fn with_mode(
+        rate: SampleRate,
+        layout: ChannelLayout,
+        mode: Mode,
+    ) -> Result<Self, AnalysisError> {
         let unsupported = || AnalysisError::Unsupported {
             channels: layout.channel_count(),
             rate: rate.hz(),
         };
-        let mut state = EbuR128::new(u32::from(layout.channel_count()), rate.hz(), mode())
+        let mut state = EbuR128::new(u32::from(layout.channel_count()), rate.hz(), mode)
             .map_err(|_| unsupported())?;
         state
             .set_channel_map(&channel_map(layout))
@@ -207,6 +222,35 @@ impl LoudnessMeter {
     /// The number of frames measured so far.
     pub fn frames(&self) -> u64 {
         self.frames
+    }
+
+    /// Switches to audio at `rate` with the channels of `layout`, if it is not
+    /// already in that shape. The short windows start again from silence.
+    pub(crate) fn follow(
+        &mut self,
+        rate: SampleRate,
+        layout: ChannelLayout,
+    ) -> Result<(), AnalysisError> {
+        if rate.hz() != self.rate || layout != self.layout {
+            self.change(rate, layout)?;
+        }
+        Ok(())
+    }
+
+    /// The K-weighted loudness of the last `ms` milliseconds (at most 400) in
+    /// LUFS; `-inf` for digital silence.
+    pub(crate) fn window_lufs(&self, ms: u32) -> f64 {
+        self.state
+            .loudness_window(ms.clamp(1, 400))
+            .unwrap_or(f64::NEG_INFINITY)
+    }
+
+    /// The integrated loudness so far in LUFS; `None` for silence.
+    pub(crate) fn integrated(&self) -> Option<f64> {
+        self.state
+            .loudness_global()
+            .ok()
+            .filter(|lufs| lufs.is_finite())
     }
 
     /// The values of everything added, and the state an album measurement needs.
