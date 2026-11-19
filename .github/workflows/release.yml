@@ -342,6 +342,10 @@ jobs:
           rm -rf "$out"
           mkdir -p "$out"
           bundle="$out/helikodu-$version-$ARCH.flatpak"
+          # Installing a bundle that carries the key checks the signature of
+          # its commit, so the commit is signed in the repository first.
+          flatpak build-sign --arch="$ARCH" --gpg-sign="$key" --gpg-homedir="$GNUPGHOME" \
+            "$RUNNER_TEMP/repo" io.github.sorrelfox.Helikodu
           # The Flathub remote in the bundle lets `flatpak install --bundle`
           # install the GNOME runtime with it; the repository and its key make
           # the installation follow Helikodu's repository for updates.

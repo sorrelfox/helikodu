@@ -56,18 +56,19 @@ The manifest check passes without findings. Newer releases of the linter (as in 
 
 ## The release bundle
 
-The Release workflow's `flatpak` job builds `helikodu-<version>-<arch>.flatpak` for x86_64 and aarch64 and attaches both to the GitHub Release (see [releasing.md](releasing.md#how-the-files-are-built)). Per architecture it runs the same three steps as above, on a native runner in Flathub's `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51` image (which has the GNOME 51 runtime and SDK, `flatpak-builder` and `flatpak-builder-lint` for both architectures):
+The Release workflow's `flatpak` job builds `helikodu-<version>-<arch>.flatpak` for x86_64 and aarch64 and attaches both to the GitHub Release (see [releasing.md](releasing.md#how-the-files-are-built)). Per architecture it runs the steps above, on a native runner in Flathub's `ghcr.io/flathub-infra/flatpak-github-actions:gnome-51` image (which has the GNOME 51 runtime and SDK, `flatpak-builder` and `flatpak-builder-lint` for both architectures):
 
 ```sh
 flatpak-builder --user --force-clean --disable-rofiles-fuse --install-deps-from=flathub --jobs=$CARGO_BUILD_JOBS \
     --state-dir=STATE --repo=REPO BUILD packaging/flatpak/io.github.sorrelfox.Helikodu.yml
 flatpak-builder-lint --exceptions --user-exceptions EXCEPTIONS.json repo REPO
+flatpak build-sign --arch=ARCH --gpg-sign=KEY REPO io.github.sorrelfox.Helikodu
 flatpak build-bundle --arch=ARCH --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
     --repo-url=https://sorrelfox.github.io/helikodu/repo/ --gpg-keys=packaging/flatpak/helikodu-repo.gpg \
     --gpg-sign=KEY REPO helikodu-<version>-ARCH.flatpak io.github.sorrelfox.Helikodu
 ```
 
-The `dir` source takes the checked-out tag. The linter may report only the two screenshot findings described above; anything else stops the release. The bundle is signed with the key of [Helikodu's Flatpak repository](#the-flatpak-repository) and names the repository and its public key. The job then installs the bundle in its container, checks that `flatpak info` shows the release's version and architecture and that the repository became its origin, and runs `helikodu --version` and `helikodu-cli --version` in it with `flatpak run`.
+The `dir` source takes the checked-out tag. The linter may report only the two screenshot findings described above; anything else stops the release. The commit and the bundle are signed with the key of [Helikodu's Flatpak repository](#the-flatpak-repository), and the bundle names the repository and its public key. The commit must be signed before the bundle is made: installing a bundle that carries a key checks its commit's signature, and an unsigned commit fails with "GPG verification enabled, but no signatures found". The job then installs the bundle in its container, checks that `flatpak info` shows the release's version and architecture and that the repository became its origin, and runs `helikodu --version` and `helikodu-cli --version` in it with `flatpak run`.
 
 `--runtime-repo` puts Flathub's `.flatpakrepo` into the bundle. When a user installs it, Flatpak offers to add the Flathub remote (if it is missing) and installs `org.gnome.Platform//51` and its extensions from there, so the bundle needs nothing installed beforehand except Flatpak:
 
