@@ -1,0 +1,63 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+   SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* The Import window, the "Replaced" section of Missing files, and the lead
+   icon of a toast. */
+
+.hk-toast-lead { -gtk-icon-size: 14px; margin-right: 2px; opacity: 0.8; }
+
+.hk-tool list.hk-list > row.hk-import-missing .hk-side-name,
+.hk-tool list.hk-list > row.hk-import-missing .hk-side-line { color: var(--hk-t3); }
+.hk-tool list.hk-list > row.hk-import-undone .hk-side-name { color: var(--hk-t3); }
+.hk-import-runs-scroller { min-height: 0; }
+
+.hk-import-options { padding: 12px 24px 14px; }
+.hk-import-options checkbutton { margin-right: 18px; }
+.hk-import-pairs-label { margin-right: 4px; }
+.hk-import-chip { min-height: 26px; padding: 0 2px 0 9px; border-radius: 6px; border: 1px solid var(--hk-line); }
+.hk-import-chip > label { font-family: monospace; font-size: 11.5px; font-feature-settings: "tnum", "liga" 0, "calt" 0; }
+.hk-import-chip > button { min-height: 22px; min-width: 22px; padding: 0; border: none; background: none; box-shadow: none; color: var(--hk-t3); -gtk-icon-size: 11px; }
+.hk-import-chip > button:hover { color: var(--hk-t1); }
+
+.hk-import-notice { margin: 0 24px 14px; }
+.hk-import-notice > box > image { margin-top: 2px; }
+button.hk-import-notice-action { padding: 0 6px; min-height: 26px; border: none; background: none; box-shadow: none; color: var(--hk-accent-text); font-weight: 600; }
+button.hk-import-notice-action:hover > label { text-decoration: underline; }
+
+.hk-import-figures { padding: 12px 24px 14px; border-top: 1px solid var(--hk-line); }
+.hk-import-figure { font-size: 20px; font-weight: 600; }
+.hk-import-figure-label { font-size: 12px; color: var(--hk-t2); }
+.hk-import-figure-caption { font-size: 12px; color: var(--hk-t3); }
+button.hk-import-link { padding: 0; min-height: 0; border: none; border-radius: 0; background: none; box-shadow: none; color: var(--hk-t2); font-size: 12px; }
+button.hk-import-link > label { text-decoration: underline; }
+button.hk-import-link:hover { color: var(--hk-t1); }
+
+.hk-import-columns { border-top: 1px solid var(--hk-line); }
+.hk-import-column { padding: 14px 20px 16px 24px; }
+.hk-import-column-head { margin-bottom: 8px; }
+.hk-import-change { min-height: 28px; border-top: 1px solid var(--hk-line); }
+.hk-import-playlist { min-height: 44px; padding: 2px 0; border-top: 1px solid var(--hk-line); }
+.hk-import-playlist .hk-import-line { font-size: 12px; }
+.hk-import-query { font-family: monospace; font-size: 11px; font-feature-settings: "tnum", "liga" 0, "calt" 0; }
+.hk-import-left-out { font-weight: 600; }
+.hk-import-fields { margin-top: 18px; }
+.hk-import-field { margin-top: 2px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--hk-line); }
+.hk-import-field-name { font-family: monospace; font-size: 12px; font-weight: 500; }
+.hk-import-field-definition { font-family: monospace; font-size: 11.5px; font-feature-settings: "tnum", "liga" 0, "calt" 0; }
+.hk-import-working { padding: 48px 24px; }
+.hk-import-dim .hk-import-figure,
+.hk-import-dim .hk-import-figure-label,
+.hk-import-dim .hk-import-change label { color: var(--hk-t3); }
+
+.hk-import-popover-list { padding: 4px 0; }
+.hk-import-popover-head { font-weight: 600; margin-bottom: 6px; }
+.hk-import-moved { padding: 4px 6px; }
+.hk-import-moved entry { font-family: monospace; font-size: 12px; }
+.hk-import-moved .hk-notice { margin: 4px 0 0; }
+
+listview.hk-organize-list > row > .hk-replaced-row { min-height: 66px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-replaced-old { font-size: 11px; }
+.hk-replaced-new { font-size: 11.5px; }
+.hk-replaced-stars { font-size: 11px; letter-spacing: 1px; }
+dropdown.hk-replaced-choice > button { min-height: 22px; padding: 0 6px 0 8px; border-radius: 5px; border: 1px solid var(--hk-line); background-color: var(--hk-field); box-shadow: none; }
+dropdown.hk-replaced-choice > button label { font-family: monospace; font-size: 11.5px; }

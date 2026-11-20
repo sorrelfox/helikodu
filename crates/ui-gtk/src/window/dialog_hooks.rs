@@ -105,6 +105,29 @@ impl MainWindow {
         crate::tools::missing_files::open(self)
     }
 
+    /// Opens Import from another player, for tests and screenshots: with the
+    /// player of the short name `player` (`rhythmbox`, `itunes`) chosen, or
+    /// the data file for `data`, or the first player found for `None`.
+    #[doc(hidden)]
+    pub fn open_import(&self, player: Option<&str>) -> Option<gtk::Window> {
+        let start = player.and_then(|id| {
+            if id == "data" {
+                Some(crate::tools::import::Start::DataFile)
+            } else {
+                crate::backend::interchange::Player::from_id(id)
+                    .map(crate::tools::import::Start::Player)
+            }
+        });
+        crate::tools::import::open(self, start)
+    }
+
+    /// Saves the user data to `path` as "Export Your Data…" does after its
+    /// save dialog, for tests.
+    #[doc(hidden)]
+    pub fn export_user_data_to(&self, path: std::path::PathBuf) {
+        crate::tools::import::export_user_data_to(self, path);
+    }
+
     /// Opens Verify files and checks the whole library, for tests and
     /// screenshots.
     #[doc(hidden)]

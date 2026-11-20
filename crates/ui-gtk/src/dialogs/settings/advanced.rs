@@ -158,6 +158,7 @@ fn database(context: &Rc<Context>) -> gtk::Box {
             if let Some(backups) = backups {
                 list.append(&backups_row(context, &backups, &facts, info.size));
             }
+            list.append(&super::your_data::row(context));
         }
         None => {
             text.append(&label(&tr("Helikodu runs without a library."), &["hk-t3"]));

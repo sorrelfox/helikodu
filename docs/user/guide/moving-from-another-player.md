@@ -1,8 +1,22 @@
 # Moving from another player
 
-Helikodu can take over the play counts, ratings and playlists you built up in another player, carry statistics over when you replace a file with a better copy, write play counts and ratings into your files, and move all of its own user data to another computer. For now these are done with [`helikodu-cli`](command-line.md); the application has no window for them yet.
+Helikodu can take over the play counts, ratings and playlists you built up in another player, carry statistics over when you replace a file with a better copy, write play counts and ratings into your files, and move all of its own user data to another computer. The application does this in the **Import** window and in **Missing files**; [`helikodu-cli`](command-line.md) has the same commands for scripts.
 
-Close Helikodu before you run these commands, so that it does not write to the library at the same time.
+## The Import window
+
+**Library → Import from Another Player…** opens a window that shows what an import would do before anything changes.
+
+- **From** lists Rhythmbox, Strawberry, Clementine, Lollypop, iTunes or Music and a Helikodu data file. A player whose library was found on this computer (its Flatpak folder included) shows where; choosing one that was not found, iTunes or Music, or the data file asks for the file. Enter or a double click on a chosen file asks for another one.
+- Helikodu reads the file in the background; the figures show "…" until it is read.
+- **Options:** "Import playlists", and "Use its ratings also where you rated the track here". **Folders that moved** takes pairs of an old folder and where it is now ("Add…"), for a library whose music was in another folder, or on Windows or a Mac. When none of the entries were found by their path, a notice above the figures says so and offers to add a folder that moved; until then entries are matched by their tags only.
+- **Figures:** Matched (by path and by tags), Not in your library, More than one fit (left out) and Unchanged (nothing new for them). "Show" lists the first 200 entries that were left out, by artist and title.
+- **What changes** lists, for each kind of change, how many tracks get it: plays and skips added, ratings set, your rating kept, loved, first and last plays, dates added, history entries. "Left out by the reader" lists what the reader could not take over.
+- **Playlists** lists each playlist of the file and what it becomes: a playlist, a smart playlist, imported before, or left out with the reason.
+- **Import for N tracks** imports. N is the number of matched tracks that change. When nothing would change, for example because the same file was imported before and has no new plays, the button stays off and the footer says why.
+
+After an import, the window shows it first under **Earlier imports**, with what it changed, and a message in the main window says how many tracks it changed, with **Undo**. **Undo this import** undoes the newest import that is not undone; undo the newer ones first to undo an older one. **Ctrl+Z** does not undo imports.
+
+The rest of this page describes what happens in detail, with the commands that do the same. Close Helikodu before you run these commands, so that it does not write to the library at the same time.
 
 ## Importing from another player
 
@@ -75,6 +89,8 @@ helikodu-cli carry-stats            # list what could be carried
 helikodu-cli carry-stats --apply    # carry it
 ```
 
+In the application, **Library → Missing Files…** lists them under **Replaced → Replaced by another copy**, with the old and the new file and what would move. Where a missing file has several possible new files, choose one in the row. **Carry to N tracks** carries the ticked rows as one change, which a message with **Undo** confirms and the Import window lists as "Replaced files" under Earlier imports, where it is undone like an import.
+
 "The same recording" means the same title and artist and a length within 2 seconds, as in the duplicate finder. The plays, skips, history and playlist entries move to the new track, and its counts add up; the new track keeps its own rating if it has one. When a missing file has several possible replacements, name the pair with `--from OLD --to NEW`. `undo-import` undoes this too.
 
 ## Writing play counts and ratings into the files
@@ -94,6 +110,8 @@ helikodu-cli write-stats --ratings --play-counts  # these, whatever the settings
 A track of a CUE sheet shares its file with other tracks, so its statistics stay in the library.
 
 ## Moving your data to another computer
+
+In the application, **Library → Export Your Data…** (or **Export…** in the "Your data" row of **Settings → Advanced**) saves the file; a message names it, and **Show** shows it in the file manager. On the other computer, **Import…** in the same row, or "A Helikodu data file" in the Import window, shows what the file would change, with the fields defined differently here side by side. A file saved by a newer version of Helikodu is not read.
 
 ```sh
 helikodu-cli export-user-data ~/helikodu-data.json

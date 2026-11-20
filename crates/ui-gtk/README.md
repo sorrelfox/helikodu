@@ -102,6 +102,12 @@ crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test play_modes
 
 The shuffle and repeat modes used last and "Follow the playing track" (View menu; it scrolls the queue panel to the track that starts) last for the session only: the window state file has no place for them yet.
 
+`tests/interchange.rs` covers the Import window (the plan read in the background, the figures and the entries left out, an import with its toast, undone only by its own Undo and newest first, never by Ctrl+Z; folders that moved; a Helikodu data file; files that cannot be read), the "Replaced" section of Missing files and "Your data" in Settings › Advanced. With `HELIKODU_IMPORT_SHOTS=DIR` it saves the screens to `DIR`:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test interchange
+```
+
 `tests/views.rs` covers the library views: the track table loading lazily and sorting by several keys, Artists, Genres and Folders, playlist edits with Undo, the context menu's actions, search with and without results, the menus, the empty library, and the frame times of the track table scrolling 100,000 tracks (slowly, fast, and jumping at random), which it prints:
 
 ```sh

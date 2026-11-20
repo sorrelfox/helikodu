@@ -8,8 +8,8 @@
 use std::path::{Path, PathBuf};
 
 use helikodu_library::interchange::{
-    CarryCandidate, ImportPlan, ImportRun, ImportRunId, ImportSource, MergeOptions, StatsToFiles,
-    StatsWriteReport, UserDataExport,
+    CarryCandidate, ForeignLibrary, ImportPlan, ImportRun, ImportRunId, ImportSource, MergeOptions,
+    StatsToFiles, StatsWriteReport, UserDataExport, UserDataFile,
 };
 use helikodu_library::{CancelToken, TagWriteSettings};
 use helikodu_model::library::TrackId;
@@ -37,6 +37,32 @@ impl MusicLibrary {
         options: &MergeOptions,
     ) -> Result<ImportPlan, LibraryError> {
         Ok(self.inner().plan_import(source, options)?)
+    }
+
+    /// Works out what importing `library`, read from `source` once with
+    /// `interchange::read_source`, would do.
+    pub fn plan_source_import(
+        &self,
+        source: &ImportSource,
+        library: &ForeignLibrary,
+        options: &MergeOptions,
+    ) -> Result<ImportPlan, LibraryError> {
+        Ok(self.inner().plan_source_import(source, library, options)?)
+    }
+
+    /// Reads an export of the user data, changing nothing.
+    pub fn read_user_data(path: &Path) -> Result<UserDataFile, LibraryError> {
+        Ok(helikodu_library::Library::read_user_data(path)?)
+    }
+
+    /// Works out what importing an export of the user data, read with
+    /// [`read_user_data`](Self::read_user_data), would do.
+    pub fn plan_user_data(
+        &self,
+        file: &UserDataFile,
+        options: &MergeOptions,
+    ) -> Result<ImportPlan, LibraryError> {
+        Ok(self.inner().plan_user_data(file, options)?)
     }
 
     /// Reads an export of the user data and works out what importing it would do.
@@ -79,6 +105,15 @@ impl MusicLibrary {
     /// `new`, as an import run that can be undone.
     pub fn carry_stats(&self, old: TrackId, new: TrackId) -> Result<ImportRunId, LibraryError> {
         Ok(self.inner().carry_stats(old, new)?)
+    }
+
+    /// Carries the statistics of each missing track in `pairs` to its
+    /// replacement, as one import run that can be undone.
+    pub fn carry_stats_of(
+        &self,
+        pairs: &[(TrackId, TrackId)],
+    ) -> Result<ImportRunId, LibraryError> {
+        Ok(self.inner().carry_stats_of(pairs)?)
     }
 
     /// How many files wait for their play count or rating to be written, under

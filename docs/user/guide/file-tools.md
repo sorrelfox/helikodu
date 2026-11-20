@@ -55,6 +55,8 @@ The context menu of a track has **Rename file…**, which renames the file in it
 
 The window looks for the files in your library folders when it opens; **Look in a folder…** looks in another folder (with the folders inside it), and **Look again** checks once more. A file is recognised by its size and content, so a renamed file is found too. **Relink N tracks** points the ticked tracks at their files again; their ratings, play counts and places in playlists stay. **Remove N from the library** removes the tracks that were not found; the notice offers **Undo** for a few seconds before they go.
 
+When a missing track's recording is in the library again as another file (the same title and artist and a length within 2 seconds, such as an MP3 replaced by a FLAC), it is also listed under **Replaced ▸ Replaced by another copy**, with its old and new file and the plays, rating, history and playlists that would move. **Carry to N tracks** moves them to the new files; see [Moving from another player](moving-from-another-player.md#when-a-file-is-replaced).
+
 ## Verify files
 
 **Tools ▸ Verify Files…** decodes files from start to end and lists those that do not decode cleanly, with a sentence on what was found: parts that could not be decoded (and where), a file that stops early, a length that differs from the one the file states, or — for FLAC — audio that does not match the checksum stored in the file. **Check** chooses the whole library, one library folder, the selected tracks (when opened with **Verify files** from the context menu) or a folder of your choice; **Verify** starts. The tool changes nothing. **Copy as text** and **Save report…** keep the list. The check stops when you close the window.

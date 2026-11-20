@@ -793,6 +793,14 @@ fn labels_and_fields_go_round_trip_and_are_undone() {
         .unwrap();
     assert_eq!(plan.totals.labels, 1, "{plan:?}");
     assert_eq!(plan.totals.label_links, 3);
+    assert_eq!(
+        (
+            plan.totals.label_tracks,
+            plan.totals.label_albums,
+            plan.totals.label_artists
+        ),
+        (1, 1, 1)
+    );
     assert_eq!(plan.totals.label_unmatched, 0);
     assert_eq!(plan.totals.fields, 2);
     assert_eq!(plan.totals.field_conflicts, 0);
@@ -986,4 +994,148 @@ fn statistics_follow_a_replaced_file() {
         })
         .unwrap();
     assert_eq!(history.len(), 1);
+}
+
+#[test]
+fn a_run_keeps_its_figures_and_when_it_was_undone() {
+    let f = fixture();
+    let dir = folder("summary");
+    let source = ImportSource {
+        player: Player::Rhythmbox,
+        path: write_rhythmbox(&dir, 5),
+    };
+    let library = read_source(&source).unwrap();
+    let plan = f
+        .library
+        .plan_source_import(&source, &library, &MergeOptions::default())
+        .unwrap();
+    assert_eq!(plan.files, ["rhythmdb.xml", "playlists.xml"]);
+    assert_eq!(
+        plan,
+        f.library
+            .plan_import(&source, &MergeOptions::default())
+            .unwrap()
+    );
+    let run = f.library.apply_import(&plan).unwrap();
+    let runs = f.library.import_runs().unwrap();
+    let summary = runs[0].summary.clone().unwrap();
+    assert_eq!(summary, plan.summary());
+    assert_eq!(summary.totals.tracks, 2);
+    assert_eq!(runs[0].undone_at, None);
+    f.library.undo_import(run).unwrap();
+    let runs = f.library.import_runs().unwrap();
+    assert!(runs[0].undone);
+    assert!(runs[0].undone_at.is_some());
+    assert_eq!(runs[0].summary, Some(summary));
+}
+
+#[test]
+fn an_export_says_who_saved_it_and_a_newer_one_is_refused() {
+    let source = with_user_data();
+    let dir = folder("saved-by");
+    let file = dir.join("export.json");
+    source.library.export_user_data_to(&file).unwrap();
+    let read = Library::read_user_data(&file).unwrap();
+    assert_eq!(read.saved.tracks, 2);
+    assert!(read.saved.at.is_some());
+    assert!(
+        read.saved
+            .program
+            .as_deref()
+            .is_some_and(|p| p.starts_with("Helikodu "))
+    );
+    let plan = source
+        .library
+        .plan_user_data(&read, &MergeOptions::default())
+        .unwrap();
+    assert_eq!(plan.files, ["export.json"]);
+    assert_eq!(plan.saved, Some(read.saved.clone()));
+
+    let newer = dir.join("newer.json");
+    fs::write(
+        &newer,
+        br#"{"format": "helikodu-user-data", "version": 99}"#,
+    )
+    .unwrap();
+    assert!(matches!(
+        Library::read_user_data(&newer),
+        Err(helikodu_library::interchange::ImportError::Newer { version: 99, .. })
+    ));
+    let broken = dir.join("broken.json");
+    fs::write(&broken, b"{").unwrap();
+    assert!(matches!(
+        Library::read_user_data(&broken),
+        Err(helikodu_library::interchange::ImportError::Format { .. })
+    ));
+}
+
+#[test]
+fn several_replacements_are_carried_as_one_run() {
+    let (library, root) = library();
+    let mut pairs = Vec::new();
+    for name in ["One", "Two"] {
+        let old = library
+            .upsert_track(tagged(
+                root,
+                &format!("/music/{name}.mp3"),
+                &format!("mp3 {name}"),
+                name,
+                "Alpha",
+                "A",
+            ))
+            .unwrap()
+            .track;
+        library
+            .record_listen(
+                old,
+                Listen {
+                    started_at: at(1000),
+                    played: Duration::from_secs(190),
+                    end: ListenEnd::Finished,
+                    position: None,
+                    context: None,
+                },
+                PlayRules::default(),
+            )
+            .unwrap();
+        let new = library
+            .upsert_track(tagged(
+                root,
+                &format!("/music/{name}.flac"),
+                &format!("flac {name}"),
+                name,
+                "Alpha",
+                "A",
+            ))
+            .unwrap()
+            .track;
+        library
+            .mark_file_missing(format!("/music/{name}.mp3"), at(5000))
+            .unwrap();
+        pairs.push((old, new));
+    }
+    for name in ["List", "Other list"] {
+        let list = library.create_playlist(name).unwrap();
+        library.add_to_playlist(list, vec![pairs[0].0]).unwrap();
+    }
+    let candidates = library.carry_candidates().unwrap();
+    assert_eq!(candidates.len(), 2);
+    assert_eq!(candidates[0].playlist_items, 2);
+    assert_eq!(candidates[0].playlists, 2);
+    assert_eq!(candidates[1].playlists, 0);
+
+    assert!(library.carry_stats_of(&[]).is_err());
+    let run = library.carry_stats_of(&pairs).unwrap();
+    let runs = library.import_runs().unwrap();
+    assert_eq!(runs.len(), 1);
+    assert_eq!(runs[0].kind, ImportRunKind::Carry);
+    assert_eq!(runs[0].summary.as_ref().unwrap().totals.tracks, 2);
+    for &(_, new) in &pairs {
+        assert_eq!(library.stats(new).unwrap().play_count, 1);
+    }
+    assert!(library.carry_candidates().unwrap().is_empty());
+    library.undo_import(run).unwrap();
+    for &(old, _) in &pairs {
+        assert_eq!(library.stats(old).unwrap().play_count, 1);
+    }
 }

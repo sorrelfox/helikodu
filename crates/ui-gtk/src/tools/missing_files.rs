@@ -12,6 +12,10 @@
 //! not listed. Removing shows an Undo toast; the tracks leave the library when
 //! the toast has gone.
 //!
+//! A second section, "Replaced", lists the missing tracks whose recording is
+//! in the library again as another file (`replaced.rs`); it is hidden while
+//! there are none.
+//!
 //! A single click selects a row, Space ticks it, and a double click or Enter
 //! plays its track.
 
@@ -81,6 +85,12 @@ struct Missing {
     stack: gtk::Stack,
     filling: Cell<bool>,
     looking: Cell<bool>,
+    /// The missing files and the "Replaced" section's page.
+    pages: gtk::Stack,
+    /// The note of the left pane for the missing files.
+    note: RefCell<String>,
+    /// The list of the "Replaced" section.
+    replaced_list: RefCell<Option<gtk::ListBox>>,
 }
 
 fn days_since(seconds: i64) -> u64 {
@@ -145,11 +155,14 @@ impl Missing {
                     )
                 })
                 .collect();
-            this.side_note.set_text(&if hidden.is_empty() {
+            this.note.replace(if hidden.is_empty() {
                 tr("Tracks on a drive that is not connected are hidden, not missing.")
             } else {
                 hidden.join(" ")
             });
+            if !this.on_replaced() {
+                this.side_note.set_text(&this.note.borrow());
+            }
             match files {
                 Ok(files) => {
                     this.files.replace(files);
@@ -162,6 +175,16 @@ impl Missing {
                 this.look();
             }
         });
+    }
+
+    /// The list of the "Replaced" section.
+    fn side_roots_list(&self) -> Option<gtk::ListBox> {
+        self.replaced_list.borrow().clone()
+    }
+
+    /// Whether the "Replaced" section is shown.
+    fn on_replaced(&self) -> bool {
+        self.pages.visible_child_name().as_deref() == Some("replaced")
     }
 
     fn fill_side(&self) {
@@ -190,7 +213,9 @@ impl Missing {
         if chosen == 0 {
             self.root.replace(None);
         }
-        if let Some(row) = self.list.row_at_index(i32::try_from(chosen).unwrap_or(0)) {
+        if self.on_replaced() {
+            self.list.unselect_all();
+        } else if let Some(row) = self.list.row_at_index(i32::try_from(chosen).unwrap_or(0)) {
             self.list.select_row(Some(&row));
         }
         self.filling.set(false);
@@ -220,6 +245,11 @@ impl Missing {
         self.visible_cache.replace(files);
         let items: Vec<glib::BoxedAnyObject> = (0..count).map(glib::BoxedAnyObject::new).collect();
         self.store.splice(0, self.store.n_items(), &items);
+        self.update_found_head();
+        self.update_footer();
+        if self.on_replaced() {
+            return;
+        }
         self.title.set_text(
             &root
                 .as_ref()
@@ -243,8 +273,6 @@ impl Missing {
         } else {
             tr("No missing track matches the filter.")
         });
-        self.update_found_head();
-        self.update_footer();
     }
 
     fn update_found_head(&self) {
@@ -711,7 +739,8 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
     let again = compact_button(&tr("Look again"));
     again.set_widget_name("missing-again");
     toolbar.append(&again);
-    column.append(&toolbar);
+    let missing_page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    missing_page.append(&toolbar);
     let found_head = label("", &["hk-section-label"]);
     found_head.set_size_request(FOUND, -1);
     let head = table_header(&[
@@ -720,7 +749,7 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
         (tr("Missing"), DAYS, true),
     ]);
     head.append(&found_head);
-    column.append(&head);
+    missing_page.append(&head);
 
     let store = gio::ListStore::new::<glib::BoxedAnyObject>();
     let selection = gtk::SingleSelection::new(Some(store.clone()));
@@ -746,7 +775,7 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
     stack.set_vexpand(true);
     stack.add_named(&scroller, Some("table"));
     stack.add_named(&empty, Some("empty"));
-    column.append(&stack);
+    missing_page.append(&stack);
     let (bar, summary) = footer();
     let remove = compact_button(&tr("Remove from the library"));
     remove.set_widget_name("missing-remove");
@@ -754,7 +783,62 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
     let relink = primary_button(&tr("Relink"));
     relink.set_widget_name("missing-relink");
     bar.append(&relink);
-    column.append(&bar);
+    missing_page.append(&bar);
+    let pages = gtk::Stack::new();
+    pages.set_vexpand(true);
+    pages.add_named(&missing_page, Some("missing"));
+    column.append(&pages);
+
+    // The "Replaced" section: its label and row under the library folders,
+    // hidden while no missing track has a new file.
+    list.set_vexpand(false);
+    let replaced_head = label(&tr("Replaced"), &["hk-section-label", "hk-list-section"]);
+    let replaced_list = gtk::ListBox::new();
+    replaced_list.add_css_class("hk-list");
+    replaced_list.set_widget_name("missing-replaced");
+    replaced_list.set_margin_start(8);
+    replaced_list.set_margin_end(8);
+    replaced_list.set_vexpand(true);
+    replaced_list.set_valign(gtk::Align::Start);
+    replaced_list.update_property(&[gtk::accessible::Property::Label(&tr("Replaced"))]);
+    let (replaced_row, replaced_count) = count_row(&tr("Replaced by another copy"));
+    replaced_list.append(&replaced_row);
+    replaced_head.set_visible(false);
+    replaced_list.set_visible(false);
+    if let Some(side) = list.parent().and_downcast::<gtk::Box>() {
+        side.insert_child_after(&replaced_head, Some(&list));
+        side.insert_child_after(&replaced_list, Some(&replaced_head));
+    }
+    let replaced = {
+        let (head, rows, count) = (
+            replaced_head.downgrade(),
+            replaced_list.downgrade(),
+            replaced_count.downgrade(),
+        );
+        let (pages, header) = (pages.downgrade(), header_summary.downgrade());
+        super::replaced::new(main, backend.clone(), move |n| {
+            if let (Some(head), Some(rows), Some(count)) =
+                (head.upgrade(), rows.upgrade(), count.upgrade())
+            {
+                count.set_text(&format::count(n));
+                head.set_visible(n > 0);
+                rows.set_visible(n > 0);
+            }
+            if let (Some(pages), Some(header)) = (pages.upgrade(), header.upgrade())
+                && pages.visible_child_name().as_deref() == Some("replaced")
+            {
+                header.set_text(&fill(
+                    &ntr(
+                        "{} missing track has a new file of the same recording",
+                        "{} missing tracks have a new file of the same recording",
+                        n,
+                    ),
+                    &[&format::count(n)],
+                ));
+            }
+        })
+    };
+    pages.add_named(&replaced.root, Some("replaced"));
 
     let missing = Rc::new(Missing {
         window: window.clone(),
@@ -787,6 +871,9 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
         stack,
         filling: Cell::new(false),
         looking: Cell::new(false),
+        pages: pages.clone(),
+        note: RefCell::new(String::new()),
+        replaced_list: RefCell::new(None),
     });
 
     let weak = Rc::downgrade(&missing);
@@ -819,7 +906,30 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
             .checked_sub(1)
             .and_then(|i| this.side_roots.borrow().get(i).cloned());
         this.root.replace(root);
+        if this.on_replaced() {
+            this.pages.set_visible_child_name("missing");
+            this.side_note.set_text(&this.note.borrow());
+            if let Some(other) = this.side_roots_list() {
+                other.unselect_all();
+            }
+        }
         this.rebuild();
+    });
+    let weak = Rc::downgrade(&missing);
+    let page = Rc::downgrade(&replaced);
+    replaced_list.connect_row_selected(move |_, row| {
+        let (Some(this), Some(page), Some(_)) = (weak.upgrade(), page.upgrade(), row) else {
+            return;
+        };
+        this.pages.set_visible_child_name("replaced");
+        this.filling.set(true);
+        this.list.unselect_all();
+        this.filling.set(false);
+        this.title.set_text(&tr("Replaced by another copy"));
+        this.header_summary.set_text(&page.summary());
+        this.side_note.set_text(&tr(
+            "The same recording means the same title and artist and a length within 2 seconds.",
+        ));
     });
     let weak = Rc::downgrade(&missing);
     filter.connect_search_changed(move |_| {
@@ -884,10 +994,12 @@ pub(crate) fn open(main: &MainWindow) -> Option<gtk::Window> {
     });
     view.add_controller(keys);
 
-    let keep_alive = RefCell::new(Some(missing.clone()));
+    missing.replaced_list.replace(Some(replaced_list.clone()));
+    let keep_alive = RefCell::new(Some((missing.clone(), replaced.clone())));
     window.connect_destroy(move |_| {
         keep_alive.borrow_mut().take();
     });
+    replaced.load();
     missing.update_footer();
     missing.load(true);
     window.present();

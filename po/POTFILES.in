@@ -124,3 +124,10 @@ crates/ui-gtk/src/backend/sample/services.rs
 crates/ui-gtk/src/backend/service/mpris.rs
 crates/ui-gtk/src/backend/sample/playlists.rs
 crates/ui-gtk/src/views/tracks/extra.rs
+crates/ui-gtk/src/backend/interchange.rs
+crates/ui-gtk/src/backend/service/interchange.rs
+crates/ui-gtk/src/tools/import.rs
+crates/ui-gtk/src/tools/import_moved.rs
+crates/ui-gtk/src/tools/import_view.rs
+crates/ui-gtk/src/tools/replaced.rs
+crates/ui-gtk/src/dialogs/settings/your_data.rs

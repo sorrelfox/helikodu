@@ -31,6 +31,7 @@ impl Providers {
             "playlists.css",
             "desktop.css",
             "insights.css",
+            "interchange.css",
         ] {
             let provider = gtk::CssProvider::new();
             provider.load_from_resource(&format!("{}/style/{file}", crate::RESOURCE_BASE));

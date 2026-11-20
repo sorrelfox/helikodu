@@ -843,6 +843,30 @@ impl MainWindow {
         }
     }
 
+    /// Shows a toast led by the symbolic icon `icon`, with a button labelled
+    /// `action` that runs `run`. An Undo button (`undo`) keeps the toast up for
+    /// 8 seconds, as the Undo toasts do, but Ctrl+Z does not run it.
+    pub(crate) fn toast_led(
+        &self,
+        text: &str,
+        icon: &str,
+        action: &str,
+        undo: bool,
+        run: impl Fn() + 'static,
+    ) {
+        if let Some(toasts) = self.imp().toasts.borrow().as_ref() {
+            toasts.show_led(
+                text,
+                icon,
+                Some(toast_overlay::ToastAction {
+                    label: action.to_owned(),
+                    undo,
+                    run: Box::new(run),
+                }),
+            );
+        }
+    }
+
     /// The four regions F6 moves between: sidebar, content, panel, deck.
     fn regions(&self) -> Vec<(gtk::Widget, gtk::Widget)> {
         let imp = self.imp();

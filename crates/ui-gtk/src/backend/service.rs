@@ -18,6 +18,7 @@ mod columns;
 mod export;
 mod history;
 mod insights;
+mod interchange;
 mod lyrics;
 mod mpris;
 mod services;
@@ -2616,6 +2617,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
     let services = Arc::new(services::ServiceServices {
         service: Arc::clone(&service),
         opened: Mutex::new(HashMap::new()),
+        interchange: Arc::new(interchange::ServiceInterchange::new(Arc::clone(&service))),
     });
     Ok(Backend::new(library, player, receiver)
         .with_ui_state(Rc::new(ServiceUiState(service)))

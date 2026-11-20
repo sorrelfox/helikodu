@@ -17,6 +17,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <file>style/playlists.css</file>
     <file>style/desktop.css</file>
     <file>style/insights.css</file>
+    <file>style/interchange.css</file>
     <file preprocess="xml-stripblanks">ui/albums.ui</file>
     <file preprocess="xml-stripblanks">ui/album.ui</file>
     <file preprocess="xml-stripblanks">ui/deck.ui</file>

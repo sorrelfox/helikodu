@@ -62,6 +62,8 @@ pub(super) struct ServiceServices {
     pub(super) service: Arc<Service>,
     /// The tracks the tag editor opened: their files as they were then.
     pub(super) opened: Mutex<HashMap<TrackKey, Opened>>,
+    /// Imports and the export of the user data.
+    pub(super) interchange: Arc<super::interchange::ServiceInterchange>,
 }
 
 /// A track's file as the tag editor opened it.
@@ -551,6 +553,10 @@ impl ServiceServices {
 }
 
 impl Services for ServiceServices {
+    fn interchange(&self) -> Arc<dyn super::super::interchange::InterchangeServices> {
+        self.interchange.clone()
+    }
+
     fn export(&self) -> Arc<dyn super::super::export::ExportServices> {
         Arc::new(super::export::ServiceExport {
             service: self.service.clone(),

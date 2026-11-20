@@ -14,6 +14,7 @@ mod export;
 mod files;
 mod history;
 mod insights;
+mod interchange;
 mod lists;
 mod lyrics;
 mod photos;

@@ -133,6 +133,18 @@ impl ToastOverlay {
         }
     }
 
+    /// Shows `text` led by the symbolic icon `icon` (a check mark for work
+    /// that is done, a warning for work cut short).
+    pub(crate) fn show_led(self: &Rc<Self>, text: &str, icon: &str, action: Option<ToastAction>) {
+        self.show(text, action, false);
+        if let Some(toast) = self.current.borrow().as_ref() {
+            let lead = gtk::Image::from_icon_name(icon);
+            lead.add_css_class("hk-toast-lead");
+            lead.set_valign(gtk::Align::Center);
+            toast.prepend(&lead);
+        }
+    }
+
     fn countdown(self: &Rc<Self>, generation: u64, seconds: u32) {
         let weak = Rc::downgrade(self);
         glib::timeout_add_local_once(Duration::from_secs(u64::from(seconds)), move || {

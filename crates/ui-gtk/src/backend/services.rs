@@ -737,6 +737,12 @@ pub trait Services: fmt::Debug + Send + Sync {
 
     /// Records that the crash reports were shown.
     fn mark_crash_reports_seen(&self) {}
+
+    /// Imports from other players, the export of the user data, and statistics
+    /// carried to replacement files.
+    fn interchange(&self) -> Arc<dyn super::interchange::InterchangeServices> {
+        Arc::new(super::interchange::NoInterchange)
+    }
 }
 
 /// The error of a file operation without a library.

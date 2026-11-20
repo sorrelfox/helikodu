@@ -51,6 +51,18 @@ pub(super) fn start_run(
         .query_row(params![kind_to_sql(kind), source, now], |row| row.get(0))
 }
 
+/// Keeps what `run` did in figures.
+pub(super) fn set_summary(
+    c: &Connection,
+    run: i64,
+    summary: &super::ImportSummary,
+) -> rusqlite::Result<()> {
+    let text = serde_json::to_string(summary).unwrap_or_default();
+    c.prepare_cached("UPDATE import_runs SET summary = ?2 WHERE id = ?1")?
+        .execute(params![run, text])?;
+    Ok(())
+}
+
 /// Records that `run` made or moved the row `row` of `kind`.
 pub(super) fn record_row(
     c: &Connection,
@@ -193,6 +205,7 @@ fn new_item(item: &ItemWork) -> NewItem {
 /// Carries out `plan` as a new run; returns the run.
 pub(super) fn apply(c: &Connection, plan: &ImportPlan, now: i64) -> rusqlite::Result<i64> {
     let run = start_run(c, plan.kind, &plan.source, now)?;
+    set_summary(c, run, &plan.summary())?;
     let mut added = c.prepare_cached("SELECT added_at FROM tracks WHERE id = ?1")?;
     for (identity, incoming, tracks) in &plan.work.identities {
         let identity = *identity;
@@ -457,8 +470,8 @@ pub(super) fn undo(
         }
     }
     super::labels_fields::undo(c, run)?;
-    c.prepare_cached("UPDATE import_runs SET undone = 1 WHERE id = ?1")?
-        .execute([run])?;
+    c.prepare_cached("UPDATE import_runs SET undone = 1, undone_at = ?2 WHERE id = ?1")?
+        .execute(params![run, now])?;
     Ok(Ok(()))
 }
 
@@ -474,7 +487,8 @@ pub(super) fn runs(c: &Connection) -> rusqlite::Result<Vec<ImportRun>> {
                 (SELECT count(*) FROM import_run_stats s WHERE s.run_id = r.id),
                 (SELECT count(*) FROM import_run_rows w WHERE w.run_id = r.id)
                 + (SELECT count(*) FROM import_run_labels l WHERE l.run_id = r.id)
-                + (SELECT count(*) FROM import_run_fields f WHERE f.run_id = r.id)
+                + (SELECT count(*) FROM import_run_fields f WHERE f.run_id = r.id),
+                r.undone_at, r.summary
          FROM import_runs r ORDER BY r.id DESC",
     )?
     .query_map([], |row| {
@@ -486,6 +500,10 @@ pub(super) fn runs(c: &Connection) -> rusqlite::Result<Vec<ImportRun>> {
             undone: row.get(4)?,
             tracks: usize::try_from(row.get::<_, i64>(5)?).unwrap_or(0),
             rows: usize::try_from(row.get::<_, i64>(6)?).unwrap_or(0),
+            undone_at: row.get::<_, Option<i64>>(7)?.map(from_unix_seconds),
+            summary: row
+                .get::<_, Option<String>>(8)?
+                .and_then(|text| serde_json::from_str(&text).ok()),
         })
     })?
     .collect()

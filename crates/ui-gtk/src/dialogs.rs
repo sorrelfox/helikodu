@@ -110,6 +110,14 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
     add(application, "missing-files", |main| {
         crate::tools::missing_files::open(main);
     });
+    add(application, "import-from-player", |main| {
+        crate::tools::import::open(main, None);
+    });
+    add(
+        application,
+        "export-user-data",
+        crate::tools::import::export_user_data,
+    );
     add(application, "verify-files", |main| {
         crate::tools::verify_files::open(main, None, false);
     });

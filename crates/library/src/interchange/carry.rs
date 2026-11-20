@@ -17,7 +17,9 @@ use std::time::SystemTime;
 use helikodu_model::library::TrackId;
 use rusqlite::{Connection, OptionalExtension};
 
-use super::apply::{ROW_HISTORY_MOVED, ROW_ITEM_MOVED, change_stats, record_row, start_run};
+use super::apply::{
+    ROW_HISTORY_MOVED, ROW_ITEM_MOVED, change_stats, record_row, set_summary, start_run,
+};
 use super::merge::{self, Stats};
 use super::{ImportError, ImportRunId, ImportRunKind};
 use crate::Library;
@@ -48,12 +50,16 @@ pub struct CarryCandidate {
     pub history: usize,
     /// Its playlist entries.
     pub playlist_items: usize,
+    /// The playlists those entries are in.
+    pub playlists: usize,
 }
 
 const CANDIDATES: &str = "
     SELECT o.id, od.path, ofl.name, n.id, nd.path, nf.name, o.title, o.artist, o.identity_id,
            (SELECT count(*) FROM history h WHERE h.identity_id = o.identity_id),
-           (SELECT count(*) FROM playlist_items i WHERE i.identity_id = o.identity_id)
+           (SELECT count(*) FROM playlist_items i WHERE i.identity_id = o.identity_id),
+           (SELECT count(DISTINCT i.playlist_id) FROM playlist_items i
+            WHERE i.identity_id = o.identity_id)
     FROM tracks o JOIN files ofl ON ofl.id = o.file_id JOIN dirs od ON od.id = ofl.dir_id
     JOIN tracks n ON n.title_fold = o.title_fold AND n.identity_id != o.identity_id
          AND hk_fold(coalesce(n.main_artist, n.artist, ''))
@@ -85,6 +91,7 @@ fn candidates(c: &Connection) -> rusqlite::Result<Vec<CarryCandidate>> {
                     stats: crate::stats::TrackStats::default(),
                     history: usize::try_from(row.get::<_, i64>(9)?).unwrap_or(0),
                     playlist_items: usize::try_from(row.get::<_, i64>(10)?).unwrap_or(0),
+                    playlists: usize::try_from(row.get::<_, i64>(11)?).unwrap_or(0),
                 },
                 row.get(8)?,
             ))
@@ -128,24 +135,14 @@ fn identity(c: &Connection, track: TrackId) -> rusqlite::Result<Option<(i64, Str
     .optional()
 }
 
-fn carry(
-    c: &Connection,
-    old: TrackId,
-    new: TrackId,
-    now: i64,
-) -> rusqlite::Result<Result<i64, ImportError>> {
-    let (Some((from, from_path)), Some((to, to_path))) = (identity(c, old)?, identity(c, new)?)
-    else {
-        return Ok(Err(ImportError::UnknownTrack));
+/// Moves the statistics of `old` to `new` as part of `run`; whether both
+/// tracks exist.
+fn carry_into(c: &Connection, run: i64, old: TrackId, new: TrackId) -> rusqlite::Result<bool> {
+    let (Some((from, _)), Some((to, _))) = (identity(c, old)?, identity(c, new)?) else {
+        return Ok(false);
     };
-    let run = start_run(
-        c,
-        ImportRunKind::Carry,
-        &format!("{from_path} → {to_path}"),
-        now,
-    )?;
     if from == to {
-        return Ok(Ok(run));
+        return Ok(true);
     }
     let (old_stats, old_existed) = merge::read(c, from)?;
     let (new_stats, new_existed) = merge::read(c, to)?;
@@ -170,6 +167,45 @@ fn carry(
             .execute(rusqlite::params![id, to])?;
         record_row(c, run, ROW_ITEM_MOVED, id, Some(from))?;
     }
+    Ok(true)
+}
+
+/// Carries each pair of `pairs` as one run.
+fn carry(
+    c: &Connection,
+    pairs: &[(TrackId, TrackId)],
+    now: i64,
+) -> rusqlite::Result<Result<i64, ImportError>> {
+    let mut paths = Vec::with_capacity(pairs.len());
+    for &(old, new) in pairs {
+        let (Some((_, from_path)), Some((_, to_path))) = (identity(c, old)?, identity(c, new)?)
+        else {
+            return Ok(Err(ImportError::UnknownTrack));
+        };
+        paths.push((from_path, to_path));
+    }
+    let Some((from_path, to_path)) = paths.first() else {
+        return Ok(Err(ImportError::UnknownTrack));
+    };
+    let source = match paths.len() {
+        1 => format!("{from_path} → {to_path}"),
+        n => format!("{from_path} → {to_path} (and {} more)", n - 1),
+    };
+    let run = start_run(c, ImportRunKind::Carry, &source, now)?;
+    let mut carried = 0;
+    for &(old, new) in pairs {
+        if carry_into(c, run, old, new)? {
+            carried += 1;
+        }
+    }
+    let summary = super::ImportSummary {
+        totals: super::PlanTotals {
+            tracks: carried,
+            ..super::PlanTotals::default()
+        },
+        ..super::ImportSummary::default()
+    };
+    set_summary(c, run, &summary)?;
     Ok(Ok(run))
 }
 
@@ -187,11 +223,20 @@ impl Library {
     /// the earliest first and the latest last play win, and `new` keeps its own
     /// rating when it has one.
     pub fn carry_stats(&self, old: TrackId, new: TrackId) -> Result<ImportRunId, ImportError> {
+        self.carry_stats_of(&[(old, new)])
+    }
+
+    /// [`carry_stats`](Self::carry_stats) for each pair of a missing track and
+    /// its replacement in `pairs`, as one import run that is undone as a whole.
+    /// Fails with [`ImportError::UnknownTrack`], changing nothing, when a track
+    /// is not in the library or `pairs` is empty.
+    pub fn carry_stats_of(&self, pairs: &[(TrackId, TrackId)]) -> Result<ImportRunId, ImportError> {
         let now = to_unix_seconds(SystemTime::now());
+        let pairs = pairs.to_vec();
         let run = self
             .database()
             .writer()?
-            .write(move |c| carry(c, old, new, now))??;
+            .write(move |c| carry(c, &pairs, now))??;
         Ok(ImportRunId(run))
     }
 }

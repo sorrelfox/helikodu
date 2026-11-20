@@ -11,6 +11,7 @@
 //!   "format": "helikodu-user-data",
 //!   "version": 1,
 //!   "exported_at": 1763550000,
+//!   "saved_by": "Helikodu 1.0.0",
 //!   "tracks": [{
 //!     "path": "/home/me/Music/Album/01.flac",
 //!     "title": "Song", "artist": "Artist", "album": "Album",
@@ -61,8 +62,9 @@
 //!
 //! The `version` changes only when a reader of an older version would read the
 //! file wrongly. Keys added later are left out of older files, and their readers
-//! read such a file as if the key were empty: `labels` and `fields` came after
-//! the first files of version 1 and are read as empty when missing.
+//! read such a file as if the key were empty: `labels`, `fields` and `saved_by`
+//! (the name and version of the program that saved the file) came after the
+//! first files of version 1 and are read as empty when missing.
 
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -190,6 +192,8 @@ struct Document {
     version: u32,
     #[serde(default)]
     exported_at: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    saved_by: Option<String>,
     #[serde(default)]
     tracks: Vec<TrackEntry>,
     #[serde(default)]
@@ -602,6 +606,7 @@ pub(super) fn export(c: &Connection, now: i64) -> rusqlite::Result<UserDataExpor
             format: USER_DATA_FORMAT.to_owned(),
             version: USER_DATA_VERSION,
             exported_at: now,
+            saved_by: Some(format!("Helikodu {}", env!("CARGO_PKG_VERSION"))),
             tracks,
             playlists,
             favourites,
@@ -614,34 +619,90 @@ pub(super) fn export(c: &Connection, now: i64) -> rusqlite::Result<UserDataExpor
 
 // --- Import -------------------------------------------------------------------------
 
+/// Who saved an export of the user data, when, and how many tracks it lists.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SavedBy {
+    /// The program that saved it, with its version (`Helikodu 1.0.0`); `None`
+    /// for files saved before this was recorded.
+    pub program: Option<String>,
+    /// When it was saved.
+    pub at: Option<std::time::SystemTime>,
+    /// The tracks it lists.
+    pub tracks: usize,
+}
+
+/// An export of the user data, read: see
+/// [`Library::read_user_data`](crate::Library::read_user_data).
+#[derive(Debug, Clone)]
+pub struct UserDataFile {
+    /// The file.
+    pub path: PathBuf,
+    /// Who saved it.
+    pub saved: SavedBy,
+    /// Its content in the form the importers share.
+    pub library: ForeignLibrary,
+}
+
 /// Reads an export file into the form the importers share.
-pub(super) fn read(path: &Path) -> Result<ForeignLibrary, ImportError> {
+pub(super) fn read(path: &Path) -> Result<UserDataFile, ImportError> {
     let bytes = std::fs::read(path).map_err(|source| ImportError::Io {
         path: path.to_path_buf(),
         source,
     })?;
-    parse(&bytes).map_err(|reason| ImportError::Format {
+    let (library, saved) = parse_file(&bytes).map_err(|problem| match problem {
+        Problem::Newer(version) => ImportError::Newer {
+            path: path.to_path_buf(),
+            version,
+        },
+        Problem::Format(reason) => ImportError::Format {
+            path: path.to_path_buf(),
+            reason,
+        },
+    })?;
+    Ok(UserDataFile {
         path: path.to_path_buf(),
-        reason,
+        saved,
+        library,
     })
 }
 
+/// Why export text cannot be read.
+enum Problem {
+    /// It is not an export, or it is broken.
+    Format(String),
+    /// A newer version of Helikodu saved it, in this version of the file.
+    Newer(u32),
+}
+
 /// Reads export text into the form the importers share.
+#[cfg(test)]
 pub(super) fn parse(bytes: &[u8]) -> Result<ForeignLibrary, String> {
-    let document: Document =
-        serde_json::from_slice(bytes).map_err(|e| format!("not a user data file: {e}"))?;
+    parse_file(bytes)
+        .map(|(library, _)| library)
+        .map_err(|problem| match problem {
+            Problem::Format(reason) => reason,
+            Problem::Newer(version) => format!("the file has version {version}"),
+        })
+}
+
+/// Reads export text into the form the importers share, with who saved it.
+fn parse_file(bytes: &[u8]) -> Result<(ForeignLibrary, SavedBy), Problem> {
+    let document: Document = serde_json::from_slice(bytes)
+        .map_err(|e| Problem::Format(format!("not a user data file: {e}")))?;
     if document.format != USER_DATA_FORMAT {
-        return Err(format!(
+        return Err(Problem::Format(format!(
             "not a user data file: the format is \"{}\"",
             document.format
-        ));
+        )));
     }
     if document.version > USER_DATA_VERSION {
-        return Err(format!(
-            "the file has version {}; this version of Helikodu reads up to version {}",
-            document.version, USER_DATA_VERSION
-        ));
+        return Err(Problem::Newer(document.version));
     }
+    let saved = SavedBy {
+        program: document.saved_by.clone(),
+        at: (document.exported_at > 0).then(|| from_unix_seconds(document.exported_at)),
+        tracks: document.tracks.len(),
+    };
     let mut library = ForeignLibrary::default();
     for entry in &document.tracks {
         let mut track = foreign(&entry.item);
@@ -722,7 +783,7 @@ pub(super) fn parse(bytes: &[u8]) -> Result<ForeignLibrary, String> {
             )),
         }
     }
-    Ok(library)
+    Ok((library, saved))
 }
 
 /// Writes `export` to `path`, replacing the file only once it is complete.

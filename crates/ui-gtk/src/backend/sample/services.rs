@@ -59,6 +59,7 @@ pub struct MemoryServices {
     updates: Option<async_channel::Sender<Update>>,
     state: Mutex<MemoryState>,
     files: SampleFiles,
+    interchange: Arc<super::interchange::SampleInterchange>,
 }
 
 impl Default for MemoryServices {
@@ -84,6 +85,7 @@ impl MemoryServices {
             library,
             updates,
             files: SampleFiles::new(music_folder()),
+            interchange: Arc::default(),
             state: Mutex::new(MemoryState {
                 settings: Arc::new(settings),
                 output: OutputSelection::default(),
@@ -238,6 +240,10 @@ fn sample_devices(backend: OutputBackendKind) -> Vec<DeviceInfo> {
 }
 
 impl Services for MemoryServices {
+    fn interchange(&self) -> Arc<dyn super::super::interchange::InterchangeServices> {
+        self.interchange.clone()
+    }
+
     fn export(&self) -> Arc<dyn super::super::export::ExportServices> {
         Arc::new(super::export::SampleExport {
             library: self.library.clone(),

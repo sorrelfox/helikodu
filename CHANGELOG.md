@@ -23,6 +23,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The **Tracks** table can show a **Labels** column (a track's own labels and those of its album and artists) and a column for each of your own fields, from **Columns ▸ Your fields**. A computed field's column cannot be sorted; a custom field's column sorts like any text column.
 - The **Browse** lists of **Tracks** can list labels: choose **Label** in a list's head.
 - The search field's completion offers `label` with your labels after `label:`, and your own fields among the others, with the values of a custom field when they are few.
+- The Import window (**Library → Import from Another Player…**) shows what importing another player's library or a Helikodu data file would change, with the folders that moved, the entries left out and the playlists, and imports it; an import is undone from the window or its message, not with Ctrl+Z.
+- Missing files has a "Replaced" section that carries the plays, history and playlist places of missing tracks to their new copies.
+- **Library → Export Your Data…** and the "Your data" row of Settings → Advanced save and import your data file.
 
 ### Changed
 

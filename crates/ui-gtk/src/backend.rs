@@ -16,6 +16,7 @@ pub mod browse;
 pub mod columns;
 pub mod export;
 pub mod insights;
+pub mod interchange;
 pub mod sample;
 pub mod service;
 pub mod services;

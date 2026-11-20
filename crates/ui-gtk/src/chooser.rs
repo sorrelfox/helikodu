@@ -94,3 +94,48 @@ pub(crate) fn select_folder(
         reply(result.ok().and_then(|f| f.path()));
     });
 }
+
+/// Asks for a file to read over `parent`, with `title` on the chooser and a
+/// filter named `kind` for the file names in `patterns` (`*.xml`). `reply`
+/// gets the file, or `None` when the chooser was cancelled or closed. The
+/// stand-in of [`replace_folder_chooser`] answers here too. Does nothing while
+/// a chooser is already open over `parent`.
+pub(crate) fn open_file(
+    parent: &gtk::Window,
+    title: &str,
+    kind: &str,
+    patterns: &[&str],
+    reply: impl FnOnce(Option<PathBuf>) + 'static,
+) {
+    if is_open_over(parent) {
+        return;
+    }
+    set_open(parent, true);
+    let weak = parent.downgrade();
+    let reply = move |path: Option<PathBuf>| {
+        if let Some(parent) = weak.upgrade() {
+            set_open(&parent, false);
+        }
+        reply(path);
+    };
+    if let Some(chooser) = STAND_IN.with(|s| s.borrow().clone()) {
+        chooser(title, Box::new(reply));
+        return;
+    }
+    let filters = gio::ListStore::new::<gtk::FileFilter>();
+    let filter = gtk::FileFilter::new();
+    filter.set_name(Some(kind));
+    for pattern in patterns {
+        filter.add_pattern(pattern);
+    }
+    filters.append(&filter);
+    let dialog = gtk::FileDialog::builder()
+        .title(title)
+        .modal(true)
+        .filters(&filters)
+        .default_filter(&filter)
+        .build();
+    dialog.open(Some(parent), gio::Cancellable::NONE, move |result| {
+        reply(result.ok().and_then(|f| f.path()));
+    });
+}

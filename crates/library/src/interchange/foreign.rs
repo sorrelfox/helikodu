@@ -127,8 +127,32 @@ impl ImportSource {
         format!("{}:{}", self.player.id(), path.to_string_lossy())
     }
 
+    /// The names of the files the reader reads: the library file, and the
+    /// playlist file beside it for Rhythmbox (`playlists.xml`) and Lollypop
+    /// (`playlists.db`) when there is one.
+    pub fn files_read(&self) -> Vec<String> {
+        let file = self.file();
+        let name = |p: &Path| {
+            p.file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default()
+        };
+        let mut files = vec![name(&file)];
+        let beside = match self.player {
+            Player::Rhythmbox => Some("playlists.xml"),
+            Player::Lollypop => Some("playlists.db"),
+            _ => None,
+        };
+        if let Some(beside) = beside.map(|b| file.with_file_name(b))
+            && beside.is_file()
+        {
+            files.push(name(&beside));
+        }
+        files
+    }
+
     /// The library file, when `path` names its folder.
-    pub(crate) fn file(&self) -> PathBuf {
+    pub fn file(&self) -> PathBuf {
         if !self.path.is_dir() {
             return self.path.clone();
         }

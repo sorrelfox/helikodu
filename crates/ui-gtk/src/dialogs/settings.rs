@@ -19,6 +19,7 @@ mod playback;
 mod search;
 mod shortcuts;
 mod track_analysis;
+mod your_data;
 
 use std::cell::RefCell;
 use std::rc::Rc;

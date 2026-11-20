@@ -7,14 +7,16 @@ use std::collections::{HashMap, HashSet};
 use std::os::unix::ffi::OsStrExt;
 
 use rusqlite::{Connection, OptionalExtension};
+use serde::{Deserialize, Serialize};
 
 use super::foreign::{
     ForeignItem, ForeignLibrary, ForeignListen, ForeignPlaylistKind, ForeignTrack,
 };
-use super::labels_fields::{self, FieldConflict, LabelWork};
+use super::labels_fields::{self, FieldConflict, LabelKey, LabelWork};
 use super::matching::{LibraryIndex, Match, describe};
 use super::merge::{self, Baseline, CountRule, Incoming, Stats};
 use super::uri::{PathMapping, local_path};
+use super::user_data::SavedBy;
 use super::{ImportRunKind, Player};
 use crate::db::unix_time::{to_millis, to_unix_seconds};
 
@@ -33,7 +35,8 @@ pub struct MergeOptions {
 }
 
 /// How the entries matched the library's tracks.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct MatchCounts {
     /// The entries read.
     pub entries: usize,
@@ -55,7 +58,8 @@ impl MatchCounts {
 }
 
 /// What an import would change.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct PlanTotals {
     /// The tracks (identities) whose statistics change.
     pub tracks: usize,
@@ -92,6 +96,12 @@ pub struct PlanTotals {
     pub labels: usize,
     /// The labels given: one for each track, album or artist that gets a label.
     pub label_links: usize,
+    /// Of the labels given, those given to tracks.
+    pub label_tracks: usize,
+    /// Of the labels given, those given to albums.
+    pub label_albums: usize,
+    /// Of the labels given, those given to artists.
+    pub label_artists: usize,
     /// The tracks, albums and artists of labels that match nothing in the library
     /// (or, for an album, more than one): left out.
     pub label_unmatched: usize,
@@ -102,7 +112,7 @@ pub struct PlanTotals {
 }
 
 /// What a playlist of the source becomes.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlannedPlaylistKind {
     /// A static playlist of `items` entries, `matched` of them library tracks;
     /// `from_rules` when the source fills it from rules that could not be read.
@@ -124,7 +134,7 @@ pub enum PlannedPlaylistKind {
 }
 
 /// A playlist of the source in a plan.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlannedPlaylist {
     /// Its name.
     pub name: String,
@@ -173,6 +183,12 @@ pub struct ImportPlan {
     pub player: Option<Player>,
     /// The source: the player and the path of its file, or the export file.
     pub source: String,
+    /// The names of the files read: `rhythmdb.xml` and `playlists.xml`, or the
+    /// export file. Empty when the plan was made from a library read elsewhere.
+    pub files: Vec<String>,
+    /// For an export of the user data: who saved it, when, and how many tracks
+    /// it lists.
+    pub saved: Option<SavedBy>,
     /// How the entries matched.
     pub matching: MatchCounts,
     /// What would change.
@@ -192,7 +208,33 @@ pub struct ImportPlan {
     pub(super) work: Work,
 }
 
+/// What an import run did, in figures, as [`ImportRun::summary`](super::ImportRun::summary)
+/// keeps it: the plan's files, matching, totals and playlists.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ImportSummary {
+    /// The names of the files read.
+    pub files: Vec<String>,
+    /// How the entries matched.
+    pub matching: MatchCounts,
+    /// What changed. For statistics carried to replacements, `tracks` is the
+    /// number of tracks that took statistics.
+    pub totals: PlanTotals,
+    /// The playlists and what each became.
+    pub playlists: Vec<PlannedPlaylist>,
+}
+
 impl ImportPlan {
+    /// The plan in figures, as the run keeps it.
+    pub fn summary(&self) -> ImportSummary {
+        ImportSummary {
+            files: self.files.clone(),
+            matching: self.matching,
+            totals: self.totals,
+            playlists: self.playlists.clone(),
+        }
+    }
+
     /// Whether applying the plan would change nothing.
     pub fn is_empty(&self) -> bool {
         self.totals.tracks == 0
@@ -491,6 +533,13 @@ pub(super) fn make(c: &Connection, input: &PlanInput<'_>) -> rusqlite::Result<Im
     let extras = labels_fields::plan(c, &index, mappings, input.library)?;
     totals.labels = extras.new_labels;
     totals.label_links = extras.links.len();
+    for link in &extras.links {
+        match link.key {
+            LabelKey::Identity(_) => totals.label_tracks += 1,
+            LabelKey::Album(_) => totals.label_albums += 1,
+            LabelKey::Artist(_) => totals.label_artists += 1,
+        }
+    }
     totals.label_unmatched = extras.unmatched;
     totals.fields = extras.fields.len();
     totals.field_conflicts = extras.conflicts.len();
@@ -501,6 +550,8 @@ pub(super) fn make(c: &Connection, input: &PlanInput<'_>) -> rusqlite::Result<Im
         kind: input.kind,
         player: input.player,
         source: input.source.clone(),
+        files: Vec::new(),
+        saved: None,
         matching,
         totals,
         playlists,

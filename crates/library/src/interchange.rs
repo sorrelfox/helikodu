@@ -70,18 +70,24 @@ pub use foreign::{
 };
 pub use labels_fields::FieldConflict;
 pub use plan::{
-    ImportPlan, MatchCounts, MergeOptions, PlanTotals, PlannedPlaylist, PlannedPlaylistKind,
+    ImportPlan, ImportSummary, MatchCounts, MergeOptions, PlanTotals, PlannedPlaylist,
+    PlannedPlaylistKind,
 };
 pub(crate) use to_files::record_rating;
 pub use to_files::{StatsToFiles, StatsWriteReport};
 pub use uri::PathMapping;
-pub use user_data::{USER_DATA_FORMAT, USER_DATA_VERSION, UserDataExport};
+pub use user_data::{SavedBy, USER_DATA_FORMAT, USER_DATA_VERSION, UserDataExport, UserDataFile};
 
 /// An applied import, or statistics carried to a replacement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ImportRunId(pub(crate) i64);
 
 impl ImportRunId {
+    /// The run with the number `id` (as [`get`](Self::get) gives it).
+    pub fn new(id: i64) -> Self {
+        Self(id)
+    }
+
     /// The number of the run in the database.
     pub fn get(self) -> i64 {
         self.0
@@ -118,6 +124,11 @@ pub struct ImportRun {
     /// The playlists, saved searches, history entries, favourites, labels given
     /// and fields defined it added.
     pub rows: usize,
+    /// When it was undone (`None` for a run undone before this was recorded).
+    pub undone_at: Option<std::time::SystemTime>,
+    /// What it did in figures, as its plan said (`None` for a run made before
+    /// this was recorded).
+    pub summary: Option<ImportSummary>,
 }
 
 /// Why an import, an export or an undo failed.
@@ -140,6 +151,15 @@ pub enum ImportError {
         path: PathBuf,
         /// What is wrong.
         reason: String,
+    },
+    /// A newer version of Helikodu saved the file, in a version of its format
+    /// this one cannot read.
+    #[error("{}: the file has version {version}; this version of Helikodu reads up to version {}", .path.display(), USER_DATA_VERSION)]
+    Newer {
+        /// The file.
+        path: PathBuf,
+        /// The version of the file's format.
+        version: u32,
     },
     /// The library database failed.
     #[error(transparent)]
@@ -169,7 +189,21 @@ impl crate::Library {
         options: &MergeOptions,
     ) -> Result<ImportPlan, ImportError> {
         let library = read_source(source)?;
-        self.plan_foreign_import(source.player, &source.key(), &library, options)
+        self.plan_source_import(source, &library, options)
+    }
+
+    /// Works out what importing `library`, read from `source` with
+    /// [`read_source`], would do; the plan names the files read. Reading once
+    /// and planning again (with other options) saves reading the files again.
+    pub fn plan_source_import(
+        &self,
+        source: &ImportSource,
+        library: &ForeignLibrary,
+        options: &MergeOptions,
+    ) -> Result<ImportPlan, ImportError> {
+        let mut plan = self.plan_foreign_import(source.player, &source.key(), library, options)?;
+        plan.files = source.files_read();
+        Ok(plan)
     }
 
     /// Works out what importing `library`, read from `player`'s file named by
@@ -198,16 +232,41 @@ impl crate::Library {
         path: &std::path::Path,
         options: &MergeOptions,
     ) -> Result<ImportPlan, ImportError> {
-        let library = user_data::read(path)?;
-        let source = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
+        let file = Self::read_user_data(path)?;
+        self.plan_user_data(&file, options)
+    }
+
+    /// Reads the user data file at `path` (see
+    /// [`export_user_data`](Self::export_user_data)), changing nothing. A file
+    /// saved by a newer version of Helikodu in a newer version of the format is
+    /// refused with [`ImportError::Newer`].
+    pub fn read_user_data(path: &std::path::Path) -> Result<UserDataFile, ImportError> {
+        user_data::read(path)
+    }
+
+    /// Works out what importing `file`, read with
+    /// [`read_user_data`](Self::read_user_data), would do.
+    pub fn plan_user_data(
+        &self,
+        file: &UserDataFile,
+        options: &MergeOptions,
+    ) -> Result<ImportPlan, ImportError> {
+        let path = &file.path;
+        let source = std::path::absolute(path).unwrap_or_else(|_| path.clone());
         let input = plan::PlanInput {
             kind: ImportRunKind::UserData,
             player: None,
             source: format!("user-data:{}", source.to_string_lossy()),
-            library: &library,
+            library: &file.library,
             options,
         };
-        Ok(self.database().read(|c| plan::make(c, &input))?)
+        let mut plan = self.database().read(|c| plan::make(c, &input))?;
+        plan.files = path
+            .file_name()
+            .map(|n| vec![n.to_string_lossy().into_owned()])
+            .unwrap_or_default();
+        plan.saved = Some(file.saved.clone());
+        Ok(plan)
     }
 
     /// Carries out `plan` in one transaction, as an import run that
