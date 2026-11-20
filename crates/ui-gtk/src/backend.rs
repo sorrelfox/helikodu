@@ -16,6 +16,7 @@ pub mod browse;
 pub mod columns;
 pub mod export;
 pub mod fields;
+pub mod grouping;
 pub mod insights;
 pub mod interchange;
 pub mod sample;
@@ -32,6 +33,7 @@ use std::time::{Duration, SystemTime};
 
 pub use browse::{ChapterRow, MediaKind, YearRange, YearRow};
 pub use columns::{ExtraColumns, ExtraValues, FieldName, FieldWords, Vocabulary, YourField};
+pub use grouping::{TrackGroup, TrackGrouping};
 pub use helikodu_model::player::{AnalyzerFrame, ChannelLevel};
 pub use helikodu_model::player::{
     PlayModes, PlayScope, RepeatMode, ShuffleMode, StopAfter, TrackFlags,
@@ -939,6 +941,21 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     ) -> Result<FacetList, BackendError> {
         let _ = (query, chosen, field);
         Err(unsupported())
+    }
+    /// `keys` (a track list in its order) in groups by `by`: the groups in the
+    /// order of their values, the tracks without a value first, the tracks of
+    /// each group in the order of `keys`.
+    fn group_tracks(
+        &self,
+        keys: &[TrackKey],
+        by: &TrackGrouping,
+    ) -> Result<Vec<TrackGroup>, BackendError> {
+        let _ = (keys, by);
+        Err(unsupported())
+    }
+    /// The names of the user's fields a list can be grouped by, in their order.
+    fn group_fields(&self) -> Result<Vec<String>, BackendError> {
+        Ok(Vec::new())
     }
     /// The tracks of `query` that pass every choice of `chosen`, in its order.
     fn facet_track_keys(

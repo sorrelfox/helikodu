@@ -20,6 +20,8 @@ The rest of this page describes what happens in detail, with the commands that d
 
 ## Importing from another player
 
+After the first scan of your library, when Helikodu finds the library of Rhythmbox, Strawberry, Clementine, Lollypop or iTunes at its usual place on your computer, a notice offers to bring its plays and ratings over, with **Import…**. It is offered once and stays until you dismiss it.
+
 ```sh
 helikodu-cli import rhythmbox                 # show what would be imported
 helikodu-cli import rhythmbox --apply         # import it

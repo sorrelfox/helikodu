@@ -142,3 +142,6 @@ crates/ui-gtk/src/tools/user_fields.rs
 crates/ui-gtk/src/tools/user_fields/draft.rs
 crates/ui-gtk/src/widgets/insert_popover.rs
 crates/ui-gtk/src/widgets/insert_popover/catalogue.rs
+crates/ui-gtk/src/dialogs/analysis_band.rs
+crates/ui-gtk/src/views/tracks/grouping.rs
+crates/ui-gtk/src/window/import_offer.rs

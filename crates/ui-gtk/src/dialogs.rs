@@ -6,6 +6,7 @@
 //! application actions that open them, and the user guide.
 
 pub(crate) mod about;
+pub(crate) mod analysis_band;
 pub(crate) mod common;
 pub(crate) mod decoder_files;
 pub(crate) mod first_run;
@@ -113,6 +114,24 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
     add(application, "import-from-player", |main| {
         crate::tools::import::open(main, None);
     });
+    // The Import window with one player chosen, by its short name.
+    let named = gio::SimpleAction::new(
+        "import-from-named-player",
+        Some(gtk::glib::VariantTy::STRING),
+    );
+    let app = application.downgrade();
+    named.connect_activate(move |_, value| {
+        let Some(main) = app.upgrade().as_ref().and_then(main_window) else {
+            return;
+        };
+        let player = value.and_then(|v| v.str()).and_then(|id| {
+            helikodu_service::library::interchange::Player::ALL
+                .into_iter()
+                .find(|p| p.id() == id)
+        });
+        crate::tools::import::open(&main, player.map(crate::tools::import::Start::Player));
+    });
+    application.add_action(&named);
     add(
         application,
         "export-user-data",

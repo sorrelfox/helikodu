@@ -12,4 +12,4 @@ pub(crate) mod track_list;
 
 pub(crate) use album_list::{AlbumItem, AlbumListModel};
 pub(crate) use covers::CoverCache;
-pub(crate) use track_list::{TrackItem, TrackListModel};
+pub(crate) use track_list::{GroupHeader, TrackItem, TrackListModel, group_index, group_key};

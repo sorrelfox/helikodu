@@ -1400,6 +1400,20 @@ fn fill_info(editor: &Rc<Editor>, index: usize) {
     let left = gtk::Box::new(gtk::Orientation::Vertical, 22);
     left.set_hexpand(true);
     let folder = track.path.parent().map(tilde).unwrap_or_default();
+    // The tag formats and pictures are the last row of the File group, which
+    // leaves room for the Analysis band under the columns.
+    let mut tags = facts.tag_formats.join(", ");
+    if facts.pictures > 0 {
+        let pictures = fill(
+            &ntr("{} picture", "{} pictures", facts.pictures),
+            &[&facts.pictures.to_string()],
+        );
+        tags = if tags.is_empty() {
+            pictures
+        } else {
+            format!("{tags} · {pictures}")
+        };
+    }
     let file_group = info_group(
         &tr("File"),
         &[
@@ -1411,6 +1425,7 @@ fn fill_info(editor: &Rc<Editor>, index: usize) {
                 facts.modified.clone().unwrap_or_default(),
                 false,
             ),
+            (tr("Tags"), tags, false),
         ],
     );
     let open = compact_button(&tr("Open folder"));
@@ -1490,25 +1505,8 @@ fn fill_info(editor: &Rc<Editor>, index: usize) {
             ),
         ],
     ));
-    let mut tags = facts.tag_formats.join(", ");
-    if facts.pictures > 0 {
-        let pictures = fill(
-            &ntr("{} picture", "{} pictures", facts.pictures),
-            &[&facts.pictures.to_string()],
-        );
-        tags = if tags.is_empty() {
-            pictures
-        } else {
-            format!("{tags} · {pictures}")
-        };
-    }
-    if !tags.is_empty() {
-        let group = gtk::Box::new(gtk::Orientation::Vertical, 8);
-        group.append(&label(&tr("Tags in the file"), &["hk-section-label"]));
-        group.append(&label(&tags, &[]));
-        left.append(&group);
-    }
-    info.append(&left);
+    let columns = gtk::Box::new(gtk::Orientation::Horizontal, 32);
+    columns.append(&left);
     let right = gtk::Box::new(gtk::Orientation::Vertical, 22);
     right.set_hexpand(true);
     let peak = |v: Option<f64>| v.map(|p| crate::format::decimal(p, 2)).unwrap_or_default();
@@ -1552,7 +1550,10 @@ fn fill_info(editor: &Rc<Editor>, index: usize) {
     if let Some(group) = super::track_flags::playback_group(&editor.backend, track.key) {
         right.append(&group);
     }
-    info.append(&right);
+    columns.append(&right);
+    info.append(&columns);
+    // What the track analysis found, across both columns.
+    info.append(&super::analysis_band::band(&facts.analysis));
 }
 
 fn file_list(editor: &Rc<Editor>) -> gtk::Box {
@@ -1678,7 +1679,7 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
     } else {
         String::new()
     };
-    let info = gtk::Box::new(gtk::Orientation::Horizontal, 32);
+    let info = gtk::Box::new(gtk::Orientation::Vertical, 18);
     info.add_css_class("hk-tag-form");
     let cover_tab = gtk::Box::new(gtk::Orientation::Horizontal, 28);
     cover_tab.add_css_class("hk-tag-form");

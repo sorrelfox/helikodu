@@ -16,6 +16,7 @@
 
 mod edit;
 mod extra;
+mod grouping;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -193,6 +194,8 @@ pub(crate) struct TracksView {
     /// The actions of the Columns menu, and its section of the user's fields.
     column_actions: gio::SimpleActionGroup,
     fields_section: gio::Menu,
+    /// What the tracks are grouped by, and the groups.
+    grouping: grouping::Grouping,
 }
 
 impl std::fmt::Debug for TracksView {
@@ -244,6 +247,9 @@ impl TracksView {
         columns_button.add_css_class("hk-sort");
         columns_button.set_valign(gtk::Align::Center);
         columns_button.set_tooltip_text(Some(&tr("Show or hide columns")));
+        // "Group by", before Columns.
+        let grouping = grouping::Grouping::new();
+        toolbar.insert_child_after(&grouping.button, Some(&filter));
         toolbar.append(&columns_button);
         let browser = (!embedded).then(|| FacetBrowser::new(backend));
         if !embedded {
@@ -333,6 +339,7 @@ impl TracksView {
                 fields: RefCell::new(Vec::new()),
                 column_actions: gio::SimpleActionGroup::new(),
                 fields_section: gio::Menu::new(),
+                grouping,
             }
         });
         crate::widgets::menu_names::set_menu_later(&columns_button, &view.columns_menu());
@@ -340,6 +347,7 @@ impl TracksView {
         view.connect_edges();
         view.connect_browser();
         view.connect_extra();
+        view.connect_grouping();
         view.show_sort();
         let weak = Rc::downgrade(&view);
         view.table.connect_map(move |_| {
@@ -781,10 +789,12 @@ impl TracksView {
     /// The keys of the selected rows, in order.
     fn selected_keys(&self) -> Vec<TrackKey> {
         let keys = self.model.keys();
-        selected_positions(&self.selection)
+        let selected = selected_positions(&self.selection)
             .into_iter()
             .filter_map(|p| keys.get(p as usize).copied())
-            .collect()
+            .collect();
+        // A selected group row stands for all its tracks.
+        self.with_group_tracks(selected)
     }
 
     /// The selection as a context menu target.
@@ -882,15 +892,13 @@ impl TracksView {
     }
 
     fn show_selection(&self) {
-        let positions = selected_positions(&self.selection);
+        let positions = self.selected_keys();
         if positions.is_empty() {
-            self.status_selection.set_text("");
+            self.status_selection.set_text(&self.grouping_status());
             return;
         }
-        let keys = self.model.keys();
         let length: Duration = positions
             .iter()
-            .filter_map(|p| keys.get(*p as usize))
             .filter_map(|k| self.model.cached(*k))
             .filter_map(|r| r.duration)
             .sum();
@@ -930,6 +938,7 @@ impl TracksView {
             ..query.clone()
         };
         let need_total = filtered && self.total.get() == 0;
+        let grouping = self.grouping.by();
         let backend = self.backend.clone();
         let view = Rc::downgrade(self);
         glib::spawn_future_local(async move {
@@ -944,7 +953,12 @@ impl TracksView {
                     } else {
                         None
                     };
-                    Ok((keys, total))
+                    // The groups, made by the library from the sorted tracks.
+                    let groups = match &grouping {
+                        Some(by) => library.group_tracks(&keys, by).ok(),
+                        None => None,
+                    };
+                    Ok((keys, total, groups))
                 })
                 .await;
             let Some(view) = view.upgrade() else { return };
@@ -952,7 +966,7 @@ impl TracksView {
                 return;
             }
             view.loaded.set(true);
-            let (keys, total) = result.unwrap_or_default();
+            let (keys, total, groups) = result.unwrap_or_default();
             if !filtered {
                 view.total.set(keys.len());
             } else if let Some(total) = total {
@@ -967,6 +981,7 @@ impl TracksView {
                 format::count(keys.len())
             };
             view.count.set_text(&count);
+            let keys = view.grouped_rows(keys, groups);
             if *view.model.keys() == keys[..] {
                 // The same tracks (after an edit): the rows shown are fetched
                 // again in place, so the table keeps its scroll position.
@@ -1063,6 +1078,7 @@ impl TracksView {
 
     /// Reloads after the library changed, dropping the cached rows.
     pub(crate) fn library_changed(self: &Rc<Self>) {
+        self.load_group_fields();
         self.model.forget_rows();
         self.load_fields();
         self.total.set(0);
@@ -1073,14 +1089,23 @@ impl TracksView {
     }
 
     fn play_from(&self, position: usize) {
+        // A group row opens or closes instead.
+        if self.toggle_group_at(u32::try_from(position).unwrap_or(u32::MAX)) {
+            return;
+        }
         let keys = self.model.keys();
         let end = (position + PLAY_WINDOW).min(keys.len());
         let Some(tracks) = keys.get(position..end) else {
             return;
         };
+        let tracks: Vec<TrackKey> = tracks
+            .iter()
+            .filter(|k| crate::models::group_index(**k).is_none())
+            .copied()
+            .collect();
         self.backend
             .send(crate::backend::PlayerRequest::PlayTracks {
-                tracks: tracks.to_vec(),
+                tracks,
                 start: 0,
                 title: self.title.borrow().clone(),
                 shuffle: false,

@@ -8,11 +8,13 @@
 //! a fixed seed, so two runs show the same library. Its files do not exist; the
 //! folders are made up from the tracks' paths.
 
+mod analysis;
 mod browse;
 mod copies;
 mod export;
 mod fields;
 mod files;
+mod grouping;
 mod history;
 mod insights;
 mod interchange;
@@ -1086,6 +1088,18 @@ impl LibrarySource for SampleLibrary {
         self.sample_facet_keys(query, chosen)
     }
 
+    fn group_tracks(
+        &self,
+        keys: &[TrackKey],
+        by: &super::TrackGrouping,
+    ) -> Result<Vec<super::TrackGroup>, BackendError> {
+        self.sample_groups(keys, by)
+    }
+
+    fn group_fields(&self) -> Result<Vec<String>, BackendError> {
+        Ok(grouping::FIELDS.iter().map(|f| (*f).to_owned()).collect())
+    }
+
     fn statistics(
         &self,
         since: super::StatisticsSince,
@@ -1942,10 +1956,25 @@ fn build(options: &SampleOptions, first_run: bool) -> (Backend, async_channel::S
     build_over(SampleLibrary::new(options.albums), options, first_run)
 }
 
+/// The backend of [`first_run_backend`] on a computer where Rhythmbox's
+/// library is found: the end of the first scan offers to import from it.
+pub fn import_offer_backend(options: &SampleOptions) -> Backend {
+    build_offering(SampleLibrary::new(options.albums), options, true, true).0
+}
+
 fn build_over(
     library: SampleLibrary,
     options: &SampleOptions,
     first_run: bool,
+) -> (Backend, async_channel::Sender<Update>) {
+    build_offering(library, options, first_run, false)
+}
+
+fn build_offering(
+    library: SampleLibrary,
+    options: &SampleOptions,
+    first_run: bool,
+    import_offer: bool,
 ) -> (Backend, async_channel::Sender<Update>) {
     let (sender, receiver) = async_channel::unbounded();
     lists::install_fields();
@@ -1954,6 +1983,9 @@ fn build_over(
     let mut services = MemoryServices::for_library(library.clone(), sender.clone());
     if first_run {
         services = services.empty();
+    }
+    if import_offer {
+        services = services.with_import_offer();
     }
     let player = Rc::new(FakePlayer {
         library: library.clone(),

@@ -200,3 +200,13 @@ listview.hk-history > row:selected { background-color: var(--hk-sel); color: var
 .hk-history-time { font-size: 11.5px; }
 .hk-history .hk-cell.hk-skip label { color: var(--hk-t3); }
 .hk-history .hk-cell.hk-missing label.hk-medium { color: var(--hk-t3); }
+
+/* Tracks grouped by a field: the row of a group spans the cells of its row
+   (each draws its part of the line), 36 high on the window's surface with a
+   line above it, except above the first group. */
+columnview.hk-table > listview > row > cell > .hk-cell.hk-group { min-height: 36px; background-color: var(--hk-win); box-shadow: inset 0 1px var(--hk-line); }
+columnview.hk-table > listview > row > cell > .hk-cell.hk-group.hk-group-first { box-shadow: none; }
+columnview.hk-table > listview > row:hover > cell > .hk-cell.hk-group { background-color: var(--hk-hover); }
+columnview.hk-table > listview > row:selected > cell > .hk-cell.hk-group { background-color: var(--hk-sel); }
+menubutton.hk-group-by .hk-group-by-field { font-size: 12px; }
+popover.hk-group-expression > contents { padding: 10px; }

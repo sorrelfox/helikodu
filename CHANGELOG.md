@@ -33,6 +33,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Library ▸ Your Fields…** defines your computed and custom fields in a window: the name, the kind, the expression or the tag, and example values for the selected tracks or a search that follow the expression as it is typed. A problem is underlined and explained with its place, and a saved field is in use at once.
 - Every pattern and expression entry has an **Insert** button: a searchable list of the fields, your own fields and the functions with an example each, which puts the choice at the cursor and selects a function's first value. It replaces **Insert field** in Organize files, and Convert and Sync and export have it too.
 
+- The tag editor's File info tab shows what the track analysis found: a curve of the track's loudness with its silences and the start of its fade-out, where the sound starts and ends, the silences inside it and where it fades out, or that the track is not analysed yet or could not be read. The tags of the file are now a row of the File group.
+- The Tracks view can be grouped with **Group by**: by album artist, album, genre, year, format, label, one of your own fields (computed fields too) or an expression. Group rows show the value and the number of tracks, open and close with a double click, **Enter**, **Left** and **Right**, and their context menu acts on all of their tracks.
+- After the first scan, when the library of another player Helikodu can import from is found on the computer, a notice offers to bring its plays and ratings over, once.
+
 ### Changed
 
 - With **Restore the last session**, music that was playing when you closed or quit Helikodu now continues where it stopped when you start it again, with a short fade in; music that was paused or stopped stays paused. The track is selected in the queue panel and scrolled into view. Files you open with Helikodu play instead, and a track whose file is missing or that was playing when Helikodu ended abnormally stays paused.

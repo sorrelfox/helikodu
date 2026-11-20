@@ -7,6 +7,10 @@
 //! that starts again when it is full. The values of the columns beyond the row
 //! (labels, the user's fields) come with the same batch, only while such a
 //! column is shown.
+//!
+//! A grouped list also holds a group row before the tracks of each group: a
+//! key made by [`group_key`], whose item carries the group's [`GroupHeader`]
+//! instead of a track row, and whose tracks count their stripes from it.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap};
@@ -21,6 +25,33 @@ use crate::backend::{Backend, ExtraColumns, ExtraValues, TrackKey, TrackRow};
 
 /// How many neighbouring rows one fetch asks for at most.
 const BATCH: usize = 96;
+/// The bit that marks the key of a group row; track keys never have it.
+const GROUP_BIT: u64 = 1 << 63;
+
+/// The key of the group row of group `index`.
+pub(crate) fn group_key(index: usize) -> TrackKey {
+    TrackKey(GROUP_BIT | index as u64)
+}
+
+/// The group `key` is the row of, if it is a group row's key.
+pub(crate) fn group_index(key: TrackKey) -> Option<usize> {
+    (key.0 & GROUP_BIT != 0).then(|| usize::try_from(key.0 & !GROUP_BIT).unwrap_or(usize::MAX))
+}
+
+/// What the row of a group shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct GroupHeader {
+    /// The value, or the words for no value.
+    pub(crate) value: String,
+    /// Whether it is the group of the tracks without a value.
+    pub(crate) no_value: bool,
+    /// The number of tracks, as shown.
+    pub(crate) count: String,
+    /// Whether its tracks are shown.
+    pub(crate) open: bool,
+    /// Whether it is the first group (which has no line above it).
+    pub(crate) first: bool,
+}
 /// How many rows the model keeps; beyond that the cache starts again.
 const CACHE: usize = 4096;
 
@@ -32,6 +63,10 @@ mod imp_item {
         pub(super) key: Cell<u64>,
         pub(super) position: Cell<u32>,
         pub(super) row: RefCell<Option<Rc<TrackRow>>>,
+        /// The header of a group row.
+        pub(super) group: RefCell<Option<Rc<GroupHeader>>>,
+        /// In a grouped list, the track's place in its group.
+        pub(super) stripe: Cell<Option<u32>>,
     }
 
     #[glib::object_subclass]
@@ -73,6 +108,17 @@ impl TrackItem {
         self.imp().position.get()
     }
 
+    /// The header, for the row of a group.
+    pub(crate) fn group(&self) -> Option<Rc<GroupHeader>> {
+        self.imp().group.borrow().clone()
+    }
+
+    /// In a grouped list, the track's place in its group, from 0; the stripes
+    /// start again in each group.
+    pub(crate) fn stripe(&self) -> Option<u32> {
+        self.imp().stripe.get()
+    }
+
     /// Its row, if fetched.
     pub(crate) fn row(&self) -> Option<Rc<TrackRow>> {
         self.imp().row.borrow().clone()
@@ -109,10 +155,17 @@ struct Fetcher {
     extras: RefCell<ExtraColumns>,
     /// Their values, by key; kept and dropped with the rows.
     extra_cache: RefCell<HashMap<TrackKey, Rc<ExtraValues>>>,
+    /// The headers of the groups, by index, in a grouped list.
+    groups: RefCell<Vec<Rc<GroupHeader>>>,
+    /// The positions of the group rows, in order.
+    group_rows: RefCell<Vec<u32>>,
 }
 
 impl Fetcher {
     fn request(self: &Rc<Self>, item: &TrackItem) {
+        if group_index(item.key()).is_some() {
+            return;
+        }
         self.waiting
             .borrow_mut()
             .entry(item.position())
@@ -151,7 +204,12 @@ impl Fetcher {
         let keys: Vec<TrackKey> = {
             let all = self.keys.borrow();
             let end = (last as usize + 1).min(all.len());
-            all.get(first as usize..end).unwrap_or_default().to_vec()
+            all.get(first as usize..end)
+                .unwrap_or_default()
+                .iter()
+                .filter(|k| group_index(**k).is_none())
+                .copied()
+                .collect()
         };
         self.fetches.set(self.fetches.get() + 1);
         let generation = self.generation.get();
@@ -240,8 +298,24 @@ mod imp_model {
 
         fn item(&self, position: u32) -> Option<glib::Object> {
             let key = *self.fetcher.keys.borrow().get(position as usize)?;
+            if let Some(index) = group_index(key) {
+                let item = TrackItem::new(key, position, None);
+                item.imp()
+                    .group
+                    .replace(self.fetcher.groups.borrow().get(index).cloned());
+                return Some(item.upcast());
+            }
             let row = self.fetcher.cache.borrow().get(&key).cloned();
-            Some(TrackItem::new(key, position, row).upcast())
+            let item = TrackItem::new(key, position, row);
+            let rows = self.fetcher.group_rows.borrow();
+            if !rows.is_empty() {
+                // The group row before the track starts its stripes.
+                let before = rows.partition_point(|p| *p < position);
+                if let Some(start) = before.checked_sub(1).and_then(|i| rows.get(i)) {
+                    item.imp().stripe.set(Some(position - start - 1));
+                }
+            }
+            Some(item.upcast())
         }
     }
 }
@@ -269,7 +343,65 @@ impl TrackListModel {
         fetcher.waiting.borrow_mut().clear();
         fetcher.generation.set(fetcher.generation.get() + 1);
         fetcher.keys.replace(keys.into());
+        self.note_group_rows();
         self.items_changed(0, removed, added);
+    }
+
+    /// Takes the headers of the groups of a grouped list (none for a list
+    /// without groups); the keys that follow hold a row for each.
+    pub(crate) fn set_groups(&self, headers: Vec<Rc<GroupHeader>>) {
+        self.imp().fetcher.groups.replace(headers);
+    }
+
+    /// Replaces the header of group `index`.
+    pub(crate) fn set_group(&self, index: usize, header: Rc<GroupHeader>) {
+        if let Some(slot) = self.imp().fetcher.groups.borrow_mut().get_mut(index) {
+            *slot = header;
+        }
+    }
+
+    /// Replaces the `removed` keys from `position` by `added`, as a group that
+    /// opens or closes does; the other rows stay where they are.
+    pub(crate) fn splice_keys(&self, position: u32, removed: u32, added: &[TrackKey]) {
+        let fetcher = &self.imp().fetcher;
+        let keys: Rc<[TrackKey]> = {
+            let old = fetcher.keys.borrow();
+            let start = (position as usize).min(old.len());
+            let end = (start + removed as usize).min(old.len());
+            old[..start]
+                .iter()
+                .chain(added)
+                .chain(&old[end..])
+                .copied()
+                .collect()
+        };
+        fetcher.waiting.borrow_mut().clear();
+        fetcher.generation.set(fetcher.generation.get() + 1);
+        fetcher.keys.replace(keys);
+        self.note_group_rows();
+        self.items_changed(
+            position,
+            removed,
+            u32::try_from(added.len()).unwrap_or(u32::MAX),
+        );
+    }
+
+    /// Finds the group rows among the keys again.
+    fn note_group_rows(&self) {
+        let fetcher = &self.imp().fetcher;
+        if fetcher.groups.borrow().is_empty() {
+            fetcher.group_rows.borrow_mut().clear();
+            return;
+        }
+        let rows: Vec<u32> = fetcher
+            .keys
+            .borrow()
+            .iter()
+            .enumerate()
+            .filter(|(_, k)| group_index(**k).is_some())
+            .map(|(p, _)| u32::try_from(p).unwrap_or(u32::MAX))
+            .collect();
+        fetcher.group_rows.replace(rows);
     }
 
     /// Forgets the cached rows, after the library changed.

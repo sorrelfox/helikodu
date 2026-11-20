@@ -21,12 +21,16 @@ use gtk::pango;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
+use std::rc::Rc;
+
 use crate::backend::TrackKey;
-use crate::models::TrackItem;
+use crate::models::{GroupHeader, TrackItem};
 use crate::playback::PlayingKeys;
 
 /// The gap between the text and the copies badge.
 const BADGE_GAP: i32 = 6;
+
+mod group_row;
 
 mod imp {
     use super::*;
@@ -45,6 +49,8 @@ mod imp {
         pub(super) badge: RefCell<Option<gtk::Button>>,
         /// The track of the row shown, for a cell that follows no item.
         pub(super) track: Cell<Option<TrackKey>>,
+        /// The header of the group row shown, in a grouped list.
+        pub(super) group: RefCell<Option<Rc<GroupHeader>>>,
     }
 
     #[glib::object_subclass]
@@ -131,6 +137,9 @@ mod imp {
 
         fn snapshot(&self, snapshot: &gtk::Snapshot) {
             let obj = self.obj();
+            if let Some(header) = self.group.borrow().as_ref() {
+                super::group_row::draw(&obj, snapshot, header);
+            }
             if !self.text.borrow().is_empty() {
                 let layout = self.layout();
                 let width = match self.shown_badge() {
@@ -368,6 +377,7 @@ impl TableCell {
     /// Follows `item`: `show` runs now and again when its row arrives.
     pub(crate) fn follow(&self, item: &TrackItem, show: impl Fn(&Self, &TrackItem) + 'static) {
         self.forget();
+        self.show_group(item);
         show(self, item);
         let weak = self.downgrade();
         let id = item.connect_loaded(move |item| {
@@ -377,6 +387,31 @@ impl TableCell {
         });
         self.imp().item.replace(Some(item.clone()));
         self.imp().loaded.replace(Some(id));
+    }
+
+    /// Shows the group row of a grouped list for an item that is one, and
+    /// starts the stripes again in each group.
+    fn show_group(&self, item: &TrackItem) {
+        let header = item.group();
+        if header.is_some() || item.stripe().is_some() {
+            let odd = item.stripe().is_some_and(|s| s % 2 == 1);
+            if odd {
+                self.add_css_class("hk-alt");
+            } else {
+                self.remove_css_class("hk-alt");
+            }
+        }
+        group_row::mark(self, header.as_deref());
+        let changed = *self.imp().group.borrow() != header;
+        if changed {
+            self.imp().group.replace(header);
+            self.queue_draw();
+        }
+    }
+
+    /// The header of the group row shown, if the cell shows one.
+    pub(crate) fn group(&self) -> Option<Rc<GroupHeader>> {
+        self.imp().group.borrow().clone()
     }
 
     /// Sets the track of the row shown, for a cell that follows no item.

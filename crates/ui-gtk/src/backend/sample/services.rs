@@ -50,6 +50,8 @@ struct MemoryState {
     covers_removed: Vec<TrackKey>,
     /// When "Back up now" was last used.
     backup_made: Option<std::time::SystemTime>,
+    /// Whether another player's library is "found" and not offered yet.
+    import_offer: bool,
 }
 
 /// Invented settings, devices, folders and tags. See the module documentation.
@@ -105,6 +107,7 @@ impl MemoryServices {
                 lyrics: HashMap::new(),
                 covers_removed: Vec::new(),
                 backup_made: None,
+                import_offer: false,
             }),
         }
     }
@@ -115,6 +118,14 @@ impl MemoryServices {
         updates: async_channel::Sender<Update>,
     ) -> Self {
         Self::new(Some(library), Some(updates), vec![music_folder()])
+    }
+
+    /// The same services on a computer where Rhythmbox's library is found:
+    /// the import is offered once.
+    #[must_use]
+    pub fn with_import_offer(self) -> Self {
+        self.lock().import_offer = true;
+        self
     }
 
     /// The same services with no library folder, as before the first run.
@@ -435,6 +446,20 @@ impl Services for MemoryServices {
         }
     }
 
+    fn import_offer(&self) -> Vec<super::super::services::FoundPlayer> {
+        if !self.lock().import_offer {
+            return Vec::new();
+        }
+        vec![super::super::services::FoundPlayer {
+            id: "rhythmbox".into(),
+            name: "Rhythmbox".into(),
+        }]
+    }
+
+    fn mark_import_offered(&self) {
+        self.lock().import_offer = false;
+    }
+
     fn edit_tracks(&self, tracks: &[TrackKey]) -> Result<Vec<EditTrack>, BackendError> {
         let Some(library) = &self.library else {
             return Ok(Vec::new());
@@ -523,6 +548,7 @@ impl Services for MemoryServices {
                         last_played: Some("9 Nov 2026".into()),
                         plays: Some(u64::from(track.plays)),
                         skips: Some(1),
+                        analysis: super::analysis::sample_analysis(*key, track.duration),
                     },
                 });
                 break;

@@ -32,6 +32,8 @@ The lyrics of one track; with several tracks selected, open the editor for one t
 
 The facts about the file, which you cannot change here: name, folder, size, the audio format, the tags in the file, the loudness values (ReplayGain), and what the library knows (when it was added, last played, plays and skips). **Open folder** shows the file in your file manager.
 
+**Analysis**, under the two columns, shows what the background analysis found for the track, so you can see why a crossfade starts where it does: a curve of how loud the track is over its length (one bar for every two seconds, silence as flat bars, and a dashed line where the fade-out starts), where the sound starts and ends, the silences inside the track and where the fade-out starts. Until the track is analysed it says so; a file that could not be read for the analysis is tried again when it changes. Nothing here is part of **Save**.
+
 ## Saving
 
 **Save N files** writes the tags into the files, one file after another. Each file is written to a copy, verified, then swapped in, so a power failure cannot damage it (very large files are an exception; see **Very large files** in [Settings](settings.md#advanced)). The library is updated at once; there is no need to rescan.

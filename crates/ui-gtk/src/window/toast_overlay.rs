@@ -131,6 +131,14 @@ impl ToastOverlay {
         self.countdown(generation, seconds);
     }
 
+    /// Shows `text` with `action` until it is dismissed (or replaced by
+    /// another toast): no clock.
+    pub(crate) fn show_until_dismissed(self: &Rc<Self>, text: &str, action: ToastAction) {
+        self.show(text, Some(action), false);
+        // The countdown of this toast no longer matches.
+        self.generation.set(self.generation.get() + 1);
+    }
+
     /// Shows `text` led by a grey dot, the mark of a device that went away.
     pub(crate) fn show_with_dot(self: &Rc<Self>, text: &str, action: Option<ToastAction>) {
         self.show(text, action, true);

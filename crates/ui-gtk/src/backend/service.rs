@@ -12,11 +12,13 @@
 //! playback come back to the window as [`Update::Request`], so they pass the
 //! full-output gate.
 
+mod analysis_and_import;
 mod artist_photos;
 mod browse;
 mod columns;
 mod export;
 mod fields;
+mod grouping;
 mod history;
 mod insights;
 mod interchange;
@@ -1527,6 +1529,18 @@ impl LibrarySource for ServiceLibrary {
         chosen: &[super::FacetChoice],
     ) -> Result<Vec<TrackKey>, BackendError> {
         self.facet_keys(query, chosen)
+    }
+
+    fn group_tracks(
+        &self,
+        keys: &[TrackKey],
+        by: &super::TrackGrouping,
+    ) -> Result<Vec<super::TrackGroup>, BackendError> {
+        self.groups(keys, by)
+    }
+
+    fn group_fields(&self) -> Result<Vec<String>, BackendError> {
+        self.field_names()
     }
 
     fn statistics(

@@ -28,6 +28,7 @@ mod artist_photos;
 pub mod backups;
 mod duplicates;
 mod files;
+mod grouping;
 mod history_export;
 mod info;
 mod insights;
@@ -138,6 +139,7 @@ pub use helikodu_library::{
 };
 pub use helikodu_library::{FacetChoice, FacetField, FacetKey, FacetList, FacetValue};
 pub use helikodu_library::{FileSection, YearSpan, YearSummary};
+pub use helikodu_library::{GroupBy, TrackGroup};
 /// One undo history over tag edits and file runs, newest first: what Ctrl+Z and
 /// Ctrl+Shift+Z step through outside an open playlist.
 pub use helikodu_library::{HistoryAction, HistoryError, HistoryReport, UndoHistory};

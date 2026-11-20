@@ -18,6 +18,7 @@ mod covers;
 mod db;
 mod details;
 mod expressions;
+mod grouping;
 mod history;
 pub mod interchange;
 mod labels;
@@ -74,6 +75,7 @@ pub use db::{
 pub use details::{
     FileDetails, LibraryTotals, PlayedTrack, ReadFileError, TrackDetails, read_file_details,
 };
+pub use grouping::{GroupBy, TrackGroup};
 /// The content hash of a cover, the key of the thumbnail cache.
 pub use helikodu_meta::covers::CoverHash;
 /// The playlist file formats an export can write and an import reads.

@@ -76,6 +76,7 @@ impl MainWindow {
         if let Some(sidebar) = self.imp().sidebar.borrow().as_ref() {
             crate::tools::managed_runs::attach(self, &sidebar.root, backend.services());
         }
+        self.watch_import_offer(backend, playback);
         first_run::show_if_needed(self);
     }
 

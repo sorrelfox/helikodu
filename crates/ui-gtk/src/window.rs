@@ -10,8 +10,10 @@
 
 pub(crate) mod desktop;
 pub(crate) mod dialog_hooks;
+pub(crate) mod grouping_hooks;
 pub(crate) mod history;
 pub(crate) mod home;
+pub(crate) mod import_offer;
 pub(crate) mod lists;
 pub(crate) mod narrow;
 pub(crate) mod now_playing;

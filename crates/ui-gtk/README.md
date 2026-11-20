@@ -100,6 +100,12 @@ crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test desktop
 crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test play_modes
 ```
 
+`tests/optional.rs` covers File info with the track analysis (analysed, not analysed yet, could not be read; no frames while idle), the Tracks view grouped by a field, one of the user's fields and an expression (the groups' order, closing and opening them by activation and with Left and Right, a group row's context menu acting on its tracks) and the offer to import from another player, once, after the first scan. With `HELIKODU_OPTIONAL_SHOTS=DIR` it saves those screens to `DIR`:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test optional
+```
+
 The shuffle and repeat modes used last and "Follow the playing track" (View menu; it scrolls the queue panel to the track that starts) last for the session only: the window state file has no place for them yet.
 
 `tests/interchange.rs` covers the Import window (the plan read in the background, the figures and the entries left out, an import with its toast, undone only by its own Undo and newest first, never by Ctrl+Z; folders that moved; a Helikodu data file; files that cannot be read), the "Replaced" section of Missing files and "Your data" in Settings › Advanced. With `HELIKODU_IMPORT_SHOTS=DIR` it saves the screens to `DIR`:

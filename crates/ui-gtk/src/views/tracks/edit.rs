@@ -144,7 +144,10 @@ impl TracksView {
             .filter(|p| positions.contains(p))
             .unwrap_or(first);
         let keys = self.model.keys();
-        let Some(&anchor) = keys.get(anchor_position as usize) else {
+        let Some(&anchor) = keys
+            .get(anchor_position as usize)
+            .filter(|k| crate::models::group_index(**k).is_none())
+        else {
             return;
         };
         let mut selected: Vec<TrackKey> = vec![anchor];
@@ -152,7 +155,7 @@ impl TracksView {
             positions
                 .iter()
                 .filter_map(|p| keys.get(*p as usize).copied())
-                .filter(|k| *k != anchor),
+                .filter(|k| *k != anchor && crate::models::group_index(*k).is_none()),
         );
         let visible = self
             .columns

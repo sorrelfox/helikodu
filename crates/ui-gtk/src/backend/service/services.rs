@@ -402,6 +402,7 @@ fn edit_track(key: TrackKey, info: &TrackInfo, file: Result<EditableFile, String
             last_played: entry.and_then(|e| e.stats.last_played.and_then(date)),
             plays: entry.map(|e| e.stats.play_count),
             skips: entry.map(|e| e.stats.skip_count),
+            analysis: super::super::services::AnalysisFacts::NotYet,
         },
     }
 }
@@ -715,6 +716,7 @@ impl Services for ServiceServices {
                     .map_err(|e| fill(&tr("The file cannot be read: {}"), &[&e.to_string()]))
             };
             let mut track = edit_track(*key, &info, file.as_ref().map_err(Clone::clone).cloned());
+            track.facts.analysis = super::analysis_and_import::analysis_facts(music, *key);
             // The text as stored, for "Repair garbled text".
             if file.as_ref().is_ok_and(|f| f.charset_repaired) {
                 let plain = ReadOptions {
@@ -1431,6 +1433,14 @@ impl Services for ServiceServices {
 
     fn mark_crash_reports_seen(&self) {
         let _ = helikodu_service::crash::mark_seen(&self.service.dirs().state);
+    }
+
+    fn import_offer(&self) -> Vec<super::super::services::FoundPlayer> {
+        super::analysis_and_import::import_offer(&self.service.dirs().state)
+    }
+
+    fn mark_import_offered(&self) {
+        super::analysis_and_import::mark_import_offered(&self.service.dirs().state);
     }
 
     fn versions(&self) -> Versions {

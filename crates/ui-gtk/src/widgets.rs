@@ -13,6 +13,7 @@ pub(crate) mod empty_state;
 pub(crate) mod eq_graph;
 pub(crate) mod insert_popover;
 pub(crate) mod level_meter;
+pub(crate) mod loudness_curve;
 pub(crate) mod lyric_lines;
 pub(crate) mod menu_names;
 pub(crate) mod now_links;

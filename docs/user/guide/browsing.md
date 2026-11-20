@@ -108,6 +108,10 @@ Click a column header to sort by it: the first click sorts in ascending order, t
 
 Double-click a track, or press **Enter**, to play from that track. **Ctrl+A** selects all tracks.
 
+### Grouping the tracks
+
+**Group by**, beside **Columns**, puts the tracks in groups: by album artist, album, genre, year, format or label, by one of [your own fields](labels-and-fields.md) (a computed field such as `decade` too, although the table cannot be sorted by one), or by **An expression…** of the [expression language](expressions.md), typed into a small box (**Insert** adds a field) and applied with **Enter**. Each group starts with a row that shows its value and how many tracks it has; tracks without a value form the group **No value**, which comes first. The groups follow their values, and within a group the tracks keep the order the column headers show. Double-click a group row, press **Enter**, or use **Left** and **Right** to close and open it; its context menu acts on all of its tracks. The status bar says what the tracks are grouped by, and **No groups** turns grouping off.
+
 ### Browsing by genre, artist and album
 
 The **Browse** button opens three linked lists above the table: **Genre**, **Album artist** and **Album**, each with the number of tracks of every value and an **All …** row at the top. Choosing a value narrows the lists to its right and the table; **Ctrl**-click and **Shift**-click choose several values. The count in the toolbar then says how many of all tracks are shown. The field of each list can be changed with the button in its head: **Genre**, **Album artist**, **Album**, **Artist**, **Composer**, **Year**, **Format** or **Label**. A list of labels counts each track under every label it has, its own and those of its album and artists. Text in the **Filter** field filters first, so the lists show only the values of the tracks it finds. **Browse** again closes the lists and shows every track.

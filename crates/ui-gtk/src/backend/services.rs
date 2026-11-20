@@ -235,6 +235,30 @@ pub struct FileFacts {
     pub plays: Option<u64>,
     /// How often it was skipped.
     pub skips: Option<u64>,
+    /// What the track analysis found.
+    pub analysis: AnalysisFacts,
+}
+
+/// What the track analysis found for one track, for the File info tab.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum AnalysisFacts {
+    /// It was not analysed, or its file changed since.
+    #[default]
+    NotYet,
+    /// Its file could not be read for the analysis.
+    Failed,
+    /// The analysis.
+    Analysed(Arc<helikodu_model::analysis::TrackAnalysis>),
+}
+
+/// Another player whose library was found on this computer, for the offer to
+/// import its plays and ratings.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FoundPlayer {
+    /// The short name the import uses: `rhythmbox`, `strawberry`, …
+    pub id: String,
+    /// The player's name, as it calls itself.
+    pub name: String,
 }
 
 /// One track as the tag editor opens it.
@@ -822,6 +846,15 @@ pub trait Services: fmt::Debug + Send + Sync {
     fn interchange(&self) -> Arc<dyn super::interchange::InterchangeServices> {
         Arc::new(super::interchange::NoInterchange)
     }
+    /// The players whose libraries are found on this computer, if the offer to
+    /// import from them was not made yet; empty once it was. Blocking.
+    fn import_offer(&self) -> Vec<FoundPlayer> {
+        Vec::new()
+    }
+
+    /// Remembers that the offer to import was made, so that it is not made
+    /// again.
+    fn mark_import_offered(&self) {}
 }
 
 /// The error of a file operation without a library.
