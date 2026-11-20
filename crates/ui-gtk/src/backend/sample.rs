@@ -18,6 +18,7 @@ mod insights;
 mod interchange;
 mod lists;
 mod lyrics;
+mod managed;
 mod photos;
 mod playlists;
 mod query;

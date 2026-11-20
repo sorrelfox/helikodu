@@ -41,7 +41,7 @@ mod plan;
 mod run;
 mod transfer;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::Library;
 use crate::copies::FileId;
@@ -256,6 +256,27 @@ impl ManagedPlan {
     pub fn fits(&self) -> bool {
         self.free_bytes.is_none_or(|free| self.bytes_needed <= free)
     }
+
+    /// A plan made of these parts, for a front end that shows invented plans (its
+    /// sample content). The library's own plans come from
+    /// [`Library::plan_managed_import`] and [`Library::plan_consolidate`]; a run of
+    /// a plan made here tidies no emptied folders.
+    pub fn from_parts(
+        operation: ManagedOperation,
+        options: ManagedOptions,
+        items: Vec<ManagedItem>,
+        bytes_needed: u64,
+        free_bytes: Option<u64>,
+    ) -> Self {
+        Self {
+            operation,
+            options,
+            items,
+            bytes_needed,
+            free_bytes,
+            bases: Vec::new(),
+        }
+    }
 }
 
 /// A run in the journal of the managed folder.
@@ -369,6 +390,10 @@ pub struct ManagedRunSummary {
     pub waiting: usize,
     /// The files it skipped.
     pub skipped: usize,
+    /// The bytes of the files it finished.
+    pub done_bytes: u64,
+    /// The bytes of the files it has yet to do.
+    pub waiting_bytes: u64,
 }
 
 /// Why a plan or a run could not start.
@@ -425,6 +450,12 @@ impl Library {
         cancel: &CancelToken,
     ) -> Result<ManagedPlan, ManagedError> {
         plan::import(self.database(), paths, options, scan, cancel)
+    }
+
+    /// How many library files that are present are outside `folder`, the managed
+    /// folder: the files a consolidation would look at. Reads only the database.
+    pub fn managed_files_outside(&self, folder: &Path) -> Result<usize, ManagedError> {
+        Ok(plan::outside(self.database(), folder)?)
     }
 
     /// Plans consolidating the library files outside the managed folder into it.

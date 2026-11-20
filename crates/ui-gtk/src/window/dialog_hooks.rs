@@ -73,7 +73,43 @@ impl MainWindow {
                 playback,
             );
         }
+        if let Some(sidebar) = self.imp().sidebar.borrow().as_ref() {
+            crate::tools::managed_runs::attach(self, &sidebar.root, backend.services());
+        }
         first_run::show_if_needed(self);
+    }
+
+    /// Opens the plan of adding `paths` to the managed folder, for tests and
+    /// screenshots.
+    #[doc(hidden)]
+    pub fn open_managed_add(&self, paths: Vec<std::path::PathBuf>) -> Option<gtk::Window> {
+        crate::tools::managed_folder::open_add(self, paths)
+    }
+
+    /// Opens the plan of gathering the library into the managed folder, for
+    /// tests and screenshots.
+    #[doc(hidden)]
+    pub fn open_managed_gather(&self) -> Option<gtk::Window> {
+        crate::tools::managed_folder::open_gather(self)
+    }
+
+    /// Opens the dialog of a run of the managed folder that was cut short, for
+    /// tests and screenshots.
+    #[doc(hidden)]
+    pub fn open_managed_cut_short(&self) -> Option<gtk::Window> {
+        crate::tools::managed_cut_short::open(self)
+    }
+
+    /// Whether the sidebar footer of a run of the managed folder is shown.
+    #[doc(hidden)]
+    pub fn managed_footer_shown(&self) -> bool {
+        let Some(sidebar) = self.imp().sidebar.borrow().clone() else {
+            return false;
+        };
+        find(sidebar.root.upcast_ref(), &|w| {
+            w.widget_name() == "managed-footer"
+        })
+        .is_some_and(|w| w.is_visible())
     }
 
     /// Opens the copies window of the track `track` (for tests and

@@ -141,6 +141,10 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
         });
         application.add_action(&action);
     }
+    crate::tools::managed_runs::install_actions(
+        application,
+        backend.services().settings().library.managed.is_on(),
+    );
     application.set_accels_for_action("app.preferences", &["<Control>comma"]);
     application.set_accels_for_action("app.shortcuts", &["<Control>question"]);
 }

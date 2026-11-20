@@ -416,6 +416,11 @@ impl MainWindow {
         self.go(before.unwrap_or(Page::Library("albums")), true);
     }
 
+    /// Opens Tracks with the tracks that `query` selects.
+    pub(crate) fn show_tracks_matching(&self, query: &str) {
+        self.show_all_tracks(query);
+    }
+
     pub(super) fn show_all_tracks(&self, text: &str) {
         let Some(pages) = self.pages() else { return };
         pages.before_search.replace(None);
@@ -1165,12 +1170,20 @@ impl MainWindow {
         }
     }
 
-    /// Files from a file manager go into the queue anywhere in the window;
-    /// dragged tracks go into the queue on the panel.
+    /// Files from a file manager go into the queue anywhere in the window (or,
+    /// while the managed folder is on, into its plan); dragged tracks go into
+    /// the queue on the panel.
     fn setup_drops(&self, backend: &Backend) {
         let weak = self.downgrade();
         let files = drag::file_target(move |paths| {
-            if let Some(window) = weak.upgrade() {
+            let Some(window) = weak.upgrade() else { return };
+            // While the managed folder is on, dropped files are music to add.
+            let managed = window
+                .backend()
+                .is_some_and(|b| b.services().settings().library.managed.is_on());
+            if managed {
+                crate::tools::managed_folder::open_add(&window, paths);
+            } else {
                 window.play_files(paths, true);
             }
         });

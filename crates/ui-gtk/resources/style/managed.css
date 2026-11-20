@@ -1,0 +1,37 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * The managed folder: its group in Settings › Library, its window (the plan of
+ * adding music or gathering the library, and the run), the dialog of a run that
+ * was cut short, and the mark before a toast.
+ *
+ * Like helikodu.css, this only paints: sizes of boxes, gaps and alignment come
+ * from the widgets.
+ */
+
+/* ---- Settings › Library ------------------------------------------------- */
+
+.hk-managed-setting { min-height: 46px; padding: 7px 14px; }
+.hk-managed-setting > label.hk-managed-top { margin-top: 8px; }
+.hk-managed-setting entry.hk-pattern-entry { min-height: 32px; font-size: 12.5px; }
+.hk-managed-example { font-size: 11.5px; }
+.hk-managed-footer { padding: 7px 14px 7px 8px; }
+
+/* ---- The window --------------------------------------------------------- */
+
+.hk-managed-path { font-size: 12px; font-weight: 500; }
+row.hk-managed-dim .hk-managed-path { color: var(--hk-t3); }
+.hk-managed-into { margin: 14px 8px 0; padding: 0 10px; }
+.hk-managed-into > .hk-section-label { margin-bottom: 6px; }
+.hk-managed-notice { margin: 0 24px 14px; }
+.hk-managed-notice image { color: var(--hk-t1); }
+listview.hk-managed-list > row > .hk-managed-row { min-height: 46px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-managed-row .hk-managed-from { font-size: 11px; }
+.hk-managed-reason { font-size: 12px; }
+.hk-managed-row image { -gtk-icon-size: 16px; }
+
+/* ---- The cut-short dialog and toasts ------------------------------------ */
+
+.hk-managed-problem { font-size: 12px; }
+.hk-toast-lead { margin-right: 2px; color: var(--hk-glass-t2); -gtk-icon-size: 14px; }

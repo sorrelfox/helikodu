@@ -25,6 +25,8 @@ pub(crate) mod statistics;
 pub(crate) mod tag_undo;
 pub(crate) mod toast_overlay;
 
+pub(crate) use toast_overlay::ToastLead;
+
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -864,6 +866,39 @@ impl MainWindow {
                     run: Box::new(run),
                 }),
             );
+        }
+    }
+
+    /// Shows a toast led by `lead`, with a button labelled `action` that runs
+    /// `run`; with `stays` it stays until it is dismissed.
+    pub(crate) fn toast_marked(
+        &self,
+        text: &str,
+        lead: ToastLead,
+        action: Option<&str>,
+        stays: bool,
+        run: impl Fn() + 'static,
+    ) {
+        if let Some(toasts) = self.imp().toasts.borrow().as_ref() {
+            toasts.show_marked(
+                text,
+                action.map(|action| toast_overlay::ToastAction {
+                    label: action.to_owned(),
+                    undo: false,
+                    run: Box::new(run),
+                }),
+                lead,
+                stays,
+            );
+        }
+    }
+
+    /// Removes the toast shown when its text is `text`.
+    pub(crate) fn dismiss_toast_if(&self, text: &str) {
+        if let Some(toasts) = self.imp().toasts.borrow().as_ref()
+            && toasts.text().as_deref() == Some(text)
+        {
+            toasts.dismiss();
         }
     }
 

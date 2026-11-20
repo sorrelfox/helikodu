@@ -62,6 +62,7 @@ pub struct MemoryServices {
     interchange: Arc<super::interchange::SampleInterchange>,
     /// The fields the user defines.
     fields: Arc<super::fields::SampleFields>,
+    managed: super::managed::SampleManaged,
 }
 
 impl Default for MemoryServices {
@@ -92,6 +93,7 @@ impl MemoryServices {
             updates,
             files: SampleFiles::new(music_folder()),
             interchange: Arc::default(),
+            managed: super::managed::SampleManaged::default(),
             state: Mutex::new(MemoryState {
                 settings: Arc::new(settings),
                 output: OutputSelection::default(),
@@ -868,6 +870,82 @@ impl Services for MemoryServices {
             }
             found(i, SampleFiles::verify(path));
         }
+    }
+
+    fn set_managed_folder(&self, folder: &std::path::Path) -> Result<bool, BackendError> {
+        let folder = folder.to_path_buf();
+        let mut added = false;
+        self.update_settings(&mut |s| {
+            added = !s.library.folders.iter().any(|f| folder.starts_with(f));
+            if added {
+                s.library.folders.push(folder.clone());
+            }
+            s.library.managed.folder = Some(folder.clone());
+        })?;
+        if added {
+            self.scan(std::slice::from_ref(&folder))?;
+        }
+        Ok(added)
+    }
+
+    fn managed_files_outside(&self) -> Result<usize, BackendError> {
+        Ok(super::managed::SampleManaged::outside(
+            &self.settings(),
+            &music_folder(),
+        ))
+    }
+
+    fn plan_managed(
+        &self,
+        source: &super::super::services::ManagedSource,
+        transfer: super::super::services::Transfer,
+        cancel: &CancelToken,
+    ) -> Result<super::super::services::ManagedPlan, BackendError> {
+        super::managed::SampleManaged::plan(
+            &self.settings(),
+            source,
+            transfer,
+            &music_folder(),
+            cancel,
+        )
+    }
+
+    fn apply_managed(
+        &self,
+        plan: &super::super::services::ManagedPlan,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<super::super::services::ManagedReport, BackendError> {
+        let report = self.managed.apply(plan, progress, cancel);
+        self.emit(Update::LibraryChanged);
+        report
+    }
+
+    fn interrupted_managed_run(
+        &self,
+    ) -> Result<Option<super::super::services::ManagedRunSummary>, BackendError> {
+        Ok(self.managed.interrupted())
+    }
+
+    fn resume_managed_run(
+        &self,
+        run: super::super::services::ManagedRunId,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<super::super::services::ManagedReport, BackendError> {
+        let report = self.managed.resume(run, progress, cancel);
+        self.emit(Update::LibraryChanged);
+        report
+    }
+
+    fn roll_back_managed_run(
+        &self,
+        run: super::super::services::ManagedRunId,
+        progress: FileProgress<'_>,
+    ) -> Result<super::super::services::ManagedReport, BackendError> {
+        let report = self.managed.roll_back(run, progress);
+        self.emit(Update::LibraryChanged);
+        report
     }
 
     fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {

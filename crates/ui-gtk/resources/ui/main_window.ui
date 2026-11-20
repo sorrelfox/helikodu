@@ -20,6 +20,11 @@ SPDX-License-Identifier: GPL-3.0-or-later
         <attribute name="action">app.add-folder</attribute>
       </item>
       <item>
+        <attribute name="label" translatable="yes">Add Music to the Managed Folder…</attribute>
+        <attribute name="action">app.managed-add</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+      <item>
         <attribute name="label" translatable="yes">New Playlist</attribute>
         <attribute name="action">app.new-playlist</attribute>
       </item>
@@ -100,27 +105,42 @@ SPDX-License-Identifier: GPL-3.0-or-later
       </submenu>
       <submenu>
         <attribute name="label" translatable="yes">Library</attribute>
-        <item>
-          <attribute name="label" translatable="yes">Rescan</attribute>
-          <attribute name="action">app.rescan</attribute>
-        </item>
-        <item>
-          <attribute name="label" translatable="yes">History</attribute>
-          <attribute name="action">win.show-history</attribute>
-        </item>
-        <item>
-          <attribute name="label" translatable="yes">Export History…</attribute>
-          <attribute name="action">win.export-history</attribute>
-        </item>
-        <item>
-          <attribute name="label" translatable="yes">Statistics</attribute>
-          <attribute name="action">win.show-statistics</attribute>
-        </item>
-        <item>
-          <attribute name="label" translatable="yes">Missing Files…</attribute>
-          <attribute name="action">app.missing-files</attribute>
-        </item>
         <section>
+          <item>
+            <attribute name="label" translatable="yes">Rescan</attribute>
+            <attribute name="action">app.rescan</attribute>
+          </item>
+        </section>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">History</attribute>
+            <attribute name="action">win.show-history</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Export History…</attribute>
+            <attribute name="action">win.export-history</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Statistics</attribute>
+            <attribute name="action">win.show-statistics</attribute>
+          </item>
+        </section>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">Missing Files…</attribute>
+            <attribute name="action">app.missing-files</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Gather into the Managed Folder…</attribute>
+            <attribute name="action">app.managed-gather</attribute>
+            <attribute name="hidden-when">action-disabled</attribute>
+          </item>
+        </section>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">Your Fields…</attribute>
+            <attribute name="action">app.user-fields</attribute>
+          </item>
           <item>
             <attribute name="label" translatable="yes">Import from Another Player…</attribute>
             <attribute name="action">app.import-from-player</attribute>
@@ -128,10 +148,6 @@ SPDX-License-Identifier: GPL-3.0-or-later
           <item>
             <attribute name="label" translatable="yes">Export Your Data…</attribute>
             <attribute name="action">app.export-user-data</attribute>
-          </item>
-          <item>
-            <attribute name="label" translatable="yes">Your Fields…</attribute>
-            <attribute name="action">app.user-fields</attribute>
           </item>
         </section>
       </submenu>

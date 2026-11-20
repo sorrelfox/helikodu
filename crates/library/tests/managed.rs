@@ -345,6 +345,10 @@ fn consolidating_keeps_identities_and_statistics() {
     let (root, library, path, id) = untidy_library("managed-consolidate");
     let before = library.stats(id).unwrap();
     assert_eq!(before.play_count, 1);
+    let managed = root.join("Library");
+    let outside = library.managed_files_outside(&managed).unwrap();
+    assert!(outside >= 3, "{outside} files outside");
+    assert_eq!(library.managed_files_outside(&root).unwrap(), 0);
     let plan = library
         .plan_consolidate(&options(&root, Transfer::Move))
         .unwrap();
@@ -376,6 +380,7 @@ fn consolidating_keeps_identities_and_statistics() {
     let image = item(&plan, "image.flac").to.clone();
     assert!(library.track_at(&image, 2).unwrap().is_some());
     // Nothing is outside any more.
+    assert_eq!(library.managed_files_outside(&managed).unwrap(), 0);
     let again = library
         .plan_consolidate(&options(&root, Transfer::Move))
         .unwrap();
@@ -428,6 +433,9 @@ fn cut_short(name: &str, after: usize) -> (PathBuf, PathBuf, Library, ManagedPla
     let waiting = library.interrupted_managed_run().unwrap().unwrap();
     assert_eq!(waiting.done, after);
     assert_eq!(waiting.waiting, plan.items.len() - after);
+    let sizes = |items: &[ManagedItem]| items.iter().map(|i| i.size).sum::<u64>();
+    assert_eq!(waiting.done_bytes, sizes(&plan.items[..after]));
+    assert_eq!(waiting.waiting_bytes, sizes(&plan.items[after..]));
     // A new run waits until this one is settled.
     assert!(matches!(
         library.apply_managed(&plan, &scan_options(&root), &|_, _| {}, &CancelToken::new()),

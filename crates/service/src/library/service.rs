@@ -278,6 +278,12 @@ impl LibraryService {
         &self.library
     }
 
+    /// The scan worker program it was started with, when it is not beside the
+    /// running program: for the calls of [`MusicLibrary`] that read files.
+    pub fn worker_program(&self) -> Option<&std::path::Path> {
+        self.worker_program.as_deref()
+    }
+
     /// Runs `query` on the worker thread and hands its result to `reply` there.
     pub fn run<T, Q, R>(&self, query: Q, reply: R) -> Result<(), LibraryError>
     where

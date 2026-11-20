@@ -33,6 +33,7 @@ crates/ui-gtk/src/dialogs/settings.rs
 crates/ui-gtk/src/dialogs/settings/advanced.rs
 crates/ui-gtk/src/dialogs/settings/appearance.rs
 crates/ui-gtk/src/dialogs/settings/library.rs
+crates/ui-gtk/src/dialogs/settings/managed_folder.rs
 crates/ui-gtk/src/dialogs/settings/loudness.rs
 crates/ui-gtk/src/dialogs/settings/output.rs
 crates/ui-gtk/src/dialogs/settings/playback.rs
@@ -79,6 +80,9 @@ crates/ui-gtk/src/views/tracks/edit.rs
 crates/ui-gtk/src/window/tag_undo.rs
 crates/ui-gtk/src/tools/file_tools.rs
 crates/ui-gtk/src/tools/organizer.rs
+crates/ui-gtk/src/tools/managed_folder.rs
+crates/ui-gtk/src/tools/managed_runs.rs
+crates/ui-gtk/src/tools/managed_cut_short.rs
 crates/ui-gtk/src/tools/missing_files.rs
 crates/ui-gtk/src/tools/verify_files.rs
 crates/ui-gtk/src/tools/rename.rs

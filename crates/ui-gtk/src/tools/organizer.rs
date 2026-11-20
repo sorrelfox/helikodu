@@ -61,7 +61,7 @@ fn pattern_name(name: &str) -> String {
 /// The character sets, in the order of their dropdown.
 const SETS: [CharacterSet; 3] = CharacterSet::ALL;
 
-fn set_name(set: CharacterSet) -> String {
+pub(crate) fn set_name(set: CharacterSet) -> String {
     match set {
         CharacterSet::AsIs => tr("Names as they are"),
         CharacterSet::Ascii => tr("Plain ASCII only"),

@@ -95,7 +95,9 @@ fn folder_row(context: &Rc<Context>, folder: &LibraryFolder) -> gtk::Box {
     text.set_valign(gtk::Align::Center);
     let path = tilde(&folder.path);
     text.append(&label(&path, &["hk-mono", "hk-path"]));
-    text.append(&label(&folder_line(folder), &["hk-t3", "hk-secondary"]));
+    let line_text =
+        super::managed_folder::folder_line(context, folder).unwrap_or_else(|| folder_line(folder));
+    text.append(&label(&line_text, &["hk-t3", "hk-secondary"]));
     line.append(&text);
     let tag = label(
         &folder_tag(folder.state),
@@ -638,6 +640,7 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
         Some(&tr("Files are played where they are. Nothing is copied.")),
         &folders(context),
     ));
+    body.append(&super::managed_folder::group(context));
     body.append(&row(&tr("Skip"), None, &skip(context)));
     body.append(&row(&tr("Scanning"), None, &scanning(context)));
     body.append(&divider());

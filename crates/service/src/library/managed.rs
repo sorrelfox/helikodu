@@ -126,6 +126,11 @@ impl MusicLibrary {
             .plan_managed_import(paths, options, &scan, cancel)?)
     }
 
+    /// How many present library files are outside the managed folder `folder`.
+    pub fn managed_files_outside(&self, folder: &Path) -> Result<usize, LibraryError> {
+        Ok(self.inner().managed_files_outside(folder)?)
+    }
+
     /// Plans consolidating the library files outside the managed folder into it.
     pub fn plan_consolidate(&self, options: &ManagedOptions) -> Result<ManagedPlan, LibraryError> {
         Ok(self.inner().plan_consolidate(options)?)

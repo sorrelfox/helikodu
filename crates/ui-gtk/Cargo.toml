@@ -104,5 +104,11 @@ harness = false
 name = "fields"
 harness = false
 
+[[test]]
+# The managed folder (its settings, its window, a run cut short) against the
+# sample backend; GTK needs its own main function.
+name = "managed"
+harness = false
+
 [lints]
 workspace = true

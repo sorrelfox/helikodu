@@ -439,6 +439,31 @@ fn all_roots(db: &Database) -> Result<Vec<(i64, PathBuf)>, ManagedError> {
     })?)
 }
 
+/// How many present library files of connected library folders are outside
+/// `folder`.
+pub(super) fn outside(db: &Database, folder: &Path) -> Result<usize, crate::db::DbError> {
+    let folder = folder.to_path_buf();
+    db.read(move |c| {
+        let mut statement = c.prepare_cached(
+            "SELECT d.path, count(*) FROM files f
+                 JOIN dirs d ON d.id = f.dir_id
+                 JOIN roots r ON r.id = d.root_id
+             WHERE r.masked = 0 AND f.missing_since IS NULL
+             GROUP BY d.id",
+        )?;
+        let mut count = 0_usize;
+        for row in statement.query_map([], |row| {
+            Ok((path_from_blob(row.get(0)?), row.get::<_, i64>(1)?))
+        })? {
+            let (dir, files) = row?;
+            if !dir.starts_with(&folder) {
+                count += usize::try_from(files).unwrap_or(0);
+            }
+        }
+        Ok(count)
+    })
+}
+
 pub(super) fn import(
     db: &Database,
     paths: &[PathBuf],

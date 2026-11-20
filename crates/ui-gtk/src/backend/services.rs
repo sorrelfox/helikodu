@@ -36,6 +36,11 @@ pub use helikodu_service::library::{
 pub use helikodu_service::library::{
     CopyFile, CopyGroup, DuplicateCounts, DuplicateEntry, DuplicateGroup, FileId, KeepRule, MatchBy,
 };
+pub use helikodu_service::library::{
+    ItemAction, ItemKind, ItemResult, ManagedItem, ManagedOperation, ManagedOptions,
+    ManagedOutcome, ManagedPlan, ManagedReport, ManagedRunId, ManagedRunSummary, SkipReason,
+    Transfer,
+};
 
 use super::{AudioFormat, BackendError, CoverKey, TrackKey};
 
@@ -483,6 +488,15 @@ pub enum VerifyScope {
 /// How a long file operation reports its progress: done and total.
 pub type FileProgress<'a> = &'a (dyn Fn(usize, usize) + Sync);
 
+/// What a plan of the managed folder takes in.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ManagedSource {
+    /// These files and folders from outside the library.
+    Add(Vec<PathBuf>),
+    /// The library's own files outside the managed folder.
+    Gather,
+}
+
 /// The dialogs' access to the core. See the module documentation.
 pub trait Services: fmt::Debug + Send + Sync {
     /// The settings as they are now.
@@ -697,6 +711,67 @@ pub trait Services: fmt::Debug + Send + Sync {
         found: &(dyn Fn(usize, VerifyReport) + Sync),
     ) {
         let _ = (paths, cancelled, found);
+    }
+
+    /// Turns the managed folder on at `folder`, or moves it there; a folder
+    /// outside every library folder becomes a library folder and is scanned.
+    /// Returns whether it did. Blocking.
+    fn set_managed_folder(&self, folder: &Path) -> Result<bool, BackendError> {
+        let _ = folder;
+        Err(no_files())
+    }
+    /// How many library files are outside the managed folder. Blocking.
+    fn managed_files_outside(&self) -> Result<usize, BackendError> {
+        Err(no_files())
+    }
+    /// The plan of adding `source` to the managed folder, copying or moving
+    /// by `transfer`. Changes nothing. Blocking, for a thread of its own.
+    fn plan_managed(
+        &self,
+        source: &ManagedSource,
+        transfer: Transfer,
+        cancel: &CancelToken,
+    ) -> Result<ManagedPlan, BackendError> {
+        let _ = (source, transfer, cancel);
+        Err(no_files())
+    }
+    /// Carries out `plan`; stops between files when `cancel` is set, and the
+    /// run is then cut short. Announces the change. Blocking, for a thread of
+    /// its own.
+    fn apply_managed(
+        &self,
+        plan: &ManagedPlan,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<ManagedReport, BackendError> {
+        let _ = (plan, progress, cancel);
+        Err(no_files())
+    }
+    /// The run of the managed folder that was cut short, if there is one.
+    /// Blocking.
+    fn interrupted_managed_run(&self) -> Result<Option<ManagedRunSummary>, BackendError> {
+        Ok(None)
+    }
+    /// Continues the run `run`, which was cut short. Announces the change.
+    /// Blocking, for a thread of its own.
+    fn resume_managed_run(
+        &self,
+        run: ManagedRunId,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<ManagedReport, BackendError> {
+        let _ = (run, progress, cancel);
+        Err(no_files())
+    }
+    /// Rolls back the run `run`, which was cut short. Announces the change.
+    /// Blocking, for a thread of its own.
+    fn roll_back_managed_run(
+        &self,
+        run: ManagedRunId,
+        progress: FileProgress<'_>,
+    ) -> Result<ManagedReport, BackendError> {
+        let _ = (run, progress);
+        Err(no_files())
     }
 
     /// The playback flags of a library track (the tag editor's Playback

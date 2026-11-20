@@ -52,6 +52,9 @@ use super::super::services::{
     TrashResult,
 };
 use super::super::services::{LimiterReading, LoudnessCoverage, LoudnessScope, LoudnessStatus};
+use super::super::services::{
+    ManagedPlan, ManagedReport, ManagedRunId, ManagedRunSummary, ManagedSource, Transfer,
+};
 use super::super::{AudioFormat, BackendError, CoverKey, TrackKey, Update};
 use super::error;
 use crate::i18n::{fill, tr};
@@ -1202,6 +1205,122 @@ impl Services for ServiceServices {
         found: &(dyn Fn(usize, VerifyReport) + Sync),
     ) {
         helikodu_service::jobs::verify::verify_files(paths, 0, cancelled, found);
+    }
+
+    fn set_managed_folder(&self, folder: &Path) -> Result<bool, BackendError> {
+        let mut outcome = Ok(false);
+        self.update_settings(&mut |s| {
+            outcome = helikodu_service::library::set_managed_folder(
+                &mut s.library,
+                Some(folder),
+                None,
+                None,
+                None,
+            );
+        })?;
+        let added = outcome.map_err(error)?;
+        if added && let Some(folder) = self.service.settings().get().library.managed.folder.clone()
+        {
+            self.scan(&[folder])?;
+        }
+        Ok(added)
+    }
+
+    fn managed_files_outside(&self) -> Result<usize, BackendError> {
+        let settings = self.service.settings().get();
+        let Some(folder) = settings.library.managed.folder.as_deref() else {
+            return Ok(0);
+        };
+        self.music()?.managed_files_outside(folder).map_err(error)
+    }
+
+    fn plan_managed(
+        &self,
+        source: &ManagedSource,
+        transfer: Transfer,
+        cancel: &CancelToken,
+    ) -> Result<ManagedPlan, BackendError> {
+        let Some(library) = self.service.library() else {
+            return Err(BackendError(tr("Helikodu runs without a library.")));
+        };
+        let settings = self.service.settings().get();
+        let options = helikodu_service::library::managed_options(
+            &settings.library,
+            Some(transfer),
+            &tr("Unknown"),
+        )
+        .map_err(error)?;
+        let music = library.library();
+        match source {
+            ManagedSource::Add(paths) => music.plan_managed_import(
+                paths,
+                &settings.library,
+                &options,
+                library.worker_program(),
+                cancel,
+            ),
+            ManagedSource::Gather => music.plan_consolidate(&options),
+        }
+        .map_err(error)
+    }
+
+    fn apply_managed(
+        &self,
+        plan: &ManagedPlan,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<ManagedReport, BackendError> {
+        let Some(library) = self.service.library() else {
+            return Err(BackendError(tr("Helikodu runs without a library.")));
+        };
+        let settings = self.service.settings().get();
+        let report = library.library().apply_managed(
+            plan,
+            &settings.library,
+            library.worker_program(),
+            progress,
+            cancel,
+        );
+        self.announce_files_changed();
+        report.map_err(error)
+    }
+
+    fn interrupted_managed_run(&self) -> Result<Option<ManagedRunSummary>, BackendError> {
+        match self.service.library() {
+            Some(library) => library.library().interrupted_managed_run().map_err(error),
+            None => Ok(None),
+        }
+    }
+
+    fn resume_managed_run(
+        &self,
+        run: ManagedRunId,
+        progress: FileProgress<'_>,
+        cancel: &CancelToken,
+    ) -> Result<ManagedReport, BackendError> {
+        let Some(library) = self.service.library() else {
+            return Err(BackendError(tr("Helikodu runs without a library.")));
+        };
+        let settings = self.service.settings().get();
+        let report = library.library().resume_managed_run(
+            run,
+            &settings.library,
+            library.worker_program(),
+            progress,
+            cancel,
+        );
+        self.announce_files_changed();
+        report.map_err(error)
+    }
+
+    fn roll_back_managed_run(
+        &self,
+        run: ManagedRunId,
+        progress: FileProgress<'_>,
+    ) -> Result<ManagedReport, BackendError> {
+        let report = self.music()?.roll_back_managed_run(run, progress);
+        self.announce_files_changed();
+        report.map_err(error)
     }
 
     fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {

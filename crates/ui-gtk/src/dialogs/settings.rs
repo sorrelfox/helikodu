@@ -14,6 +14,7 @@ mod appearance;
 pub(crate) mod dsp;
 pub(crate) mod library;
 mod loudness;
+mod managed_folder;
 mod output;
 mod playback;
 mod search;

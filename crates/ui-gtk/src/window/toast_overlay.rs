@@ -23,6 +23,15 @@ pub(crate) struct ToastAction {
     pub(crate) run: Box<dyn Fn()>,
 }
 
+/// The mark before a toast's text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ToastLead {
+    /// Something finished.
+    Check,
+    /// Something needs a decision.
+    Warning,
+}
+
 /// The toast area over the content.
 pub(crate) struct ToastOverlay {
     host: gtk::Box,
@@ -142,6 +151,31 @@ impl ToastOverlay {
             lead.add_css_class("hk-toast-lead");
             lead.set_valign(gtk::Align::Center);
             toast.prepend(&lead);
+        }
+    }
+
+    /// Shows `text` led by the mark `lead`; with `stays` it stays until it is
+    /// dismissed or replaced, otherwise for the usual time.
+    pub(crate) fn show_marked(
+        self: &Rc<Self>,
+        text: &str,
+        action: Option<ToastAction>,
+        lead: ToastLead,
+        stays: bool,
+    ) {
+        self.show(text, action, lead == ToastLead::Warning);
+        if let Some(toast) = self.current.borrow().as_ref() {
+            let icon = gtk::Image::from_icon_name(match lead {
+                ToastLead::Check => "helikodu-check-symbolic",
+                ToastLead::Warning => "helikodu-warning-symbolic",
+            });
+            icon.add_css_class("hk-toast-lead");
+            icon.set_valign(gtk::Align::Center);
+            toast.prepend(&icon);
+        }
+        if stays {
+            // The clock of this toast never runs out.
+            self.generation.set(self.generation.get() + 1);
         }
     }
 

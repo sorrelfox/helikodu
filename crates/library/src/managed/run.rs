@@ -690,18 +690,37 @@ pub(super) fn interrupted(db: &Database) -> Result<Option<ManagedRunSummary>, Db
         let Some(facts) = run_facts(c, run)? else {
             return Ok(None);
         };
-        let (started_at, done, waiting, skipped): (i64, i64, i64, i64) = c
+        let (started_at, done, waiting, skipped, done_bytes, waiting_bytes): (
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+        ) = c
             .prepare_cached(
                 "SELECT r.started_at,
                         (SELECT count(*) FROM managed_ops WHERE run_id = r.id AND state = 2),
                         (SELECT count(*) FROM managed_ops WHERE run_id = r.id AND state IN (0, 1)),
-                        (SELECT count(*) FROM managed_ops WHERE run_id = r.id AND state = 3)
+                        (SELECT count(*) FROM managed_ops WHERE run_id = r.id AND state = 3),
+                        (SELECT coalesce(sum(size), 0) FROM managed_ops
+                             WHERE run_id = r.id AND state = 2),
+                        (SELECT coalesce(sum(size), 0) FROM managed_ops
+                             WHERE run_id = r.id AND state IN (0, 1))
                  FROM managed_runs r WHERE r.id = ?1",
             )?
             .query_row([run], |row| {
-                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
             })?;
         let count = |n: i64| usize::try_from(n).unwrap_or(0);
+        let bytes = |n: i64| u64::try_from(n).unwrap_or(0);
         Ok(Some(ManagedRunSummary {
             run: ManagedRunId(run),
             operation: facts.operation,
@@ -711,6 +730,8 @@ pub(super) fn interrupted(db: &Database) -> Result<Option<ManagedRunSummary>, Db
             done: count(done),
             waiting: count(waiting),
             skipped: count(skipped),
+            done_bytes: bytes(done_bytes),
+            waiting_bytes: bytes(waiting_bytes),
         }))
     })
 }
