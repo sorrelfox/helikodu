@@ -117,5 +117,11 @@ harness = false
 name = "optional"
 harness = false
 
+[[test]]
+# Labels against the sample backend: the view, the popover, the chips and the
+# sidebar row; GTK needs its own main function.
+name = "labels"
+harness = false
+
 [lints]
 workspace = true

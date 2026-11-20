@@ -94,6 +94,12 @@ crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test tag_editing
 crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test desktop
 ```
 
+`tests/labels.rs` covers labels: the sidebar row shown once a label exists, the Labels view and its empty state, the Labels popover (ticked, mixed and inherited rows, typing, Enter, one Undo for everything done while it was open), the chips of the album and artist pages, and renaming, merging and removing with Undo. With `HELIKODU_LABELS_SHOTS=DIR` it saves the screens to `DIR`:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test labels
+```
+
 `tests/play_modes.rs` covers the play modes: the Playback menu's labels and the mode actions, the deck's shuffle and repeat buttons, stop after, the loop chip and the loop shortcuts, the sleep timer popover and chip, the queue panel's selection as the cursor of "Continue from the selected track" (a single click selects, a double click or Enter plays), the tag editor's Playback group (kept in the library and applied at once, not part of Save), the play button's menu with its Stop after submenu, every deck icon at 16 px under Adwaita and Breeze, and a paused window with the loop and sleep chips drawing no frames (the sleep chip counts down only while playing or while its popover is open). With `HELIKODU_PLAYMODE_SHOTS=DIR` it saves the deck with modes and chips, the sleep popover, the play button's menu and the Playback menu with its submenus, dark and light, to `DIR`; `HELIKODU_ICON_THEME` picks the icon theme for them:
 
 ```sh

@@ -151,7 +151,8 @@ pub use helikodu_library::{
 };
 /// Labels of tracks, albums and artists, kept in the library.
 pub use helikodu_library::{
-    ItemLabels, LabelError, LabelItems, LabelSummary, LabelTarget, MAX_LABEL_CHARS,
+    ItemLabels, LabelChange, LabelError, LabelId, LabelItems, LabelMark, LabelMarks, LabelSummary,
+    LabelTarget, LabelUndo, MAX_LABEL_CHARS,
 };
 pub use helikodu_library::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 /// The undo journal of tag edits: [`MusicLibrary::edit_tags`] records each

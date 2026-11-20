@@ -74,6 +74,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
                       </object>
                     </child>
                     <child>
+                      <object class="HkWrapBox" id="label_chips">
+                        <property name="spacing">6</property>
+                        <property name="row-spacing">6</property>
+                        <property name="margin-top">10</property>
+                      </object>
+                    </child>
+                    <child>
                       <object class="HkWrapBox">
                         <property name="spacing">8</property>
                         <property name="row-spacing">8</property>

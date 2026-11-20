@@ -11,6 +11,7 @@ pub(crate) mod common;
 pub(crate) mod decoder_files;
 pub(crate) mod first_run;
 pub(crate) mod formats;
+pub(crate) mod label_merge;
 pub(crate) mod loudness_footer;
 pub(crate) mod maintenance;
 pub(crate) mod settings;

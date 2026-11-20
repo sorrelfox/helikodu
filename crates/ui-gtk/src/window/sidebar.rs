@@ -28,6 +28,7 @@ const LIBRARY: &[(&str, &str)] = &[
     ("genres", "helikodu-tag-symbolic"),
     ("composers", "helikodu-composer-symbolic"),
     ("years", "helikodu-calendar-symbolic"),
+    ("labels", "helikodu-label-symbolic"),
     ("folders", "folder-symbolic"),
 ];
 
@@ -53,6 +54,7 @@ pub(crate) fn page_title(page: &str) -> String {
         "genres" => tr("Genres"),
         "composers" => tr("Composers"),
         "years" => tr("Years"),
+        "labels" => tr("Labels"),
         "folders" => tr("Folders"),
         _ => String::new(),
     }
@@ -166,6 +168,10 @@ impl Sidebar {
         });
         for (page, icon) in LIBRARY {
             sidebar.add_row(page, icon, &page_title(page), &[]);
+        }
+        // Until the counts say a label exists.
+        if let Some(row) = sidebar.row("labels") {
+            row.set_visible(false);
         }
         sidebar.add_row(
             "new-playlist",
@@ -588,6 +594,10 @@ impl Sidebar {
 
     /// Shows the library totals beside the rows.
     pub(crate) fn set_counts(&self, counts: &LibraryCounts) {
+        // The Labels row shows once a label exists.
+        if let Some(row) = self.row("labels") {
+            row.set_visible(counts.labels > 0);
+        }
         for (page, label) in self.counts.borrow().iter() {
             let value = match page.as_str() {
                 "albums" => Some(counts.albums),
@@ -596,6 +606,7 @@ impl Sidebar {
                 "genres" => Some(counts.genres),
                 "composers" => Some(counts.composers),
                 "years" => Some(counts.years),
+                "labels" => Some(counts.labels),
                 _ => None,
             };
             label.set_text(

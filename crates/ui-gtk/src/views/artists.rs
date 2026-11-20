@@ -106,6 +106,8 @@ pub(crate) struct ArtistsView {
     photo_pass: Cell<bool>,
     open: RefCell<Option<Open>>,
     open_album: OpenAlbum,
+    /// The artist's label chips.
+    chips: Rc<crate::views::label_chips::LabelChips>,
 }
 
 impl std::fmt::Debug for ArtistsView {
@@ -160,6 +162,11 @@ impl ArtistsView {
         summary.set_ellipsize(gtk::pango::EllipsizeMode::None);
         summary.set_single_line_mode(false);
         titles.append(&summary);
+        // The artist's labels, 10 below the summary.
+        let chip_row = WrapBox::new(6);
+        chip_row.set_margin_top(10);
+        titles.append(&chip_row);
+        let chips = crate::views::label_chips::LabelChips::new(&chip_row, backend);
         hero.append(&titles);
         let play = button(&tr("Play all"), Some("media-playback-start-symbolic"), true);
         let shuffle = button(
@@ -305,6 +312,7 @@ impl ArtistsView {
             photo_pass: Cell::new(false),
             open: RefCell::new(None),
             open_album: Rc::new(open_album),
+            chips,
         });
         view.connect(playback, &play, &shuffle, &releases_tab, &tracks_tab);
         view
@@ -654,6 +662,10 @@ impl ArtistsView {
         ));
         parts.push(format::minutes(detail.duration));
         self.summary.set_text(&parts.join(" · "));
+        self.chips.show(
+            crate::backend::LabelFor::Artist(detail.row.key),
+            crate::window::labels::Scope::Named(detail.row.name.clone()),
+        );
         while let Some(child) = self.releases.first_child() {
             self.releases.remove(&child);
         }

@@ -7,8 +7,8 @@
 //! artist or a genre) and pops the menu up; the window keeps the target while
 //! the menu is open, and its `win.sel-*` actions act on it: play, play next,
 //! add to the queue or a playlist, go to the album or artist, edit tags, rate,
-//! open the containing folder, show the copies of a track's file, and remove
-//! from a playlist or the queue.
+//! open the containing folder, show the copies of a track's file, open the
+//! Labels popover, and remove from a playlist or the queue.
 
 use std::rc::Rc;
 
@@ -243,6 +243,7 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         let entry = gio::MenuItem::new(Some(&tr("Pin to the sidebar")), None);
         entry.set_action_and_target_value(Some(action), Some(&id.to_variant()));
         pins.append_item(&entry);
+        pins.append_item(&item(&tr("Labels…"), "win.sel-labels"));
         menu.append_section(None, &pins);
     }
     if matches!(target, Target::Tracks { .. } | Target::Album(_)) {
@@ -266,6 +267,7 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         none.set_action_and_target_value(Some("win.sel-rate"), Some(&0i32.to_variant()));
         rate.append_item(&none);
         edit.append_submenu(Some(&tr("Rate")), &rate);
+        edit.append_item(&item(&tr("Labels…"), "win.sel-labels"));
         menu.append_section(None, &edit);
         let folder = gio::Menu::new();
         folder.append_item(&item(&tr("Open containing folder"), "win.sel-open-folder"));
@@ -342,9 +344,22 @@ pub(crate) fn popup(
     target: Target,
     at: Option<(f64, f64)>,
 ) -> Option<gtk::PopoverMenu> {
+    popup_with(widget, target, at, None)
+}
+
+/// [`popup`] with the section `extra` at the end of the menu.
+pub(crate) fn popup_with(
+    widget: &impl IsA<gtk::Widget>,
+    target: Target,
+    at: Option<(f64, f64)>,
+    extra: Option<&gio::Menu>,
+) -> Option<gtk::PopoverMenu> {
     let widget = widget.as_ref();
     let window = widget.root().and_downcast::<MainWindow>()?;
     let model = menu(&target, &window.playlist_rows());
+    if let Some(extra) = extra {
+        model.append_section(None, extra);
+    }
     // A pinned album or artist offers "Unpin" instead.
     let pinned = match &target {
         Target::Album(album) => window.is_pinned(crate::backend::PinKey::Album(*album)),
@@ -366,6 +381,7 @@ pub(crate) fn popup(
         f64::from(widget.height()) / 2.0,
     ));
     popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+    window.set_menu_anchor(widget, (x, y));
     popover.connect_closed(|p| {
         let p = p.clone();
         glib::idle_add_local_once(move || p.unparent());

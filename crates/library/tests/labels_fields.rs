@@ -14,8 +14,9 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant, SystemTime};
 
 use helikodu_library::{
-    DatabaseConfig, DefinitionPart, DefinitionProblem, FieldDefinition, FieldError, LabelError,
-    LabelTarget, Library, QueryRequest, RootId, TrackChange, UserField, parse_query, print_query,
+    DatabaseConfig, DefinitionPart, DefinitionProblem, FieldDefinition, FieldError, LabelChange,
+    LabelError, LabelTarget, LabelUndo, Library, QueryRequest, RootId, TrackChange, UserField,
+    parse_query, print_query,
 };
 use helikodu_model::expression::Template;
 use helikodu_model::library::TrackId;
@@ -545,4 +546,184 @@ fn computed_fields_query_a_few_thousand_tracks_quickly() {
     assert_eq!(count, 500);
     assert!(elapsed < Duration::from_secs(5), "{elapsed:?}");
     library.remove_field("decade").unwrap();
+}
+
+/// Every label with the tracks that have it, for comparing states.
+fn label_state(library: &Library) -> Vec<(i64, String, Vec<TrackId>)> {
+    library
+        .labels()
+        .unwrap()
+        .into_iter()
+        .map(|l| {
+            let name = l.name.clone();
+            let mut ids = library
+                .query_track_ids(&QueryRequest::new(
+                    parse_query(&format!("label=\"{name}\"")).unwrap(),
+                ))
+                .unwrap();
+            ids.sort();
+            (l.id.get(), name, ids)
+        })
+        .collect()
+}
+
+fn give(target: &LabelTarget, name: &str) -> LabelChange {
+    LabelChange::Give {
+        target: target.clone(),
+        name: name.to_owned(),
+    }
+}
+
+#[test]
+fn each_label_change_can_be_undone() {
+    let _turn = turn();
+    let (library, root) = library();
+    let a = add(&library, root, "/music/one/a.flac", "A", "Band", "One");
+    let b = add(&library, root, "/music/one/b.flac", "B", "Band", "One");
+    let c = add(&library, root, "/music/two/c.flac", "C", "Solo", "Two");
+    let album = album_of(&library, c);
+    library
+        .add_label(&LabelTarget::Tracks(vec![a, b]), "late night")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::Album(album), "road trip")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::Artist("Band".into()), "favourite")
+        .unwrap();
+    let before = label_state(&library);
+
+    let changes = [
+        give(&LabelTarget::Tracks(vec![c]), "late night"),
+        give(&LabelTarget::Tracks(vec![a]), "brand new"),
+        give(&LabelTarget::Tracks(vec![a]), "LATE NIGHT"),
+        LabelChange::Take {
+            target: LabelTarget::Tracks(vec![a, b]),
+            name: "late night".into(),
+        },
+        LabelChange::Take {
+            target: LabelTarget::Album(album),
+            name: "road trip".into(),
+        },
+        LabelChange::Rename {
+            name: "favourite".into(),
+            new_name: "Loved".into(),
+        },
+        LabelChange::Merge {
+            from: "late night".into(),
+            into: "road trip".into(),
+        },
+        LabelChange::Delete {
+            name: "favourite".into(),
+        },
+    ];
+    for change in &changes {
+        let (_, undo) = library.change_labels(change).unwrap();
+        assert!(!undo.is_empty(), "{change:?}");
+        assert_ne!(label_state(&library), before, "{change:?} changed nothing");
+        library.undo_labels(&undo).unwrap();
+        // The labels are back with their ids, spelling and tracks.
+        assert_eq!(label_state(&library), before, "after undoing {change:?}");
+    }
+}
+
+#[test]
+fn changes_joined_are_undone_together() {
+    let _turn = turn();
+    let (library, root) = library();
+    let a = add(&library, root, "/music/one/a.flac", "A", "Band", "One");
+    let b = add(&library, root, "/music/one/b.flac", "B", "Band", "One");
+    library
+        .add_label(&LabelTarget::Tracks(vec![a]), "late night")
+        .unwrap();
+    let before = label_state(&library);
+
+    // As in the Labels popover: several clicks, one Undo.
+    let tracks = LabelTarget::Tracks(vec![a, b]);
+    let mut undo = LabelUndo::default();
+    for change in [
+        give(&tracks, "late night"),
+        give(&tracks, "night drive"),
+        LabelChange::Take {
+            target: tracks.clone(),
+            name: "late night".into(),
+        },
+        give(&tracks, "late night"),
+        LabelChange::Rename {
+            name: "night drive".into(),
+            new_name: "late drive".into(),
+        },
+        give(&LabelTarget::Tracks(vec![b]), "night drive"),
+    ] {
+        undo.absorb(library.change_labels(&change).unwrap().1);
+    }
+    assert_eq!(library.labels().unwrap().len(), 3);
+    library.undo_labels(&undo).unwrap();
+    assert_eq!(label_state(&library), before);
+
+    // A label removed and made again in between comes back as it was.
+    let mut undo = LabelUndo::default();
+    for change in [
+        LabelChange::Delete {
+            name: "late night".into(),
+        },
+        give(&tracks, "late night"),
+    ] {
+        undo.absorb(library.change_labels(&change).unwrap().1);
+    }
+    library.undo_labels(&undo).unwrap();
+    assert_eq!(label_state(&library), before);
+}
+
+#[test]
+fn marks_tell_own_and_inherited_labels() {
+    let _turn = turn();
+    let (library, root) = library();
+    let a = add(&library, root, "/music/one/a.flac", "A", "Band", "One");
+    let b = add(&library, root, "/music/one/b.flac", "B", "Band", "One");
+    let c = add(&library, root, "/music/two/c.flac", "C", "Solo", "Two");
+    library
+        .add_label(&LabelTarget::Tracks(vec![a, b]), "late night")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::Tracks(vec![a]), "night drive")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::AlbumOf(a), "night shift")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::Artist("Solo".into()), "solo")
+        .unwrap();
+
+    let marks = library
+        .label_marks(&LabelTarget::Tracks(vec![a, b, c]))
+        .unwrap();
+    assert_eq!(marks.items, 3);
+    let seen: Vec<(&str, usize, usize, usize)> = marks
+        .labels
+        .iter()
+        .map(|m| (m.name.as_str(), m.own, m.from_album, m.from_artist))
+        .collect();
+    assert_eq!(
+        seen,
+        [
+            ("late night", 2, 0, 0),
+            ("night drive", 1, 0, 0),
+            ("night shift", 0, 2, 0),
+            ("solo", 0, 0, 1),
+        ]
+    );
+    let album = library.label_marks(&LabelTarget::AlbumOf(b)).unwrap();
+    assert_eq!(album.items, 1);
+    assert_eq!(album.labels.len(), 1);
+    assert_eq!(album.labels[0].name, "night shift");
+    let nobody = library
+        .label_marks(&LabelTarget::Artist("Nobody".into()))
+        .unwrap();
+    assert_eq!(nobody.items, 0);
+
+    let items = library.label_items_of("NIGHT SHIFT").unwrap().unwrap();
+    assert_eq!(items.albums, [album_of(&library, a)]);
+    assert!(items.tracks.is_empty());
+    assert!(library.label_items_of("none").unwrap().is_none());
 }

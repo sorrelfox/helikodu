@@ -12,13 +12,6 @@ use super::{
 };
 use crate::backend::insights::{facets_of, passes};
 
-/// The labels of a sample track, as the facets list them.
-fn labels(row: &TrackRow) -> Vec<String> {
-    super::lists::labels_of(row)
-        .into_iter()
-        .map(str::to_owned)
-        .collect()
-}
 use crate::backend::{
     FacetChoice, FacetField, FacetList, LibraryStats, PlayedAlbumRow, PlayedArtistRow,
     StatisticsSince, TrackRow,
@@ -43,6 +36,7 @@ impl SampleLibrary {
         field: FacetField,
     ) -> Result<FacetList, BackendError> {
         let artist = |album| self.album_artist_of(album);
+        let labels = |row: &TrackRow| self.labels_of_track(row.key);
         let rows: Vec<TrackRow> = self
             .rows_of(&TrackQuery {
                 sort: Vec::new(),
@@ -60,6 +54,7 @@ impl SampleLibrary {
         chosen: &[FacetChoice],
     ) -> Result<Vec<TrackKey>, BackendError> {
         let artist = |album| self.album_artist_of(album);
+        let labels = |row: &TrackRow| self.labels_of_track(row.key);
         Ok(self
             .rows_of(query)?
             .into_iter()

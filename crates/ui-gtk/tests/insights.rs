@@ -198,9 +198,9 @@ fn a_label_pane_lists_the_labels(app: &gtk::Application) {
         names.windows(2).all(|w| w[0] < w[1]),
         "in name order: {names:?}"
     );
-    // A track with several labels counts under each.
-    let counted: usize = labels.iter().skip(1).map(|r| r.1).sum();
-    assert!(counted > labels[0].1, "{counted} of {}", labels[0].1);
+    // All labels counts every track, each label the tracks that have it.
+    assert_eq!(labels[0].1, window.tracks_shown().0);
+    assert!(labels.iter().skip(1).all(|r| r.1 > 0 && r.1 < labels[0].1));
 
     // A label narrows the table to its tracks.
     let favourite = labels.iter().position(|r| r.0 == "favourite").unwrap();

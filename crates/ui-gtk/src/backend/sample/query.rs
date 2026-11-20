@@ -41,11 +41,24 @@ pub(super) fn sample_searches() -> Vec<SampleSearch> {
     .collect()
 }
 
+/// The labels of a track, as the sample's label store gives them.
+pub(super) type LabelsOf<'a> = &'a dyn Fn(&TrackRow) -> Vec<String>;
+
 /// The tracks of `rows` that `query` selects, in its order, cut to its limit.
-pub(super) fn select(query: &Query, rows: Vec<TrackRow>, now: SystemTime) -> Vec<TrackRow> {
+pub(super) fn select(
+    query: &Query,
+    rows: Vec<TrackRow>,
+    now: SystemTime,
+    labels: LabelsOf<'_>,
+) -> Vec<TrackRow> {
     let mut rows: Vec<TrackRow> = rows
         .into_iter()
-        .filter(|row| query.filter.as_ref().is_none_or(|e| holds(e, row, now)))
+        .filter(|row| {
+            query
+                .filter
+                .as_ref()
+                .is_none_or(|e| holds(e, row, now, labels))
+        })
         .collect();
     if !query.sort.is_empty() {
         rows.sort_by(|a, b| {
@@ -54,7 +67,7 @@ pub(super) fn select(query: &Query, rows: Vec<TrackRow>, now: SystemTime) -> Vec
                 .iter()
                 .filter_map(|key| match &key.by {
                     SortBy::Field(field) => {
-                        let order = compare(field, a, b);
+                        let order = compare(field, a, b, labels);
                         Some(if key.descending {
                             order.reverse()
                         } else {
@@ -93,12 +106,9 @@ fn text_of<'a>(field: &Field, row: &'a TrackRow) -> Option<&'a str> {
 
 /// The values of the fields the library keeps beside the row: the labels, the
 /// computed fields and the MOOD tag of the sample.
-fn values_of(field: &Field, row: &TrackRow) -> Option<Vec<String>> {
+fn values_of(field: &Field, row: &TrackRow, labels: LabelsOf<'_>) -> Option<Vec<String>> {
     Some(match field {
-        Field::Label => super::lists::labels_of(row)
-            .into_iter()
-            .map(str::to_owned)
-            .collect(),
+        Field::Label => labels(row),
         Field::Computed(name) => vec![super::lists::field_value(row, name)],
         Field::Tag(tag) if tag == "MOOD" => super::lists::mood_of(row)
             .map(str::to_owned)
@@ -127,12 +137,12 @@ fn number_of(field: &Field, row: &TrackRow, now: SystemTime) -> Option<f64> {
     }
 }
 
-fn compare(field: &Field, a: &TrackRow, b: &TrackRow) -> Ordering {
+fn compare(field: &Field, a: &TrackRow, b: &TrackRow, labels: LabelsOf<'_>) -> Ordering {
     let now = SystemTime::now();
     if let (Some(x), Some(y)) = (text_of(field, a), text_of(field, b)) {
         return lower(x).cmp(&lower(y));
     }
-    if let (Some(x), Some(y)) = (values_of(field, a), values_of(field, b)) {
+    if let (Some(x), Some(y)) = (values_of(field, a, labels), values_of(field, b, labels)) {
         return x
             .first()
             .map(|v| lower(v))
@@ -154,11 +164,11 @@ fn compare(field: &Field, a: &TrackRow, b: &TrackRow) -> Ordering {
     }
 }
 
-fn holds(expr: &Expr, row: &TrackRow, now: SystemTime) -> bool {
+fn holds(expr: &Expr, row: &TrackRow, now: SystemTime, labels: LabelsOf<'_>) -> bool {
     match expr {
-        Expr::All(all) => all.iter().all(|e| holds(e, row, now)),
-        Expr::Any(any) => any.iter().any(|e| holds(e, row, now)),
-        Expr::Not(e) => !holds(e, row, now),
+        Expr::All(all) => all.iter().all(|e| holds(e, row, now, labels)),
+        Expr::Any(any) => any.iter().any(|e| holds(e, row, now, labels)),
+        Expr::Not(e) => !holds(e, row, now, labels),
         Expr::Text(text) => {
             let text = lower(text);
             [&row.title, &row.artist, &row.album_title, &row.genre]
@@ -167,7 +177,7 @@ fn holds(expr: &Expr, row: &TrackRow, now: SystemTime) -> bool {
         }
         Expr::Has(Presence::Field(field)) => {
             text_of(field, row).is_some_and(|t| !t.is_empty())
-                || values_of(field, row).is_some_and(|v| v.iter().any(|t| !t.is_empty()))
+                || values_of(field, row, labels).is_some_and(|v| v.iter().any(|t| !t.is_empty()))
                 || number_of(field, row, now).is_some()
         }
         Expr::Is(Flag::Lossless) => lossless(row),
@@ -177,7 +187,7 @@ fn holds(expr: &Expr, row: &TrackRow, now: SystemTime) -> bool {
                     || row.format.sample_rate.unwrap_or(0) > 48_000)
         }
         Expr::Compare(c) => {
-            if let Some(values) = values_of(&c.field, row) {
+            if let Some(values) = values_of(&c.field, row, labels) {
                 let Value::Text(value) = &c.value else {
                     return false;
                 };

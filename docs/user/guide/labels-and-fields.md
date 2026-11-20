@@ -1,6 +1,6 @@
 # Labels and your own fields
 
-Helikodu keeps two kinds of information of your own beside the tags of your files: **labels**, free words you give tracks, albums and artists, and **fields** you define, either computed from other fields or standing for a tag. Neither is written to your files. For now they are made with [`helikodu-cli`](command-line.md#helikodu-cli); the window finds and uses them in searches, smart playlists and naming patterns.
+Helikodu keeps two kinds of information of your own beside the tags of your files: **labels**, free words you give tracks, albums and artists, and **fields** you define, either computed from other fields or standing for a tag. Neither is written to your files. Labels are given in the window; fields are made with [`helikodu-cli`](command-line.md#helikodu-cli), and the window finds and uses them in searches, smart playlists and naming patterns.
 
 ## Labels
 
@@ -10,6 +10,29 @@ A label is any word or short phrase, such as `late night`, `to sort` or `road tr
 - Labels are told apart without regard to capitals and accents: `Jazz` and `jazz` are one label, written the way it was given last.
 - A track keeps its labels when its file is moved or renamed, when the library is scanned again, and when it leaves the library and comes back later, just as it keeps its plays and rating. An album keeps its labels when it is scanned again, and an artist's labels follow the artist's name.
 - A label that nothing has any more is removed.
+
+### Giving labels in the window
+
+Choose **Labels…** in the menu of selected tracks, of an album or of an artist, or click **Add label** under the title of an album or artist page. A list of your labels opens with a box beside each:
+
+- A ticked box means everything you chose has the label; a box with a dash means only part of it has it. Click a label to give it to everything you chose, click it again to take it from all of it.
+- A label the tracks have only through their album or artist is greyed out and says "from the album" or "from the artist": change it on the album or the artist.
+- Type to find a label. Press Enter to give the label you typed, a new one or one you already have.
+- Each click counts at once and the list stays open. The first change shows a notice with **Undo**, which takes back everything you did until the list closed; Ctrl+Z does the same while the notice is shown.
+
+The labels of an album or an artist show as small tags under its title; click one to see everything with that label.
+
+**Labels** in the sidebar (it appears once you have a label) and **Library ▸ Labels** in the main menu open the list of your labels, with the number of tracks each covers. Choosing one shows the artists, albums and tracks it was given to, with **Play all** and **Shuffle**, which play every track that has it. Right-click a label (or use the button with three dots) to:
+
+- **Rename** it, also with F2. Renaming it to the name of another label offers to merge the two.
+- **Merge into** another label: everything that has it gets the other label instead, and it disappears.
+- **Remove from everything**.
+
+Right-click an artist, album or track shown under a label and choose **Remove the label** to take the label from it alone. Each of these changes shows a notice with **Undo** as well.
+
+The record label of an album, from the `LABEL` tag of its files, is shown as **Record label** among the album's details; it has nothing to do with your labels.
+
+### Labels from the command line
 
 ```sh
 helikodu-cli labels add "late night" --query 'genre:jazz year<1970'

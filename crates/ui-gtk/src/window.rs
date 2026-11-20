@@ -14,6 +14,7 @@ pub(crate) mod grouping_hooks;
 pub(crate) mod history;
 pub(crate) mod home;
 pub(crate) mod import_offer;
+pub(crate) mod labels;
 pub(crate) mod lists;
 pub(crate) mod narrow;
 pub(crate) mod now_playing;
@@ -119,6 +120,7 @@ pub(crate) enum Page {
     Album(AlbumKey),
     Artist(ArtistKey),
     Genre(GenreKey),
+    Label(crate::backend::LabelKey),
     Playlist(PlaylistKey),
     Search,
 }
@@ -204,6 +206,10 @@ mod imp {
         pub(super) narrow: RefCell<Option<Rc<narrow::Narrow>>>,
         /// The Library statistics page.
         pub(super) statistics: RefCell<Option<Rc<crate::views::statistics::StatisticsView>>>,
+        /// The Labels page.
+        pub(super) labels_view: RefCell<Option<Rc<crate::views::labels::LabelsView>>>,
+        /// Where the last context menu opened: "Labels…" opens its popover there.
+        pub(super) menu_anchor: RefCell<Option<(glib::WeakRef<gtk::Widget>, f64, f64)>>,
         /// The player's state the Playback menu is to show once the main
         /// menu has closed.
         pub(super) pending_playback_menu: RefCell<Option<crate::playback::PlayerView>>,
@@ -351,6 +357,7 @@ impl MainWindow {
         // History, Home and Statistics are built when first opened.
         self.setup_history();
         self.setup_statistics();
+        self.setup_labels();
 
         imp.deck.bind(backend, &playback, &covers);
         self.setup_dialogs(backend, &playback);
@@ -379,7 +386,8 @@ impl MainWindow {
                     if let Some(albums) = window.imp().albums.borrow().as_ref() {
                         albums.reload();
                     }
-                    window.load_counts();
+                    // The counts, and the labels where they show.
+                    window.labels_changed();
                     window.library_changed();
                     window.home_changed();
                     // Edited tags show on the open album page too.
@@ -675,6 +683,7 @@ impl MainWindow {
             "genres" => "genres",
             "composers" => "composers",
             "years" => "years",
+            labels::PAGE => labels::PAGE,
             "folders" => "folders",
             other => {
                 self.open_sidebar_row(other);
@@ -701,6 +710,8 @@ impl MainWindow {
             Page::Library(history::PAGE) => self.show_history(),
             Page::Library(home::PAGE) => self.show_home(),
             Page::Library(statistics::PAGE) => self.show_statistics(),
+            Page::Library(labels::PAGE) => self.show_labels(None),
+            Page::Label(key) => self.show_labels(Some(key)),
             Page::Library(name) if self.has_page(name) => self.show_page(page),
             Page::Artist(_) | Page::Genre(_) | Page::Playlist(_) | Page::Search => {
                 self.show_page(page)
@@ -739,7 +750,9 @@ impl MainWindow {
             Page::Library("tracks" | "artists" | "genres" | "composers" | "years")
                 | Page::Artist(_)
                 | Page::Genre(_)
+                | Page::Label(_)
         ) || page == Page::Library(history::PAGE)
+            || page == Page::Library(labels::PAGE)
             || page == Page::Library(home::PAGE)
             || page == Page::Library(statistics::PAGE);
         let shown = imp.panel_wanted.get() && (imp.panel_chosen.get() || !wide);
@@ -923,6 +936,7 @@ impl MainWindow {
         let content_target = match imp.views.visible_child_name().as_deref() {
             Some("albums") => imp.albums.borrow().as_ref().map(AlbumsView::focus_target),
             Some("album") => imp.album.borrow().as_ref().map(AlbumPage::focus_target),
+            Some(labels::PAGE) => self.labels_focus(),
             Some(name) => self.page_focus_target(name),
             _ => None,
         }

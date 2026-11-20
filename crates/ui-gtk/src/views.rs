@@ -16,6 +16,8 @@ pub(crate) mod folders;
 pub(crate) mod genres;
 pub(crate) mod history;
 pub(crate) mod home;
+pub(crate) mod label_chips;
+pub(crate) mod labels;
 pub(crate) mod now_playing;
 pub(crate) mod placeholder;
 pub(crate) mod playlist;

@@ -14,7 +14,8 @@
 
 use helikodu_library::tag_editing::FieldKey;
 use helikodu_library::{
-    FieldDefinition, ItemLabels, LabelItems, LabelSummary, LabelTarget, UserField,
+    FieldDefinition, ItemLabels, LabelChange, LabelItems, LabelMarks, LabelSummary, LabelTarget,
+    LabelUndo, UserField,
 };
 use helikodu_model::library::TrackId;
 use helikodu_model::query::Field;
@@ -51,6 +52,29 @@ impl MusicLibrary {
     /// Removes the label `name` from everything that has it.
     pub fn delete_label(&self, name: &str) -> Result<(), LibraryError> {
         Ok(self.inner().delete_label(name)?)
+    }
+
+    /// Makes `change`: how many tracks, albums or artists got or lost the label,
+    /// and what undoes it. Undos of changes made one after the other can be
+    /// joined with [`LabelUndo::absorb`] and undone together.
+    pub fn change_labels(&self, change: &LabelChange) -> Result<(usize, LabelUndo), LibraryError> {
+        Ok(self.inner().change_labels(change)?)
+    }
+
+    /// Puts back the labels `undo` noted, as they were before its changes.
+    pub fn undo_labels(&self, undo: &LabelUndo) -> Result<(), LibraryError> {
+        Ok(self.inner().undo_labels(undo)?)
+    }
+
+    /// The labels the items of `target` have, with how many have each, own or
+    /// from their albums and artists.
+    pub fn label_marks(&self, target: &LabelTarget) -> Result<LabelMarks, LibraryError> {
+        Ok(self.inner().label_marks(target)?)
+    }
+
+    /// The label `name` with what it was given to; `None` when there is none.
+    pub fn label_items_of(&self, name: &str) -> Result<Option<LabelItems>, LibraryError> {
+        Ok(self.inner().label_items_of(name)?)
     }
 
     /// The labels of `target`: its own, and for tracks those from their albums and

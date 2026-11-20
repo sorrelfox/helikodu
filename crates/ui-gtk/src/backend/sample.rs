@@ -18,6 +18,7 @@ mod grouping;
 mod history;
 mod insights;
 mod interchange;
+mod labels;
 mod lists;
 mod lyrics;
 mod managed;
@@ -107,6 +108,15 @@ const GENRES: &[&str] = &[
     "World",
 ];
 
+/// The record labels of the sample's releases.
+const RECORD_LABELS: &[&str] = &[
+    "Saar Records",
+    "Northern Tide",
+    "Lantern House",
+    "Paper Harbour",
+    "Kestrel Music",
+];
+
 /// The time the albums were added before, so the sample shows the same dates.
 fn sample_now() -> SystemTime {
     SystemTime::UNIX_EPOCH + Duration::from_secs(1_794_000_000)
@@ -173,6 +183,8 @@ pub struct SampleLibrary {
     kinds: Mutex<HashMap<AlbumKey, super::MediaKind>>,
     /// The artist photos chosen.
     photos: photos::Photos,
+    /// The labels.
+    labels: Mutex<labels::SampleLabels>,
 }
 
 fn format(r: &mut Random) -> AudioFormat {
@@ -368,8 +380,10 @@ impl SampleLibrary {
             searches: Mutex::new(query::sample_searches()),
             kinds: Mutex::new(HashMap::new()),
             photos: photos::Photos::default(),
+            labels: Mutex::new(labels::SampleLabels::default()),
         };
         library.add_sample_playlists(&mut r);
+        library.add_sample_labels();
         library
     }
 
@@ -510,11 +524,12 @@ impl SampleLibrary {
             kind: self.kind_of(key),
             resume: None,
             reader: None,
+            record_label: Some(RECORD_LABELS[album.genre % RECORD_LABELS.len()].to_owned()),
         })
     }
 
     /// Compares two tracks by one column, smallest first.
-    fn compare(a: &TrackRow, b: &TrackRow, column: TrackColumn) -> Ordering {
+    fn compare(&self, a: &TrackRow, b: &TrackRow, column: TrackColumn) -> Ordering {
         match column {
             TrackColumn::Number => (a.disc, a.number).cmp(&(b.disc, b.number)),
             TrackColumn::Title => lower(&a.title).cmp(&lower(&b.title)),
@@ -531,7 +546,9 @@ impl SampleLibrary {
             TrackColumn::Length => a.duration.cmp(&b.duration),
             TrackColumn::Genre => lower(&a.genre).cmp(&lower(&b.genre)),
             TrackColumn::Added => a.added.cmp(&b.added),
-            TrackColumn::Labels => lists::labels_of(a).cmp(&lists::labels_of(b)),
+            TrackColumn::Labels => self
+                .labels_of_track(a.key)
+                .cmp(&self.labels_of_track(b.key)),
             TrackColumn::Field(name) => lower(&lists::field_value(a, name.as_str()))
                 .cmp(&lower(&lists::field_value(b, name.as_str()))),
         }
@@ -584,6 +601,7 @@ impl LibrarySource for SampleLibrary {
             genres,
             composers: self.composer_rows().len(),
             years: self.year_rows().len(),
+            labels: self.sample_labels().len(),
         })
     }
 
@@ -715,7 +733,13 @@ impl LibrarySource for SampleLibrary {
             if !query.sort.is_empty() {
                 selector.sort.clear();
             }
-            let rows = query::select(&selector, self.track_rows(&all)?, SystemTime::now());
+            let labels = |row: &TrackRow| self.labels_of_track(row.key);
+            let rows = query::select(
+                &selector,
+                self.track_rows(&all)?,
+                SystemTime::now(),
+                &labels,
+            );
             let mut keys: Vec<TrackKey> = rows.iter().map(|r| r.key).collect();
             if !query.sort.is_empty() {
                 let order = self.track_keys(&TrackQuery {
@@ -754,7 +778,7 @@ impl LibrarySource for SampleLibrary {
             rows.sort_by(|a, b| {
                 sort.iter()
                     .map(|key| {
-                        let order = Self::compare(a, b, key.column);
+                        let order = self.compare(a, b, key.column);
                         if key.descending {
                             order.reverse()
                         } else {
@@ -1132,6 +1156,37 @@ impl LibrarySource for SampleLibrary {
 
     fn vocabulary(&self) -> Result<super::Vocabulary, BackendError> {
         self.sample_vocabulary()
+    }
+
+    fn labels(&self) -> Result<Vec<super::LabelRow>, BackendError> {
+        Ok(self.sample_labels())
+    }
+
+    fn label_choices(&self, target: &super::LabelFor) -> Result<super::LabelChoices, BackendError> {
+        Ok(self.sample_label_choices(target))
+    }
+
+    fn change_label(
+        &self,
+        edit: &super::LabelEdit,
+    ) -> Result<super::LabelDone, super::LabelEditError> {
+        self.sample_change_label(edit)
+    }
+
+    fn undo_labels(&self, undo: &super::LabelUndo) -> Result<(), BackendError> {
+        self.sample_undo_labels(undo);
+        Ok(())
+    }
+
+    fn label_contents(
+        &self,
+        key: super::LabelKey,
+    ) -> Result<Option<super::LabelContents>, BackendError> {
+        Ok(self.sample_label_contents(key))
+    }
+
+    fn label_track_keys(&self, key: super::LabelKey) -> Result<Vec<TrackKey>, BackendError> {
+        Ok(self.sample_label_track_keys(key))
     }
 
     fn composer_duration(&self, composer: ArtistKey) -> Result<Duration, BackendError> {

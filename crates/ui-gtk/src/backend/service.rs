@@ -22,6 +22,7 @@ mod grouping;
 mod history;
 mod insights;
 mod interchange;
+mod labels;
 mod lyrics;
 mod mpris;
 mod services;
@@ -188,6 +189,27 @@ fn person(key: ArtistKey) -> PersonId {
 
 fn genre_id(key: GenreKey) -> GenreId {
     GenreId::from_raw(i64::try_from(key.0).unwrap_or(-1))
+}
+
+/// The record labels of the tracks of `album`, each once, from their `LABEL`
+/// tags (which `ORGANIZATION` and `PUBLISHER` are read as).
+fn record_label(
+    music: &MusicLibrary,
+    album: &helikodu_service::library::AlbumDetail,
+) -> Option<String> {
+    let ids: Vec<TrackId> = album
+        .discs
+        .iter()
+        .flat_map(|d| d.tracks.iter().map(|t| t.id))
+        .collect();
+    let mut names: Vec<String> = Vec::new();
+    for (_, value) in music.field_values("tag:LABEL", &ids).ok()? {
+        let value = value.trim();
+        if !value.is_empty() && !names.iter().any(|n| n == value) {
+            names.push(value.to_owned());
+        }
+    }
+    (!names.is_empty()).then(|| names.join(", "))
 }
 
 fn track_id(key: TrackKey) -> TrackId {
@@ -552,6 +574,7 @@ impl LibrarySource for ServiceLibrary {
             genres: totals.genres,
             composers: browse::composer_count(music),
             years: music.years().map_or(0, |y| y.len()),
+            labels: music.labels().map_or(0, |l| l.len()),
         })
     }
 
@@ -691,6 +714,7 @@ impl LibrarySource for ServiceLibrary {
             kind: browse::album_kind(detail.discs.iter().flat_map(|d| &d.tracks)),
             resume,
             reader,
+            record_label: record_label(music, &detail),
         }))
     }
 
@@ -1575,6 +1599,36 @@ impl LibrarySource for ServiceLibrary {
 
     fn vocabulary(&self) -> Result<super::Vocabulary, BackendError> {
         self.completion_words()
+    }
+
+    fn labels(&self) -> Result<Vec<super::LabelRow>, BackendError> {
+        self.label_rows()
+    }
+
+    fn label_choices(&self, target: &super::LabelFor) -> Result<super::LabelChoices, BackendError> {
+        self.choices(target)
+    }
+
+    fn change_label(
+        &self,
+        edit: &super::LabelEdit,
+    ) -> Result<super::LabelDone, super::LabelEditError> {
+        self.edit_labels(edit)
+    }
+
+    fn undo_labels(&self, undo: &super::LabelUndo) -> Result<(), BackendError> {
+        self.undo_label_edits(undo)
+    }
+
+    fn label_contents(
+        &self,
+        key: super::LabelKey,
+    ) -> Result<Option<super::LabelContents>, BackendError> {
+        self.contents(key)
+    }
+
+    fn label_track_keys(&self, key: super::LabelKey) -> Result<Vec<TrackKey>, BackendError> {
+        self.label_tracks(key)
     }
 
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {

@@ -2,12 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Labels and the user's fields of the invented library, for the track table's
-//! columns, the facet browser and the search completion: the labels of the
-//! design's sample ("favourite", "late night" and so on), given to albums,
-//! artists and tracks by a fixed rule, and three fields: `decade` and `era`,
-//! computed from the year, and `mood`, the tag MOOD.
-
-use std::collections::BTreeMap;
+//! columns, the facet browser and the search completion: the labels, as the
+//! sample's label store (`labels.rs`) holds them, and three fields: `decade` and
+//! `era`, computed from the year, and `mood`, the tag MOOD.
 
 use helikodu_model::user_fields::{UserField, UserFields};
 
@@ -17,59 +14,8 @@ use super::super::{
 };
 use super::SampleLibrary;
 
-/// The labels given to albums, by a rule on the album's number.
-const ALBUM_LABELS: &[(u64, u64, &str)] = &[
-    (5, 0, "favourite"),
-    (9, 1, "road trip"),
-    (11, 2, "for the car"),
-    (17, 3, "winter"),
-];
-
-/// The labels given to artists, by a rule on their name.
-const ARTIST_LABELS: &[(u64, u64, &str)] = &[
-    (6, 0, "late night"),
-    (10, 3, "work"),
-    (23, 5, "evening walk"),
-];
-
-/// The labels given to tracks themselves, by a rule on their number.
-const TRACK_LABELS: &[(u64, u64, &str)] = &[
-    (7, 0, "to sort"),
-    (31, 4, "after hours"),
-    (41, 6, "live"),
-    (97, 8, "night drive"),
-    (151, 9, "night shift"),
-];
-
 /// The moods the MOOD tags of the sample hold.
 const MOODS: &[&str] = &["bright", "calm", "dark", "warm"];
-
-/// A stable number for a name.
-fn name_number(name: &str) -> u64 {
-    name.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
-        (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3)
-    })
-}
-
-/// Every label of `row`, own and inherited, in name order.
-pub(super) fn labels_of(row: &TrackRow) -> Vec<&'static str> {
-    let artist = row.artist.split(" & ").next().unwrap_or_default();
-    let artist = name_number(artist);
-    let mut labels: Vec<&'static str> = Vec::new();
-    for (rules, number) in [
-        (ALBUM_LABELS, row.album.0),
-        (ARTIST_LABELS, artist),
-        (TRACK_LABELS, row.key.0),
-    ] {
-        for (every, at, label) in rules {
-            if number % every == *at && !labels.contains(label) {
-                labels.push(label);
-            }
-        }
-    }
-    labels.sort_unstable();
-    labels
-}
 
 /// The fields of the sample, as the user would define them.
 fn definitions() -> Vec<UserField> {
@@ -128,7 +74,7 @@ impl SampleLibrary {
             .filter_map(|key| {
                 let row = self.track(*key)?;
                 let labels = if columns.labels {
-                    labels_of(&row).join(", ")
+                    self.labels_of_track(row.key).join(", ")
                 } else {
                     String::new()
                 };
@@ -143,17 +89,14 @@ impl SampleLibrary {
     }
 
     pub(super) fn sample_vocabulary(&self) -> Result<Vocabulary, BackendError> {
-        let mut labels: BTreeMap<&'static str, usize> = BTreeMap::new();
         let mut decade = None;
         for index in 1..=self.tracks.len() {
             let Some(row) = self.track_row_unpatched(TrackKey(index as u64)) else {
                 continue;
             };
-            for label in labels_of(&row) {
-                *labels.entry(label).or_default() += 1;
-            }
-            if decade.is_none() && row.year.is_some() {
+            if row.year.is_some() {
                 decade = Some(field_value(&row, "decade"));
+                break;
             }
         }
         let fields = self
@@ -173,9 +116,10 @@ impl SampleLibrary {
             })
             .collect();
         Ok(Vocabulary {
-            labels: labels
+            labels: self
+                .sample_labels()
                 .into_iter()
-                .map(|(name, tracks)| (name.to_owned(), tracks))
+                .map(|row| (row.name, row.tracks))
                 .collect(),
             fields,
         })
@@ -187,7 +131,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn labels_follow_their_rules_in_name_order() {
+    fn fields_follow_the_year_and_the_mood() {
         let row = TrackRow {
             key: TrackKey(7),
             album: crate::backend::AlbumKey(5),
@@ -195,10 +139,6 @@ mod tests {
             year: Some(2018),
             ..TrackRow::default()
         };
-        let labels = labels_of(&row);
-        assert!(labels.contains(&"favourite"));
-        assert!(labels.contains(&"to sort"));
-        assert!(labels.windows(2).all(|w| w[0] < w[1]));
         assert_eq!(field_value(&row, "decade"), "2010s");
         assert_eq!(field_value(&row, "era"), "2010s");
         assert_eq!(field_value(&row, "mood"), "dark");

@@ -504,7 +504,7 @@ impl MainWindow {
                 views.set_visible_child_name("search");
                 String::new()
             }
-            Page::Library(_) | Page::Album(_) => String::new(),
+            Page::Library(_) | Page::Album(_) | Page::Label(_) => String::new(),
         }
     }
 

@@ -124,6 +124,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
             <attribute name="label" translatable="yes">Statistics</attribute>
             <attribute name="action">win.show-statistics</attribute>
           </item>
+          <item>
+            <attribute name="label" translatable="yes">Labels</attribute>
+            <attribute name="action">win.show-labels</attribute>
+          </item>
         </section>
         <section>
           <item>

@@ -19,6 +19,7 @@ pub mod fields;
 pub mod grouping;
 pub mod insights;
 pub mod interchange;
+pub mod labels;
 pub mod sample;
 pub mod service;
 pub mod services;
@@ -45,6 +46,10 @@ pub use helikodu_model::settings::UiState;
 pub use insights::{
     FacetChoice, FacetField, FacetKey, FacetList, FacetValue, LibraryStats, PlayedAlbumRow,
     PlayedArtistRow, StatisticsSince,
+};
+pub use labels::{
+    LabelChoice, LabelChoices, LabelContents, LabelDone, LabelEdit, LabelEditError, LabelFor,
+    LabelKey, LabelRow, LabelState, LabelUndo,
 };
 
 /// Identifies an album for as long as the backend runs.
@@ -169,6 +174,8 @@ pub struct LibraryCounts {
     pub composers: usize,
     /// Release years.
     pub years: usize,
+    /// The user's labels.
+    pub labels: usize,
 }
 
 /// The audio format of a track or album, as far as it is known.
@@ -291,6 +298,8 @@ pub struct AlbumDetail {
     pub resume: Option<(TrackKey, Duration)>,
     /// Who reads an audiobook: its composer tag, where audiobooks keep it.
     pub reader: Option<String>,
+    /// The record label of its release, from the tags of its files.
+    pub record_label: Option<String>,
 }
 
 impl AlbumDetail {
@@ -987,6 +996,35 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     /// The labels and the user's fields, as the search completion offers them.
     fn vocabulary(&self) -> Result<Vocabulary, BackendError> {
         Ok(Vocabulary::default())
+    }
+    /// Every label, in name order.
+    fn labels(&self) -> Result<Vec<LabelRow>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// Every label with how it stands for `target`.
+    fn label_choices(&self, target: &LabelFor) -> Result<LabelChoices, BackendError> {
+        let _ = target;
+        Ok(LabelChoices::default())
+    }
+    /// Makes a change of labels.
+    fn change_label(&self, edit: &LabelEdit) -> Result<LabelDone, LabelEditError> {
+        let _ = edit;
+        Err(LabelEditError::Failed(unsupported()))
+    }
+    /// Puts the labels back as they were before the changes `undo` came from.
+    fn undo_labels(&self, undo: &LabelUndo) -> Result<(), BackendError> {
+        let _ = undo;
+        Err(unsupported())
+    }
+    /// What the label `key` was given to; `None` when there is no such label.
+    fn label_contents(&self, key: LabelKey) -> Result<Option<LabelContents>, BackendError> {
+        let _ = key;
+        Ok(None)
+    }
+    /// Every track that has the label `key`, in album order.
+    fn label_track_keys(&self, key: LabelKey) -> Result<Vec<TrackKey>, BackendError> {
+        let _ = key;
+        Ok(Vec::new())
     }
 }
 

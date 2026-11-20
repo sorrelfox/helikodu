@@ -5,8 +5,8 @@
 //! library follows: the groups in the order of their values (case aside,
 //! numbers by their value), the tracks without a value first, the tracks of a
 //! group in the order of the list. The sample has three fields of the user's:
-//! `decade` and `era` (computed from the year) and `mood` (a tag), and a few
-//! labels.
+//! `decade` and `era` (computed from the year) and `mood` (a tag), and the
+//! labels of its label store.
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -37,21 +37,8 @@ fn mood(row: &TrackRow) -> String {
     }
 }
 
-/// The invented labels of a track, by name.
-fn labels(row: &TrackRow) -> Vec<String> {
-    let mut labels = Vec::new();
-    if row.album.0.is_multiple_of(4) {
-        labels.push("late night".to_owned());
-    }
-    if row.key.0.is_multiple_of(9) {
-        labels.push("Workout".to_owned());
-    }
-    labels.sort_by_key(|l| l.to_lowercase());
-    labels
-}
-
 /// The values an expression reads of `row`.
-fn values(row: &TrackRow, album_artist: &str) -> FieldMap {
+fn values(row: &TrackRow, album_artist: &str, labels: Vec<String>) -> FieldMap {
     let mut map = FieldMap::default();
     map.set(Field::Title, row.title.clone());
     map.set(Field::Artist, row.artist.clone());
@@ -68,7 +55,7 @@ fn values(row: &TrackRow, album_artist: &str) -> FieldMap {
         map.set(Field::Track, number.to_string());
     }
     map.set(Field::Plays, row.plays.to_string());
-    map.set_list(Field::Label, labels(row));
+    map.set_list(Field::Label, labels);
     map
 }
 
@@ -119,7 +106,8 @@ impl SampleLibrary {
                     .unwrap_or_default()
             };
             if let Some(template) = &template {
-                return template.evaluate(&values(row, &album_artist()));
+                let labels = self.labels_of_track(row.key);
+                return template.evaluate(&values(row, &album_artist(), labels));
             }
             match by {
                 TrackGrouping::AlbumArtist => album_artist(),
@@ -127,7 +115,11 @@ impl SampleLibrary {
                 TrackGrouping::Genre => row.genre.split(", ").next().unwrap_or("").to_owned(),
                 TrackGrouping::Year => row.year.map(|y| y.to_string()).unwrap_or_default(),
                 TrackGrouping::Format => row.format.codec.clone().unwrap_or_default(),
-                TrackGrouping::Label => labels(row).into_iter().next().unwrap_or_default(),
+                TrackGrouping::Label => self
+                    .labels_of_track(row.key)
+                    .into_iter()
+                    .next()
+                    .unwrap_or_default(),
                 TrackGrouping::Field(name) => match name.as_str() {
                     "decade" => decade(row),
                     "era" => {

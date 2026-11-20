@@ -222,6 +222,7 @@ mod tests {
             added: None,
             size: None,
             folder: None,
+            record_label: None,
             album_gain_db: None,
             kind: MediaKind::Audiobook,
             resume: resume.map(|(key, secs)| (TrackKey(key), Duration::from_secs(secs))),

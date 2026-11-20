@@ -145,3 +145,10 @@ crates/ui-gtk/src/widgets/insert_popover/catalogue.rs
 crates/ui-gtk/src/dialogs/analysis_band.rs
 crates/ui-gtk/src/views/tracks/grouping.rs
 crates/ui-gtk/src/window/import_offer.rs
+crates/ui-gtk/src/views/labels.rs
+crates/ui-gtk/src/views/label_chips.rs
+crates/ui-gtk/src/popovers/labels.rs
+crates/ui-gtk/src/dialogs/label_merge.rs
+crates/ui-gtk/src/window/labels.rs
+crates/ui-gtk/src/backend/sample/labels.rs
+crates/ui-gtk/src/backend/service/labels.rs

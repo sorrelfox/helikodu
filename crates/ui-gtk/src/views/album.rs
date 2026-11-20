@@ -83,6 +83,8 @@ mod imp {
         #[template_child]
         pub(super) badges: TemplateChild<crate::widgets::WrapBox>,
         #[template_child]
+        pub(super) label_chips: TemplateChild<crate::widgets::WrapBox>,
+        #[template_child]
         pub(super) play: TemplateChild<gtk::Button>,
         #[template_child]
         pub(super) shuffle: TemplateChild<gtk::Button>,
@@ -113,6 +115,8 @@ mod imp {
         pub(super) select: Cell<Option<TrackKey>>,
         pub(super) generation: Cell<u64>,
         pub(super) covers: RefCell<Option<Rc<CoverCache>>>,
+        /// The album's label chips.
+        pub(super) chips: RefCell<Option<Rc<crate::views::label_chips::LabelChips>>>,
     }
 
     #[glib::object_subclass]
@@ -289,6 +293,12 @@ impl AlbumPage {
     pub(crate) fn bind(&self, backend: &Backend, playback: &Rc<Playback>, covers: &Rc<CoverCache>) {
         self.imp().backend.replace(Some(backend.clone()));
         self.imp().covers.replace(Some(covers.clone()));
+        self.imp()
+            .chips
+            .replace(Some(crate::views::label_chips::LabelChips::new(
+                &self.imp().label_chips,
+                backend,
+            )));
         self.install_actions();
         self.restore_details_width(backend);
         let weak = self.downgrade();
@@ -496,6 +506,10 @@ impl AlbumPage {
         } else if let Some(genre) = &detail.genre {
             entries.push((tr("Genre"), genre.clone(), false));
         }
+        if let Some(record_label) = &detail.record_label {
+            // The tag of the files, apart from the user's own labels.
+            entries.push((tr("Record label"), record_label.clone(), false));
+        }
         if let Some(year) = row.year {
             entries.push((tr("Released"), year.to_string(), false));
         }
@@ -521,9 +535,23 @@ impl AlbumPage {
             _ => {}
         }
         fill_grid(&imp.details, entries);
+        let album = detail.row.key;
         imp.detail.replace(Some(detail));
+        self.show_label_chips(album);
         self.show_tracks();
         self.apply_select();
+    }
+
+    /// Shows the labels of `album` under its badges.
+    fn show_label_chips(&self, album: AlbumKey) {
+        let imp = self.imp();
+        let title = imp.title.text().to_string();
+        if let Some(chips) = imp.chips.borrow().as_ref() {
+            chips.show(
+                crate::backend::LabelFor::Album(album),
+                crate::window::labels::Scope::Named(title),
+            );
+        }
     }
 
     /// Selects `track`, and scrolls to it, once its album is shown.

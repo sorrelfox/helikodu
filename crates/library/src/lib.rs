@@ -84,7 +84,8 @@ pub use helikodu_meta::playlists::{PathStyle, PlaylistKind};
 pub use helikodu_meta::worker::{CoverOrigin, CoverReport};
 pub use history::{HistoryAction, HistoryError, HistoryReport, UndoHistory};
 pub use labels::{
-    ItemLabels, LabelError, LabelItems, LabelSummary, LabelTarget, MAX_LABEL_CHARS, clean_label,
+    ItemLabels, LabelChange, LabelError, LabelId, LabelItems, LabelMark, LabelMarks, LabelSummary,
+    LabelTarget, LabelUndo, MAX_LABEL_CHARS, clean_label,
 };
 pub use library::Library;
 pub use loudness::{
