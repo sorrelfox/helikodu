@@ -31,19 +31,6 @@ use crate::models::{GroupHeader, group_index, group_key};
 use crate::views::table::TableCell;
 use crate::widgets::label;
 
-/// The fields "Insert" offers in the expression popover, by their names.
-const INSERT_FIELDS: &[&str] = &[
-    "albumartist",
-    "artist",
-    "album",
-    "title",
-    "year",
-    "genre",
-    "composer",
-    "codec",
-    "label",
-];
-
 /// The menu's name of a built-in choice.
 fn choice_name(by: &TrackGrouping) -> String {
     match by {
@@ -287,18 +274,6 @@ impl TracksView {
             glib::idle_add_local_once(move || view.show_expression());
         });
         group.add_action(&expression);
-        let insert = gio::SimpleAction::new("insert", Some(glib::VariantTy::STRING));
-        let weak = Rc::downgrade(self);
-        insert.connect_activate(move |_, value| {
-            let (Some(view), Some(name)) = (
-                weak.upgrade(),
-                value.and_then(|v| v.str().map(str::to_owned)),
-            ) else {
-                return;
-            };
-            view.insert_field(&name);
-        });
-        group.add_action(&insert);
         self.root.insert_action_group("grouping", Some(&group));
 
         // Left and Right close and open the focused group row.
@@ -595,27 +570,9 @@ impl TracksView {
         entry.set_placeholder_text(Some("{left(year, 3)}0s"));
         entry.update_property(&[gtk::accessible::Property::Label(&tr("Expression"))]);
         line.append(&entry);
-        let menu = gio::Menu::new();
-        for name in INSERT_FIELDS {
-            let item = gio::MenuItem::new(Some(name), None);
-            item.set_action_and_target_value(Some("grouping.insert"), Some(&(*name).to_variant()));
-            menu.append_item(&item);
-        }
-        let fields = self.grouping.fields.borrow();
-        if !fields.is_empty() {
-            let own = gio::Menu::new();
-            for name in fields.iter() {
-                let item = gio::MenuItem::new(Some(name), None);
-                item.set_action_and_target_value(Some("grouping.insert"), Some(&name.to_variant()));
-                own.append_item(&item);
-            }
-            menu.append_section(Some(&tr("Your fields")), &own);
-        }
-        let insert = gtk::MenuButton::new();
-        insert.set_label(&tr("Insert"));
-        insert.add_css_class("hk-menu-btn");
-        insert.set_always_show_arrow(true);
-        crate::widgets::menu_names::set_menu_later(&insert, &menu);
+        let insert = crate::widgets::insert_popover::insert_button(
+            crate::widgets::insert_popover::InsertTarget::entry(&entry),
+        );
         line.append(&insert);
         body.append(&line);
         let note = crate::widgets::wrapped_label(
@@ -646,26 +603,6 @@ impl TracksView {
         });
         self.grouping.expression.replace(Some(popover.clone()));
         popover
-    }
-
-    /// Inserts the field `name` at the cursor of the expression box.
-    fn insert_field(&self, name: &str) {
-        let Some(entry) = self
-            .grouping
-            .expression
-            .borrow()
-            .as_ref()
-            .and_then(|p| p.child())
-            .and_then(|c| c.first_child())
-            .and_then(|c| c.first_child())
-            .and_downcast::<gtk::Entry>()
-        else {
-            return;
-        };
-        let mut position = entry.position();
-        entry.insert_text(&format!("{{{name}}}"), &mut position);
-        entry.set_position(position);
-        entry.grab_focus_without_selecting();
     }
 
     /// The group rows shown, as their headers read: value and count (for
