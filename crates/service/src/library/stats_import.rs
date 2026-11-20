@@ -5,7 +5,7 @@
 //! replaced file's replacement, and play counts and ratings written into the
 //! files, for the front ends.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use helikodu_library::interchange::{
     CarryCandidate, ImportPlan, ImportRun, ImportRunId, ImportSource, MergeOptions, StatsToFiles,
@@ -90,15 +90,17 @@ impl MusicLibrary {
     }
 
     /// Writes the play counts and ratings that changed into up to `limit` files,
-    /// as the `[advanced]` settings ask, and reads them again. Nothing is written
-    /// when both settings are off. Blocks: call it when the application is idle
-    /// or before it quits, off a window's thread.
+    /// as the `[advanced]` settings ask, and reads them again; the files in `skip`
+    /// (such as the one playing) wait for a later batch. Nothing is written when
+    /// both settings are off. Blocks: call it when the application is idle or
+    /// before it quits, off a window's thread.
     pub fn write_stats_to_files(
         &self,
         library: &LibrarySettings,
         advanced: &AdvancedSettings,
         worker_program: Option<&Path>,
         limit: usize,
+        skip: &[PathBuf],
         cancel: &CancelToken,
     ) -> Result<StatsWriteReport, LibraryError> {
         let what = stats_to_files(advanced);
@@ -109,6 +111,6 @@ impl MusicLibrary {
         let settings = TagWriteSettings::from_settings(advanced);
         Ok(self
             .inner()
-            .write_stats_to_files(what, &settings, &scan, limit, cancel)?)
+            .write_stats_to_files(what, &settings, &scan, limit, skip, cancel)?)
     }
 }

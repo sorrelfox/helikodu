@@ -41,6 +41,7 @@ mod service;
 mod sorting;
 mod source;
 mod stats_import;
+mod stats_writes;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -74,6 +75,7 @@ pub use self::service::{
 };
 pub use self::source::TrackSource;
 pub use self::stats_import::{STATS_BATCH, stats_to_files};
+pub use self::stats_writes::StatsWriteOptions;
 pub use helikodu_library::PlayKeys;
 /// Imports from other players and of exported user data, statistics carried to a
 /// replacement, and statistics written into the files.

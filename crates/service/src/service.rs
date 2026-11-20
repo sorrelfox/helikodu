@@ -32,7 +32,7 @@ use crate::files::AppDirs;
 use crate::library::backups::{BackupScheduler, StartNotice};
 use crate::library::{
     BackgroundAnalysisOptions, DATABASE_FILE, LibraryError, LibraryService, LibraryServiceOptions,
-    MusicLibrary,
+    MusicLibrary, StatsWriteOptions,
 };
 use crate::lyrics::{LocalLyrics, LyricsService};
 use crate::player::{
@@ -187,6 +187,7 @@ impl Service {
                     worker_program: config.worker_program,
                     language: current.appearance.language.clone(),
                     analysis: config.analysis,
+                    stats_writes: StatsWriteOptions::default(),
                 },
             )?),
             None => None,
@@ -196,6 +197,7 @@ impl Service {
             library.apply_duplicate_settings(&current.library);
             library.set_import_playlists(&current.library);
             library.set_background_analysis(&current.library);
+            library.set_stats_writes(&current);
         }
         let mut session = SessionConfig::new(&dirs.state);
         session.restore = current.playback.on_start == StartAction::Restore;

@@ -526,6 +526,7 @@ pub(crate) fn write_stats(args: &WriteStatsArgs) -> Result<Outcome> {
             &settings.advanced,
             args.worker.as_deref(),
             STATS_BATCH,
+            &[],
             &CancelToken::new(),
         )?;
         written += report.written;

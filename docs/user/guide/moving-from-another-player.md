@@ -84,7 +84,7 @@ Helikodu keeps statistics in its library. To let other players and tools see the
 - ratings with **Settings → Advanced → Also write ratings to the tags of the files** (see [Ratings](tags.md#ratings)), or `write_ratings_to_tags = true` in the `[advanced]` table of the settings file;
 - play counts with `write_play_counts_to_tags = true` in the same table.
 
-Play counts are written as the counter of the `POPM` frame and as `FMPS_Playcount` in ID3 tags, and as `FMPS_PLAYCOUNT` in Vorbis comments, APEv2 tags and MP4 files. They are not written after every play: files are written in batches, only those whose values changed since they were last written. To write them now:
+Play counts are written as the counter of the `POPM` frame and as `FMPS_Playcount` in ID3 tags, and as `FMPS_PLAYCOUNT` in Vorbis comments, APEv2 tags and MP4 files. They are not written after every play. While Helikodu runs, it writes them by itself in the background: a few minutes after the last play, never during a scan, and never into the file that is playing (that file waits until another track plays or playback stops). It also writes what is left shortly after it starts, at once when you switch the setting on, and when it closes, for at most about two seconds; whatever does not fit is written next time. Only files whose values changed since they were last written are written, and these writes are not on the Undo history of tag changes. To write them now:
 
 ```sh
 helikodu-cli write-stats                          # as the settings say

@@ -87,7 +87,7 @@ fn changed_statistics_are_written_in_a_batch() {
 
     let settings = TagWriteSettings::default();
     let report = library
-        .write_stats_to_files(both, &settings, &options, 10, &CancelToken::new())
+        .write_stats_to_files(both, &settings, &options, 10, &[], &CancelToken::new())
         .unwrap();
     assert_eq!(report.written, 2, "{report:?}");
     assert!(report.failed.is_empty());
@@ -105,4 +105,29 @@ fn changed_statistics_are_written_in_a_batch() {
         .unwrap();
     assert_eq!(library.pending_stats_writes(counts_only).unwrap(), 0);
     assert_eq!(library.pending_stats_writes(both).unwrap(), 1);
+
+    // A file to skip (the one playing) waits for a later batch.
+    let report = library
+        .write_stats_to_files(
+            both,
+            &settings,
+            &options,
+            10,
+            std::slice::from_ref(&rated),
+            &CancelToken::new(),
+        )
+        .unwrap();
+    assert_eq!(
+        (report.written, report.postponed, report.remaining),
+        (0, 1, 1)
+    );
+    assert_eq!(in_file(&rated).0, Some(7));
+    let report = library
+        .write_stats_to_files(both, &settings, &options, 10, &[], &CancelToken::new())
+        .unwrap();
+    assert_eq!(
+        (report.written, report.postponed, report.remaining),
+        (1, 0, 0)
+    );
+    assert_eq!(in_file(&rated).0, Some(10));
 }

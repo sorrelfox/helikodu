@@ -51,6 +51,9 @@ pub struct StatsWriteReport {
     pub failed: Vec<(PathBuf, String)>,
     /// The files still to write after this batch.
     pub remaining: usize,
+    /// The files left for later because they were to be skipped (they are
+    /// counted in `remaining`).
+    pub postponed: usize,
 }
 
 /// A file whose values differ from those last written.
@@ -164,7 +167,8 @@ impl Library {
 
     /// Writes the play counts and ratings (as `what` chooses) of up to `limit`
     /// files whose values differ from what was last written into them, then reads
-    /// the written files again. Meant to run now and then (when the application
+    /// the written files again. The files in `skip` (such as the one playing) are
+    /// left for a later batch. Meant to run now and then (when the application
     /// is idle, or before it quits), not after every play.
     pub fn write_stats_to_files(
         &self,
@@ -172,13 +176,19 @@ impl Library {
         settings: &TagWriteSettings,
         scan: &ScanOptions,
         limit: usize,
+        skip: &[PathBuf],
         cancel: &CancelToken,
     ) -> Result<StatsWriteReport, ScanError> {
         let mut report = StatsWriteReport::default();
         if !what.any() || limit == 0 {
             return Ok(report);
         }
-        let files = self.database().read(move |c| pending(c, what, limit))?;
+        let wanted = limit.saturating_add(skip.len());
+        let mut files = self.database().read(move |c| pending(c, what, wanted))?;
+        let before = files.len();
+        files.retain(|p| !skip.contains(&p.path));
+        report.postponed = before - files.len();
+        files.truncate(limit);
         let items: Vec<BatchItem> = files
             .iter()
             .map(|p| {

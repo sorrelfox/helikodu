@@ -26,6 +26,7 @@ use super::analysis::{AnalysisProgress, BackgroundAnalysis, BackgroundAnalysisOp
 use super::duplicates::DuplicateApplier;
 use super::playlists::PlaylistFinder;
 use super::sorting::LanguageSorter;
+use super::stats_writes::{StatsWriteOptions, StatsWriter};
 use super::{
     AlbumDetail, AlbumId, AlbumQuery, AlbumSummary, ArtistQuery, ArtistSummary, GenreQuery,
     GenreSummary, LibraryError, LibraryOverview, MusicLibrary, Paged, ScanRequest, SearchPage,
@@ -95,6 +96,10 @@ pub struct LibraryServiceOptions {
     /// How the background track analysis behaves. It runs only once
     /// [`LibraryService::set_background_analysis`] turns it on.
     pub analysis: BackgroundAnalysisOptions,
+    /// When play counts and ratings are written into the files. They are written
+    /// only once [`LibraryService::set_stats_writes`] hands over settings that
+    /// ask for it.
+    pub stats_writes: StatsWriteOptions,
 }
 
 impl Default for LibraryServiceOptions {
@@ -105,6 +110,7 @@ impl Default for LibraryServiceOptions {
             worker_program: None,
             language: String::new(),
             analysis: BackgroundAnalysisOptions::default(),
+            stats_writes: StatsWriteOptions::default(),
         }
     }
 }
@@ -179,6 +185,7 @@ pub struct LibraryService {
     duplicates: DuplicateApplier,
     sorting: LanguageSorter,
     analysis: BackgroundAnalysis,
+    stats_writes: StatsWriter,
     pub(super) bus: EventBus<Event>,
     worker_program: Option<PathBuf>,
     pub(super) finder: PlaylistFinder,
@@ -242,6 +249,12 @@ impl LibraryService {
         let sorting = LanguageSorter::start(library.clone(), bus.clone(), &options.language);
         let finder = PlaylistFinder::new(library.clone());
         let analysis = BackgroundAnalysis::start(library.clone(), bus.clone(), options.analysis);
+        let stats_writes = StatsWriter::start(
+            library.clone(),
+            bus.clone(),
+            options.worker_program.clone(),
+            options.stats_writes,
+        );
         Ok(Self {
             finder,
             library,
@@ -254,6 +267,7 @@ impl LibraryService {
             duplicates,
             sorting,
             analysis,
+            stats_writes,
             bus,
             worker_program: options.worker_program,
         })
@@ -426,6 +440,7 @@ impl LibraryService {
                     &advanced,
                     worker.as_deref(),
                     super::stats_import::STATS_BATCH,
+                    &[],
                     &helikodu_library::CancelToken::new(),
                 )?;
                 if report.written > 0 {
@@ -729,6 +744,14 @@ impl LibraryService {
         self.analysis.progress()
     }
 
+    /// Writes play counts and ratings into the files by themselves (see
+    /// [`StatsWriteOptions`]) as the `[advanced]` settings of `settings` ask,
+    /// with its `[library]` settings. The service does this at start; afterwards
+    /// the writes follow changes of the settings themselves.
+    pub fn set_stats_writes(&self, settings: &Settings) {
+        self.stats_writes.apply(settings);
+    }
+
     /// Cancels the running scan, if any, and waits until it has stopped.
     pub fn cancel_scan(&self) {
         if let Some(running) = lock(&self.scan).take() {
@@ -799,6 +822,8 @@ impl Drop for LibraryService {
         self.stop_loudness();
         self.cancel_scan();
         self.stop_watching();
+        // After the scans and the watcher, which must not see the writes; bounded.
+        self.stats_writes.stop();
         self.jobs = None;
         if let Some(worker) = self.worker.take() {
             let _ = worker.join();
