@@ -18,9 +18,9 @@
 //!   and the album, the track number and a length within 2 s where both sides
 //!   have them. An entry that fits tracks of more than one identity is ambiguous
 //!   and left out.
-//! - **A plan, then the import.** [`Library::plan_import`] says what would change
-//!   (see [`ImportPlan`]); [`Library::apply_import`] makes the change in one
-//!   transaction and records it as an import run, which [`Library::undo_import`]
+//! - **A plan, then the import.** [`Library::plan_import`](crate::Library::plan_import) says what would change
+//!   (see [`ImportPlan`]); [`Library::apply_import`](crate::Library::apply_import) makes the change in one
+//!   transaction and records it as an import run, which [`Library::undo_import`](crate::Library::undo_import)
 //!   undoes. Merge rules:
 //!   - play and skip counts are **added**; the counts each source gave are kept
 //!     per identity, so importing the same source again adds only what was played
@@ -99,7 +99,7 @@ pub enum ImportRunKind {
     Carry,
 }
 
-/// An import run, as [`Library::import_runs`] lists it.
+/// An import run, as [`Library::import_runs`](crate::Library::import_runs) lists it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportRun {
     /// The run.
