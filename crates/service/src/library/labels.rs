@@ -89,6 +89,25 @@ impl MusicLibrary {
         Ok(self.inner().field_values(name, tracks)?)
     }
 
+    /// Every label of each of `tracks`, own and inherited, in name order, as a
+    /// track list's labels column shows them.
+    pub fn track_labels(
+        &self,
+        tracks: &[TrackId],
+    ) -> Result<Vec<(TrackId, Vec<String>)>, LibraryError> {
+        Ok(self.inner().track_labels(tracks)?)
+    }
+
+    /// The values of the tag `key` with their numbers of tracks, in name order,
+    /// when there are at most `limit`; `None` when there are more.
+    pub fn tag_values(
+        &self,
+        key: &str,
+        limit: usize,
+    ) -> Result<Option<Vec<(String, usize)>>, LibraryError> {
+        Ok(self.inner().tag_values(key, limit)?)
+    }
+
     /// The key the tag editor writes the custom field `name` under (see
     /// [`tag_editing`](super::tag_editing)); `None` when `name` is no custom field.
     pub fn field_key(&self, name: &str) -> Option<FieldKey> {

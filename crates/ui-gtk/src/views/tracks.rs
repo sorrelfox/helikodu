@@ -15,6 +15,7 @@
 //! The same view, without its toolbar, lists the tracks of an artist.
 
 mod edit;
+mod extra;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -23,7 +24,9 @@ use std::time::Duration;
 use gtk::prelude::*;
 use gtk::{gdk, gio, glib};
 
-use crate::backend::{Backend, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort};
+use crate::backend::{
+    Backend, TrackColumn, TrackKey, TrackQuery, TrackRow, TrackScope, TrackSort, YourField,
+};
 use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::{TrackItem, TrackListModel};
@@ -46,6 +49,7 @@ const COLUMNS: &[(TrackColumn, bool, i32, bool)] = &[
     (TrackColumn::Genre, false, 104, false),
     (TrackColumn::Year, true, 58, false),
     (TrackColumn::Format, true, 120, false),
+    (TrackColumn::Labels, false, 150, true),
     (TrackColumn::Rating, true, 86, false),
     (TrackColumn::Plays, false, 62, false),
     (TrackColumn::Added, false, 96, false),
@@ -73,6 +77,9 @@ pub(crate) fn column_title(column: TrackColumn) -> String {
         TrackColumn::Length => tr("Length"),
         TrackColumn::Genre => tr("Genre"),
         TrackColumn::Added => tr("Added"),
+        TrackColumn::Labels => tr("Labels"),
+        // As the field was named.
+        TrackColumn::Field(name) => name.as_str().to_owned(),
     }
 }
 
@@ -90,6 +97,8 @@ fn column_id(column: TrackColumn) -> &'static str {
         TrackColumn::Length => "length",
         TrackColumn::Genre => "genre",
         TrackColumn::Added => "added",
+        TrackColumn::Labels => "labels",
+        TrackColumn::Field(name) => name.id(),
     }
 }
 
@@ -107,6 +116,8 @@ fn cell_text(row: &TrackRow, column: TrackColumn) -> String {
         TrackColumn::Length => row.duration.map(format::duration).unwrap_or_default(),
         TrackColumn::Genre => row.genre.clone(),
         TrackColumn::Added => crate::tools::tool_window::date(row.added),
+        // Not in the row: see `show_extra_cell`.
+        TrackColumn::Labels | TrackColumn::Field(_) => String::new(),
     }
 }
 
@@ -175,6 +186,13 @@ pub(crate) struct TracksView {
     /// The facet browser and its button (not on the artist page).
     browser: Option<Rc<FacetBrowser>>,
     browse: gtk::ToggleButton,
+    /// The columns of the user's fields, in their order.
+    field_columns: RefCell<Vec<(TrackColumn, gtk::ColumnViewColumn)>>,
+    /// The user's fields, as last loaded.
+    fields: RefCell<Vec<YourField>>,
+    /// The actions of the Columns menu, and its section of the user's fields.
+    column_actions: gio::SimpleActionGroup,
+    fields_section: gio::Menu,
 }
 
 impl std::fmt::Debug for TracksView {
@@ -311,12 +329,17 @@ impl TracksView {
                 clicked_row: Cell::new(None),
                 browser,
                 browse,
+                field_columns: RefCell::new(Vec::new()),
+                fields: RefCell::new(Vec::new()),
+                column_actions: gio::SimpleActionGroup::new(),
+                fields_section: gio::Menu::new(),
             }
         });
         crate::widgets::menu_names::set_menu_later(&columns_button, &view.columns_menu());
         view.connect(playback);
         view.connect_edges();
         view.connect_browser();
+        view.connect_extra();
         view.show_sort();
         let weak = Rc::downgrade(&view);
         view.table.connect_map(move |_| {
@@ -366,6 +389,7 @@ impl TracksView {
             title = widget.next_sibling();
             i += 1;
         }
+        self.mark_unsortable();
     }
 
     /// The first and the last shown column, in the table's order.
@@ -374,12 +398,7 @@ impl TracksView {
         let shown: Vec<TrackColumn> = (0..columns.n_items())
             .filter_map(|i| columns.item(i).and_downcast::<gtk::ColumnViewColumn>())
             .filter(gtk::ColumnViewColumn::is_visible)
-            .filter_map(|c| {
-                self.columns
-                    .iter()
-                    .find(|(_, own)| *own == c)
-                    .map(|(column, _)| *column)
-            })
+            .filter_map(|c| self.column_of(&c))
             .collect();
         (shown.first().copied(), shown.last().copied())
     }
@@ -390,23 +409,8 @@ impl TracksView {
         let mark = {
             let weak = Rc::downgrade(self);
             move || {
-                let Some(view) = weak.upgrade() else { return };
-                let (first, last) = view.edge_columns();
-                for cell in view
-                    .cells
-                    .borrow()
-                    .iter()
-                    .filter_map(glib::WeakRef::upgrade)
-                {
-                    let column = view
-                        .columns
-                        .iter()
-                        .find(|(c, _)| cell.widget_name() == column_id(*c))
-                        .map(|(c, _)| *c);
-                    cell.set_edges(
-                        column.is_some() && column == first,
-                        column.is_some() && column == last,
-                    );
+                if let Some(view) = weak.upgrade() {
+                    view.mark_edges();
                 }
             }
         };
@@ -417,6 +421,27 @@ impl TracksView {
         self.table
             .columns()
             .connect_items_changed(move |_, _, _, _| mark());
+    }
+
+    /// Marks the cells of the first and the last shown column.
+    fn mark_edges(&self) {
+        let (first, last) = self.edge_columns();
+        let columns = self.all_columns();
+        for cell in self
+            .cells
+            .borrow()
+            .iter()
+            .filter_map(glib::WeakRef::upgrade)
+        {
+            let column = columns
+                .iter()
+                .find(|(c, _)| cell.widget_name() == column_id(*c))
+                .map(|(c, _)| *c);
+            cell.set_edges(
+                column.is_some() && column == first,
+                column.is_some() && column == last,
+            );
+        }
     }
 
     fn connect_browser(self: &Rc<Self>) {
@@ -473,18 +498,30 @@ impl TracksView {
     }
 
     fn columns_menu(self: &Rc<Self>) -> gio::Menu {
-        let group = gio::SimpleActionGroup::new();
+        let group = &self.column_actions;
         let menu = gio::Menu::new();
-        for (column, c) in &self.columns {
+        let main = gio::Menu::new();
+        // Labels comes last, after the tags.
+        let mut columns: Vec<&(TrackColumn, gtk::ColumnViewColumn)> = self.columns.iter().collect();
+        columns.sort_by_key(|(column, _)| *column == TrackColumn::Labels);
+        for (column, c) in columns {
             let name = column_id(*column);
-            let action = gio::PropertyAction::new(name, c, "visible");
-            group.add_action(&action);
-            menu.append(
+            if *column == TrackColumn::Title {
+                // The title is always shown.
+                let action = gio::SimpleAction::new_stateful(name, None, &true.to_variant());
+                action.set_enabled(false);
+                group.add_action(&action);
+            } else {
+                group.add_action(&gio::PropertyAction::new(name, c, "visible"));
+            }
+            main.append(
                 Some(&column_title(*column)),
                 Some(&format!("columns.{name}")),
             );
         }
-        self.root.insert_action_group("columns", Some(&group));
+        menu.append_section(None, &main);
+        menu.append_section(Some(&tr("Your fields")), &self.fields_section);
+        self.root.insert_action_group("columns", Some(group));
         menu
     }
 
@@ -508,6 +545,7 @@ impl TracksView {
                 | TrackColumn::Length
                 | TrackColumn::Added => TableCell::text(1.0, &["hk-numeric", "hk-t2"]),
                 TrackColumn::Format => TableCell::text(0.0, &["hk-mono-meta"]),
+                TrackColumn::Labels | TrackColumn::Field(_) => TableCell::text(0.0, &["hk-t2"]),
                 _ => TableCell::text(0.0, &[]),
             };
             cell.set_widget_name(column_id(column));
@@ -604,6 +642,9 @@ impl TracksView {
                     Some(row) => cell.set_copies(row.key, row.copies),
                     None => cell.set_copies(TrackKey(0), 0),
                 }
+            }
+            TrackColumn::Labels | TrackColumn::Field(_) => {
+                self.show_extra_cell(cell, track, column);
             }
             _ => cell.set_text(&text(row.as_ref())),
         }
@@ -782,12 +823,7 @@ impl TracksView {
         let Some(primary) = sorter.primary_sort_column() else {
             return;
         };
-        let Some(column) = self
-            .columns
-            .iter()
-            .find(|(_, c)| *c == primary)
-            .map(|(column, _)| *column)
-        else {
+        let Some(column) = self.column_of(&primary) else {
             return;
         };
         let descending = sorter.primary_sort_order() == gtk::SortType::Descending;
@@ -823,7 +859,7 @@ impl TracksView {
             keys.iter().map(|k| (k.column, k.descending)).collect()
         };
         let numbered = keys.is_empty() || keys.len() > 1;
-        for (column, c) in &self.columns {
+        for (column, c) in &self.all_columns() {
             let mut title = column_title(*column);
             if let Some(index) = marks.iter().position(|(m, _)| m == column) {
                 let arrow = if marks[index].1 { "↓" } else { "↑" };
@@ -948,7 +984,7 @@ impl TracksView {
     /// Shows only `columns`, in the table's order, each with its width and
     /// whether it takes spare room.
     pub(crate) fn show_columns(&self, columns: &[(TrackColumn, i32, bool)]) {
-        for (column, c) in &self.columns {
+        for (column, c) in &self.all_columns() {
             match columns.iter().find(|(shown, _, _)| shown == column) {
                 Some((_, width, expand)) => {
                     c.set_visible(true);
@@ -1028,6 +1064,7 @@ impl TracksView {
     /// Reloads after the library changed, dropping the cached rows.
     pub(crate) fn library_changed(self: &Rc<Self>) {
         self.model.forget_rows();
+        self.load_fields();
         self.total.set(0);
         if let Some(browser) = self.shown_browser() {
             browser.set_text(self.filter.text().trim());

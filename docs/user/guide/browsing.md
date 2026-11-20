@@ -38,6 +38,8 @@ Text with a field and an operator is a query: `genre:jazz -genre:fusion`, `ratin
 
 While you type a field name, a list under the field offers the fields that start with it, with an example of each; after `kind:`, `codec:`, `has:` or `is:` it offers the values. **Tab** completes, **Up** and **Down** choose, **Escape** closes the list.
 
+The list knows your [labels and your own fields](labels-and-fields.md) too. After `label:` it lists your labels with the number of tracks each covers, a name of several words in quotes (`label:"late night"`); with more than 200 labels it lists those that start with the letters typed. Your own fields are offered among the others while their names are typed, and after the name of a custom field it offers the field's values when there are few. A computed field offers no values, and `sort:` with one is refused with a notice.
+
 When part of a query cannot be read, it is underlined, and a notice says what is wrong with an example that works. The table keeps showing the last query that could be read.
 
 The column on the right shows four example queries; click one to search with it.
@@ -100,15 +102,15 @@ While a chapter plays, the deck shows the chapter's number and title, and the se
 
 ## Tracks
 
-**Tracks** lists every track of the library in a table. The **Filter** field narrows it, and **Columns** shows or hides columns: **#**, **Title**, **Artist**, **Album**, **Year**, **Format**, **Rating**, **Plays** (hidden at first) and **Length**. Drag a column header to move the column, and its edge to change its width. Click the stars in the **Rating** column to rate a track.
+**Tracks** lists every track of the library in a table. The **Filter** field narrows it, and **Columns** shows or hides columns: **#**, **Title**, **Artist**, **Album**, **Year**, **Format**, **Rating**, **Plays** (hidden at first) and **Length**, and, hidden at first, **Genre**, **Added** and **Labels**: a track's own labels and those of its album and artists, in alphabetical order (the tooltip lists them all). Under **Your fields** the menu lists each of [your own fields](labels-and-fields.md) as a column too; their values appear as the rows are shown. Drag a column header to move the column, and its edge to change its width. Click the stars in the **Rating** column to rate a track.
 
-Click a column header to sort by it: the first click sorts in ascending order, the second in descending order, and the third turns that column's sorting off. Every column can be sorted. Sorting by several columns at once works by clicking them one after another: the column clicked last decides first, and the columns clicked before it decide among equal values, up to four columns. The headers show the order with arrows and, with more than one column, numbers. The status bar at the bottom says what the table is **Sorted by**; without your own order, tracks are sorted by artist, album, disc and track number.
+Click a column header to sort by it: the first click sorts in ascending order, the second in descending order, and the third turns that column's sorting off. Every column can be sorted except **Labels** and the columns of computed fields, whose headers say so in their tooltip; a custom field sorts like any text column. Sorting by several columns at once works by clicking them one after another: the column clicked last decides first, and the columns clicked before it decide among equal values, up to four columns. The headers show the order with arrows and, with more than one column, numbers. The status bar at the bottom says what the table is **Sorted by**; without your own order, tracks are sorted by artist, album, disc and track number.
 
 Double-click a track, or press **Enter**, to play from that track. **Ctrl+A** selects all tracks.
 
 ### Browsing by genre, artist and album
 
-The **Browse** button opens three linked lists above the table: **Genre**, **Album artist** and **Album**, each with the number of tracks of every value and an **All …** row at the top. Choosing a value narrows the lists to its right and the table; **Ctrl**-click and **Shift**-click choose several values. The count in the toolbar then says how many of all tracks are shown. The field of each list can be changed with the button in its head: **Genre**, **Album artist**, **Album**, **Artist**, **Composer**, **Year** or **Format**. Text in the **Filter** field filters first, so the lists show only the values of the tracks it finds. **Browse** again closes the lists and shows every track.
+The **Browse** button opens three linked lists above the table: **Genre**, **Album artist** and **Album**, each with the number of tracks of every value and an **All …** row at the top. Choosing a value narrows the lists to its right and the table; **Ctrl**-click and **Shift**-click choose several values. The count in the toolbar then says how many of all tracks are shown. The field of each list can be changed with the button in its head: **Genre**, **Album artist**, **Album**, **Artist**, **Composer**, **Year**, **Format** or **Label**. A list of labels counts each track under every label it has, its own and those of its album and artists. Text in the **Filter** field filters first, so the lists show only the values of the tracks it finds. **Browse** again closes the lists and shows every track.
 
 ## Library statistics
 

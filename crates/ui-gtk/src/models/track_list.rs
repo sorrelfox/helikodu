@@ -4,7 +4,9 @@
 //! The track list model of the track table: a `GListModel` over track keys in
 //! the order a query gave. Rows are fetched by key, a batch of neighbours at a
 //! time, on a worker thread when a cell is bound to them, and kept in a cache
-//! that starts again when it is full.
+//! that starts again when it is full. The values of the columns beyond the row
+//! (labels, the user's fields) come with the same batch, only while such a
+//! column is shown.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap};
@@ -15,7 +17,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
 
-use crate::backend::{Backend, TrackKey, TrackRow};
+use crate::backend::{Backend, ExtraColumns, ExtraValues, TrackKey, TrackRow};
 
 /// How many neighbouring rows one fetch asks for at most.
 const BATCH: usize = 96;
@@ -103,6 +105,10 @@ struct Fetcher {
     scheduled: Cell<bool>,
     generation: Cell<u64>,
     fetches: Cell<u64>,
+    /// The columns beyond the row that are fetched with it.
+    extras: RefCell<ExtraColumns>,
+    /// Their values, by key; kept and dropped with the rows.
+    extra_cache: RefCell<HashMap<TrackKey, Rc<ExtraValues>>>,
 }
 
 impl Fetcher {
@@ -149,14 +155,30 @@ impl Fetcher {
         };
         self.fetches.set(self.fetches.get() + 1);
         let generation = self.generation.get();
+        let extras = self.extras.borrow().clone();
         let me = self.clone();
         glib::spawn_future_local(async move {
-            let rows = backend
-                .query(move |library| library.track_rows(&keys))
+            let (rows, extra) = backend
+                .query(move |library| {
+                    let rows = library.track_rows(&keys)?;
+                    let extra = if extras.is_empty() {
+                        Vec::new()
+                    } else {
+                        library.extra_values(&keys, &extras).unwrap_or_default()
+                    };
+                    Ok((rows, extra))
+                })
                 .await
                 .unwrap_or_default();
             if me.generation.get() != generation {
                 return;
+            }
+            {
+                let mut cache = me.extra_cache.borrow_mut();
+                if cache.len() + extra.len() > CACHE {
+                    cache.clear();
+                }
+                cache.extend(extra.into_iter().map(|(k, v)| (k, Rc::new(v))));
             }
             let rows: HashMap<TrackKey, Rc<TrackRow>> =
                 rows.into_iter().map(|r| (r.key, Rc::new(r))).collect();
@@ -253,6 +275,32 @@ impl TrackListModel {
     /// Forgets the cached rows, after the library changed.
     pub(crate) fn forget_rows(&self) {
         self.imp().fetcher.cache.borrow_mut().clear();
+        self.imp().fetcher.extra_cache.borrow_mut().clear();
+    }
+
+    /// Fetches the values of `extras` with the rows from now on; whether that
+    /// changed what is fetched. The rows cached are forgotten then, so that each
+    /// comes again with its values.
+    pub(crate) fn set_extras(&self, extras: ExtraColumns) -> bool {
+        let fetcher = &self.imp().fetcher;
+        if *fetcher.extras.borrow() == extras {
+            return false;
+        }
+        fetcher.extras.replace(extras);
+        self.forget_rows();
+        // A batch on its way has no values for the new columns: it is dropped,
+        // and what waited for it is fetched again.
+        fetcher.generation.set(fetcher.generation.get() + 1);
+        if !fetcher.waiting.borrow().is_empty() && !fetcher.scheduled.replace(true) {
+            let again = fetcher.clone();
+            glib::idle_add_local_once(move || again.fetch());
+        }
+        true
+    }
+
+    /// The values of the extra columns for `key`, once fetched.
+    pub(crate) fn extra(&self, key: TrackKey) -> Option<Rc<ExtraValues>> {
+        self.imp().fetcher.extra_cache.borrow().get(&key).cloned()
     }
 
     /// The keys, in order.

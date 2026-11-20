@@ -14,6 +14,7 @@
 
 mod artist_photos;
 mod browse;
+mod columns;
 mod export;
 mod history;
 mod insights;
@@ -248,7 +249,9 @@ fn sort_key(column: TrackColumn) -> TrackSortKey {
         TrackColumn::Plays => TrackSortKey::Plays,
         TrackColumn::Length => TrackSortKey::Length,
         // Sorted through the query language instead (see `query_sort`).
-        TrackColumn::Genre | TrackColumn::Added => TrackSortKey::Title,
+        TrackColumn::Genre | TrackColumn::Added | TrackColumn::Labels | TrackColumn::Field(_) => {
+            TrackSortKey::Title
+        }
     }
 }
 
@@ -268,6 +271,12 @@ fn query_sort(keys: &[TrackSort]) -> Vec<SortKey> {
                 TrackColumn::Length => vec![Field::Duration],
                 TrackColumn::Genre => vec![Field::Genre],
                 TrackColumn::Added => vec![Field::Added],
+                TrackColumn::Labels => vec![Field::Label],
+                // A custom field sorts as its tag; a computed field cannot sort.
+                TrackColumn::Field(name) => Field::from_name(name.as_str())
+                    .filter(|field| matches!(field, Field::Tag(_)))
+                    .into_iter()
+                    .collect(),
             };
             fields.into_iter().map(move |field| SortKey {
                 by: SortBy::Field(field),
@@ -380,10 +389,15 @@ impl ServiceLibrary {
         let is_query = parsed
             .as_ref()
             .is_some_and(|p| p.error.is_none() && !p.query.is_plain_text());
-        let by_query = query
-            .sort
-            .iter()
-            .any(|k| matches!(k.column, TrackColumn::Genre | TrackColumn::Added));
+        let by_query = query.sort.iter().any(|k| {
+            matches!(
+                k.column,
+                TrackColumn::Genre
+                    | TrackColumn::Added
+                    | TrackColumn::Labels
+                    | TrackColumn::Field(_)
+            )
+        });
         if !is_query && !by_query {
             return Ok(None);
         }
@@ -1518,6 +1532,33 @@ impl LibrarySource for ServiceLibrary {
         since: super::StatisticsSince,
     ) -> Result<super::LibraryStats, BackendError> {
         self.library_statistics(since)
+    }
+
+    fn sortable(&self, column: TrackColumn) -> bool {
+        match column {
+            TrackColumn::Labels => false,
+            // Only a custom field: the query language cannot sort by a computed one.
+            TrackColumn::Field(name) => {
+                matches!(Field::from_name(name.as_str()), Some(Field::Tag(_)))
+            }
+            _ => true,
+        }
+    }
+
+    fn your_fields(&self) -> Result<Vec<super::YourField>, BackendError> {
+        self.fields_defined()
+    }
+
+    fn extra_values(
+        &self,
+        keys: &[TrackKey],
+        columns: &super::ExtraColumns,
+    ) -> Result<Vec<(TrackKey, super::ExtraValues)>, BackendError> {
+        self.column_values(keys, columns)
+    }
+
+    fn vocabulary(&self) -> Result<super::Vocabulary, BackendError> {
+        self.completion_words()
     }
 
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {

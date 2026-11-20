@@ -7,19 +7,33 @@
 //! operator it lists the values of the fields that have few (kind, codec,
 //! has, is). Tab completes, Up and Down choose, Escape closes. The entry keeps
 //! the focus throughout.
+//!
+//! The user's labels and fields come from the library each time the entry takes
+//! the focus: the fields are listed among the built-in ones, `label:` lists the
+//! labels with their numbers of tracks, and a field that stands for a tag lists
+//! its values when they are few.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gtk::prelude::*;
-use gtk::{gdk, pango};
+use gtk::{gdk, glib, pango};
 use helikodu_model::query::{Field, FieldKind, Flag, MediaKind};
 
-use crate::i18n::tr;
+use crate::backend::{Backend, Vocabulary};
+use crate::format;
+use crate::i18n::{fill, ntr, tr};
 use crate::widgets::label;
 
 /// The most rows shown at once.
 const MAX_ROWS: usize = 8;
+
+/// The height of a row.
+const ROW_HEIGHT: i32 = 30;
+
+/// Up to this many labels are all listed after `label:`; with more, only those
+/// that start with the typed letters.
+const ALL_LABELS: usize = 200;
 
 /// One choice.
 #[derive(Debug, Clone)]
@@ -78,10 +92,7 @@ fn describe(field: &Field) -> (String, &'static str) {
         Field::LastPlayed => (tr("When it was last played"), "lastplayed>1y"),
         Field::FirstPlayed => (tr("When it was first played"), "firstplayed<30d"),
         Field::LastSkipped => (tr("When it was last skipped"), "lastskipped<7d"),
-        Field::Label => (
-            tr("A label of the track, its album or an artist"),
-            "label:jazz",
-        ),
+        Field::Label => (tr("One of your labels"), "label:favourite"),
         _ => (tr("A tag"), "tag:mood=calm"),
     }
 }
@@ -103,11 +114,88 @@ fn word_at(text: &str, cursor: usize) -> (usize, &str) {
     (start, &before[start..])
 }
 
+/// `value` as the query language reads it as one value: in quotes when it has
+/// white space or a character the language gives a meaning.
+fn quoted(value: &str) -> String {
+    let plain = !value.is_empty()
+        && !value.starts_with('-')
+        && !value
+            .chars()
+            .any(|c| c.is_whitespace() || "():=!~<>\"".contains(c));
+    if plain {
+        value.to_owned()
+    } else {
+        format!("\"{value}\"")
+    }
+}
+
+/// The labels after `name` and its operator `op` that start with `typed`.
+fn label_choices(name: &str, op: &str, typed: &str, words: &Vocabulary) -> Vec<Choice> {
+    let typed = typed.trim_start_matches('"').to_lowercase();
+    if words.labels.len() > ALL_LABELS && typed.is_empty() {
+        return Vec::new();
+    }
+    words
+        .labels
+        .iter()
+        .filter(|(label, _)| {
+            let label = label.to_lowercase();
+            label.starts_with(&typed) && label != typed
+        })
+        .map(|(label, tracks)| {
+            let query = format!("{name}{op}{}", quoted(label));
+            Choice {
+                name: label.clone(),
+                description: fill(
+                    &ntr("{} track", "{} tracks", *tracks),
+                    &[&format::count(*tracks)],
+                ),
+                insert: format!("{query} "),
+                example: query,
+            }
+        })
+        .collect()
+}
+
+/// The user's fields whose names start with `typed`.
+fn your_field_choices(typed: &str, words: &Vocabulary) -> Vec<Choice> {
+    words
+        .fields
+        .iter()
+        .filter(|f| f.field.name.starts_with(typed) && f.field.name != typed)
+        .map(|f| {
+            let name = f.field.name.clone();
+            let description = match &f.field.tag {
+                Some(tag) => fill(&tr("Your field, the tag {}"), &[tag]),
+                None => tr("Your field, computed"),
+            };
+            let example = match &f.example {
+                Some(value) => format!("{name}={}", quoted(value)),
+                None => format!("has:{name}"),
+            };
+            Choice {
+                insert: format!("{name}:"),
+                name,
+                description,
+                example,
+            }
+        })
+        .collect()
+}
+
 /// The choices for `word`: fields by name, or values after a field and its
-/// operator.
-fn choices(word: &str) -> Vec<Choice> {
+/// operator; `words` holds the user's labels and fields.
+fn choices(word: &str, words: &Vocabulary) -> Vec<Choice> {
     if let Some((name, value)) = word.split_once([':', '=']) {
-        let values: Vec<String> = match name.to_ascii_lowercase().as_str() {
+        let op = &word[name.len()..=name.len()];
+        let lower = name.to_ascii_lowercase();
+        if Field::built_in(&lower) == Some(Field::Label) {
+            return label_choices(name, op, value, words);
+        }
+        let own = words.fields.iter().find(|f| f.field.name == lower);
+        let values: Vec<String> = match lower.as_str() {
+            // A computed field offers no values; a custom field its few ones.
+            _ if own.is_some() => own.map(|f| f.values.clone()).unwrap_or_default(),
             "kind" => MediaKind::ALL.iter().map(|k| k.name().to_owned()).collect(),
             "codec" | "format" => [
                 "flac", "alac", "wav", "aiff", "wavpack", "ape", "mp3", "aac", "opus", "vorbis",
@@ -121,20 +209,24 @@ fn choices(word: &str) -> Vec<Choice> {
             "is" => Flag::ALL.iter().map(|f| f.name().to_owned()).collect(),
             _ => return Vec::new(),
         };
-        let typed = value.to_lowercase();
-        let op = &word[name.len()..=name.len()];
+        let typed = value.trim_start_matches('"').to_lowercase();
         return values
             .into_iter()
-            .filter(|v| v.starts_with(&typed) && *v != typed)
+            .filter(|v| {
+                let v = v.to_lowercase();
+                v.starts_with(&typed) && v != typed
+            })
             .map(|v| Choice {
-                name: v.clone(),
                 description: String::new(),
-                example: format!("{name}{op}{v}"),
-                insert: format!("{name}{op}{v} "),
+                example: format!("{name}{op}{}", quoted(&v)),
+                insert: format!("{name}{op}{} ", quoted(&v)),
+                name: v,
             })
             .collect();
     }
-    if word.is_empty() || !word.chars().all(|c| c.is_ascii_alphabetic()) {
+    let named = word.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
+        && word.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+    if !named {
         return Vec::new();
     }
     let typed = word.to_ascii_lowercase();
@@ -177,6 +269,7 @@ fn choices(word: &str) -> Vec<Choice> {
             });
         }
     }
+    found.extend(your_field_choices(&typed, words));
     found.sort_by(|a, b| a.name.cmp(&b.name));
     found.truncate(MAX_ROWS);
     found
@@ -187,6 +280,14 @@ pub(crate) struct QueryCompletion {
     entry: gtk::SearchEntry,
     popover: gtk::Popover,
     list: gtk::ListBox,
+    scroller: gtk::ScrolledWindow,
+    backend: Backend,
+    /// The user's labels and fields, as last loaded.
+    words: RefCell<Rc<Vocabulary>>,
+    /// Whether they were asked for since the entry took the focus.
+    asked: Cell<bool>,
+    /// The completion itself, for the answer of the library.
+    me: RefCell<std::rc::Weak<Self>>,
     choices: RefCell<Vec<Choice>>,
     /// The word and where it starts, while the popover is open.
     word: RefCell<(usize, String)>,
@@ -202,8 +303,8 @@ impl std::fmt::Debug for QueryCompletion {
 }
 
 impl QueryCompletion {
-    /// The completion of `entry`.
-    pub(crate) fn new(entry: &gtk::SearchEntry) -> Rc<Self> {
+    /// The completion of `entry`, with the labels and fields of `backend`.
+    pub(crate) fn new(entry: &gtk::SearchEntry, backend: &Backend) -> Rc<Self> {
         let popover = gtk::Popover::new();
         popover.add_css_class("hk-completion");
         popover.set_has_arrow(false);
@@ -217,7 +318,13 @@ impl QueryCompletion {
         list.set_selection_mode(gtk::SelectionMode::Single);
         list.set_can_focus(false);
         list.update_property(&[gtk::accessible::Property::Label(&tr("Completions"))]);
-        content.append(&list);
+        // A long list of values scrolls; the popover shows eight rows at most.
+        let scroller = gtk::ScrolledWindow::new();
+        scroller.set_hscrollbar_policy(gtk::PolicyType::Never);
+        scroller.set_propagate_natural_height(true);
+        scroller.set_max_content_height(ROW_HEIGHT * MAX_ROWS as i32);
+        scroller.set_child(Some(&list));
+        content.append(&scroller);
         content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         let hint = label(
             &tr("Tab completes · Up and Down choose · Esc closes"),
@@ -231,6 +338,11 @@ impl QueryCompletion {
             entry: entry.clone(),
             popover,
             list,
+            scroller,
+            backend: backend.clone(),
+            words: RefCell::new(Rc::new(Vocabulary::default())),
+            asked: Cell::new(false),
+            me: RefCell::new(std::rc::Weak::new()),
             choices: RefCell::new(Vec::new()),
             word: RefCell::new((0, String::new())),
             dismissed: RefCell::new(None),
@@ -250,15 +362,39 @@ impl QueryCompletion {
                 popover.unparent();
             }
         });
+        completion.me.replace(Rc::downgrade(&completion));
         let weak = Rc::downgrade(&completion);
         entry.connect_has_focus_notify(move |entry| {
             if !entry.has_focus()
                 && let Some(completion) = weak.upgrade()
             {
+                // Asked for again when the entry is used next.
+                completion.asked.set(false);
                 completion.close();
             }
         });
         completion
+    }
+
+    /// Asks the library for the labels and the user's fields again; the
+    /// popover follows them if it is open.
+    fn load_words(&self) {
+        self.asked.set(true);
+        let weak = self.me.borrow().clone();
+        let backend = self.backend.clone();
+        glib::spawn_future_local(async move {
+            let Ok(words) = backend.query(|library| library.vocabulary()).await else {
+                return;
+            };
+            let Some(completion) = weak.upgrade() else {
+                return;
+            };
+            if **completion.words.borrow() == words {
+                return;
+            }
+            completion.words.replace(Rc::new(words));
+            completion.update();
+        });
     }
 
     /// Whether the popover is open.
@@ -286,14 +422,22 @@ impl QueryCompletion {
                 .root()
                 .and_then(|r| r.focus())
                 .is_some_and(|f| f.is_ancestor(&self.entry));
-        let found = if typing { choices(word) } else { Vec::new() };
+        if typing && !self.asked.get() {
+            self.load_words();
+        }
+        let words = self.words.borrow().clone();
+        let found = if typing {
+            choices(word, &words)
+        } else {
+            Vec::new()
+        };
         if found.is_empty() {
             self.close();
             return;
         }
         let typed = word
             .split_once([':', '='])
-            .map_or(word.len(), |(_, value)| value.len());
+            .map_or(word.len(), |(_, value)| value.trim_start_matches('"').len());
         crate::widgets::remove_rows(&self.list);
         for choice in &found {
             self.list.append(&row(choice, typed));
@@ -314,6 +458,15 @@ impl QueryCompletion {
         self.selected.set(index);
         if let Some(row) = self.list.row_at_index(index as i32) {
             self.list.select_row(Some(&row));
+            // Keep the chosen row in view.
+            let adjustment = self.scroller.vadjustment();
+            let top = f64::from(ROW_HEIGHT) * index as f64;
+            let bottom = top + f64::from(ROW_HEIGHT);
+            if top < adjustment.value() {
+                adjustment.set_value(top);
+            } else if bottom > adjustment.value() + adjustment.page_size() {
+                adjustment.set_value(bottom - adjustment.page_size());
+            }
         }
     }
 
@@ -424,8 +577,10 @@ mod tests {
 
     #[test]
     fn fields_complete_by_prefix_and_values_after_the_operator() {
-        let names =
-            |word: &str| -> Vec<String> { choices(word).into_iter().map(|c| c.name).collect() };
+        let words = Vocabulary::default();
+        let names = |word: &str| -> Vec<String> {
+            choices(word, &words).into_iter().map(|c| c.name).collect()
+        };
         assert_eq!(
             names("a"),
             ["added", "album", "albumartist", "albumgain", "artist"]
@@ -437,5 +592,66 @@ mod tests {
         assert!(names("artist:k").is_empty());
         assert_eq!(word_at("genre:jazz -gen", 15), (12, "gen"));
         assert_eq!(word_at("(art", 4), (1, "art"));
+    }
+
+    fn words() -> Vocabulary {
+        use crate::backend::{FieldWords, YourField};
+        Vocabulary {
+            labels: vec![
+                ("after hours".into(), 41),
+                ("favourite".into(), 204),
+                ("late night".into(), 63),
+            ],
+            fields: vec![
+                FieldWords {
+                    field: YourField {
+                        name: "decade".into(),
+                        tag: None,
+                    },
+                    example: Some("1990s".into()),
+                    values: Vec::new(),
+                },
+                FieldWords {
+                    field: YourField {
+                        name: "mood".into(),
+                        tag: Some("MOOD".into()),
+                    },
+                    example: Some("calm".into()),
+                    values: vec!["bright".into(), "calm".into()],
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn labels_and_your_fields_complete() {
+        let words = words();
+        let found = |word: &str| choices(word, &words);
+        let names =
+            |word: &str| -> Vec<String> { found(word).into_iter().map(|c| c.name).collect() };
+        // `label` among the fields, and the user's fields with the others.
+        assert_eq!(
+            names("l"),
+            ["label", "lastplayed", "lastskipped", "limit", "lyricist"]
+        );
+        assert_eq!(names("d"), ["decade", "disc", "discsubtitle", "duration"]);
+        let decade = &found("dec")[0];
+        assert_eq!(decade.example, "decade=1990s");
+        assert_eq!(decade.insert, "decade:");
+        assert_eq!(found("moo")[0].description, "Your field, the tag MOOD");
+        // After `label:` the labels, a name of several words in quotes.
+        assert_eq!(names("label:"), ["after hours", "favourite", "late night"]);
+        let late = &found("label:la")[0];
+        assert_eq!(late.example, "label:\"late night\"");
+        assert_eq!(late.insert, "label:\"late night\" ");
+        assert_eq!(late.description, "63 tracks");
+        assert_eq!(names("labels=\"fav"), ["favourite"]);
+        // A custom field offers its values; a computed one none.
+        assert_eq!(names("mood:"), ["bright", "calm"]);
+        assert!(names("decade:").is_empty());
+        // With no labels the popover stays closed.
+        assert!(choices("label:", &Vocabulary::default()).is_empty());
+        assert_eq!(quoted("live"), "live");
+        assert_eq!(quoted("for the car"), "\"for the car\"");
     }
 }

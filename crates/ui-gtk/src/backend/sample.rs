@@ -14,6 +14,7 @@ mod export;
 mod files;
 mod history;
 mod insights;
+mod lists;
 mod lyrics;
 mod photos;
 mod playlists;
@@ -525,6 +526,9 @@ impl SampleLibrary {
             TrackColumn::Length => a.duration.cmp(&b.duration),
             TrackColumn::Genre => lower(&a.genre).cmp(&lower(&b.genre)),
             TrackColumn::Added => a.added.cmp(&b.added),
+            TrackColumn::Labels => lists::labels_of(a).cmp(&lists::labels_of(b)),
+            TrackColumn::Field(name) => lower(&lists::field_value(a, name.as_str()))
+                .cmp(&lower(&lists::field_value(b, name.as_str()))),
         }
     }
 
@@ -1084,6 +1088,33 @@ impl LibrarySource for SampleLibrary {
         since: super::StatisticsSince,
     ) -> Result<super::LibraryStats, BackendError> {
         self.sample_statistics(since)
+    }
+
+    fn sortable(&self, column: TrackColumn) -> bool {
+        match column {
+            TrackColumn::Labels => false,
+            TrackColumn::Field(name) => self
+                .sample_fields()
+                .iter()
+                .any(|f| f.name == name.as_str() && !f.is_computed()),
+            _ => true,
+        }
+    }
+
+    fn your_fields(&self) -> Result<Vec<super::YourField>, BackendError> {
+        Ok(self.sample_fields())
+    }
+
+    fn extra_values(
+        &self,
+        keys: &[TrackKey],
+        columns: &super::ExtraColumns,
+    ) -> Result<Vec<(TrackKey, super::ExtraValues)>, BackendError> {
+        self.sample_extra_values(keys, columns)
+    }
+
+    fn vocabulary(&self) -> Result<super::Vocabulary, BackendError> {
+        self.sample_vocabulary()
     }
 
     fn composer_duration(&self, composer: ArtistKey) -> Result<Duration, BackendError> {
@@ -1914,6 +1945,7 @@ fn build_over(
     first_run: bool,
 ) -> (Backend, async_channel::Sender<Update>) {
     let (sender, receiver) = async_channel::unbounded();
+    lists::install_fields();
     *library.rated.lock().unwrap_or_else(PoisonError::into_inner) = Some(sender.clone());
     let library = Arc::new(library);
     let mut services = MemoryServices::for_library(library.clone(), sender.clone());

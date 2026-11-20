@@ -12,8 +12,8 @@ mod support;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use helikodu_library::{
-    FacetChoice, FacetField, FacetKey, Library, Listen, ListenEnd, PlayRules, QueryRequest, RootId,
-    StatisticsRequest, TrackTags, parse_query,
+    FacetChoice, FacetField, FacetKey, LabelTarget, Library, Listen, ListenEnd, PlayRules,
+    QueryRequest, RootId, StatisticsRequest, TrackTags, parse_query,
 };
 use helikodu_model::library::TrackId;
 use helikodu_model::query::Query;
@@ -169,6 +169,77 @@ fn the_query_filters_before_the_panes() {
     }];
     let ids = library.facet_track_ids(&query, &chosen).unwrap();
     assert_eq!(ids.len(), 1);
+}
+
+#[test]
+fn a_label_pane_counts_own_and_inherited_labels() {
+    let (library, tracks) = fixture();
+    let [a1, a2, a3, b1, _] = tracks[..] else {
+        panic!("five tracks")
+    };
+    // Given to a track, to its album, and to an artist; a track counts once
+    // under each of its labels, however it has them.
+    library
+        .add_label(&LabelTarget::Tracks(vec![a1]), "late night")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::Tracks(vec![a1]), "Favourite")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::AlbumOf(a2), "favourite")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::Artist("Okto".into()), "late night")
+        .unwrap();
+
+    let all = request(Query::default());
+    let labels = library.facet_values(&all, &[], FacetField::Label).unwrap();
+    assert_eq!(labels.tracks, 5);
+    assert_eq!(
+        names(&labels),
+        [("favourite".to_owned(), 2), ("late night".to_owned(), 3)]
+    );
+    assert!(matches!(labels.values[0].key, FacetKey::Id(_)));
+
+    // Chosen, the label narrows the other panes and the table.
+    let late = [FacetChoice {
+        field: FacetField::Label,
+        keys: vec![labels.values[1].key.clone()],
+    }];
+    let genres = library
+        .facet_values(&all, &late, FacetField::Genre)
+        .unwrap();
+    assert_eq!(
+        names(&genres),
+        [("Ambient".to_owned(), 2), ("Blues".to_owned(), 1)]
+    );
+    let mut ids = library.facet_track_ids(&all, &late).unwrap();
+    ids.sort();
+    assert_eq!(ids, [a1, a3, b1]);
+    // Both labels: a track with either passes.
+    let either = [FacetChoice {
+        field: FacetField::Label,
+        keys: labels.values.iter().map(|v| v.key.clone()).collect(),
+    }];
+    assert_eq!(library.facet_track_ids(&all, &either).unwrap().len(), 4);
+
+    // The query and the panes before it narrow the label pane.
+    let blues = [FacetChoice {
+        field: FacetField::Genre,
+        keys: vec![genres.values[1].key.clone()],
+    }];
+    let narrowed = library
+        .facet_values(&all, &blues, FacetField::Label)
+        .unwrap();
+    assert_eq!(names(&narrowed), [("late night".to_owned(), 1)]);
+    let query = request(parse_query("year:2019").unwrap());
+    let labels = library
+        .facet_values(&query, &[], FacetField::Label)
+        .unwrap();
+    assert_eq!(
+        names(&labels),
+        [("favourite".to_owned(), 2), ("late night".to_owned(), 1)]
+    );
 }
 
 #[test]

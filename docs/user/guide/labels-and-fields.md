@@ -39,6 +39,8 @@ In the [query language](browsing.md#the-query-language), `label` is a text field
 
 Plain search text finds labels too: searching `jazz` lists the tracks labelled `jazz` along with those whose title, artist or genre has the word. Naming patterns can use labels as well: `{join(label)}` writes all of a track's labels.
 
+In the main window, the **Labels** column of **Tracks** shows each track's labels, the **Browse** lists can list them (choose **Label** in a list's head), and the search field's completion offers your labels after `label:` (see [Browsing](browsing.md)).
+
 The label field has nothing to do with the record label in a file's tags, which is the tag `LABEL` and is found with `tag:LABEL`.
 
 ## Computed fields
@@ -57,7 +59,7 @@ Once defined, the name works wherever a field does:
 - in **expressions** of other computed fields, as `era` uses `decade` above, as long as none of them comes back to itself;
 - in **searches** and smart playlists, compared as text: `decade=1990s`, `decade:199`, `era~^19`, `has:decade`. Helikodu works the field out for every track before such a search runs; on a library of a few thousand tracks that takes a fraction of a second, on a very large library noticeably longer.
 
-A search cannot sort by a computed field yet: `sort:decade` is not accepted.
+A search cannot sort by a computed field yet: `sort:decade` is not accepted, and the column of a computed field in **Tracks** cannot be sorted either. Each of your fields can be shown as a column of **Tracks** (**Columns ▸ Your fields**), and the search field's completion offers them among the other fields.
 
 ## Custom fields
 

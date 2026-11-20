@@ -23,7 +23,7 @@ use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use helikodu_ui_gtk::backend::{AlbumQuery, Backend, FacetField, sample};
+use helikodu_ui_gtk::backend::{AlbumQuery, Backend, FacetField, FieldName, TrackColumn, sample};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display, snapshot};
 
@@ -81,6 +81,16 @@ fn shot(window: &MainWindow, name: &str) {
     spin(300);
     let path = std::path::Path::new(&dir).join(format!("{name}.png"));
     snapshot::save_png(window, &path).unwrap();
+}
+
+/// Saves `popover` to `HELIKODU_INSIGHTS_SHOTS/name.png` when that is set.
+fn popover_shot(popover: &gtk::Popover, name: &str) {
+    let Some(dir) = std::env::var_os("HELIKODU_INSIGHTS_SHOTS") else {
+        return;
+    };
+    spin(300);
+    let path = std::path::Path::new(&dir).join(format!("{name}.png"));
+    snapshot::save_widget_png(popover, &path).unwrap();
 }
 
 /// Counts the frames the window paints in `ms` milliseconds.
@@ -165,6 +175,145 @@ fn the_facet_browser_narrows_the_table(app: &gtk::Application) {
     // Closed, the browser no longer narrows the table.
     window.set_browsing(false);
     wait_for("every track", 3, || window.tracks_shown().0 == all);
+    window.destroy();
+}
+
+fn a_label_pane_lists_the_labels(app: &gtk::Application) {
+    let (window, _) = window_sized(app, 1440);
+    window.open_page("tracks");
+    wait_for("the tracks", 3, || window.tracks_shown().0 > 0);
+    window.set_browsing(true);
+    wait_for("the panes", 3, || {
+        let rows = window.facet_rows();
+        rows.len() == 3 && rows.iter().all(|p| !p.is_empty())
+    });
+    window.set_facet_field(2, FacetField::Label);
+    wait_for("the labels", 3, || {
+        window.facet_rows()[2].first().map(|r| r.0.as_str()) == Some("All labels")
+    });
+    let labels = window.facet_rows()[2].clone();
+    let names: Vec<&str> = labels.iter().skip(1).map(|r| r.0.as_str()).collect();
+    assert!(names.contains(&"favourite"), "{names:?}");
+    assert!(
+        names.windows(2).all(|w| w[0] < w[1]),
+        "in name order: {names:?}"
+    );
+    // A track with several labels counts under each.
+    let counted: usize = labels.iter().skip(1).map(|r| r.1).sum();
+    assert!(counted > labels[0].1, "{counted} of {}", labels[0].1);
+
+    // A label narrows the table to its tracks.
+    let favourite = labels.iter().position(|r| r.0 == "favourite").unwrap();
+    window.choose_facets(2, &[favourite as u32]);
+    wait_for("the table to narrow", 3, || {
+        window.tracks_shown().0 == labels[favourite].1
+    });
+    shot(&window, "facets-labels");
+    window.set_browsing(false);
+    window.destroy();
+}
+
+fn tracks_show_labels_and_your_fields(app: &gtk::Application) {
+    let (window, _) = window_sized(app, 1440);
+    window.open_page("tracks");
+    wait_for("the tracks", 3, || window.tracks_shown().0 > 0);
+    // Each of the user's fields has an item in the Columns menu.
+    wait_for("the fields", 3, || !window.track_field_columns().is_empty());
+    assert_eq!(
+        window.track_field_columns(),
+        [
+            "columns.field-decade",
+            "columns.field-era",
+            "columns.field-mood"
+        ]
+    );
+
+    // The labels, own and inherited, in name order; the column does not sort.
+    window.set_track_column_shown(TrackColumn::Labels, true);
+    wait_for("the labels", 3, || {
+        window
+            .track_column_texts(TrackColumn::Labels)
+            .0
+            .iter()
+            .any(|(_, text)| !text.is_empty())
+    });
+    for (_, text) in window.track_column_texts(TrackColumn::Labels).0 {
+        let labels: Vec<&str> = text.split(", ").collect();
+        assert!(labels.windows(2).all(|w| w[0] < w[1]), "{text}");
+    }
+    assert!(!window.track_column_sorts(TrackColumn::Labels));
+
+    // A computed field: its values, and a header that says why it cannot sort.
+    let decade = TrackColumn::Field(FieldName::new("decade"));
+    window.set_track_column_shown(decade, true);
+    wait_for("the decades", 3, || {
+        let (texts, _) = window.track_column_texts(decade);
+        !texts.is_empty() && texts.iter().all(|(_, t)| t.ends_with("0s"))
+    });
+    assert!(!window.track_column_sorts(decade));
+    assert_eq!(
+        window.track_column_texts(decade).1.as_deref(),
+        Some("A computed field cannot sort the list.")
+    );
+    shot(&window, "tracks-columns");
+    let menu = window.demo_columns_menu().unwrap();
+    popover_shot(&menu, "columns-menu");
+    menu.popdown();
+
+    // A field that stands for a tag sorts like a text column.
+    let mood = TrackColumn::Field(FieldName::new("mood"));
+    window.set_track_column_shown(mood, true);
+    assert!(window.track_column_sorts(mood));
+    assert_eq!(window.track_column_texts(mood).1, None);
+    window.sort_tracks(&[(mood, true)]);
+    wait_for("the moods in order", 3, || {
+        let (texts, _) = window.track_column_texts(mood);
+        texts.len() > 5
+            && texts.first().is_some_and(|(_, t)| t == "warm")
+            && texts.windows(2).all(|w| w[0].1 >= w[1].1)
+    });
+
+    // Hidden again, the columns ask for nothing more.
+    for column in [TrackColumn::Labels, decade, mood] {
+        window.set_track_column_shown(column, false);
+    }
+    window.destroy();
+}
+
+fn the_search_completes_labels_and_your_fields(app: &gtk::Application) {
+    let (window, _) = window_sized(app, 1440);
+    let names = |text: &str| {
+        window.demo_query_completion(text);
+        window.search_completions()
+    };
+    // The user's fields among the built-in ones.
+    window.demo_query_completion("genre:jazz -genre:fusion d");
+    wait_for("the fields", 3, || {
+        window.search_completions().first().map(String::as_str) == Some("decade")
+    });
+    assert!(names("genre:jazz l").contains(&"label".to_owned()));
+    // After `label:` the labels.
+    let labels = names("genre:jazz -genre:fusion label:");
+    assert!(labels.contains(&"favourite".to_owned()), "{labels:?}");
+    assert!(labels.contains(&"late night".to_owned()), "{labels:?}");
+    assert_eq!(names("label:fav"), ["favourite"]);
+    if let Some(popover) = window.demo_query_completion("genre:jazz -genre:fusion label:") {
+        popover_shot(&popover, "completion-labels");
+    }
+    if let Some(popover) = window.demo_query_completion("genre:jazz -genre:fusion d") {
+        popover_shot(&popover, "completion-fields");
+    }
+    // A custom field offers its values; a computed field none.
+    assert_eq!(names("mood:"), ["bright", "calm", "dark", "warm"]);
+    assert!(names("decade:").is_empty());
+    // A computed field cannot sort the list: the notice says so.
+    window.search_text("sort:decade");
+    wait_for("the notice", 3, || {
+        window
+            .search_query_state()
+            .is_some_and(|(_, notice)| notice)
+    });
+    window.search_text("");
     window.destroy();
 }
 
@@ -490,6 +639,18 @@ const TESTS: &[(&str, Test)] = &[
     (
         "the_facet_browser_narrows_the_table",
         the_facet_browser_narrows_the_table,
+    ),
+    (
+        "a_label_pane_lists_the_labels",
+        a_label_pane_lists_the_labels,
+    ),
+    (
+        "tracks_show_labels_and_your_fields",
+        tracks_show_labels_and_your_fields,
+    ),
+    (
+        "the_search_completes_labels_and_your_fields",
+        the_search_completes_labels_and_your_fields,
     ),
     (
         "statistics_count_and_open_tracks",

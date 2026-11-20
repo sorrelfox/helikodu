@@ -93,14 +93,23 @@ pub struct LibraryStats {
 }
 
 /// The facet values of `field` among `rows`, for backends that hold their
-/// tracks in memory; `album_artist` names the album artist of an album.
+/// tracks in memory; `album_artist` names the album artist of an album, and
+/// `labels` gives the labels of a track.
 pub(crate) fn facets_of(
     rows: &[TrackRow],
     field: FacetField,
     album_artist: impl Fn(AlbumKey) -> String,
+    labels: impl Fn(&TrackRow) -> Vec<String>,
 ) -> FacetList {
     let mut counts: BTreeMap<(FacetKey, String), usize> = BTreeMap::new();
     for row in rows {
+        if field == FacetField::Label {
+            // A track counts under each of its labels.
+            for label in labels(row) {
+                *counts.entry((text_key(&label), label)).or_default() += 1;
+            }
+            continue;
+        }
         let (key, name) = match field {
             FacetField::Genre if !row.genre.is_empty() => (text_key(&row.genre), row.genre.clone()),
             FacetField::AlbumArtist => {
@@ -148,10 +157,14 @@ pub(crate) fn passes(
     row: &TrackRow,
     chosen: &[FacetChoice],
     album_artist: &impl Fn(AlbumKey) -> String,
+    labels: &impl Fn(&TrackRow) -> Vec<String>,
 ) -> bool {
     chosen.iter().filter(|c| !c.keys.is_empty()).all(|choice| {
         let keys: HashSet<&FacetKey> = choice.keys.iter().collect();
         let key = match choice.field {
+            FacetField::Label => {
+                return labels(row).iter().any(|l| keys.contains(&text_key(l)));
+            }
             FacetField::Genre => text_key(&row.genre),
             FacetField::AlbumArtist => text_key(&album_artist(row.album)),
             FacetField::Album => FacetKey::Id(i64::try_from(row.album.0).unwrap_or(-1)),

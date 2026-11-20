@@ -180,6 +180,34 @@ impl Library {
             .map_err(|_| FieldError::Unknown(field.name().into_owned()))?;
         Ok(self.evaluate_expression(&template, tracks)?)
     }
+
+    /// The values the tag `key` has in the library, each with its number of
+    /// tracks, in name order (values that differ only in case or accents are
+    /// one), when there are at most `limit` of them; `None` when there are more.
+    /// A search completion offers them after the name of a custom field.
+    pub fn tag_values(
+        &self,
+        key: &str,
+        limit: usize,
+    ) -> Result<Option<Vec<(String, usize)>>, DbError> {
+        let key = key.trim().to_ascii_uppercase();
+        let most = i64::try_from(limit.saturating_add(1)).unwrap_or(i64::MAX);
+        let values: Vec<(String, usize)> = self.database().read(move |c| {
+            c.prepare_cached(
+                "SELECT min(value), count(DISTINCT track_id) FROM track_tags
+                 WHERE key = ?1 AND trim(value) <> ''
+                 GROUP BY hk_fold(value) ORDER BY min(value) COLLATE HK_LOCALE LIMIT ?2",
+            )?
+            .query_map(params![key, most], |row| {
+                Ok((
+                    row.get(0)?,
+                    usize::try_from(row.get::<_, i64>(1)?).unwrap_or(0),
+                ))
+            })?
+            .collect()
+        })?;
+        Ok((values.len() <= limit).then_some(values))
+    }
 }
 
 /// The computed fields `query` compares or tests, each once.

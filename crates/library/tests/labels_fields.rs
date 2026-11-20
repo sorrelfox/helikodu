@@ -272,6 +272,46 @@ fn album_and_artist_labels_count_for_their_tracks() {
 }
 
 #[test]
+fn track_labels_give_the_column_every_label_in_name_order() {
+    let _turn = turn();
+    let (library, root) = library();
+    let a = add(&library, root, "/music/one/a.flac", "A", "Band", "One");
+    let b = add(&library, root, "/music/one/b.flac", "B", "Band", "One");
+    let c = add(&library, root, "/music/two/c.flac", "C", "Solo", "Two");
+    library
+        .add_label(&LabelTarget::Tracks(vec![a]), "road trip")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::AlbumOf(a), "late night")
+        .unwrap();
+    library
+        .add_label(&LabelTarget::Artist("Band".into()), "favourite")
+        .unwrap();
+    // Given to the track and to its album: listed once.
+    library
+        .add_label(&LabelTarget::Tracks(vec![b]), "late night")
+        .unwrap();
+
+    let gone = TrackId::new(999_999);
+    let columns = library.track_labels(&[c, a, gone, b]).unwrap();
+    assert_eq!(
+        columns,
+        [
+            (c, Vec::<String>::new()),
+            (
+                a,
+                vec![
+                    "favourite".to_owned(),
+                    "late night".to_owned(),
+                    "road trip".to_owned()
+                ]
+            ),
+            (b, vec!["favourite".to_owned(), "late night".to_owned()]),
+        ]
+    );
+}
+
+#[test]
 fn labels_in_the_query_language() {
     let _turn = turn();
     let (library, root) = library();
@@ -436,6 +476,19 @@ fn custom_fields_name_tags_and_are_kept_with_the_library() {
         .evaluate_expression(&Template::parse("{upper(mood)}").unwrap(), &[calm])
         .unwrap();
     assert_eq!(values[0].1, "CALM");
+    // Its values, for the search completion: few, or none when there are more.
+    let mut third = tagged(root, "/music/c.flac", "c", "C", "Band", "Album");
+    third.catalog.other = vec![("MOOD".into(), "calm".into())];
+    library.upsert_track(third).unwrap();
+    let mut fourth = tagged(root, "/music/d.flac", "d", "D", "Band", "Album");
+    fourth.catalog.other = vec![("MOOD".into(), "Bright".into())];
+    library.upsert_track(fourth).unwrap();
+    assert_eq!(
+        library.tag_values("mood", 5).unwrap(),
+        Some(vec![("Bright".to_owned(), 1), ("Calm".to_owned(), 2)])
+    );
+    assert_eq!(library.tag_values("MOOD", 1).unwrap(), None);
+    assert_eq!(library.tag_values("NOTHING", 5).unwrap(), Some(Vec::new()));
     library
         .define_field(UserField::computed("feel", "{mood} {title}"))
         .unwrap();

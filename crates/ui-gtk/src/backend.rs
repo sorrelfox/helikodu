@@ -13,6 +13,7 @@
 //! service's interface changes, only `service.rs` follows it.
 
 pub mod browse;
+pub mod columns;
 pub mod export;
 pub mod insights;
 pub mod sample;
@@ -28,6 +29,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 pub use browse::{ChapterRow, MediaKind, YearRange, YearRow};
+pub use columns::{ExtraColumns, ExtraValues, FieldName, FieldWords, Vocabulary, YourField};
 pub use helikodu_model::player::{AnalyzerFrame, ChannelLevel};
 pub use helikodu_model::player::{
     PlayModes, PlayScope, RepeatMode, ShuffleMode, StopAfter, TrackFlags,
@@ -373,6 +375,10 @@ pub enum TrackColumn {
     Genre,
     /// When the track came into the library.
     Added,
+    /// Its labels, own and those of its album and artists.
+    Labels,
+    /// One of the user's fields.
+    Field(FieldName),
 }
 
 /// One key of a track list's order.
@@ -945,6 +951,23 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     fn statistics(&self, since: StatisticsSince) -> Result<LibraryStats, BackendError> {
         let _ = since;
         Err(unsupported())
+    }
+    /// The fields the user defined, in their order.
+    fn your_fields(&self) -> Result<Vec<YourField>, BackendError> {
+        Ok(Vec::new())
+    }
+    /// What `columns` show for each of `keys`; a key without a track is left out.
+    fn extra_values(
+        &self,
+        keys: &[TrackKey],
+        columns: &ExtraColumns,
+    ) -> Result<Vec<(TrackKey, ExtraValues)>, BackendError> {
+        let _ = (keys, columns);
+        Ok(Vec::new())
+    }
+    /// The labels and the user's fields, as the search completion offers them.
+    fn vocabulary(&self) -> Result<Vocabulary, BackendError> {
+        Ok(Vocabulary::default())
     }
 }
 

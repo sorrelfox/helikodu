@@ -558,6 +558,25 @@ impl Library {
         })
     }
 
+    /// Every label of each of `tracks`, own and inherited, in name order, as the
+    /// labels column of a track list shows them: one read for the lot. Tracks the
+    /// library does not have are left out; a track without labels has an empty
+    /// list.
+    pub fn track_labels(&self, tracks: &[TrackId]) -> Result<Vec<(TrackId, Vec<String>)>, DbError> {
+        let tracks = tracks.to_vec();
+        self.database().read(move |c| {
+            let mut known = c.prepare_cached("SELECT 1 FROM tracks WHERE id = ?1")?;
+            let mut out = Vec::with_capacity(tracks.len());
+            for track in tracks {
+                let id = sql_track_id(track);
+                if known.exists([id])? {
+                    out.push((track, of_track(c, id)?));
+                }
+            }
+            Ok(out)
+        })
+    }
+
     /// Every label with the tracks, albums and artists it was given to, for an
     /// export of the user's data. Tracks and albums that are not in the library now
     /// are left out.

@@ -36,6 +36,7 @@ fn field_id(field: FacetField) -> &'static str {
         FacetField::Composer => "composer",
         FacetField::Year => "year",
         FacetField::Format => "format",
+        FacetField::Label => "label",
     }
 }
 
@@ -53,6 +54,7 @@ pub(crate) fn field_title(field: FacetField) -> String {
         FacetField::Composer => tr("Composer"),
         FacetField::Year => tr("Year"),
         FacetField::Format => tr("Format"),
+        FacetField::Label => tr("Label"),
     }
 }
 
@@ -66,6 +68,7 @@ fn all_title(field: FacetField) -> String {
         FacetField::Composer => tr("All composers"),
         FacetField::Year => tr("All years"),
         FacetField::Format => tr("All formats"),
+        FacetField::Label => tr("All labels"),
     }
 }
 

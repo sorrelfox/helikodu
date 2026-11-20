@@ -247,7 +247,7 @@ impl MainWindow {
         // Each page is as wide as it needs; a wide page must not widen the window.
         imp.views.set_hhomogeneous(false);
         let search_entry = self.search_entry();
-        let completion = QueryCompletion::new(&search_entry);
+        let completion = QueryCompletion::new(&search_entry, backend);
         let pages = Rc::new(Pages {
             window: self.downgrade(),
             views: imp.views.get(),

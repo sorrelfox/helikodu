@@ -12,6 +12,7 @@ pub(crate) mod desktop;
 pub(crate) mod dialog_hooks;
 pub(crate) mod history;
 pub(crate) mod home;
+pub(crate) mod lists;
 pub(crate) mod narrow;
 pub(crate) mod now_playing;
 pub(crate) mod pages;

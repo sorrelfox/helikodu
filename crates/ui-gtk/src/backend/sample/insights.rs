@@ -11,6 +11,14 @@ use super::{
     AlbumKey, ArtistKey, BackendError, LibrarySource, SampleLibrary, TrackKey, TrackQuery,
 };
 use crate::backend::insights::{facets_of, passes};
+
+/// The labels of a sample track, as the facets list them.
+fn labels(row: &TrackRow) -> Vec<String> {
+    super::lists::labels_of(row)
+        .into_iter()
+        .map(str::to_owned)
+        .collect()
+}
 use crate::backend::{
     FacetChoice, FacetField, FacetList, LibraryStats, PlayedAlbumRow, PlayedArtistRow,
     StatisticsSince, TrackRow,
@@ -41,9 +49,9 @@ impl SampleLibrary {
                 ..query.clone()
             })?
             .into_iter()
-            .filter(|row| passes(row, chosen, &artist))
+            .filter(|row| passes(row, chosen, &artist, &labels))
             .collect();
-        Ok(facets_of(&rows, field, artist))
+        Ok(facets_of(&rows, field, artist, labels))
     }
 
     pub(super) fn sample_facet_keys(
@@ -55,7 +63,7 @@ impl SampleLibrary {
         Ok(self
             .rows_of(query)?
             .into_iter()
-            .filter(|row| passes(row, chosen, &artist))
+            .filter(|row| passes(row, chosen, &artist, &labels))
             .map(|row| row.key)
             .collect())
     }

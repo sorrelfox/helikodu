@@ -72,6 +72,13 @@ pub(crate) fn message(error: &SyntaxError) -> String {
         }
         SyntaxErrorKind::InvalidRegex(_) => tr("The regular expression does not work."),
         SyntaxErrorKind::RangeOperator => tr("A range goes after : or =."),
+        SyntaxErrorKind::UnknownSortKey(name)
+            if helikodu_model::user_fields::current()
+                .expression(name)
+                .is_some() =>
+        {
+            fill(&tr("A computed field cannot sort the list: {}."), &[name])
+        }
         SyntaxErrorKind::UnknownSortKey(name) => fill(&tr("Cannot sort by “{}”."), &[name]),
         SyntaxErrorKind::InvalidLimit => {
             tr("A limit is a number of tracks, or of min, h, MB or GB.")

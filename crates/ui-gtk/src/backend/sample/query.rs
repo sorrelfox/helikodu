@@ -3,8 +3,8 @@
 
 //! The query language over the invented library, for the fields its tracks
 //! have: titles, artists, albums, genres, formats, years, plays, ratings,
-//! lengths and when they were added. Other fields match nothing. Saved searches
-//! are kept in memory.
+//! lengths, when they were added, labels and the sample's own fields. Other
+//! fields match nothing. Saved searches are kept in memory.
 
 use std::cmp::Ordering;
 use std::time::{Duration, SystemTime};
@@ -91,6 +91,23 @@ fn text_of<'a>(field: &Field, row: &'a TrackRow) -> Option<&'a str> {
     })
 }
 
+/// The values of the fields the library keeps beside the row: the labels, the
+/// computed fields and the MOOD tag of the sample.
+fn values_of(field: &Field, row: &TrackRow) -> Option<Vec<String>> {
+    Some(match field {
+        Field::Label => super::lists::labels_of(row)
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+        Field::Computed(name) => vec![super::lists::field_value(row, name)],
+        Field::Tag(tag) if tag == "MOOD" => super::lists::mood_of(row)
+            .map(str::to_owned)
+            .into_iter()
+            .collect(),
+        _ => return None,
+    })
+}
+
 fn number_of(field: &Field, row: &TrackRow, now: SystemTime) -> Option<f64> {
     match field {
         Field::Year => row.year.map(f64::from),
@@ -114,6 +131,12 @@ fn compare(field: &Field, a: &TrackRow, b: &TrackRow) -> Ordering {
     let now = SystemTime::now();
     if let (Some(x), Some(y)) = (text_of(field, a), text_of(field, b)) {
         return lower(x).cmp(&lower(y));
+    }
+    if let (Some(x), Some(y)) = (values_of(field, a), values_of(field, b)) {
+        return x
+            .first()
+            .map(|v| lower(v))
+            .cmp(&y.first().map(|v| lower(v)));
     }
     // Missing values last; for ages, later is smaller.
     match (number_of(field, a, now), number_of(field, b, now)) {
@@ -144,6 +167,7 @@ fn holds(expr: &Expr, row: &TrackRow, now: SystemTime) -> bool {
         }
         Expr::Has(Presence::Field(field)) => {
             text_of(field, row).is_some_and(|t| !t.is_empty())
+                || values_of(field, row).is_some_and(|v| v.iter().any(|t| !t.is_empty()))
                 || number_of(field, row, now).is_some()
         }
         Expr::Is(Flag::Lossless) => lossless(row),
@@ -153,6 +177,18 @@ fn holds(expr: &Expr, row: &TrackRow, now: SystemTime) -> bool {
                     || row.format.sample_rate.unwrap_or(0) > 48_000)
         }
         Expr::Compare(c) => {
+            if let Some(values) = values_of(&c.field, row) {
+                let Value::Text(value) = &c.value else {
+                    return false;
+                };
+                let value = lower(value);
+                let hit = |text: &String| match c.op {
+                    Operator::Equals | Operator::NotEquals => lower(text) == value,
+                    _ => lower(text).contains(&value),
+                };
+                let found = values.iter().filter(|t| !t.is_empty()).any(hit);
+                return found != (c.op == Operator::NotEquals);
+            }
             if let Some(text) = text_of(&c.field, row) {
                 let Value::Text(value) = &c.value else {
                     return false;

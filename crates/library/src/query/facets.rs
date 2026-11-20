@@ -34,11 +34,13 @@ pub enum FacetField {
     Year,
     /// The audio format (the codec).
     Format,
+    /// The labels of the tracks: their own and those of their albums and artists.
+    Label,
 }
 
 impl FacetField {
     /// Every field, in the order the browser offers them.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Genre,
         Self::AlbumArtist,
         Self::Album,
@@ -46,13 +48,15 @@ impl FacetField {
         Self::Composer,
         Self::Year,
         Self::Format,
+        Self::Label,
     ];
 }
 
-/// One value of a facet: a row id (genre, person, album), a year, or a codec.
+/// One value of a facet: a row id (genre, person, album, label), a year, or a
+/// codec.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum FacetKey {
-    /// The id of a genre, person or album, or a year.
+    /// The id of a genre, person, album or label, or a year.
     Id(i64),
     /// A codec, in lower case.
     Text(String),
@@ -173,6 +177,7 @@ fn choice_condition(choice: &FacetChoice, params: &mut Vec<SqlValue>) -> String 
         FacetField::Composer => people_condition(2, &list),
         FacetField::Year => format!("t.year IN ({list})"),
         FacetField::Format => format!("lower(t.codec) IN ({list})"),
+        FacetField::Label => crate::labels::has_label(&list),
     }
 }
 
@@ -191,7 +196,8 @@ fn values(
 ) -> rusqlite::Result<FacetList> {
     let matching = format!(
         "WITH m AS (SELECT t.id AS id, t.album_id AS album_id, t.year AS year,
-                           t.codec AS codec {FROM} WHERE {condition})"
+                           t.codec AS codec, t.identity_id AS identity_id
+                    {FROM} WHERE {condition})"
     );
     let tracks: i64 = c
         .prepare(&format!("{matching} SELECT count(*) FROM m"))?
@@ -233,6 +239,26 @@ fn values(
         FacetField::Format => {
             "SELECT lower(m.codec), lower(m.codec), count(*) FROM m
              WHERE m.codec IS NOT NULL GROUP BY lower(m.codec) ORDER BY count(*) DESC, 1"
+        }
+        // A track counts under each of its labels: those given to it, to its
+        // album and to its artists.
+        FacetField::Label => {
+            "SELECT l.id, l.name, count(DISTINCT x.track) FROM (
+                SELECT m.id AS track, lt.label_id AS label FROM m
+                    JOIN label_tracks lt ON lt.identity_id = m.identity_id
+                UNION SELECT m.id, la.label_id FROM m
+                    JOIN albums al ON al.id = m.album_id
+                    JOIN label_albums la ON la.album_key = al.album_key
+                UNION SELECT m.id, lr.label_id FROM m
+                    JOIN track_people tp ON tp.track_id = m.id AND tp.role = 0
+                    JOIN people p ON p.id = tp.person_id
+                    JOIN label_artists lr ON lr.artist_fold = p.fold
+                UNION SELECT m.id, lr.label_id FROM m
+                    JOIN album_people ap ON ap.album_id = m.album_id
+                    JOIN people p ON p.id = ap.person_id
+                    JOIN label_artists lr ON lr.artist_fold = p.fold
+             ) x JOIN labels l ON l.id = x.label
+             GROUP BY l.id ORDER BY l.name COLLATE HK_LOCALE, l.id"
         }
     };
     let text_key = field == FacetField::Format;

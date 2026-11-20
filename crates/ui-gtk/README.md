@@ -63,7 +63,7 @@ When the service's interface changes, only `service.rs` follows it.
 cargo test -p helikodu-ui-gtk
 ```
 
-`tests/insights.rs` covers the facet browser (panes narrowing each other and the table, several values, another field), Library statistics (the counts, the rows that open Tracks, no frames while idle), the narrow window (the panes over the content at 640 px, closing them, the compact deck) and the D-Bus interface served by a window of an application that owns its name on the test's session bus. With `HELIKODU_INSIGHTS_SHOTS=DIR` it saves the screens to `DIR`:
+`tests/insights.rs` covers the facet browser (panes narrowing each other and the table, several values, another field, a pane of labels), the Labels column and the columns of the user's fields in Tracks (their values, which of them sort), the search completion of labels and the user's fields, Library statistics (the counts, the rows that open Tracks, no frames while idle), the narrow window (the panes over the content at 640 px, closing them, the compact deck) and the D-Bus interface served by a window of an application that owns its name on the test's session bus. With `HELIKODU_INSIGHTS_SHOTS=DIR` it saves the screens to `DIR`:
 
 ```sh
 crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test insights
