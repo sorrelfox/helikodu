@@ -43,6 +43,17 @@ In the main window, the **Labels** column of **Tracks** shows each track's label
 
 The label field has nothing to do with the record label in a file's tags, which is the tag `LABEL` and is found with `tag:LABEL`.
 
+## Your Fields
+
+**Library ▸ Your Fields…** opens a window with your fields at the left and **New field** under them. Choose one to change it:
+
+- **Name**: the name you write in searches and patterns (see the rules [below](#rules-for-names-and-definitions)).
+- **Kind**: **Computed from other fields** or **A tag of the files**.
+- **Expression** (for a computed field): the expression, over several lines if you like. **Insert** beside it adds a field, one of your own fields or a function at the cursor (see [Expressions](expressions.md#the-insert-button)). For a tag, **Tag name** takes the tag instead.
+- **Example values** show what the field gives for the tracks selected in the main window, or, when nothing is selected, for the first tracks of the library. Type a search into **Or the tracks of a search** to see the first tracks it finds instead. The values follow the expression as you type.
+
+A name or an expression that cannot be used is underlined, and a note under it says what is wrong and at which character, often with an example that works. Nothing is saved while there is a problem. **Save** (**Add field** for a new one) puts the field in use at once: searches, smart playlists, naming patterns and the Insert lists know it from then on. **Remove** removes the field; it cannot be used while another field uses this one, and the line at the bottom says which. Choosing another field or closing the window with changes that are not saved asks whether to save them.
+
 ## Computed fields
 
 A computed field is a name for an [expression](expressions.md): its value for a track is the text the expression gives.
@@ -78,4 +89,4 @@ Give the tag as its Vorbis comment name. `TXXX:MOOD` (MP3) and `----:com.apple.i
 - A definition that cannot be used is refused with what is wrong and where: `helikodu-cli fields define` marks the characters under the definition.
 - A field that a computed field uses cannot be removed until that computed field is changed or removed.
 
-Labels and fields are kept in the library database, so a [backup](files.md) of the library keeps them. `helikodu-cli export-user-data` writes them with the rest of your user data, to read into another library with `import-user-data` (see [Moving your data to another computer](moving-from-another-player.md#moving-your-data-to-another-computer)). The running application uses fields changed from the command line after it is started again.
+Labels and fields are kept in the library database, so a [backup](files.md) of the library keeps them. `helikodu-cli export-user-data` writes them with the rest of your user data, to read into another library with `import-user-data` (see [Moving your data to another computer](moving-from-another-player.md#moving-your-data-to-another-computer)). The running application uses fields changed from the command line after it is started again; a field saved in Your Fields applies at once.

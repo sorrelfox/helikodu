@@ -131,3 +131,10 @@ crates/ui-gtk/src/tools/import_moved.rs
 crates/ui-gtk/src/tools/import_view.rs
 crates/ui-gtk/src/tools/replaced.rs
 crates/ui-gtk/src/dialogs/settings/your_data.rs
+crates/ui-gtk/src/backend/fields.rs
+crates/ui-gtk/src/backend/service/fields.rs
+crates/ui-gtk/src/backend/sample/fields.rs
+crates/ui-gtk/src/tools/user_fields.rs
+crates/ui-gtk/src/tools/user_fields/draft.rs
+crates/ui-gtk/src/widgets/insert_popover.rs
+crates/ui-gtk/src/widgets/insert_popover/catalogue.rs

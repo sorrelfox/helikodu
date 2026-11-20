@@ -74,6 +74,13 @@ impl MusicLibrary {
         Ok(self.inner().define_field(field)?)
     }
 
+    /// Puts `field` in the place of the field `old`, which may have another
+    /// name; the definition as stored. A rename another field needs the old
+    /// name for is refused.
+    pub fn replace_field(&self, old: &str, field: UserField) -> Result<UserField, LibraryError> {
+        Ok(self.inner().replace_field(old, field)?)
+    }
+
     /// Removes the field `name`, unless a computed field uses it.
     pub fn remove_field(&self, name: &str) -> Result<(), LibraryError> {
         Ok(self.inner().remove_field(name)?)
@@ -106,6 +113,16 @@ impl MusicLibrary {
         limit: usize,
     ) -> Result<Option<Vec<(String, usize)>>, LibraryError> {
         Ok(self.inner().tag_values(key, limit)?)
+    }
+
+    /// The text `expression` gives for each of `tracks`, in their order; tracks
+    /// the library does not have are left out.
+    pub fn evaluate_expression(
+        &self,
+        expression: &helikodu_model::expression::Template,
+        tracks: &[TrackId],
+    ) -> Result<Vec<(TrackId, String)>, LibraryError> {
+        Ok(self.inner().evaluate_expression(expression, tracks)?)
     }
 
     /// The key the tag editor writes the custom field `name` under (see

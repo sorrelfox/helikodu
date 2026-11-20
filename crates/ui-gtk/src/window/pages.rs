@@ -622,7 +622,7 @@ impl MainWindow {
     }
 
     /// The selection of the visible view, for the keyboard actions.
-    fn current_target(&self) -> Option<Target> {
+    pub(crate) fn current_target(&self) -> Option<Target> {
         let pages = self.pages()?;
         match self.imp().views.visible_child_name().as_deref() {
             Some("tracks") => pages.tracks().target(),

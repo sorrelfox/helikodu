@@ -7,7 +7,7 @@ Three tools in the **Tools** and **Library** menus work on the files of your lib
 **Tools ▸ Organize Files…** moves and renames your files by a naming pattern. Opened from the context menu of selected tracks (**Organize files…**), it works on those tracks only.
 
 - **Patterns** at the left are saved patterns; edits to the pattern are kept with the chosen one. **New pattern** adds one. Right-click a pattern (or press the Menu key) to **Rename** or **Delete** it.
-- A pattern names fields in braces (see [Naming patterns](#naming-patterns) below). **Insert field** adds a field at the cursor. The file's extension is always kept.
+- A pattern names fields in braces (see [Naming patterns](#naming-patterns) below). **Insert** beside the pattern finds a field, one of your own fields or a function and puts it at the cursor (see [Expressions](expressions.md#the-insert-button)). The file's extension is always kept.
 - **Into** chooses where files go: the library folder each file is already in, one of your library folders, or a folder you choose inside a library folder.
 - The second dropdown chooses the characters names may hold: **Names that Windows can read** (for drives you share with other systems), **Names as they are**, or **Plain ASCII only** (accents are dropped).
 - **Move covers and booklets too** moves the pictures and PDF files of a folder along when every track of that folder goes to the same new folder.

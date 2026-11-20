@@ -331,8 +331,10 @@ impl Sync {
             Ok(_) => {
                 self.pattern_note.set_text("");
                 self.pattern_note.remove_css_class("hk-query-problem");
+                crate::widgets::pattern_entry::underline(&self.pattern, None);
             }
             Err(e) => {
+                crate::widgets::pattern_entry::underline(&self.pattern, Some((e.start, e.end)));
                 self.pattern_note.set_text(&super::naming_problem(&e));
                 self.pattern_note.add_css_class("hk-query-problem");
             }
@@ -655,15 +657,11 @@ pub(crate) fn open_with(main: &MainWindow, playlist: Option<PlaylistKey>) -> Opt
     let caption = label(&tr("Folders and names"), &["hk-field-label"]);
     caption.set_margin_top(6);
     right.append(&caption);
-    let pattern = gtk::Entry::new();
-    pattern.add_css_class("hk-input");
-    pattern.add_css_class("hk-mono");
+    let pattern_entry = crate::widgets::pattern_entry::PatternEntry::new("sync-pattern");
+    pattern_entry.labelled_by(&caption);
+    let pattern = pattern_entry.entry.clone();
     pattern.add_css_class("hk-query");
-    pattern.set_widget_name("sync-pattern");
-    pattern.update_relation(&[gtk::accessible::Relation::LabelledBy(&[
-        caption.upcast_ref()
-    ])]);
-    right.append(&pattern);
+    right.append(&pattern_entry.root);
     let pattern_note = label("", &["hk-t3"]);
     right.append(&pattern_note);
     let playlists = gtk::CheckButton::with_label(&tr("Write each playlist as an .m3u8 file"));

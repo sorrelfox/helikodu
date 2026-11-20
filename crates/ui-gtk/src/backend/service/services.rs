@@ -563,6 +563,12 @@ impl Services for ServiceServices {
         })
     }
 
+    fn user_fields(&self) -> Arc<dyn super::super::fields::FieldServices> {
+        Arc::new(super::fields::ServiceFields {
+            service: self.service.clone(),
+        })
+    }
+
     fn settings(&self) -> Arc<Settings> {
         self.service.settings().get()
     }

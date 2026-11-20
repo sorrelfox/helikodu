@@ -118,6 +118,9 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
         "export-user-data",
         crate::tools::import::export_user_data,
     );
+    add(application, "user-fields", |main| {
+        crate::tools::user_fields::open(main);
+    });
     add(application, "verify-files", |main| {
         crate::tools::verify_files::open(main, None, false);
     });

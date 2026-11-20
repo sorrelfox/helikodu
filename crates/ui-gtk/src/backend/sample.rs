@@ -11,6 +11,7 @@
 mod browse;
 mod copies;
 mod export;
+mod fields;
 mod files;
 mod history;
 mod insights;

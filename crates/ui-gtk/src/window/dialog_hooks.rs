@@ -99,6 +99,12 @@ impl MainWindow {
         crate::tools::organizer::open(self, None)
     }
 
+    /// Opens Your fields, for tests and screenshots.
+    #[doc(hidden)]
+    pub fn open_user_fields(&self) -> Option<gtk::Window> {
+        crate::tools::user_fields::open(self)
+    }
+
     /// Opens Missing files, for tests and screenshots.
     #[doc(hidden)]
     pub fn open_missing_files(&self) -> Option<gtk::Window> {

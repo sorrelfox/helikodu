@@ -122,6 +122,52 @@ impl Library {
         stored.ok_or(FieldError::Unknown(String::new()))
     }
 
+    /// Puts `field` in the place of the field `old`, which may have another name,
+    /// after checking it with every other field: a rename that another computed
+    /// field still needs the old name for is refused, as [`Library::remove_field`]
+    /// refuses it. The definition as stored.
+    pub fn replace_field(&self, old: &str, field: UserField) -> Result<UserField, FieldError> {
+        let old = old.trim().to_ascii_lowercase();
+        let built = self.database().writer()?.write(move |c| {
+            let mut fields = stored(c)?;
+            let Some(at) = fields
+                .iter()
+                .position(|f| f.name.eq_ignore_ascii_case(&old))
+            else {
+                return Ok(Err(FieldError::Unknown(old)));
+            };
+            fields[at] = field.clone();
+            let set = match UserFields::build(&fields) {
+                Ok(set) => set,
+                Err(error) => {
+                    let renamed = !field.name.eq_ignore_ascii_case(&old);
+                    let unknown = renamed
+                        && !error.name.eq_ignore_ascii_case(&field.name)
+                        && matches!(
+                            &error.problem,
+                            DefinitionProblem::Expression(
+                                helikodu_model::expression::Problem::UnknownField(n)
+                            ) if n.eq_ignore_ascii_case(&old)
+                        );
+                    return Ok(Err(if unknown {
+                        FieldError::InUse {
+                            field: old,
+                            used_by: error.name,
+                        }
+                    } else {
+                        FieldError::Definition(error)
+                    }));
+                }
+            };
+            store(c, &set)?;
+            let stored = set.get(&field.name).cloned();
+            Ok(Ok((set, stored)))
+        })?;
+        let (set, stored) = built?;
+        user_fields::install(set);
+        stored.ok_or(FieldError::Unknown(String::new()))
+    }
+
     /// Removes the field `name`. A field a computed field uses stays.
     pub fn remove_field(&self, name: &str) -> Result<(), FieldError> {
         let name = name.trim().to_ascii_lowercase();

@@ -47,45 +47,6 @@ const CHANGE: i32 = 150;
 /// How long the preview waits for typing to pause.
 const TYPING: Duration = Duration::from_millis(250);
 
-/// The fields "Insert field" offers, by their names in the query language.
-const FIELDS: &[&str] = &[
-    "albumartist",
-    "artist",
-    "album",
-    "title",
-    "track",
-    "disc",
-    "year",
-    "originalyear",
-    "genre",
-    "composer",
-    "performer",
-    "conductor",
-    "discsubtitle",
-    "work",
-    "codec",
-];
-
-fn field_name(field: &str) -> String {
-    match field {
-        "albumartist" => tr("Album artist"),
-        "artist" => tr("Artist"),
-        "album" => tr("Album"),
-        "title" => tr("Title"),
-        "track" => tr("Track number"),
-        "disc" => tr("Disc number"),
-        "year" => tr("Year"),
-        "originalyear" => tr("Original year"),
-        "genre" => tr("Genre"),
-        "composer" => tr("Composer"),
-        "performer" => tr("Performer"),
-        "conductor" => tr("Conductor"),
-        "discsubtitle" => tr("Disc subtitle"),
-        "work" => tr("Work"),
-        _ => tr("Format"),
-    }
-}
-
 /// The names of the patterns the library starts with, for their translations.
 fn pattern_name(name: &str) -> String {
     match name {
@@ -456,6 +417,7 @@ impl Organizer {
         // A pattern that cannot be read is reported at once, under the entry.
         if let Err(error) = crate::backend::services::NamingPattern::parse(&options.pattern) {
             self.pattern.add_css_class("error");
+            crate::widgets::pattern_entry::underline(&self.pattern, Some((error.start, error.end)));
             self.pattern_note
                 .set_text(&crate::tools::naming_problem(&error));
             self.pattern_note.add_css_class("hk-query-problem");
@@ -464,6 +426,7 @@ impl Organizer {
             return;
         }
         self.pattern.remove_css_class("error");
+        crate::widgets::pattern_entry::underline(&self.pattern, None);
         self.pattern_note.remove_css_class("hk-query-problem");
         self.pattern_note.set_text(&tr(
             "Text in square brackets is left out when a field inside it is empty. The file extension is kept.",
@@ -933,7 +896,7 @@ fn row_widget(organizer: &std::rc::Weak<Organizer>) -> gtk::Box {
     row
 }
 
-/// The options: Pattern with Insert field, the note under it, and Into.
+/// The options: Pattern with Insert, the note under it, and Into.
 struct Options {
     root: gtk::Grid,
     pattern: gtk::Entry,
@@ -952,36 +915,11 @@ fn options() -> Options {
     let pattern_label = label(&tr("Pattern"), &["hk-medium"]);
     pattern_label.set_ellipsize(gtk::pango::EllipsizeMode::None);
     grid.attach(&pattern_label, 0, 0, 1, 1);
-    let pattern = gtk::Entry::new();
-    pattern.add_css_class("hk-input");
-    pattern.add_css_class("hk-mono");
-    pattern.add_css_class("hk-pattern-entry");
-    pattern.set_hexpand(true);
-    pattern.set_widget_name("organize-pattern");
-    pattern.update_relation(&[gtk::accessible::Relation::LabelledBy(&[
-        pattern_label.upcast_ref()
-    ])]);
-    let line = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    line.append(&pattern);
-    let menu = gio::Menu::new();
-    for field in FIELDS {
-        let item = gio::MenuItem::new(Some(&field_name(field)), None);
-        item.set_action_and_target_value(
-            Some("organizer.insert-field"),
-            Some(&(*field).to_variant()),
-        );
-        menu.append_item(&item);
-    }
-    let insert = gtk::MenuButton::new();
-    let insert_content = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    insert_content.append(&gtk::Label::new(Some(&tr("Insert field"))));
-    insert_content.append(&gtk::Image::from_icon_name("pan-down-symbolic"));
-    insert.set_child(Some(&insert_content));
-    crate::widgets::menu_names::set_menu_later(&insert, &menu);
-    insert.add_css_class("hk-menu-btn");
-    insert.update_property(&[gtk::accessible::Property::Label(&tr("Insert field"))]);
-    insert.set_valign(gtk::Align::Center);
-    line.append(&insert);
+    let entry = crate::widgets::pattern_entry::PatternEntry::new("organize-pattern");
+    entry.labelled_by(&pattern_label);
+    let pattern = entry.entry.clone();
+    let insert = entry.insert.clone();
+    let line = entry.root;
     grid.attach(&line, 1, 0, 3, 1);
     let note = label("", &["hk-t3", "hk-secondary"]);
     note.set_widget_name("organize-pattern-note");
@@ -1126,22 +1064,6 @@ pub(crate) fn open(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Option<g
         cancel: RefCell::new(None),
     });
 
-    let actions = gio::SimpleActionGroup::new();
-    let insert = gio::SimpleAction::new("insert-field", Some(glib::VariantTy::STRING));
-    let weak = Rc::downgrade(&organizer);
-    insert.connect_activate(move |_, field| {
-        let (Some(this), Some(field)) = (weak.upgrade(), field.and_then(|f| f.get::<String>()))
-        else {
-            return;
-        };
-        let text = format!("{{{field}}}");
-        let mut position = this.pattern.position();
-        this.pattern.insert_text(&text, &mut position);
-        this.pattern.set_position(position);
-        this.pattern.grab_focus_without_selecting();
-    });
-    actions.add_action(&insert);
-    window.insert_action_group("organizer", Some(&actions));
     let _ = opts.insert;
 
     let weak = Rc::downgrade(&organizer);

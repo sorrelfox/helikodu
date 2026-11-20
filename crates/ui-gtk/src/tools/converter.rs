@@ -443,9 +443,11 @@ impl Converter {
         match NamingPattern::parse(&self.pattern.text()) {
             Ok(p) => {
                 self.pattern_note.set_visible(false);
+                crate::widgets::pattern_entry::underline(&self.pattern, None);
                 Some(p)
             }
             Err(e) => {
+                crate::widgets::pattern_entry::underline(&self.pattern, Some((e.start, e.end)));
                 self.pattern_note
                     .set_text(&crate::tools::naming_problem(&e));
                 self.pattern_note.set_visible(true);
@@ -929,13 +931,11 @@ pub(crate) fn open_with(main: &MainWindow, tracks: Option<Vec<TrackKey>>) -> Opt
     save_to.append(&choose);
     second.append(&labelled(&tr("Save to"), &save_to));
     let pattern_box = gtk::Box::new(gtk::Orientation::Vertical, 4);
-    let pattern = gtk::Entry::new();
-    pattern.add_css_class("hk-input");
-    pattern.add_css_class("hk-mono");
+    let pattern_entry = crate::widgets::pattern_entry::PatternEntry::new("pattern");
+    let pattern = pattern_entry.entry.clone();
     pattern.add_css_class("hk-query");
-    pattern.set_widget_name("pattern");
     pattern.set_text(&state.converter.pattern);
-    pattern_box.append(&pattern);
+    pattern_box.append(&pattern_entry.root);
     second.append(&labelled(&tr("Folders and names"), &pattern_box));
     options.append(&second);
     let pattern_note = label("", &["hk-query-problem"]);

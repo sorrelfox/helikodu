@@ -90,3 +90,43 @@ listview.hk-verify-list > row > .hk-verify-row { min-height: 50px; padding: 0 24
 .hk-verify-last { margin-top: 14px; }
 progressbar.hk-tool-meter > trough { min-height: 4px; border: none; border-radius: 2px; background-color: var(--hk-line2); background-image: none; box-shadow: none; }
 progressbar.hk-tool-meter > trough > progress { min-height: 4px; border: none; border-radius: 2px; background-color: var(--hk-accent-fill); background-image: none; box-shadow: none; }
+
+/* ---- Your fields ----------------------------------------------------------- */
+
+.hk-fields-editor { padding: 16px 24px; }
+.hk-fields-label.top { margin-top: 7px; }
+.hk-fields-side-name { font-size: 12.5px; }
+list.hk-list > row.hk-dim:selected { color: var(--hk-t1); }
+entry.hk-input.hk-mono#fields-name, entry.hk-input.hk-mono#fields-tag { font-size: 12px; }
+.hk-notice.hk-fields-notice { margin: 8px 0 0; padding: 8px 12px; }
+.hk-fields-help { margin-top: 6px; font-size: 12px; }
+.hk-fields-example { font-size: 12px; }
+scrolledwindow.hk-fields-expression-box { border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field); }
+textview.hk-fields-expression, textview.hk-fields-expression > text { background: none; background-color: transparent; color: var(--hk-t1); font-size: 12px; }
+searchentry.hk-input.hk-fields-search { min-height: 24px; margin-right: -12px; font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+searchentry.hk-input.hk-fields-search > text { min-height: 0; }
+.hk-fields-value-row { min-height: 30px; padding: 0 24px; border-bottom: 1px solid var(--hk-line); }
+.hk-fields-value { font-size: 12px; }
+.hk-fields-empty { padding: 22px 24px; }
+
+/* ---- The Insert popover ------------------------------------------------------ */
+
+menubutton.hk-menu-btn > button:checked { background-color: var(--hk-hover); }
+popover.hk-insert > contents {
+  padding: 6px; border-radius: 10px; border: 1px solid var(--hk-line2);
+  background-color: var(--hk-menu); color: var(--hk-t1); box-shadow: var(--hk-menu-shadow);
+}
+searchentry.hk-insert-search { min-height: 30px; margin: 2px 2px 4px; background-color: var(--hk-pane); }
+list.hk-insert-list { background: none; }
+list.hk-insert-list > row { min-height: 28px; padding: 0 10px; border-radius: 5px; background: none; color: var(--hk-t1); }
+list.hk-insert-list > row.function { min-height: 44px; }
+list.hk-insert-list > row.hk-insert-row:hover, list.hk-insert-list > row:selected { background-color: var(--hk-hover); color: var(--hk-t1); }
+list.hk-insert-list > row.hk-insert-section { padding-top: 6px; }
+.hk-insert-name { font-size: 12px; }
+.hk-insert-example { font-size: 11px; }
+.hk-insert-what { font-size: 12px; }
+.hk-insert-count { font-size: 11px; }
+.hk-insert-nothing { padding: 10px; }
+popover.hk-insert separator { margin: 0 0 4px; background-color: var(--hk-line); }
+button.hk-insert-guide { min-height: 30px; padding: 0 10px; border: none; border-radius: 5px; background: none; background-image: none; box-shadow: none; }
+button.hk-insert-guide:hover { background-color: var(--hk-hover); }

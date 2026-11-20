@@ -10,7 +10,7 @@ Everything happens on this computer. Helikodu never downloads covers or sends an
 
 - **Presets** on the left: Opus 128 (about 1 MB a minute), Opus 192, MP3 V0, AAC 256, FLAC, ALAC and WAV 16-bit / 44.1 kHz. **New preset** saves the current choices as a preset of your own; right-click one of your own (or press the Menu key, F2 or Delete) to rename or delete it.
 - **Format**, **Quality**, **Sample rate** and **Channels**. Opus is always written at 48 kHz. The formats are those the FFmpeg on your computer can write; a format without an encoder says so, and cannot be used.
-- **Save to**: the folder the new files go to. **Folders and names**: a naming pattern (see below).
+- **Save to**: the folder the new files go to. **Folders and names**: a naming pattern (see below); **Insert** beside it adds a field or a function at the cursor.
 - **Copy tags and covers** writes the tags and the front cover into each new file. **Replace files that are already there** overwrites files of the same name; without it they are left alone.
 - **Work on** sets how many files are converted at a time (4 by default).
 

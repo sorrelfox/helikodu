@@ -27,6 +27,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Missing files has a "Replaced" section that carries the plays, history and playlist places of missing tracks to their new copies.
 - **Library → Export Your Data…** and the "Your data" row of Settings → Advanced save and import your data file.
 
+- **Library ▸ Your Fields…** defines your computed and custom fields in a window: the name, the kind, the expression or the tag, and example values for the selected tracks or a search that follow the expression as it is typed. A problem is underlined and explained with its place, and a saved field is in use at once.
+- Every pattern and expression entry has an **Insert** button: a searchable list of the fields, your own fields and the functions with an example each, which puts the choice at the cursor and selects a function's first value. It replaces **Insert field** in Organize files, and Convert and Sync and export have it too.
+
 ### Changed
 
 - With **Restore the last session**, music that was playing when you closed or quit Helikodu now continues where it stopped when you start it again, with a short fade in; music that was paused or stopped stays paused. The track is selected in the queue panel and scrolled into view. Files you open with Helikodu play instead, and a track whose file is missing or that was playing when Helikodu ended abnormally stays paused.

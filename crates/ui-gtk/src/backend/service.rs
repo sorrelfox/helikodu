@@ -16,6 +16,7 @@ mod artist_photos;
 mod browse;
 mod columns;
 mod export;
+mod fields;
 mod history;
 mod insights;
 mod interchange;

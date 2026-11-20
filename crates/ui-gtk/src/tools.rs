@@ -25,6 +25,7 @@ pub(crate) mod tag_preview;
 pub(crate) mod tag_tools;
 pub(crate) mod tool_window;
 pub(crate) mod trash;
+pub(crate) mod user_fields;
 pub(crate) mod verify_files;
 
 use crate::backend::export::{PatternError, PatternProblem};
@@ -33,7 +34,19 @@ use crate::i18n::{fill, tr};
 /// Why a naming pattern cannot be read, in a sentence with its place: the same
 /// words in the organizer, the converter and folder sync.
 pub(crate) fn naming_problem(error: &PatternError) -> String {
-    let problem = match &error.problem {
+    fill(
+        &tr("{} At character {}."),
+        &[
+            &problem_sentence(&error.problem),
+            &(error.start + 1).to_string(),
+        ],
+    )
+}
+
+/// What is wrong with a pattern or an expression, in a sentence without its
+/// place.
+pub(crate) fn problem_sentence(problem: &PatternProblem) -> String {
+    match problem {
         PatternProblem::Empty => tr("The pattern is empty."),
         PatternProblem::UnclosedField => tr("A field is not closed with }."),
         PatternProblem::EmptyField => fill(
@@ -50,7 +63,7 @@ pub(crate) fn naming_problem(error: &PatternError) -> String {
         PatternProblem::TooDeep => tr("Square brackets are nested too deeply."),
         PatternProblem::TooComplex => tr("The expression is nested too deeply."),
         PatternProblem::UnclosedQuote => tr("A quote is not closed."),
-        PatternProblem::UnclosedParenthesis => tr("A ( is not closed with )."),
+        PatternProblem::UnclosedParenthesis => tr("A parenthesis is not closed."),
         PatternProblem::UnknownFunction(name) => {
             fill(&tr("There is no function called {}."), &[name])
         }
@@ -75,11 +88,7 @@ pub(crate) fn naming_problem(error: &PatternError) -> String {
         PatternProblem::Unexpected(text) => fill(&tr("{} does not belong here."), &[text]),
         PatternProblem::NameExpected => tr("let needs a name first."),
         PatternProblem::FieldExpected => tr("raw needs a field."),
-    };
-    fill(
-        &tr("{} At character {}."),
-        &[&problem, &(error.start + 1).to_string()],
-    )
+    }
 }
 
 /// Rename and delete on the rows of the list at the left of a tool window, as

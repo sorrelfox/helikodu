@@ -60,6 +60,8 @@ pub struct MemoryServices {
     state: Mutex<MemoryState>,
     files: SampleFiles,
     interchange: Arc<super::interchange::SampleInterchange>,
+    /// The fields the user defines.
+    fields: Arc<super::fields::SampleFields>,
 }
 
 impl Default for MemoryServices {
@@ -82,6 +84,10 @@ impl MemoryServices {
         let mut settings = Settings::default();
         settings.library.folders.clone_from(&roots);
         Self {
+            fields: Arc::new(super::fields::SampleFields::new(
+                library.clone(),
+                updates.clone(),
+            )),
             library,
             updates,
             files: SampleFiles::new(music_folder()),
@@ -248,6 +254,10 @@ impl Services for MemoryServices {
         Arc::new(super::export::SampleExport {
             library: self.library.clone(),
         })
+    }
+
+    fn user_fields(&self) -> Arc<dyn super::super::fields::FieldServices> {
+        self.fields.clone()
     }
 
     fn settings(&self) -> Arc<Settings> {

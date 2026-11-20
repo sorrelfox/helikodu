@@ -129,6 +129,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
             <attribute name="label" translatable="yes">Export Your Data…</attribute>
             <attribute name="action">app.export-user-data</attribute>
           </item>
+          <item>
+            <attribute name="label" translatable="yes">Your Fields…</attribute>
+            <attribute name="action">app.user-fields</attribute>
+          </item>
         </section>
       </submenu>
       <submenu>

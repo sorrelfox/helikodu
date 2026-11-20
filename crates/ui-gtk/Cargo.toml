@@ -98,5 +98,11 @@ harness = false
 name = "interchange"
 harness = false
 
+[[test]]
+# Your fields and the Insert popover against the sample backend; GTK needs its
+# own main function.
+name = "fields"
+harness = false
+
 [lints]
 workspace = true

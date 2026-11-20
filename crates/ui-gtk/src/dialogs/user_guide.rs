@@ -67,6 +67,35 @@ pub(crate) fn open(main: &MainWindow) {
     });
 }
 
+/// Opens the guide at its chapter `chapter` (the name of the chapter's page,
+/// such as `expressions`) from a window over the main window `parent`, or says
+/// on the main window that it cannot.
+pub(crate) fn open_chapter(parent: &gtk::Window, chapter: &str) {
+    let main = std::iter::successors(Some(parent.clone()), gtk::Window::transient_for)
+        .find_map(|w| w.downcast::<MainWindow>().ok());
+    let Some(page) = installed_page() else {
+        if let Some(main) = main {
+            main.toast(
+                &tr(
+                    "The user guide is not installed. It comes with the application's installation.",
+                ),
+                true,
+            );
+        }
+        return;
+    };
+    let uri = format!("{}#{chapter}", gio::File::for_path(&page).uri());
+    let launcher = gtk::UriLauncher::new(&uri);
+    let weak = main.map(|m| m.downgrade());
+    launcher.launch(Some(parent), None::<&gio::Cancellable>, move |result| {
+        if let (Err(error), Some(main)) = (result, weak.and_then(|w| w.upgrade()))
+            && !error.matches(gtk::DialogError::Dismissed)
+        {
+            main.toast(&tr("The user guide could not be opened."), true);
+        }
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

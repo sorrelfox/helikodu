@@ -12,6 +12,16 @@ Naming patterns are written in Helikodu's expression language. The [organizer](f
 - In a naming pattern, an expression that gives nothing outside brackets is written as "Unknown".
 - Fields you defined yourself work too: a computed field such as `{decade}` gives the text of its own expression, and a custom field such as `{mood}` the tag it stands for. `{label}` gives a track's labels. See [Labels and your own fields](labels-and-fields.md).
 
+## The Insert button
+
+Every pattern and expression entry has an **Insert** button beside it: the organizer, the converter, folder sync, the managed folder and [Your Fields](labels-and-fields.md#your-fields). It opens a list of the **Fields**, **Your fields** and the **Functions**, each with what it gives; a function also shows an example. Type into **Find a field or a function** to narrow the list by name or description, choose with the arrow keys and Enter, or click.
+
+- A field goes in at the cursor as `{name}`, or as `name` when the cursor is already inside braces.
+- A function goes in as its call, such as `{left(text, n)}`, with its first value selected, so that you can type over it.
+- **Expressions in the user guide** at the bottom opens this page in the guide installed with Helikodu.
+
+A field you save in Your Fields is offered at once.
+
 ## Inside the braces
 
 - **Text** in double or single quotes: `"Live"` or `'Live'`. A backslash takes the next character as it is: `"say \"hi\""`.
@@ -75,7 +85,7 @@ Function names may be written in any case.
 
 ## Problems and limits
 
-A pattern that cannot be read is explained under its entry, with the character where the problem is: an unknown field or function, a function with too few or too many values, a quote, parenthesis, brace or bracket that is not closed, or something that does not belong where it is.
+A pattern that cannot be read is explained under its entry, with the character where the problem is, and the part that fails is underlined: an unknown field or function, a function with too few or too many values, a quote, parenthesis, brace or bracket that is not closed, or something that does not belong where it is.
 
 Brackets can be nested 16 deep and expressions 32 deep. No value grows beyond 64 KiB, and padding adds at most 1024 characters. Every folder and file name is still cut to 255 bytes.
 
