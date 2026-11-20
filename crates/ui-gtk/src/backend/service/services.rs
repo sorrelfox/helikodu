@@ -76,10 +76,6 @@ pub(super) struct Opened {
     read_only: Option<String>,
 }
 
-/// Held while tags are written or a tag edit is undone, so that the steps of
-/// the undo journal happen one after the other.
-static TAG_WRITES: Mutex<()> = Mutex::new(());
-
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
@@ -733,7 +729,7 @@ impl Services for ServiceServices {
     }
 
     fn write_tags(&self, edit: &TagEdit) -> Vec<WriteResult> {
-        let _writing = lock(&TAG_WRITES);
+        let _writing = helikodu_service::library::lock_tag_writes();
         let Some(library) = self.service.library() else {
             let message = tr("Helikodu runs without a library.");
             return edit
@@ -896,7 +892,7 @@ impl Services for ServiceServices {
     }
 
     fn step_tags(&self, redo: bool) -> Result<Option<TagStepResult>, BackendError> {
-        let _writing = lock(&TAG_WRITES);
+        let _writing = helikodu_service::library::lock_tag_writes();
         let Some(library) = self.service.library() else {
             return Ok(None);
         };
@@ -910,7 +906,7 @@ impl Services for ServiceServices {
     }
 
     fn step_history(&self, redo: bool) -> Result<Option<HistoryStepResult>, BackendError> {
-        let _writing = lock(&TAG_WRITES);
+        let _writing = helikodu_service::library::lock_tag_writes();
         let Some(library) = self.service.library() else {
             return Ok(None);
         };

@@ -384,6 +384,7 @@ impl Shared {
     ) -> bool {
         loop {
             let skipped = skip();
+            let writing = super::lock_tag_writes();
             let report = self.library.write_stats_to_files(
                 &settings.library,
                 &settings.advanced,
@@ -392,6 +393,7 @@ impl Shared {
                 &skipped,
                 cancel,
             );
+            drop(writing);
             let report = match report {
                 Ok(report) => report,
                 Err(error) => {

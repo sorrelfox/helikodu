@@ -59,6 +59,19 @@ use helikodu_model::player::TrackFlags;
 use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
 use std::collections::HashMap;
 
+/// Held while tags are written to files: by a tag edit or its undo in the
+/// front end, and by the background writer of play counts and ratings. A file
+/// is replaced as a whole when its tags are written, so two writers at once
+/// could lose one's change.
+static TAG_WRITES: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Takes the lock that keeps tag writes to files one after the other.
+pub fn lock_tag_writes() -> std::sync::MutexGuard<'static, ()> {
+    TAG_WRITES
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 pub use self::analysis::{AnalysisProgress, AnalysisState, BackgroundAnalysisOptions, PauseReason};
 pub use self::artist_photos::ARTIST_PHOTO_FOLDER;
 pub use self::history_export::{ExportedListen, HistoryFormat, write_history};
