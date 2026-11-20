@@ -119,11 +119,14 @@ class: home
     <div><dt>Gapless</dt><dd>Tracks that share a format join sample-exactly. Tracks of one album stay gapless even when crossfade is on.</dd></div>
     <div><dt>Exact seeking</dt><dd>A seek lands on the exact frame wherever the format allows it.</dd></div>
     <div><dt>Crossfades and fades</dt><dd>Crossfade between tracks and when you skip, with equal-power gains, exact to the frame. Short fades for pause, stop, seek and skip, so nothing clicks.</dd></div>
+    <div><dt>Crossfades that follow the music</dt><dd>Every track is analysed once in the background. A crossfade then starts where the ending track fades out, never longer than the length you chose.</dd></div>
+    <div><dt>Silence, left out</dt><dd>If you like, the silence at the start and end of tracks is left out, and long silence inside a track, such as before a hidden track, is skipped.</dd></div>
+    <div><dt>A leveller</dt><dd>Tracks without ReplayGain values can be evened out as they play, gradually, by at most 12 dB.</dd></div>
     <div><dt>A seek bar that shows the music</dt><dd>Its bars follow the loudness of the track. They are worked out in the background, never while the library is being scanned.</dd></div>
     <div><dt>Lyrics</dt><dd>Synced and plain, from a file beside the track or from its tags. Each track's timing can be moved in steps of 0.1 s.</dd></div>
     <div><dt>Play modes</dt><dd>Shuffle by tracks, albums, folders or groupings, or within each album. Repeat a track, an album or the queue. Stop after this track, this album or the queue. Play only this artist or this album.</dd></div>
     <div><dt>Previous means previous</dt><dd>With shuffle on, Previous retraces the tracks in the order they actually played.</dd></div>
-    <div><dt>A queue with a memory</dt><dd>What played, what plays and what comes next. When Helikodu starts again, the queue, the position and the modes are as you left them, paused.</dd></div>
+    <div><dt>A queue with a memory</dt><dd>What played, what plays and what comes next. When Helikodu starts again, the queue, the position and the modes are as you left them, and music that was playing plays on.</dd></div>
     <div><dt>Long tracks resume</dt><dd>Audiobooks and tracks over 20 minutes continue where you stopped, even after you played something else.</dd></div>
     <div><dt>Settings of a track's own</dt><dd>Leave a track out of shuffle, play it only when you start it yourself, or give it its own volume.</dd></div>
     <div><dt>Honest play counts</dt><dd>A track counts as played after half of it or four minutes, whichever comes first. Skipping ahead does not count as listening.</dd></div>
@@ -214,7 +217,7 @@ class: home
   </div>
   {{viewer view-library | Pictures of the library}}
   {{tab Statistics | statistics | Library statistics: tracks, albums, artists, playing time and size across the top, the formats and their quality with bars, the listening of this year, and the most played artists and albums. | Library ▸ Statistics counts the collection and your listening. A row under Formats or Quality opens Tracks with those tracks.}}
-  {{tab Settings | settings-library | Settings, Library: the music folders, name patterns to skip, scanning options, what to do with copies of the same file, and storage limits for covers, analysis data, logs and the undo history. | The library's folders and rules. A folder can be watched, scanned again or removed; removing it never removes anything from your disk.}}
+  {{tab Settings | settings-library | Settings, Library: the music folders, name patterns to skip, scanning options, what to do with copies of the same file, and storage limits for covers, waveforms, logs and the undo history. | The library's folders and rules. A folder can be watched, scanned again or removed; removing it never removes anything from your disk.}}
   {{tab Copies | copies | A window titled Identical copies that lists four files of one track with their paths, sizes and dates. One is marked as the main copy. | Files whose bytes are identical are recognised as copies of one track. They share one set of play counts, ratings and playlist entries, and the spare ones can go to the desktop trash.}}
   {{tab First run | first-run | The first run: Where is your music? The music folder is ticked, there are switches for watching the folders and for video files, a line names the output device, and a button says Scan and start. | The first start asks where the music is, and tells you where the sound will go.}}
   {{end}}
@@ -226,6 +229,9 @@ class: home
     <div><dt>Albums as they are</dt><dd>Albums of several discs, compilations, several artists and genres per track, credits by role, sort names and MusicBrainz identifiers are all understood.</dd></div>
     <div><dt>Covers from your own files</dt><dd>Pictures inside the files and image files in the album folder, stored once and cached as thumbnails. Nothing is downloaded.</dd></div>
     <div><dt>Backups</dt><dd>The library is backed up once a day and the last seven backups are kept. A damaged database is replaced by the newest good backup at the next start.</dd></div>
+    <div><dt>Labels of your own</dt><dd>Give tracks, albums and artists words of your own, such as <i>late night</i> or <i>to sort</i>, browse by them and search for them. They stay in the library, never in your files.</dd></div>
+    <div><dt>Bring your history along</dt><dd>Play counts, ratings and playlists come over from Rhythmbox, Strawberry, Clementine, Lollypop and iTunes, with a preview first and an undo afterwards. Your own data moves to another computer in one file.</dd></div>
+    <div><dt>A managed folder, if you want one</dt><dd>Helikodu can also copy or move music you add into one folder and name it for you, and gather the rest of the library there. Each file is checked before an original goes.</dd></div>
     <div><dt>You say what is scanned</dt><dd>Patterns to skip, <code>.nomedia</code> files and hidden folders are respected. The sound of video files joins the library only if you ask for it.</dd></div>
   </dl>
 </section>
@@ -342,6 +348,7 @@ class: home
   <dl class="points">
     <div><dt>One undo history</dt><dd>Tag edits and file moves share it. Ctrl+Z undoes whichever came last, and each file gets back the tags, cover and lyrics it had. The last 100 changes are kept for 90 days.</dd></div>
     <div><dt>One naming pattern everywhere</dt><dd><code>{albumartist}/{album}/[{disc}-]{track} {title}</code> names a track the same in the organizer, the converter and sync. Text in square brackets is left out when a field in it is empty.</dd></div>
+    <div><dt>Patterns with functions</dt><dd>Patterns can hold conditions and functions, such as <code>{if(composer, composer, artist)}</code>, and fields of your own: a computed field such as <code>decade</code>, or a name for any tag.</dd></div>
     <div><dt>Editing in the table</dt><dd>F2 edits a cell of the track table, for all selected rows at once.</dd></div>
     <div><dt>Safe across drives</dt><dd>Moved to another drive, a file is copied, checked byte for byte, and only then removed from its old place.</dd></div>
     <div><dt>Safe across crashes</dt><dd>A run of the organizer that was cut short is finished at the next start.</dd></div>

@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-11-20
+
 ### Added
 
 - Helikodu analyses your library tracks in the background after a scan: where each track's sound starts and ends, its silent stretches and how its loudness changes. It works on one track at a time at the lowest priority, slows down while music plays from the same disk, pauses during scans and on battery, and carries on where it stopped after a restart. Nothing is written to the files. Tracks without any loudness tags are measured in the same pass, albums as a whole, so they are evened out like tagged ones. Later versions use the analysis for smoother transitions and for skipping silence. `helikodu-cli analyze` runs it from the command line.
@@ -15,7 +17,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `helikodu-cli carry-stats` carries the plays, rating, history and playlist entries of a file that was replaced by another copy of the same recording (for example an MP3 by a FLAC) to the new file.
 - `helikodu-cli export-user-data` and `import-user-data` move ratings, play counts, history, playlists, smart playlists, Favourites, saved searches, labels and computed and custom fields between installations as a documented JSON file. An import adds labels and fields without taking any away, keeps a field the library defines differently, and is undone with `undo-import`.
 - Play counts can be written into the files (`write_play_counts_to_tags` in the `[advanced]` settings), as the `POPM` counter and `FMPS_PLAYCOUNT`, in the background a few minutes after plays rather than after every play (never into the file that is playing, never during a scan, and briefly when Helikodu closes); `helikodu-cli write-stats` writes the changed play counts and ratings now.
-
 - A managed media folder, off by default: `helikodu-cli managed-folder` sets a folder of the library and a naming pattern, imports files and folders from elsewhere (a downloads folder, a memory stick) into it by copying or moving them, with their covers, booklets, rip logs, lyrics and CUE sheets (whose `FILE` lines are changed to the new names), and consolidates the library files that are elsewhere into it, keeping their ratings, play counts and history. `--dry-run` shows every file and where it goes, names that are taken, and the space needed and free. Nothing is ever replaced, a copy is checked before an original is removed, and a run cut short continues or rolls back without losing a file.
 - The managed folder in the window: its group in Settings ▸ Library (the folder, the names, copy or move, the characters in names), **Add Music to the Managed Folder…** in the main menu and **Gather into the Managed Folder…** in the Library menu, and files dropped on the window while it is on. A window shows the plan with its figures and every file before anything changes, and a notice when the files do not fit.
 - A run of the managed folder works in the background with its progress and **Stop**, in the window, the sidebar and Settings; afterwards **Show in the library** opens Tracks at the folders the music went to. A finished run has no undo.
@@ -30,10 +31,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The Import window (**Library → Import from Another Player…**) shows what importing another player's library or a Helikodu data file would change, with the folders that moved, the entries left out and the playlists, and imports it; an import is undone from the window or its message, not with Ctrl+Z.
 - Missing files has a "Replaced" section that carries the plays, history and playlist places of missing tracks to their new copies.
 - **Library → Export Your Data…** and the "Your data" row of Settings → Advanced save and import your data file.
-
 - **Library ▸ Your Fields…** defines your computed and custom fields in a window: the name, the kind, the expression or the tag, and example values for the selected tracks or a search that follow the expression as it is typed. A problem is underlined and explained with its place, and a saved field is in use at once.
 - Every pattern and expression entry has an **Insert** button: a searchable list of the fields, your own fields and the functions with an example each, which puts the choice at the cursor and selects a function's first value. It replaces **Insert field** in Organize files, and Convert and Sync and export have it too.
-
 - The tag editor's File info tab shows what the track analysis found: a curve of the track's loudness with its silences and the start of its fade-out, where the sound starts and ends, the silences inside it and where it fades out, or that the track is not analysed yet or could not be read. The tags of the file are now a row of the File group.
 - The Tracks view can be grouped with **Group by**: by album artist, album, genre, year, format, label, one of your own fields (computed fields too) or an expression. Group rows show the value and the number of tracks, open and close with a double click, **Enter**, **Left** and **Right**, and their context menu acts on all of their tracks.
 - After the first scan, when the library of another player Helikodu can import from is found on the computer, a notice offers to bring its plays and ratings over, once.

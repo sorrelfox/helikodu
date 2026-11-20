@@ -122,6 +122,19 @@ SPDX-License-Identifier: CC0-1.0
   <translation type="gettext">helikodu</translation>
 
   <releases>
+    <release version="0.9.4" date="2026-11-20" type="development">
+      <description>
+        <p>Track analysis and library features:</p>
+        <ul>
+          <li>Tracks are analysed in the background: crossfades follow the music, silence can be left out or skipped, and a leveller evens out tracks without loudness values</li>
+          <li>Import play counts, ratings and playlists from Rhythmbox, Strawberry, Clementine, Lollypop and iTunes, and move your own data to another computer</li>
+          <li>Labels for tracks, albums and artists, and fields of your own</li>
+          <li>An optional managed music folder</li>
+          <li>Naming patterns with functions and conditions, and the track table grouped by any field</li>
+          <li>Music that was playing when Helikodu closed plays on when it starts again</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.3" date="2026-11-19" type="development">
       <description>
         <p>Fixes for the release candidate:</p>
