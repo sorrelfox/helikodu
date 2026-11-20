@@ -4,7 +4,8 @@
 //! The dialogs against the sample backend: settings that round-trip through
 //! the store, the language choice, the full-output confirmation (also for
 //! requests from other programs), the tag editor with mixed values, the first
-//! run, the output switcher, Supported formats, About and Keyboard shortcuts.
+//! run, the output switcher, Supported formats, About and Keyboard shortcuts,
+//! and the settings of the track analysis and what uses it.
 //!
 //! Like `widgets.rs`, this program runs only under the headless compositor:
 //!
@@ -1277,6 +1278,314 @@ impl Drop for Pointer {
 }
 
 /// The close button of the header strip of `window`.
+/// The texts of the labels under `root` that are on screen.
+fn mapped_texts(root: &impl IsA<gtk::Widget>) -> Vec<String> {
+    descendants(root.upcast_ref())
+        .iter()
+        .filter(|w| w.is_mapped())
+        .filter_map(|w| w.downcast_ref::<gtk::Label>().map(|l| l.text().to_string()))
+        .collect()
+}
+
+/// The settings of the track analysis and what uses it: on Playback the
+/// crossfade from the analysis (insensitive while crossfades are off) and the
+/// Silence group with its count and link; on Loudness the leveller, which needs
+/// a mode and replaces the preamp for files without values, and the readout
+/// while it works; on Library the analysis with its states and Waveforms; on
+/// Advanced play counts in the files.
+fn analysis_settings_rows(app: &gtk::Application) {
+    use helikodu_model::settings::LoudnessMode;
+    use helikodu_ui_gtk::backend::services::{AnalysisProgress, AnalysisState};
+    use helikodu_ui_gtk::backend::{SignalLamp, StageKind};
+    let (backend, updates) = sample::backend_with_updates(&options());
+    let (window, backend) = window_over(app, backend);
+    let services = backend.services();
+    let settings = window.open_settings("playback");
+    wait_for("the playback page", || {
+        window.settings_page().as_deref() == Some("playback")
+    });
+
+    // The crossfade from the analysis needs crossfades between tracks.
+    let from_analysis: gtk::Switch = named(&settings, "crossfade-from-analysis");
+    let from_row: gtk::Box = named(&settings, "crossfade-from-analysis-row");
+    assert!(from_analysis.is_active());
+    assert!(
+        !from_row.is_sensitive(),
+        "insensitive while crossfades are off"
+    );
+    let between: gtk::DropDown = named(&settings, "crossfade");
+    between.set_selected(3);
+    assert!(services.settings().playback.transitions.crossfade);
+    assert!(from_row.is_sensitive());
+    from_analysis.set_active(false);
+    assert!(
+        !services
+            .settings()
+            .playback
+            .transitions
+            .crossfade_from_analysis
+    );
+    between.set_selected(0);
+    assert!(!from_row.is_sensitive());
+    assert!(!from_analysis.is_active(), "the switch keeps its value");
+
+    // Silence.
+    let trim: gtk::Switch = named(&settings, "trim-silence");
+    let skip: gtk::Switch = named(&settings, "skip-silence");
+    let length: gtk::DropDown = named(&settings, "skip-silence-length");
+    assert!(!trim.is_active() && !skip.is_active());
+    assert_eq!(length.selected(), 1, "10 seconds");
+    trim.set_active(true);
+    skip.set_active(true);
+    length.set_selected(5);
+    let transitions = services.settings().playback.transitions;
+    assert!(transitions.trim_silence && transitions.skip_silence);
+    assert_eq!(transitions.skip_silence_min_s, 120);
+    let note: gtk::Label = named(&settings, "silence-note");
+    wait_for("the analysis count", || {
+        note.text().contains(" are so far ")
+    });
+    // The words in brackets open the Library page at the analysis.
+    let _: bool = note.emit_by_name("activate-link", &[&"track-analysis"]);
+    wait_for("the library page", || {
+        window.settings_page().as_deref() == Some("library")
+    });
+
+    // Track analysis.
+    let analyse: gtk::Switch = named(&settings, "analyze-in-background");
+    let count: gtk::Label = named(&settings, "analysis-count");
+    let state: gtk::Label = named(&settings, "analysis-state");
+    let meter: gtk::LevelBar = named(&settings, "analysis-meter");
+    assert!(analyse.is_active());
+    wait_for("the analysis counts", || {
+        count.text().ends_with(" tracks analysed")
+    });
+    assert!(
+        state.text().starts_with("Working slowly while music plays"),
+        "{}",
+        state.text()
+    );
+    assert!(!meter.has_css_class("off"));
+    analyse.set_active(false);
+    assert!(!services.settings().library.analyze_in_background);
+    wait_for("the analysis off", || {
+        state
+            .text()
+            .starts_with("Crossfades use their fixed length")
+    });
+    assert!(meter.has_css_class("off"), "drawn without its fill colour");
+    analyse.set_active(true);
+    assert!(services.settings().library.analyze_in_background);
+    wait_for("the analysis on", || {
+        state.text().starts_with("Working slowly")
+    });
+    // What the library service reports reaches the row.
+    updates
+        .try_send(Update::Analysis(AnalysisProgress {
+            total: 1_000,
+            analyzed: 1_000,
+            failed: 0,
+            state: AnalysisState::Idle,
+        }))
+        .unwrap();
+    wait_for("every track analysed", || {
+        state.text() == "Every track is analysed."
+    });
+    assert_eq!(count.text(), "1,000 of 1,000 tracks analysed");
+    assert!((meter.value() - 1.0).abs() < 1e-9, "the meter is full");
+    let all = texts(&settings);
+    assert!(all.contains("Waveforms"), "the storage row is renamed");
+    assert!(!all.contains("Analysis data"));
+
+    // The leveller.
+    window.open_settings("loudness");
+    wait_for("the loudness page", || {
+        window.settings_page().as_deref() == Some("loudness")
+    });
+    let leveller: gtk::Switch = named(&settings, "leveller");
+    let row: gtk::Box = named(&settings, "leveller-row");
+    let explanation: gtk::Label = named(&settings, "leveller-note");
+    let untagged: gtk::Box = named(&settings, "untagged-preamp");
+    let unused: gtk::Label = named(&settings, "untagged-preamp-note");
+    let rest: gtk::Label = named(&settings, "loudness-rest");
+    assert!(!leveller.is_active() && row.is_sensitive());
+    assert!(untagged.is_sensitive() && !unused.is_visible());
+    wait_for("the loudness counts", || {
+        rest.text().contains("use the preamp")
+    });
+    leveller.set_active(true);
+    assert!(services.settings().loudness.leveller);
+    assert!(!untagged.is_sensitive(), "the preamp is not used");
+    assert!(unused.is_visible());
+    assert!(
+        rest.text().contains("evened out by the leveller"),
+        "{}",
+        rest.text()
+    );
+    named::<gtk::ToggleButton>(&settings, "loudness-off").set_active(true);
+    assert_eq!(services.settings().loudness.mode, LoudnessMode::Off);
+    assert!(!row.is_sensitive(), "the leveller needs a mode");
+    assert_eq!(explanation.text(), "Works while “Even out loudness” is on.");
+    assert!(leveller.is_active(), "the switch keeps its value");
+    assert!(rest.text().contains("use the preamp"));
+    named::<gtk::ToggleButton>(&settings, "loudness-auto").set_active(true);
+    assert!(row.is_sensitive());
+    assert!(explanation.text().starts_with("Instead of a fixed preamp."));
+    // A track without loudness values plays through the leveller.
+    let mut path = sample::signal_path(SignalLamp::LosslessProcessed);
+    if let Some(stage) = path
+        .stages
+        .iter_mut()
+        .find(|s| s.kind == StageKind::Loudness)
+    {
+        stage.detail = "leveller (no loudness values)".into();
+    }
+    updates
+        .try_send(Update::SignalPath(Some(Box::new(path))))
+        .unwrap();
+    let readout_path: gtk::Label = named(&settings, "loudness-readout-path");
+    let readout_state: gtk::Label = named(&settings, "loudness-readout-state");
+    let readout_note: gtk::Label = named(&settings, "loudness-readout-note");
+    wait_for("the leveller in the readout", || {
+        readout_path
+            .text()
+            .contains("Leveller\u{a0}(no\u{a0}loudness\u{a0}values)")
+    });
+    assert_eq!(readout_state.text(), "DSP active");
+    assert!(
+        readout_note
+            .text()
+            .starts_with("This track has no loudness values")
+    );
+
+    // Play counts in the files.
+    window.open_settings("advanced");
+    wait_for("the advanced page", || {
+        window.settings_page().as_deref() == Some("advanced")
+    });
+    let counts: gtk::Switch = named(&settings, "write-play-counts");
+    let ratings: gtk::Switch = named(&settings, "write-ratings");
+    assert!(!counts.is_active() && !ratings.is_active());
+    counts.set_active(true);
+    assert!(services.settings().advanced.write_play_counts_to_tags);
+    assert!(!services.settings().advanced.write_ratings_to_tags);
+    assert!(texts(&settings).contains("Statistics in files"));
+    assert_eq!(services.settings().validate(), Ok(()));
+
+    // Opened again, the controls show the stored values.
+    settings.close();
+    spin(50);
+    let settings = window.open_settings("playback");
+    spin(50);
+    assert!(named::<gtk::Switch>(&settings, "trim-silence").is_active());
+    assert!(!named::<gtk::Switch>(&settings, "crossfade-from-analysis").is_active());
+    assert!(named::<gtk::Switch>(&settings, "leveller").is_active());
+    assert!(named::<gtk::Switch>(&settings, "write-play-counts").is_active());
+    window.destroy();
+}
+
+/// With `HELIKODU_SETTINGS_SHOTS=DIR`, writes the pages of the track analysis
+/// and what uses it (Playback scrolled to Silence, Loudness with the leveller
+/// at work, Library scrolled to Track analysis, Advanced) to `DIR`.
+fn analysis_settings_screenshots(app: &gtk::Application) {
+    use helikodu_ui_gtk::backend::{SignalLamp, StageKind};
+    let Some(folder) = std::env::var_os("HELIKODU_SETTINGS_SHOTS").map(std::path::PathBuf::from)
+    else {
+        println!("analysis_settings_screenshots: skipped; set HELIKODU_SETTINGS_SHOTS");
+        return;
+    };
+    std::fs::create_dir_all(&folder).unwrap();
+    let (backend, updates) = sample::backend_with_updates(&options());
+    let (window, backend) = window_over(app, backend);
+    backend
+        .services()
+        .update_settings(&mut |s| {
+            s.playback.transitions.crossfade = true;
+            s.loudness.leveller = true;
+        })
+        .unwrap();
+    let mut path = sample::signal_path(SignalLamp::LosslessProcessed);
+    if let Some(stage) = path
+        .stages
+        .iter_mut()
+        .find(|s| s.kind == StageKind::Loudness)
+    {
+        stage.detail = "leveller (no loudness values)".into();
+    }
+    updates
+        .try_send(Update::SignalPath(Some(Box::new(path))))
+        .unwrap();
+    let shot = |settings: &gtk::Window, page: &str, scrolled_to: Option<&str>| {
+        window.open_settings(page);
+        spin(300);
+        if let Some(name) = scrolled_to {
+            let target: gtk::Widget = named(settings, name);
+            let mut scroller = target.parent();
+            while let Some(widget) = scroller.clone() {
+                if widget.is::<gtk::ScrolledWindow>() {
+                    break;
+                }
+                scroller = widget.parent();
+            }
+            let scroller = scroller.and_downcast::<gtk::ScrolledWindow>().unwrap();
+            let body = scroller.child().unwrap();
+            let point = target
+                .compute_point(&body, &gtk::graphene::Point::zero())
+                .unwrap();
+            scroller
+                .vadjustment()
+                .set_value(f64::from(point.y()) - 200.0);
+            spin(300);
+        }
+        let file = folder.join(format!("settings-{page}.png"));
+        helikodu_ui_gtk::snapshot::save_png(settings, &file).unwrap();
+        println!("wrote {}", file.display());
+    };
+    let settings = window.open_settings("playback");
+    shot(&settings, "playback", Some("silence-note"));
+    shot(&settings, "loudness", None);
+    shot(&settings, "library", Some("track-analysis"));
+    shot(&settings, "advanced", None);
+    window.destroy();
+}
+
+/// The settings search finds the rows of the track analysis and what uses
+/// it, as it finds the others.
+fn analysis_settings_search(app: &gtk::Application) {
+    let (window, _) = window(app);
+    let settings = window.open_settings("playback");
+    spin(100);
+    let entry = descendants(settings.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::SearchEntry>().ok())
+        .find(|e| e.placeholder_text().as_deref() == Some("Search settings"))
+        .unwrap();
+    for (words, found) in [
+        (
+            "play counts",
+            "Also write play counts to the tags of the files",
+        ),
+        (
+            "leveller",
+            "Even out tracks without loudness values as they play",
+        ),
+        ("hidden tracks", "Skip long silence inside a track"),
+        (
+            "silence",
+            "Leave out silence at the start and end of each track",
+        ),
+        ("fades out", "Start the crossfade where the track fades out"),
+        ("analyse", "Analyse tracks in the background"),
+        ("waveforms", "Waveforms"),
+    ] {
+        entry.set_text(words);
+        wait_for(words, || mapped_texts(&settings).iter().any(|t| t == found));
+    }
+    entry.set_text("");
+    settings.close();
+    window.destroy();
+}
+
 fn close_button(window: &gtk::Window) -> gtk::Widget {
     descendants(window.upcast_ref())
         .into_iter()
@@ -1373,6 +1682,12 @@ const TESTS: &[Test] = &[
     ("organizer_moves_and_undoes", organizer_moves_and_undoes),
     ("missing_files_relink", missing_files_relink),
     ("verify_files_reports", verify_files_reports),
+    ("analysis_settings_rows", analysis_settings_rows),
+    ("analysis_settings_search", analysis_settings_search),
+    (
+        "analysis_settings_screenshots",
+        analysis_settings_screenshots,
+    ),
 ];
 
 fn main() -> ExitCode {

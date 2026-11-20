@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use helikodu_model::audio::{DeviceCapabilities, SampleFormat, SampleRate};
 
+use super::super::services::{AnalysisProgress, AnalysisState};
 use super::super::services::{
     Availability, BackendSelection, DatabaseInfo, Decoder, DecoderStatus, DeviceId, DeviceInfo,
     DeviceSelection, EditTrack, FamilyStatus, FileFacts, FolderState, FormatFamily, FormatReport,
@@ -121,6 +122,27 @@ impl MemoryServices {
 
     fn lock(&self) -> std::sync::MutexGuard<'_, MemoryState> {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// The track analysis of the sample library, as the design shows it: some
+    /// four fifths analysed, a few that could not be read, and the rest done
+    /// slowly while music plays.
+    fn analysis(&self, settings: &Settings) -> AnalysisProgress {
+        let total = self
+            .library
+            .as_ref()
+            .map_or(0, |l| l.albums.iter().map(|a| a.tracks.len()).sum());
+        let failed = (total / 100).min(12);
+        AnalysisProgress {
+            total,
+            analyzed: total * 81 / 100,
+            failed,
+            state: if settings.library.analyze_in_background {
+                AnalysisState::Yielding
+            } else {
+                AnalysisState::Off
+            },
+        }
     }
 
     fn emit(&self, update: Update) {
@@ -236,6 +258,8 @@ impl Services for MemoryServices {
         let output = settings.output.selection();
         let moved = output != state.output;
         let duplicates = settings.library.duplicates != state.settings.library.duplicates;
+        let analysis =
+            settings.library.analyze_in_background != state.settings.library.analyze_in_background;
         state.settings = Arc::new(settings);
         if moved {
             state.output = output.clone();
@@ -243,6 +267,10 @@ impl Services for MemoryServices {
         drop(state);
         if moved {
             self.set_output(output);
+        }
+        if analysis {
+            let settings = self.settings();
+            self.emit(Update::Analysis(self.analysis(&settings)));
         }
         if duplicates {
             // As the service applies the change in the background: the copies
@@ -629,6 +657,11 @@ impl Services for MemoryServices {
 
     fn is_measuring_loudness(&self) -> bool {
         false
+    }
+
+    fn analysis_progress(&self) -> Option<AnalysisProgress> {
+        self.library.as_ref()?;
+        Some(self.analysis(&self.settings()))
     }
 
     fn limiter_activity(&self) -> Option<LimiterReading> {

@@ -82,15 +82,35 @@ fn idle_words(stage: &SignalStage) -> String {
     }
 }
 
+/// How the engine names the gain of the leveller, at the start of the
+/// loudness stage's words (its details, such as a track volume, follow).
+const LEVELLER: &str = "leveller (no loudness values";
+
+/// Whether the leveller evens out the level of what is heard: the track has
+/// no loudness values, and the leveller works in their place.
+pub(crate) fn uses_leveller(path: &SignalPath) -> bool {
+    path.stage(StageKind::Loudness)
+        .is_some_and(|s| s.state == StageState::Active && s.detail.starts_with(LEVELLER))
+}
+
+/// The words for a stage that changes the samples: the engine's own, but for
+/// the leveller, which is named in the interface's language.
+fn active_words(stage: &SignalStage) -> String {
+    if stage.kind == StageKind::Loudness && stage.detail.starts_with(LEVELLER) {
+        return tr("Leveller (no loudness values)");
+    }
+    stage.detail.clone()
+}
+
 /// The value and node of the stages of `kinds` taken together: active when
 /// one of them is, with the words of each that is; otherwise the words of
 /// the first one reported.
 pub(crate) fn stages(path: &SignalPath, kinds: &[StageKind]) -> (String, Node) {
     let reported: Vec<&SignalStage> = kinds.iter().filter_map(|k| path.stage(*k)).collect();
-    let active: Vec<&str> = reported
+    let active: Vec<String> = reported
         .iter()
         .filter(|s| s.state == StageState::Active)
-        .map(|s| s.detail.as_str())
+        .map(|s| active_words(s))
         .collect();
     if !active.is_empty() {
         return (active.join(" · "), Node::Active);
@@ -605,6 +625,24 @@ mod tests {
         assert_eq!(idle.len(), 10);
         assert!(idle[..9].iter().all(|r| r.value.is_empty()));
         assert_eq!(idle[9].value, "Studio Interface");
+    }
+
+    #[test]
+    fn the_leveller_is_named_in_the_loudness_row() {
+        let mut path = signal_path(SignalLamp::LosslessProcessed);
+        assert!(!uses_leveller(&path));
+        let loudness = path
+            .stages
+            .iter_mut()
+            .find(|s| s.kind == StageKind::Loudness)
+            .unwrap();
+        loudness.detail = "leveller (no loudness values, track volume +1.0 dB)".into();
+        assert!(uses_leveller(&path));
+        let rows = rows(Some(&path), "");
+        assert_eq!(rows[1].value, "Leveller (no loudness values)");
+        assert_eq!(rows[1].node, Node::Active);
+        // It counts as an active stage.
+        assert!(sentence(Some(&path)).starts_with("5 stages are active."));
     }
 
     #[test]

@@ -26,6 +26,7 @@ pub use helikodu_service::formats::{
     Availability, Decoder, DecoderStatus, FamilyStatus, FormatFamily, FormatReport,
 };
 pub use helikodu_service::jobs::verify::{VerifiedFormat, VerifyProblem, VerifyReport};
+pub use helikodu_service::library::{AnalysisProgress, AnalysisState, PauseReason};
 pub use helikodu_service::library::{
     CancelToken, Change, CharacterSet, Destination, FileRunId, FileRunSummary, FoundFile,
     MissingFile, MoveOutcome, MoveProblem, MoveRequest, NamingPattern, OrganizeOptions,
@@ -93,7 +94,7 @@ impl ScanStatus {
 pub struct StorageUsage {
     /// Cover thumbnails, in bytes.
     pub covers: Option<u64>,
-    /// Analysis data, in bytes.
+    /// The waveforms of the seek bar, in bytes.
     pub analysis: Option<u64>,
     /// Logs, in bytes.
     pub logs: Option<u64>,
@@ -549,6 +550,12 @@ pub trait Services: fmt::Debug + Send + Sync {
     fn stop_loudness(&self);
     /// Whether a loudness measurement runs.
     fn is_measuring_loudness(&self) -> bool;
+    /// How far the track analysis of the library is, and what the background
+    /// analysis does; `None` without a library. Later changes arrive as
+    /// [`Update::Analysis`](super::Update::Analysis). Blocking.
+    fn analysis_progress(&self) -> Option<AnalysisProgress> {
+        None
+    }
     /// What the limiter did lately, when the player reports it.
     fn limiter_activity(&self) -> Option<LimiterReading>;
 

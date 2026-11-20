@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Settings › Playback: the Previous button, the seek step, when a play
-//! counts, what playing an album does to the queue, crossfades and fades, the
-//! start-up queue, long tracks, power, and the decoders of synthesized
+//! counts, what playing an album does to the queue, crossfades (from the
+//! track analysis, where it has one) and fades, leaving out and skipping
+//! silence, the start-up queue, long tracks, power, and the decoders of synthesized
 //! formats (the SoundFont for MIDI, the song lengths of SID tunes, how often a
 //! looping tune repeats and its fade). The two power switches that a later
 //! version applies are shown insensitive.
@@ -11,10 +12,12 @@
 use std::rc::Rc;
 
 use gtk::prelude::*;
+use gtk::{gio, glib};
 use helikodu_model::settings::{ContextAction, StartAction};
 
 use super::{Context, page_body};
-use crate::backend::services::Settings;
+use crate::backend::Update;
+use crate::backend::services::{AnalysisProgress, Settings};
 use crate::dialogs::common::{
     compact_button, divider, dropdown, key_caps, note, on_selected, row, switch_row, tilde,
     with_note,
@@ -329,6 +332,7 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     body.append(&divider());
     body.append(&row(&tr("Crossfade"), None, &crossfade(context)));
     body.append(&row(&tr("Fades"), None, &fades(context)));
+    body.append(&row(&tr("Silence"), None, &silence(context)));
     body.append(&divider());
     body.append(&row(&tr("When Helikodu starts"), None, &start(context)));
     body.append(&row(&tr("Long tracks"), None, &long_tracks(context)));
@@ -412,12 +416,181 @@ fn crossfade(context: &Rc<Context>) -> gtk::Box {
     );
     skip.set_widget_name("skip-crossfade");
     line.append(&skip);
-    with_note(
-        &line,
-        &tr(
-            "Tracks that follow each other on an album always join without a crossfade. Nothing is crossfaded on a bit-perfect path.",
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    column.append(&line);
+    let (from_analysis, switch) = switch_row(
+        &tr("Start the crossfade where the track fades out"),
+        Some(&tr(
+            "Used while a crossfade between tracks is on. A long fade is overlapped longer, an abrupt end briefly, and never longer than the length chosen.",
+        )),
+    );
+    from_analysis.set_widget_name("crossfade-from-analysis-row");
+    switch.set_widget_name("crossfade-from-analysis");
+    switch.set_active(transitions.crossfade_from_analysis);
+    bind_switch(context, &switch, |s, on| {
+        s.playback.transitions.crossfade_from_analysis = on;
+    });
+    // Only used while tracks are crossfaded; the switch keeps its value.
+    from_analysis.set_sensitive(transitions.crossfade);
+    let weak = Rc::downgrade(context);
+    let weak_row = from_analysis.downgrade();
+    between.connect_selected_notify(move |_| {
+        if let (Some(context), Some(row)) = (weak.upgrade(), weak_row.upgrade()) {
+            row.set_sensitive(context.settings().playback.transitions.crossfade);
+        }
+    });
+    column.append(&from_analysis);
+    column.append(&note(&tr(
+        "Tracks that follow each other on an album always join without a crossfade. Nothing is crossfaded on a bit-perfect path.",
+    )));
+    column
+}
+
+/// Applies `switch` to the settings with `set` as it is toggled; a change the
+/// store refuses puts it back.
+fn bind_switch(
+    context: &Rc<Context>,
+    switch: &gtk::Switch,
+    set: impl Fn(&mut Settings, bool) + 'static,
+) {
+    let weak = Rc::downgrade(context);
+    switch.connect_active_notify(move |switch| {
+        let Some(context) = weak.upgrade() else {
+            return;
+        };
+        let on = switch.is_active();
+        if !context.update(|s| set(s, on)) {
+            switch.set_active(!on);
+        }
+    });
+}
+
+/// The lengths of silence inside a track that can be skipped, in seconds.
+const SKIP_SILENCE_S: [u32; 8] = [5, 10, 20, 30, 60, 120, 300, 600];
+
+/// A length of silence as the list shows it: `10 seconds`, `2 minutes`.
+fn silence_length(s: u32) -> String {
+    if s >= 60 && s.is_multiple_of(60) {
+        minutes(s / 60)
+    } else {
+        seconds(s)
+    }
+}
+
+/// The line under the Silence group, with markup: how many tracks are
+/// analysed (left out once all are), and a link to the analysis in
+/// Settings › Library.
+fn silence_note(progress: Option<&AnalysisProgress>) -> String {
+    let link = format!(
+        "<a href=\"track-analysis\">{}</a>",
+        glib::markup_escape_text(&tr("Settings › Library"))
+    );
+    let text = match progress {
+        Some(p) if p.total > 0 && p.analyzed < p.total => fill(
+            &ntr(
+                // Translators: {0} is the number of tracks analysed, {1} the
+                // number of all tracks, which chooses the form, {2} a link to
+                // the settings page.
+                "Both need a track to be analysed: {} of {} is so far ({}). Nothing is left out on a bit-perfect path.",
+                "Both need a track to be analysed: {} of {} are so far ({}). Nothing is left out on a bit-perfect path.",
+                p.total,
+            ),
+            &[
+                &crate::format::count(p.analyzed),
+                &crate::format::count(p.total),
+                "\u{E000}",
+            ],
         ),
-    )
+        _ => fill(
+            // Translators: {} is a link to the settings page.
+            &tr(
+                "Both need a track to be analysed ({}). Nothing is left out on a bit-perfect path.",
+            ),
+            &["\u{E000}"],
+        ),
+    };
+    // The words around the link are escaped; the link is markup.
+    glib::markup_escape_text(&text).replace('\u{E000}', &link)
+}
+
+/// Leaving out silence at the start and end of tracks, skipping long silence
+/// inside them, and how many tracks are analysed for it.
+fn silence(context: &Rc<Context>) -> gtk::Box {
+    let transitions = context.settings().playback.transitions;
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    let (trim_row, trim) = switch_row(
+        &tr("Leave out silence at the start and end of each track"),
+        Some(&tr(
+            "Tracks that follow each other on an album still join without a gap.",
+        )),
+    );
+    trim.set_widget_name("trim-silence");
+    trim.set_active(transitions.trim_silence);
+    bind_switch(context, &trim, |s, on| {
+        s.playback.transitions.trim_silence = on;
+    });
+    column.append(&trim_row);
+    let (skip_row, skip) = switch_row(
+        &tr("Skip long silence inside a track"),
+        Some(&tr(
+            "For hidden tracks after a long pause. Silence in the first 15 seconds is never skipped.",
+        )),
+    );
+    skip.set_widget_name("skip-silence");
+    skip.set_active(transitions.skip_silence);
+    bind_switch(context, &skip, |s, on| {
+        s.playback.transitions.skip_silence = on;
+    });
+    let length = value_dropdown(
+        context,
+        &SKIP_SILENCE_S,
+        transitions.skip_silence_min_s,
+        silence_length,
+        124,
+        |s, v| s.playback.transitions.skip_silence_min_s = v,
+    );
+    length.set_widget_name("skip-silence-length");
+    length.add_css_class(crate::dialogs::common::OWN_LABEL);
+    length.update_property(&[gtk::accessible::Property::Label(&tr(
+        "Silence longer than this is skipped",
+    ))]);
+    let longer = label(&tr("longer than"), &["hk-t2"]);
+    skip_row.insert_child_after(&longer, skip_row.first_child().as_ref());
+    skip_row.insert_child_after(&length, Some(&longer));
+    column.append(&skip_row);
+
+    let line = note(&silence_note(None));
+    line.set_use_markup(true);
+    line.set_widget_name("silence-note");
+    let weak = Rc::downgrade(context);
+    line.connect_activate_link(move |_, _| {
+        if let Some(context) = weak.upgrade() {
+            context.show_setting(super::Page::Library, super::track_analysis::ROW);
+        }
+        glib::Propagation::Stop
+    });
+    column.append(&line);
+    // The count comes from the library, then follows the analysis.
+    let services = context.services.clone();
+    let weak_line = line.downgrade();
+    glib::spawn_future_local(async move {
+        let progress = gio::spawn_blocking(move || services.analysis_progress())
+            .await
+            .ok()
+            .flatten();
+        if let (Some(line), Some(progress)) = (weak_line.upgrade(), progress) {
+            line.set_markup(&silence_note(Some(&progress)));
+        }
+    });
+    if let Some(playback) = &context.playback {
+        let weak_line = line.downgrade();
+        playback.connect_event(move |update| {
+            if let (Update::Analysis(progress), Some(line)) = (update, weak_line.upgrade()) {
+                line.set_markup(&silence_note(Some(progress)));
+            }
+        });
+    }
+    column
 }
 
 /// The four fades, each with its label above.
@@ -601,4 +774,51 @@ fn looping(context: &Rc<Context>) -> gtk::Box {
             &[&format!("{}:{:02}", default / 60, default % 60)],
         ),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backend::services::AnalysisState;
+
+    #[test]
+    fn silence_lengths_read_as_drawn() {
+        let texts: Vec<String> = SKIP_SILENCE_S.iter().map(|&s| silence_length(s)).collect();
+        assert_eq!(
+            texts,
+            [
+                "5 seconds",
+                "10 seconds",
+                "20 seconds",
+                "30 seconds",
+                "1 minute",
+                "2 minutes",
+                "5 minutes",
+                "10 minutes"
+            ]
+        );
+    }
+
+    #[test]
+    fn the_silence_note_counts_until_every_track_is_analysed() {
+        let link = "<a href=\"track-analysis\">Settings › Library</a>";
+        let mut progress = AnalysisProgress {
+            total: 18_402,
+            analyzed: 14_950,
+            failed: 12,
+            state: AnalysisState::Yielding,
+        };
+        assert_eq!(
+            silence_note(Some(&progress)),
+            format!(
+                "Both need a track to be analysed: 14,950 of 18,402 are so far ({link}). Nothing is left out on a bit-perfect path."
+            )
+        );
+        progress.analyzed = progress.total;
+        let done = format!(
+            "Both need a track to be analysed ({link}). Nothing is left out on a bit-perfect path."
+        );
+        assert_eq!(silence_note(Some(&progress)), done);
+        assert_eq!(silence_note(None), done);
+    }
 }

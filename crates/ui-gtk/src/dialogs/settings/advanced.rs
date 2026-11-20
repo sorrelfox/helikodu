@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Settings › Advanced: the ID3 version of new tags, in-place writing of
-//! very large files, ratings in files (a later version), the library
+//! very large files, ratings and play counts in files, the library
 //! database, loading each track into memory for slow drives, the log detail
 //! and the diagnostics, developer mode, and putting every setting back to its
 //! default. The library database row holds its backups: a daily one, "Back up
@@ -83,25 +83,46 @@ fn large_files(context: &Rc<Context>) -> gtk::Box {
     )
 }
 
-fn ratings(context: &Rc<Context>) -> gtk::Box {
-    let (line, switch) = switch_row(
-        &tr("Also write ratings to the tags of the files"),
-        Some(&tr(
-            "Other players can then read them. Off: ratings stay in the library only.",
-        )),
-    );
-    switch.set_active(context.settings().advanced.write_ratings_to_tags);
-    let weak = Rc::downgrade(context);
-    switch.connect_active_notify(move |switch| {
-        let Some(context) = weak.upgrade() else {
-            return;
-        };
-        let on = switch.is_active();
-        if !context.update(|s| s.advanced.write_ratings_to_tags = on) {
-            switch.set_active(!on);
-        }
-    });
-    line
+/// Ratings and play counts also written into the files.
+fn statistics(context: &Rc<Context>) -> gtk::Box {
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    let advanced = context.settings().advanced;
+    type Set = fn(&mut crate::backend::services::Settings, bool);
+    let rows: [(String, String, bool, &str, Set); 2] = [
+        (
+            tr("Also write ratings to the tags of the files"),
+            tr("Other players can then read them. Off: ratings stay in the library only."),
+            advanced.write_ratings_to_tags,
+            "write-ratings",
+            |s, on| s.advanced.write_ratings_to_tags = on,
+        ),
+        (
+            tr("Also write play counts to the tags of the files"),
+            tr(
+                "Written in the background a few minutes after the last play, never into the file that is playing. These writes are not on the Undo history.",
+            ),
+            advanced.write_play_counts_to_tags,
+            "write-play-counts",
+            |s, on| s.advanced.write_play_counts_to_tags = on,
+        ),
+    ];
+    for (title, explanation, value, name, set) in rows {
+        let (line, switch) = switch_row(&title, Some(&explanation));
+        switch.set_active(value);
+        switch.set_widget_name(name);
+        let weak = Rc::downgrade(context);
+        switch.connect_active_notify(move |switch| {
+            let Some(context) = weak.upgrade() else {
+                return;
+            };
+            let on = switch.is_active();
+            if !context.update(|s| set(s, on)) {
+                switch.set_active(!on);
+            }
+        });
+        column.append(&line);
+    }
+    column
 }
 
 fn database(context: &Rc<Context>) -> gtk::Box {
@@ -464,7 +485,7 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     let (scroller, body) = page_body();
     body.append(&row(&tr("Tags in MP3 files"), None, &id3(context)));
     body.append(&row(&tr("Very large files"), None, &large_files(context)));
-    body.append(&row(&tr("Ratings"), None, &ratings(context)));
+    body.append(&row(&tr("Statistics in files"), None, &statistics(context)));
     body.append(&divider());
     body.append(&row(
         &tr("Library database"),

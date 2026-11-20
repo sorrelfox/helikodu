@@ -9,10 +9,13 @@ The **Loudness** page of the settings has:
 | Setting | What it does |
 |---|---|
 | **Even out loudness** | **Off**; **Track** (every track at the same loudness); **Album** (whole albums at the same loudness, keeping the differences between their tracks); **Automatic** (the default: the album gain while an album plays in order, the track gain otherwise, for example in shuffle) |
-| **Preamp** | Two sliders, −12 to +12 dB: **Files with loudness values** (added to their gain, default 0 dB) and **Files without loudness values** (their gain, default −6 dB, so they are not much louder than normalized ones) |
+| **Preamp** | Two sliders, −12 to +12 dB: **Files with loudness values** (added to their gain, default 0 dB) and **Files without loudness values** (their gain, default −6 dB, so they are not much louder than normalized ones; not used while the leveller is on) |
+| **Leveller** | **Even out tracks without loudness values as they play** (off by default), instead of the fixed preamp; see [The leveller](#the-leveller). It works while **Even out loudness** is on |
 | **Prevent clipping** | **Lower the gain**: the gain is reduced until the loudest peak fits below full scale; or **Use the limiter**: the full gain is kept and peaks above full scale are limited |
 
 Gains follow the ReplayGain 2.0 reference of −18 LUFS; Opus R128 gains are converted to it. A change takes effect at once, also on the playing track.
+
+At the bottom of the page, **Signal path right now** shows what happens to the level of the track that plays: the source, the gain applied (or the leveller) and the device, and whether playback is still bit-perfect. It follows your changes as you make them.
 
 ## Measuring loudness
 
@@ -22,6 +25,6 @@ Library tracks that have no loudness values at all, neither tags nor a measureme
 
 ### The leveller
 
-Tracks without any loudness values (files outside the library, or library tracks not measured yet) normally play at the gain of **Files without loudness values**. With `leveller = true` in the `[loudness]` table of the settings file (there is no control for it yet; it is off by default), Helikodu evens them out while they play instead: a slow gain brings them toward the loudness of tracks with values, at most 12 dB up or down, rising by at most 1 dB and falling by at most 3 dB a second, so that it does not pump. For an analysed track it reads the loudness of the next few seconds from the analysis and starts to turn down before a loud passage; for other files it follows the loudness of the last three seconds. With **Lower the gain** it never raises the loudest peak heard so far above full scale; with **Use the limiter** it leaves peaks to the limiter. Tracks with loudness values keep their gains, and the leveller is off while **Even out loudness** is **Off** and on a bit-perfect path in exclusive mode. The signal path shows it as "leveller (no loudness values)".
+Tracks without any loudness values (files outside the library, or library tracks not measured yet) normally play at the gain of **Files without loudness values**. With **Even out tracks without loudness values as they play** under **Leveller** (off by default), Helikodu evens them out while they play instead: a slow gain brings them toward the loudness of tracks with values, at most 12 dB up or down, rising by at most 1 dB and falling by at most 3 dB a second, so that it does not pump. For an analysed track it reads the loudness of the next few seconds from the analysis and starts to turn down before a loud passage; for other files it follows the loudness of the last three seconds. With **Lower the gain** it never raises the loudest peak heard so far above full scale; with **Use the limiter** it leaves peaks to the limiter. Tracks with loudness values keep their gains, and the leveller is off while **Even out loudness** is **Off** and on a bit-perfect path in exclusive mode. The signal path shows it as **Leveller (no loudness values)** in its Loudness row, and so does the box at the bottom of the **Loudness** page while such a track plays; **Loudness data** then says that the tracks without values are evened out by the leveller.
 
 When a gain is applied, playback is no longer bit-perfect. Set **Even out loudness** to **Off** if bit-perfect output matters more to you.

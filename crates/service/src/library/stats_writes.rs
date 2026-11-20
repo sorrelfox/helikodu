@@ -32,6 +32,7 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use helikodu_library::CancelToken;
+use helikodu_library::interchange::StatsToFiles;
 use helikodu_model::settings::{Settings, SettingsGroup};
 
 use super::service::LibraryEvent;
@@ -118,9 +119,15 @@ struct State {
 
 impl State {
     fn enabled(&self) -> bool {
+        self.what().any()
+    }
+
+    /// What the settings send into the files.
+    fn what(&self) -> StatsToFiles {
         self.settings
             .as_ref()
-            .is_some_and(|s| stats_to_files(&s.advanced).any())
+            .map(|s| stats_to_files(&s.advanced))
+            .unwrap_or_default()
     }
 
     fn scanning(&self) -> bool {
@@ -236,12 +243,16 @@ impl Shared {
 
     fn apply(&self, settings: Arc<Settings>) {
         let mut state = self.lock();
-        let was = state.enabled();
+        let before = state.what();
         let first = state.settings.is_none();
         state.settings = Some(settings);
         let on = state.enabled();
-        if on && !was && !first {
-            // Switched on: what is pending is written now.
+        let after = state.what();
+        let added =
+            (after.ratings && !before.ratings) || (after.play_counts && !before.play_counts);
+        if added && !first {
+            // Switched on (ratings or play counts): what is pending is written
+            // now.
             state.due = Some(Instant::now());
         } else if !on {
             state.interrupt();

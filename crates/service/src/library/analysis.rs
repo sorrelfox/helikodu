@@ -22,7 +22,8 @@
 //!   battery power when [`BackgroundAnalysisOptions::pause_on_battery`].
 //! - Turning the setting off, or dropping the service, stops it within a decoded
 //!   block; what it finished stays stored, and it resumes with the tracks still
-//!   pending.
+//!   pending: at once when the setting is turned on again, at the next start
+//!   otherwise.
 //!
 //! Its progress is announced as [`LibraryEvent::Analysis`] (when its state changes,
 //! and at most every two seconds while it works) and can be asked for with
@@ -268,7 +269,13 @@ impl Shared {
     fn set_enabled(&self, on: bool) {
         let was = self.enabled.swap(on, Ordering::SeqCst);
         if was != on {
-            drop(self.lock());
+            let mut state = self.lock();
+            if on {
+                // Turned on again: the tracks a stopped run left are taken up
+                // without waiting for a scan, once the start delay is over.
+                state.work = true;
+            }
+            drop(state);
             self.changed.notify_all();
         }
     }

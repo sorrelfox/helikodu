@@ -18,6 +18,7 @@ mod output;
 mod playback;
 mod search;
 mod shortcuts;
+mod track_analysis;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -144,6 +145,37 @@ impl Context {
         if let Some(main) = self.main.upgrade() {
             main.toast(text, false);
         }
+    }
+
+    /// Shows `page`, ending a search, scrolled to the setting whose widget is
+    /// called `name`, which takes the focus.
+    pub(crate) fn show_setting(&self, page: Page, name: &str) {
+        if let Some(entry) = find_widget(&self.window, |w| w.is::<gtk::SearchEntry>())
+            .and_downcast::<gtk::SearchEntry>()
+            && !entry.text().is_empty()
+        {
+            entry.set_text("");
+        }
+        self.stack.set_visible_child_name(page.id());
+        let Some(shown) = self.stack.child_by_name(page.id()) else {
+            return;
+        };
+        let name = name.to_owned();
+        // Once the page has its size.
+        glib::timeout_add_local_once(std::time::Duration::from_millis(30), move || {
+            let Some(target) = find_widget(&shown, |w| w.widget_name() == name.as_str()) else {
+                return;
+            };
+            if let Some(scroller) = shown.downcast_ref::<gtk::ScrolledWindow>()
+                && let Some(body) = scroller.child()
+                && let Some(point) = target.compute_point(&body, &gtk::graphene::Point::zero())
+            {
+                scroller
+                    .vadjustment()
+                    .set_value(f64::from(point.y()) - 18.0);
+            }
+            target.child_focus(gtk::DirectionType::TabForward);
+        });
     }
 
     /// Builds every page again from the stored settings, keeping the page shown.
@@ -486,6 +518,25 @@ fn setup_search(
         glib::Propagation::Proceed
     });
     context.window.add_controller(keys);
+}
+
+/// The first widget under `root` (or `root` itself) for which `found` holds.
+fn find_widget(
+    root: &impl IsA<gtk::Widget>,
+    found: impl Fn(&gtk::Widget) -> bool,
+) -> Option<gtk::Widget> {
+    let mut pending = vec![root.as_ref().clone()];
+    while let Some(widget) = pending.pop() {
+        if found(&widget) {
+            return Some(widget);
+        }
+        let mut child = widget.last_child();
+        while let Some(c) = child {
+            child = c.prev_sibling();
+            pending.push(c);
+        }
+    }
+    None
 }
 
 fn find_stack(window: &gtk::Window) -> Option<gtk::Stack> {

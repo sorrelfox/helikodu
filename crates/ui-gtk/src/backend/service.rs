@@ -2359,6 +2359,7 @@ impl Forwarder {
             LibraryEvent::Loudness(_) => {
                 services::loudness_update(event).is_none_or(|update| self.send(update))
             }
+            LibraryEvent::Analysis(progress) => self.send(Update::Analysis(*progress)),
             LibraryEvent::DuplicatesApplied(result) => self.send(Update::DuplicatesApplied(
                 result
                     .as_ref()

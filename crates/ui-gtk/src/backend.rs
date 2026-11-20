@@ -1543,6 +1543,9 @@ pub enum Update {
     Stats(PlaybackStats),
     /// A loudness measurement made progress or ended.
     Loudness(services::LoudnessStatus),
+    /// The track analysis made progress, or the background analysis changed
+    /// what it does.
+    Analysis(services::AnalysisProgress),
     /// The lyrics of the playing track: `None` when it has none or nothing
     /// plays.
     Lyrics(Option<Arc<LyricsView>>),

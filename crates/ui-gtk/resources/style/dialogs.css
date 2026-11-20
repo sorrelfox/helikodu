@@ -259,3 +259,12 @@ menubutton.hk-menu-btn > button {
   background: none; background-image: none; box-shadow: none; color: var(--hk-t2);
 }
 menubutton.hk-menu-btn > button:hover { background-color: var(--hk-hover); }
+
+/* Design 1.4: the readout of Settings › Loudness, the track analysis meter
+   while the analysis is off, and the preamp the leveller replaces. */
+.hk-dsp-readout .hk-readout-note { color: var(--hk-glass-t2); }
+levelbar.hk-meter.off > trough { background-color: var(--hk-line); }
+levelbar.hk-meter.off > trough > block.filled { background-color: var(--hk-line2); }
+.hk-preamp-scale:disabled { opacity: 0.45; }
+label.hk-note > link { color: var(--hk-t2); text-decoration-line: underline; }
+label.hk-note > link:hover { color: var(--hk-t1); }

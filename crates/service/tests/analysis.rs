@@ -335,3 +335,61 @@ fn the_service_analyses_in_the_background_as_the_setting_says() {
         std::thread::sleep(Duration::from_millis(20));
     }
 }
+
+#[test]
+fn turned_on_again_the_analysis_takes_up_what_is_pending() {
+    let f = fixture("again");
+    let bus = EventBus::new();
+    let options = LibraryServiceOptions {
+        analysis: BackgroundAnalysisOptions {
+            start_delay: Duration::ZERO,
+            settle: Duration::ZERO,
+            pause_on_battery: false,
+            ..BackgroundAnalysisOptions::default()
+        },
+        ..LibraryServiceOptions::default()
+    };
+    let service = LibraryService::start(f.music.clone(), bus.clone(), options).unwrap();
+    let wait_for = |state: AnalysisState| {
+        let deadline = Instant::now() + Duration::from_secs(60);
+        loop {
+            let progress = service.analysis_progress();
+            if progress.state == state
+                && (state != AnalysisState::Idle || progress.remaining() == 0)
+            {
+                return;
+            }
+            assert!(Instant::now() < deadline, "not {state:?}: {progress:?}");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    };
+    service.set_background_analysis(&LibrarySettings::default());
+    wait_for(AnalysisState::Idle);
+
+    // A file changes and nobody says so: the finished run takes no notice.
+    let path = f.folder.join("1.wav");
+    write_wav(&path, 2.0, -20.0, 1.0, 0.0);
+    add(&f.library, f.root, &path, Some("Record"), 20);
+    let current = || f.music.track_analysis(f.album[1]).unwrap().unwrap().current;
+    assert!(!current());
+
+    // Turned off and on again, the analysis takes it up at once, without a
+    // scan or a change of the library.
+    let off = LibrarySettings {
+        analyze_in_background: false,
+        ..LibrarySettings::default()
+    };
+    service.set_background_analysis(&off);
+    wait_for(AnalysisState::Off);
+    assert!(!current());
+    service.set_background_analysis(&LibrarySettings::default());
+    let deadline = Instant::now() + Duration::from_secs(60);
+    while !current() {
+        assert!(
+            Instant::now() < deadline,
+            "not analysed after turning it on"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    wait_for(AnalysisState::Idle);
+}

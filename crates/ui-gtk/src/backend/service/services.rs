@@ -36,12 +36,12 @@ use helikodu_service::player::{
 
 use helikodu_service::library::backups::StartNotice;
 
+use super::super::services::{AnalysisProgress, BackupsInfo, CrashNotice};
 use super::super::services::{
     BackendSelection, CoverEdit, DatabaseInfo, DeviceInfo, EditTrack, FileFacts, FolderState,
     FormatReport, HistoryStepResult, LibraryFolder, OutputBackendKind, OutputSelection, ScanStatus,
     Services, Settings, StorageUsage, TagEdit, TagField, TagStepResult, Versions, WriteResult,
 };
-use super::super::services::{BackupsInfo, CrashNotice};
 use super::super::services::{
     CancelToken, FileProgress, FileRunId, FileRunSummary, FoundFile, MissingFile, MoveRequest,
     OrganizeOptions, PlannedMove, RelinkOutcome, RunReport, SavedPattern, VerifyReport,
@@ -973,6 +973,21 @@ impl Services for ServiceServices {
         self.service
             .library()
             .is_some_and(|library| library.is_measuring_loudness())
+    }
+
+    fn analysis_progress(&self) -> Option<AnalysisProgress> {
+        let library = self.service.library()?;
+        let mut progress = library.analysis_progress();
+        // Until the background analysis has counted (it does so as it starts),
+        // the counts come from the library.
+        if progress.total == 0
+            && let Ok(coverage) = library.library().analysis_coverage()
+        {
+            progress.total = coverage.tracks;
+            progress.analyzed = coverage.analyzed;
+            progress.failed = coverage.failed;
+        }
+        Some(progress)
     }
 
     fn limiter_activity(&self) -> Option<LimiterReading> {

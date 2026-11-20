@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Settings › Library: the library folders with their state, rescan and
-//! remove; the names to skip; how folders are scanned; what is done with
-//! byte-identical copies, applied to the library at once with its progress;
-//! and the size limits of the caches and stores.
+//! remove; the names to skip; how folders are scanned; the track analysis
+//! (`track_analysis.rs`); what is done with byte-identical copies, applied to
+//! the library at once with its progress; and the size limits of the caches
+//! and stores.
 
 use std::cell::Cell;
 use std::path::PathBuf;
@@ -526,7 +527,8 @@ fn storage(context: &Rc<Context>) -> gtk::Box {
             |s, v| s.library.storage.covers_mib = v,
         ),
         (
-            tr("Analysis data"),
+            // The pictures of the seek bar.
+            tr("Waveforms"),
             &[256, 512, 1024, 2048, 4096],
             storage.analysis_mib,
             false,
@@ -638,6 +640,13 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     ));
     body.append(&row(&tr("Skip"), None, &skip(context)));
     body.append(&row(&tr("Scanning"), None, &scanning(context)));
+    body.append(&divider());
+    body.append(&row(
+        &tr("Track analysis"),
+        None,
+        &super::track_analysis::group(context),
+    ));
+    body.append(&divider());
     body.append(&row(
         &tr("Copies"),
         Some(&tr("Files whose bytes are identical, tags included.")),

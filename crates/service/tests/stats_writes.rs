@@ -3,10 +3,11 @@
 
 //! Play counts written into the files by the library service itself, over FLAC
 //! files generated with `ffmpeg`: after a quiet spell once plays were recorded,
-//! not at all while the setting is off, at once when it is switched on, after
-//! the start for what was left, never into the file the player has open, and
-//! within the close limit when the service ends. No sound is played: the
-//! player's events are published on the bus by the test.
+//! not at all while the setting is off, at once when it is switched on (also
+//! beside ratings that were written already), after the start for what was
+//! left, never into the file the player has open, and within the close limit
+//! when the service ends. No sound is played: the player's events are published
+//! on the bus by the test.
 
 #![forbid(unsafe_code)]
 #![allow(clippy::unwrap_used)]
@@ -241,6 +242,33 @@ fn nothing_is_written_while_the_setting_is_off() {
     f.record(0);
     drop(service);
     assert_eq!(f.in_file(0).as_deref(), Some("1"));
+}
+
+#[test]
+fn play_counts_switched_on_beside_ratings_are_written_at_once() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let f = fixture("beside-ratings", 1);
+    let bus = EventBus::new();
+    let service = f.service(&bus, writes(Duration::ZERO, Duration::from_millis(50)));
+    let mut ratings_only = f.settings(false);
+    ratings_only.advanced.write_ratings_to_tags = true;
+    service.set_stats_writes(&ratings_only);
+    f.play(&bus, 0);
+    std::thread::sleep(Duration::from_millis(800));
+    assert_eq!(f.in_file(0), None);
+
+    // Play counts switched on while ratings were already written: at once,
+    // without a new play.
+    let mut both = ratings_only.clone();
+    both.advanced.write_play_counts_to_tags = true;
+    bus.publish(&Event::Settings(SettingsEvent::Changed {
+        groups: vec![SettingsGroup::Advanced],
+        settings: Arc::new(both),
+    }));
+    f.wait_for(0, "1");
+    drop(service);
 }
 
 #[test]

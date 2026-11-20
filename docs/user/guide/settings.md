@@ -4,14 +4,14 @@ Choose **Preferences** in the main menu, or press **Ctrl+,**, to open the **Sett
 
 | Page | What it holds |
 |---|---|
-| **Library** | Your music **Folders**, **Skip** patterns, **Scanning** (watching for changes, symbolic links, video files, drives that are not connected), and **Storage** limits for covers, analysis data, logs and the undo history. See [First run and music folders](first-run.md) |
-| **Playback** | What the **Previous button** does, the **Seek step** of the seek shortcuts (5 s by default), when to **Count a play**, whether **Playing an album** replaces the queue or adds to it, the **Crossfade** between tracks and when you skip, the **Fades** for pause, stop, seek and skip, what happens **When Helikodu starts**, resuming **Long tracks**, keeping the computer awake while music plays and pausing when the screen locks or the computer goes to sleep (**Power**), and the SoundFont for **MIDI files**, the song lengths for **SID tunes** and how often **Looping tunes** repeat. See [Crossfades and fades](playing.md#crossfades-and-fades) |
+| **Library** | Your music **Folders**, **Skip** patterns, **Scanning** (watching for changes, symbolic links, video files, drives that are not connected), the **Track analysis** in the background, and **Storage** limits for covers, waveforms, logs and the undo history. See [First run and music folders](first-run.md) and [Track analysis](#track-analysis) |
+| **Playback** | What the **Previous button** does, the **Seek step** of the seek shortcuts (5 s by default), when to **Count a play**, whether **Playing an album** replaces the queue or adds to it, the **Crossfade** between tracks and when you skip (and whether it starts where the track fades out), the **Fades** for pause, stop, seek and skip, leaving out and skipping **Silence**, what happens **When Helikodu starts**, resuming **Long tracks**, keeping the computer awake while music plays and pausing when the screen locks or the computer goes to sleep (**Power**), and the SoundFont for **MIDI files**, the song lengths for **SID tunes** and how often **Looping tunes** repeat. See [Crossfades and fades](playing.md#crossfades-and-fades) and [Silence between and inside tracks](playing.md#silence-between-and-inside-tracks) |
 | **Audio output** | The backend, device, mode, sample rate and format, volume control and buffer. See [Choosing the audio output](audio-output.md) |
-| **Loudness** | ReplayGain and R128 normalization, and measuring the loudness of your tracks. See [Loudness and ReplayGain](loudness.md) |
+| **Loudness** | ReplayGain and R128 normalization, the leveller for tracks without loudness values, and measuring the loudness of your tracks. See [Loudness and ReplayGain](loudness.md) |
 | **DSP and EQ** | Equalizer, crossfeed, channel mix, limiter and dither. See [Equalizer and sound processing](dsp.md) |
 | **Appearance** | Light or dark colours, the accent colour, the window style, the menu bar, striped tables, the language, notifications and the tray icon |
 | **Shortcuts** | The keys of every action, and the shortcuts that work in other applications. See [Keyboard shortcuts](keyboard-shortcuts.md#changing-the-shortcuts) |
-| **Advanced** | Tag writing, the library database, how much the log records, developer mode, and putting every setting back to its default |
+| **Advanced** | Tag writing, ratings and play counts in the files, the library database, how much the log records, developer mode, and putting every setting back to its default |
 
 ## Searching the settings
 
@@ -37,13 +37,22 @@ High-contrast and reduced-motion preferences of the desktop are followed as well
 
 - **Tags in MP3 files**: **ID3v2.4** (the default) or **ID3v2.3**, for new tags that the [tag editor](tags.md) writes into MP3 files. Choose ID3v2.3 if an old car stereo or portable player shows no tags.
 - **Very large files**: **Change tags in place for files over** a size (2 GiB by default). Smaller files are changed through a checked copy, which is safe even if the power fails; a change in place is faster for huge files but has no such safety net. The tag editor tells you before it happens.
-- **Ratings**: **Also write ratings to the tags of the files** (off by default) writes a rating you give into the file as well, so that other players can read it; see [Ratings](tags.md#ratings). Ratings are kept in the library either way.
+- **Statistics in files**: **Also write ratings to the tags of the files** (off by default) writes a rating you give into the file as well, so that other players can read it; see [Ratings](tags.md#ratings). **Also write play counts to the tags of the files** (off by default) does the same for play counts, in the background a few minutes after the last play and never into the file that is playing; see [Writing play counts and ratings into the files](moving-from-another-player.md#writing-play-counts-and-ratings-into-the-files). Switched on, what is waiting is written at once. Both are kept in the library either way, and these writes are not on the Undo history.
 - **Library database**: where the library is stored, its size and the result of its last check, with **Open folder**.
 - **Backups**: a backup of the library is made once a day while Helikodu runs, and the last 7 are kept in `~/.local/share/helikodu/backups/`. **Back up now** makes one at once. **Restore…** puts a backup back: choose the file, confirm, and Helikodu starts again with the library as it was then. The library as it was before is kept in the backups folder.
 - **Slow drives**: **Load each track into memory before it plays**, for drives that are slow or go to sleep (up to 512 MiB per track).
 - **Logs**: **No logs** (the default), **Normal detail** or **Full detail, for a bug report**; **Open log folder**; and **Copy diagnostics**, which puts a summary for a bug report on the clipboard (versions, the output and its devices, the main settings; no file paths but the settings file's). With **No logs** nothing is written. The logs stay within the limit under Library › Storage (50 MiB by default) and stay on this computer.
 - **Developer mode**: **Show tools for testing** adds the silent and WAV-file outputs.
 - **Reset**: **Reset settings…** puts every setting back to its default. The library, playlists, ratings and play counts are kept.
+
+## Track analysis
+
+Helikodu analyses each library track once, in the background: where its sound starts and ends, its long silences and how its loudness changes. Crossfades, leaving out and skipping silence (**Playback** settings) and the leveller (**Loudness** settings) use it; nothing is written to the files. Under **Track analysis** in the **Library** settings:
+
+- **Analyse tracks in the background** (on by default). Off, the analysis stops at once, crossfades use their fixed length and silence is not left out; on again, it carries on with the tracks not yet analysed.
+- How many tracks are analysed, with a meter, and what the analysis does now: working, working slowly while music plays from the same drive, waiting for a library scan to finish, paused while the computer runs on battery, or done. Tracks whose files could not be read are counted after it.
+
+The analysis works on one track at a time at the lowest priority, and is shown nowhere else.
 
 ## Copies of the same file
 
@@ -59,14 +68,4 @@ Helikodu notices when your library holds the same file more than once: files who
 
 All settings are stored in `~/.config/helikodu/settings.toml`, a plain text file. You can edit it while Helikodu is closed. A value that is out of range resets its section to the defaults; a file that cannot be read at all is replaced by the defaults and kept as `settings.toml.bak`. To start over with all defaults, delete the file.
 
-Some settings have no control in the window yet and are set in the file only:
-
-| Table | Key | Default | What it does |
-|---|---|---|---|
-| `[playback.transitions]` | `crossfade_from_analysis` | `true` | The crossfade between tracks takes its overlap from the track analysis (see [Crossfades and fades](playing.md#crossfades-and-fades)); only matters while the crossfade is on |
-| `[playback.transitions]` | `trim_silence` | `false` | Leaves out the silence before and after the sound of a track (see [Silence between and inside tracks](playing.md#silence-between-and-inside-tracks)) |
-| `[playback.transitions]` | `skip_silence` | `false` | Jumps over long silence inside a track |
-| `[playback.transitions]` | `skip_silence_min_s` | `10` | How long, in seconds (5 to 600), silence inside a track must be to be skipped |
-| `[loudness]` | `leveller` | `false` | Evens out tracks without loudness values while they play (see [The leveller](loudness.md#the-leveller)) |
-
-Settings files of earlier versions, without these keys, load with the defaults.
+Settings files of earlier versions, without the keys added since, load with the defaults for them.

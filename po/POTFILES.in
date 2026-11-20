@@ -102,6 +102,7 @@ crates/ui-gtk/src/mini_player.rs
 crates/ui-gtk/src/views/home.rs
 crates/ui-gtk/src/window/desktop.rs
 crates/ui-gtk/src/dialogs/settings/shortcuts.rs
+crates/ui-gtk/src/dialogs/settings/track_analysis.rs
 crates/ui-gtk/src/dialogs/settings/search.rs
 crates/ui-gtk/src/views/facet_browser.rs
 crates/ui-gtk/src/views/statistics.rs
