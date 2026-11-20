@@ -317,15 +317,16 @@ fn silence_is_trimmed_where_tracks_join() {
 
 const SKIP_RATE: u32 = 8_000;
 
-/// 16 s of sound, 12 s of silence, 2 s of sound, at 8 kHz.
-fn hidden_track() -> (Signal, PlaybackItem, SilentSpan) {
+/// 16 s of sound, 12 s of silence, 2 s of sound, at 8 kHz, written to the
+/// file `name` (each test its own, as tests run at the same time).
+fn hidden_track(name: &str) -> (Signal, PlaybackItem, SilentSpan) {
     let s = |seconds: f64| (seconds * f64::from(SKIP_RATE)) as usize;
     let signal = concat(&[
         media::sine(SKIP_RATE, s(16.0)),
         silence(SKIP_RATE, s(12.0)),
         media::sine(SKIP_RATE, s(2.0)),
     ]);
-    let path = media::write_wav("hidden.wav", &signal);
+    let path = media::write_wav(name, &signal);
     let item = analysed(1, &path);
     let span = item.analysis.as_deref().unwrap().silences[0];
     assert!(span.len() as usize > s(11.0), "{span:?}");
@@ -342,7 +343,7 @@ fn skipping() -> TransitionSettings {
 
 #[test]
 fn long_silence_inside_a_track_is_skipped() {
-    let (signal, item, span) = hidden_track();
+    let (signal, item, span) = hidden_track("hidden-skipped.wav");
     let keep = SKIP_RATE as usize;
     let (from, to) = (span.start as usize + keep, span.end as usize - keep);
     let out = media::path("hidden-out.wav");
@@ -394,7 +395,7 @@ fn seek_and_play(item: &PlaybackItem, seconds: f64, tag: &str) -> (u64, usize) {
 
 #[test]
 fn seeks_and_positions_stay_in_file_time_around_a_skip() {
-    let (signal, item, span) = hidden_track();
+    let (signal, item, span) = hidden_track("hidden-seeks.wav");
     let keep = SKIP_RATE as u64;
     let skipped = (span.end - keep) - (span.start + keep);
     let total = signal.frames() as u64;

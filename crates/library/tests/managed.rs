@@ -548,13 +548,19 @@ fn a_run_cut_short_rolls_back_without_losing_a_file() {
 #[test]
 fn a_read_only_source_is_copied_and_kept() {
     use std::os::unix::fs::PermissionsExt;
-    if !have_ffmpeg() || rustix_is_root() {
+    if !have_ffmpeg() {
         return;
     }
     let (base, root, library) = library_at("managed-read-only");
     let from = downloads(&base);
     let live = from.join("Okto Live");
     fs::set_permissions(&live, fs::Permissions::from_mode(0o555)).unwrap();
+    if can_write_into(&live) {
+        // Root, or a process allowed to ignore permissions (as in many
+        // containers): a read-only folder means nothing to it.
+        fs::set_permissions(&live, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
     let plan = plan_import(&library, &root, &live, Transfer::Move);
     let result =
         library.apply_managed(&plan, &scan_options(&root), &|_, _| {}, &CancelToken::new());
@@ -578,9 +584,12 @@ fn a_read_only_source_is_copied_and_kept() {
     assert!(item(&plan, "image.flac").to.is_file());
 }
 
-fn rustix_is_root() -> bool {
-    // Root may write anywhere, so a read-only folder means nothing to it.
-    std::env::var_os("USER").is_some_and(|u| u == "root")
+/// Whether a file can be made in `folder` despite its permissions.
+fn can_write_into(folder: &Path) -> bool {
+    let probe = folder.join(".write-probe");
+    let wrote = fs::write(&probe, b"").is_ok();
+    let _ = fs::remove_file(&probe);
+    wrote
 }
 
 #[test]
