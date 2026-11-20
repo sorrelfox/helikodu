@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Helikodu's own user data as a JSON file: ratings, play counts, history,
-//! playlists and smart playlists, Favourites and saved searches, keyed by path
-//! and tags so that it can be read into another library.
+//! playlists and smart playlists, Favourites, saved searches, labels and the
+//! user's computed and custom fields, keyed by path and tags so that it can be
+//! read into another library.
 //!
 //! ```json
 //! {
@@ -27,7 +28,16 @@
 //!     {"name": "Top rated", "folder": [], "kind": "smart", "query": "rating>=4"}
 //!   ],
 //!   "favourites": [{"path": "/home/me/Music/Album/01.flac", "title": "Song"}],
-//!   "saved_searches": [{"name": "Jazz", "query": "genre:jazz"}]
+//!   "saved_searches": [{"name": "Jazz", "query": "genre:jazz"}],
+//!   "labels": [{"name": "late night",
+//!               "tracks": [{"path": "/home/me/Music/Album/01.flac", "title": "Song",
+//!                           "artist": "Artist", "album": "Album",
+//!                           "duration_ms": 215000}],
+//!               "albums": [{"album_artist": "Artist", "album": "Album"}],
+//!               "artists": ["Artist"]}],
+//!   "fields": [{"name": "decade", "kind": "computed",
+//!               "definition": "{left(year, 3)}0s"},
+//!              {"name": "mood", "kind": "custom", "definition": "MOOD"}]
 //! }
 //! ```
 //!
@@ -38,6 +48,21 @@
 //! by path, then by tags, like an import from another player; counts take the
 //! higher of the two values, so that reading a file into the library it came
 //! from changes nothing.
+//!
+//! `labels` lists each label with the tracks (path and tags, as above), the
+//! albums (album artist, `null` for various artists, and title) and the artists
+//! (by name) it was given to; reading it back gives the label to those that
+//! match and takes no label away. Albums match by album artist and title, and
+//! artists by name, both in any case and with or without accents. `fields`
+//! lists the computed fields (`definition` an expression) and the custom fields
+//! (`definition` a tag key) in their order; reading it back defines those the
+//! library has no field of that name for, and keeps the library's own definition
+//! where it has one.
+//!
+//! The `version` changes only when a reader of an older version would read the
+//! file wrongly. Keys added later are left out of older files, and their readers
+//! read such a file as if the key were empty: `labels` and `fields` came after
+//! the first files of version 1 and are read as empty when missing.
 
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -48,8 +73,10 @@ use serde::{Deserialize, Serialize};
 
 use super::ImportError;
 use super::foreign::{
-    ForeignItem, ForeignLibrary, ForeignListen, ForeignPlaylist, ForeignPlaylistKind, ForeignTrack,
+    ForeignAlbum, ForeignItem, ForeignLabel, ForeignLibrary, ForeignListen, ForeignPlaylist,
+    ForeignPlaylistKind, ForeignTrack,
 };
+use crate::UserField;
 use crate::db::path_from_blob;
 use crate::db::unix_time::{from_millis, from_unix_seconds};
 use crate::stats::Rating;
@@ -129,6 +156,35 @@ struct SavedEntry {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct AlbumEntry {
+    #[serde(default)]
+    album_artist: Option<String>,
+    album: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct LabelEntry {
+    name: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    tracks: Vec<Item>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    albums: Vec<AlbumEntry>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    artists: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct FieldEntry {
+    name: String,
+    kind: String,
+    definition: String,
+}
+
+/// `user_fields.kind` of a computed field, and of a custom field.
+pub(super) const FIELD_COMPUTED: i64 = 0;
+pub(super) const FIELD_CUSTOM: i64 = 1;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Document {
     format: String,
     version: u32,
@@ -142,6 +198,10 @@ struct Document {
     favourites: Vec<Item>,
     #[serde(default)]
     saved_searches: Vec<SavedEntry>,
+    #[serde(default)]
+    labels: Vec<LabelEntry>,
+    #[serde(default)]
+    fields: Vec<FieldEntry>,
 }
 
 /// An export of the user data, ready to be written.
@@ -174,6 +234,25 @@ impl UserDataExport {
     /// The saved searches listed.
     pub fn saved_searches(&self) -> usize {
         self.document.saved_searches.len()
+    }
+
+    /// The labels listed.
+    pub fn labels(&self) -> usize {
+        self.document.labels.len()
+    }
+
+    /// The tracks, albums and artists given a label, one for each label given.
+    pub fn label_items(&self) -> usize {
+        self.document
+            .labels
+            .iter()
+            .map(|l| l.tracks.len() + l.albums.len() + l.artists.len())
+            .sum()
+    }
+
+    /// The computed and custom fields listed.
+    pub fn fields(&self) -> usize {
+        self.document.fields.len()
     }
 
     /// The JSON text.
@@ -430,6 +509,79 @@ fn export_playlists(c: &Connection) -> rusqlite::Result<(Vec<PlaylistEntry>, Vec
     Ok((playlists, favourites))
 }
 
+fn export_labels(c: &Connection) -> rusqlite::Result<Vec<LabelEntry>> {
+    let labels: Vec<(i64, String)> = c
+        .prepare("SELECT id, name FROM labels ORDER BY name COLLATE HK_LOCALE, id")?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut entries = Vec::with_capacity(labels.len());
+    for (id, name) in labels {
+        let identities: Vec<i64> = c
+            .prepare_cached(
+                "SELECT identity_id FROM label_tracks WHERE label_id = ?1 ORDER BY identity_id",
+            )?
+            .query_map([id], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        let mut tracks = Vec::with_capacity(identities.len());
+        for identity in identities {
+            if let Some((item, _)) = identity_item(c, identity)? {
+                tracks.push(item);
+            }
+        }
+        // Albums that are in the library now, so that they have a title.
+        let albums = c
+            .prepare_cached(
+                "SELECT al.artist, al.title FROM label_albums la
+                 JOIN albums al ON al.album_key = la.album_key
+                 WHERE la.label_id = ?1 AND al.title IS NOT NULL
+                 ORDER BY al.artist_sort, al.title_sort, al.id",
+            )?
+            .query_map([id], |row| {
+                Ok(AlbumEntry {
+                    album_artist: row.get(0)?,
+                    album: row.get(1)?,
+                })
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+        let artists = c
+            .prepare_cached(
+                "SELECT coalesce((SELECT p.name FROM people p
+                                  WHERE p.fold = lr.artist_fold ORDER BY p.id LIMIT 1),
+                                 lr.artist_fold)
+                 FROM label_artists lr WHERE lr.label_id = ?1
+                 ORDER BY 1 COLLATE HK_LOCALE",
+            )?
+            .query_map([id], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        let entry = LabelEntry {
+            name,
+            tracks,
+            albums,
+            artists,
+        };
+        if !(entry.tracks.is_empty() && entry.albums.is_empty() && entry.artists.is_empty()) {
+            entries.push(entry);
+        }
+    }
+    Ok(entries)
+}
+
+fn export_fields(c: &Connection) -> rusqlite::Result<Vec<FieldEntry>> {
+    c.prepare("SELECT name, kind, definition FROM user_fields ORDER BY position, name")?
+        .query_map([], |row| {
+            Ok(FieldEntry {
+                name: row.get(0)?,
+                kind: match row.get::<_, i64>(1)? {
+                    FIELD_CUSTOM => "custom",
+                    _ => "computed",
+                }
+                .to_owned(),
+                definition: row.get(2)?,
+            })
+        })?
+        .collect()
+}
+
 /// The user data of the library behind `c`.
 pub(super) fn export(c: &Connection, now: i64) -> rusqlite::Result<UserDataExport> {
     let tracks = export_tracks(c)?;
@@ -443,6 +595,8 @@ pub(super) fn export(c: &Connection, now: i64) -> rusqlite::Result<UserDataExpor
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
+    let labels = export_labels(c)?;
+    let fields = export_fields(c)?;
     Ok(UserDataExport {
         document: Document {
             format: USER_DATA_FORMAT.to_owned(),
@@ -452,6 +606,8 @@ pub(super) fn export(c: &Connection, now: i64) -> rusqlite::Result<UserDataExpor
             playlists,
             favourites,
             saved_searches,
+            labels,
+            fields,
         },
     })
 }
@@ -535,6 +691,37 @@ pub(super) fn parse(bytes: &[u8]) -> Result<ForeignLibrary, String> {
         .iter()
         .map(|s| (s.name.clone(), s.query.clone()))
         .collect();
+    library.labels = document
+        .labels
+        .iter()
+        .map(|label| ForeignLabel {
+            name: label.name.clone(),
+            tracks: label.tracks.iter().map(foreign).collect(),
+            albums: label
+                .albums
+                .iter()
+                .map(|a| ForeignAlbum {
+                    album_artist: a.album_artist.clone(),
+                    album: a.album.clone(),
+                })
+                .collect(),
+            artists: label.artists.clone(),
+        })
+        .collect();
+    for field in &document.fields {
+        match field.kind.as_str() {
+            "computed" => library
+                .fields
+                .push(UserField::computed(&field.name, &field.definition)),
+            "custom" => library
+                .fields
+                .push(UserField::tag(&field.name, &field.definition)),
+            other => library.notes.push(format!(
+                "the field {} was left out: the kind \"{other}\" is not known",
+                field.name
+            )),
+        }
+    }
     Ok(library)
 }
 

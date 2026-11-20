@@ -76,4 +76,4 @@ Give the tag as its Vorbis comment name. `TXXX:MOOD` (MP3) and `----:com.apple.i
 - A definition that cannot be used is refused with what is wrong and where: `helikodu-cli fields define` marks the characters under the definition.
 - A field that a computed field uses cannot be removed until that computed field is changed or removed.
 
-Labels and fields are kept in the library database, so a [backup](files.md) of the library keeps them. The running application uses fields changed from the command line after it is started again.
+Labels and fields are kept in the library database, so a [backup](files.md) of the library keeps them. `helikodu-cli export-user-data` writes them with the rest of your user data, to read into another library with `import-user-data` (see [Moving your data to another computer](moving-from-another-player.md#moving-your-data-to-another-computer)). The running application uses fields changed from the command line after it is started again.

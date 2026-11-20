@@ -300,6 +300,7 @@ pub(super) fn apply(c: &Connection, plan: &ImportPlan, now: i64) -> rusqlite::Re
             record_row(c, run, ROW_FAVOURITE, item, None)?;
         }
     }
+    super::labels_fields::apply(c, run, &plan.work.labels, &plan.work.fields, now)?;
     Ok(run)
 }
 
@@ -455,6 +456,7 @@ pub(super) fn undo(
             _ => {}
         }
     }
+    super::labels_fields::undo(c, run)?;
     c.prepare_cached("UPDATE import_runs SET undone = 1 WHERE id = ?1")?
         .execute([run])?;
     Ok(Ok(()))
@@ -471,6 +473,8 @@ pub(super) fn runs(c: &Connection) -> rusqlite::Result<Vec<ImportRun>> {
         "SELECT r.id, r.kind, r.source, r.at, r.undone,
                 (SELECT count(*) FROM import_run_stats s WHERE s.run_id = r.id),
                 (SELECT count(*) FROM import_run_rows w WHERE w.run_id = r.id)
+                + (SELECT count(*) FROM import_run_labels l WHERE l.run_id = r.id)
+                + (SELECT count(*) FROM import_run_fields f WHERE f.run_id = r.id)
          FROM import_runs r ORDER BY r.id DESC",
     )?
     .query_map([], |row| {

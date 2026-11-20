@@ -22,7 +22,8 @@ use helikodu_library::interchange::{
 };
 use helikodu_library::raw::rusqlite::Connection;
 use helikodu_library::{
-    ItemContent, Library, Listen, ListenEnd, Page, PlayRules, PlaylistType, Rating, RootId,
+    FieldDefinition, ItemContent, LabelTarget, Library, Listen, ListenEnd, Page, PlayRules,
+    PlaylistType, Rating, RootId, UserField,
 };
 use helikodu_model::library::TrackId;
 use support::{library, tagged};
@@ -745,6 +746,183 @@ fn user_data_goes_round_trip() {
     assert!(playlists(&target.library).is_empty());
     assert!(!target.library.is_favourite(target.other).unwrap());
     assert!(target.library.saved_searches().unwrap().is_empty());
+}
+
+/// The labels given to `target` itself.
+fn own_labels(library: &Library, target: LabelTarget) -> Vec<String> {
+    library.labels_of(&target).unwrap().own
+}
+
+#[test]
+fn labels_and_fields_go_round_trip_and_are_undone() {
+    let source = fixture();
+    let lib = &source.library;
+    lib.add_label(&LabelTarget::Tracks(vec![source.one]), "Late night")
+        .unwrap();
+    lib.add_label(&LabelTarget::AlbumOf(source.two), "Road")
+        .unwrap();
+    lib.add_label(&LabelTarget::Artist("Beta".to_owned()), "Road")
+        .unwrap();
+    lib.define_field(UserField::computed("decade", "{left(year, 3)}0s"))
+        .unwrap();
+    lib.define_field(UserField::tag("mood", "MOOD")).unwrap();
+    let dir = folder("labels-fields");
+    let file = dir.join("export.json");
+    let export = lib.export_user_data_to(&file).unwrap();
+    assert_eq!(export.labels(), 2);
+    assert_eq!(export.label_items(), 3);
+    assert_eq!(export.fields(), 2);
+    let json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&file).unwrap()).unwrap();
+    assert_eq!(json["version"], 1);
+    assert_eq!(json["labels"][0]["name"], "Late night");
+    assert_eq!(json["labels"][0]["tracks"][0]["path"], "/music/A/01.flac");
+    assert_eq!(json["labels"][1]["albums"][0]["album_artist"], "Alpha");
+    assert_eq!(json["labels"][1]["albums"][0]["album"], "First");
+    assert_eq!(json["labels"][1]["artists"][0], "Beta");
+    assert_eq!(json["fields"][0]["kind"], "computed");
+    assert_eq!(json["fields"][1]["definition"], "MOOD");
+
+    // A library rebuilt from the same files, with a label of its own.
+    let target = fixture();
+    let t = &target.library;
+    t.add_label(&LabelTarget::Tracks(vec![target.two]), "road")
+        .unwrap();
+    let plan = t
+        .plan_user_data_import(&file, &MergeOptions::default())
+        .unwrap();
+    assert_eq!(plan.totals.labels, 1, "{plan:?}");
+    assert_eq!(plan.totals.label_links, 3);
+    assert_eq!(plan.totals.label_unmatched, 0);
+    assert_eq!(plan.totals.fields, 2);
+    assert_eq!(plan.totals.field_conflicts, 0);
+    assert!(!plan.is_empty());
+    let run = t.apply_import(&plan).unwrap();
+    assert_eq!(
+        own_labels(t, LabelTarget::Tracks(vec![target.one])),
+        ["Late night"]
+    );
+    // The label the library had keeps its spelling.
+    assert_eq!(own_labels(t, LabelTarget::AlbumOf(target.two)), ["road"]);
+    assert_eq!(
+        own_labels(t, LabelTarget::Artist("beta".to_owned())),
+        ["road"]
+    );
+    assert_eq!(t.user_fields().unwrap(), lib.user_fields().unwrap());
+
+    // Reading the export into the library it came from changes nothing.
+    let same = lib
+        .plan_user_data_import(&file, &MergeOptions::default())
+        .unwrap();
+    assert!(same.is_empty(), "{same:?}");
+
+    // What the user adds after the import stays when it is undone.
+    t.add_label(&LabelTarget::Tracks(vec![target.other]), "Road")
+        .unwrap();
+    t.define_field(UserField::computed("era", "{decade}!"))
+        .unwrap();
+    t.undo_import(run).unwrap();
+    assert!(own_labels(t, LabelTarget::Tracks(vec![target.one])).is_empty());
+    assert!(own_labels(t, LabelTarget::AlbumOf(target.one)).is_empty());
+    assert!(own_labels(t, LabelTarget::Artist("Beta".to_owned())).is_empty());
+    assert_eq!(
+        own_labels(t, LabelTarget::Tracks(vec![target.other])),
+        ["Road"]
+    );
+    assert_eq!(
+        own_labels(t, LabelTarget::Tracks(vec![target.two])),
+        ["Road"]
+    );
+    let names: Vec<String> = t.labels().unwrap().into_iter().map(|l| l.name).collect();
+    assert_eq!(names, ["Road"]);
+    // `mood` goes; `decade` stays because `era` uses it.
+    let fields: Vec<String> = t
+        .user_fields()
+        .unwrap()
+        .into_iter()
+        .map(|f| f.name)
+        .collect();
+    assert_eq!(fields, ["decade", "era"]);
+}
+
+#[test]
+fn an_export_without_labels_or_fields_still_imports() {
+    let target = fixture();
+    let dir = folder("old-export");
+    let file = dir.join("old.json");
+    fs::write(
+        &file,
+        r#"{"format": "helikodu-user-data", "version": 1, "exported_at": 1763550000,
+            "tracks": [{"path": "/music/A/01.flac", "title": "Song One", "artist": "Alpha",
+                        "album": "First", "play_count": 3, "skip_count": 0}],
+            "playlists": [], "favourites": [], "saved_searches": []}"#,
+    )
+    .unwrap();
+    let plan = target
+        .library
+        .plan_user_data_import(&file, &MergeOptions::default())
+        .unwrap();
+    assert_eq!(plan.matching.by_path, 1);
+    assert_eq!(plan.totals.plays_added, 3);
+    assert_eq!(plan.totals.label_links, 0);
+    assert_eq!(plan.totals.fields, 0);
+    let run = target.library.apply_import(&plan).unwrap();
+    assert_eq!(target.library.stats(target.one).unwrap().play_count, 3);
+    assert!(target.library.labels().unwrap().is_empty());
+    assert!(target.library.user_fields().unwrap().is_empty());
+    target.library.undo_import(run).unwrap();
+    assert_eq!(target.library.stats(target.one).unwrap().play_count, 0);
+}
+
+#[test]
+fn a_field_defined_differently_here_is_kept() {
+    let source = fixture();
+    source
+        .library
+        .define_field(UserField::tag("mood", "MOOD"))
+        .unwrap();
+    source
+        .library
+        .define_field(UserField::computed("shout", "{upper(title)}"))
+        .unwrap();
+    let dir = folder("field-conflict");
+    let file = dir.join("export.json");
+    source.library.export_user_data_to(&file).unwrap();
+
+    let target = fixture();
+    let t = &target.library;
+    t.define_field(UserField::tag("Mood", "FEELING")).unwrap();
+    let plan = t
+        .plan_user_data_import(&file, &MergeOptions::default())
+        .unwrap();
+    assert_eq!(plan.totals.fields, 1);
+    assert_eq!(plan.totals.field_conflicts, 1);
+    let conflict = &plan.field_conflicts[0];
+    assert_eq!(conflict.name, "mood");
+    assert_eq!(
+        conflict.ours,
+        FieldDefinition::Tag {
+            key: "FEELING".to_owned()
+        }
+    );
+    assert_eq!(
+        conflict.theirs,
+        FieldDefinition::Tag {
+            key: "MOOD".to_owned()
+        }
+    );
+    let run = t.apply_import(&plan).unwrap();
+    let fields = t.user_fields().unwrap();
+    assert_eq!(fields.len(), 2);
+    assert_eq!(fields[0], UserField::tag("mood", "FEELING"));
+    assert_eq!(fields[1].name, "shout");
+
+    // Undo removes the field the import defined and keeps the library's own.
+    t.undo_import(run).unwrap();
+    assert_eq!(
+        t.user_fields().unwrap(),
+        [UserField::tag("mood", "FEELING")]
+    );
 }
 
 #[test]

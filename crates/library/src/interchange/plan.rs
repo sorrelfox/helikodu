@@ -11,6 +11,7 @@ use rusqlite::{Connection, OptionalExtension};
 use super::foreign::{
     ForeignItem, ForeignLibrary, ForeignListen, ForeignPlaylistKind, ForeignTrack,
 };
+use super::labels_fields::{self, FieldConflict, LabelWork};
 use super::matching::{LibraryIndex, Match, describe};
 use super::merge::{self, Baseline, CountRule, Incoming, Stats};
 use super::uri::{PathMapping, local_path};
@@ -87,6 +88,17 @@ pub struct PlanTotals {
     pub saved_searches: usize,
     /// The tracks added to Favourites.
     pub favourites: usize,
+    /// The labels made (labels the library does not have yet).
+    pub labels: usize,
+    /// The labels given: one for each track, album or artist that gets a label.
+    pub label_links: usize,
+    /// The tracks, albums and artists of labels that match nothing in the library
+    /// (or, for an album, more than one): left out.
+    pub label_unmatched: usize,
+    /// The computed and custom fields defined.
+    pub fields: usize,
+    /// The fields defined differently here, whose definition here is kept.
+    pub field_conflicts: usize,
 }
 
 /// What a playlist of the source becomes.
@@ -147,6 +159,8 @@ pub(super) struct Work {
     pub(super) history: Vec<(i64, ForeignListen)>,
     pub(super) saved_searches: Vec<(String, String)>,
     pub(super) favourites: Vec<i64>,
+    pub(super) labels: Vec<LabelWork>,
+    pub(super) fields: Vec<crate::UserField>,
 }
 
 /// What an import would do: [`Library::plan_import`](crate::Library::plan_import)
@@ -169,7 +183,9 @@ pub struct ImportPlan {
     pub ambiguous: Vec<String>,
     /// The first unmatched entries, in words.
     pub unmatched: Vec<String>,
-    /// What the reader left out, in words.
+    /// The fields defined differently here: the definition here is kept.
+    pub field_conflicts: Vec<FieldConflict>,
+    /// What the reader or the plan left out, in words.
     pub notes: Vec<String>,
     pub(super) rule: CountRule,
     pub(super) replace_ratings: bool,
@@ -184,6 +200,8 @@ impl ImportPlan {
             && self.totals.saved_searches == 0
             && self.totals.favourites == 0
             && self.work.playlists.is_empty()
+            && self.work.labels.is_empty()
+            && self.work.fields.is_empty()
     }
 }
 
@@ -469,6 +487,16 @@ pub(super) fn make(c: &Connection, input: &PlanInput<'_>) -> rusqlite::Result<Im
     }
     totals.favourites = favourites.len();
 
+    // Labels and fields.
+    let extras = labels_fields::plan(c, &index, mappings, input.library)?;
+    totals.labels = extras.new_labels;
+    totals.label_links = extras.links.len();
+    totals.label_unmatched = extras.unmatched;
+    totals.fields = extras.fields.len();
+    totals.field_conflicts = extras.conflicts.len();
+    let mut notes = input.library.notes.clone();
+    notes.extend(extras.notes);
+
     Ok(ImportPlan {
         kind: input.kind,
         player: input.player,
@@ -478,7 +506,8 @@ pub(super) fn make(c: &Connection, input: &PlanInput<'_>) -> rusqlite::Result<Im
         playlists,
         ambiguous,
         unmatched,
-        notes: input.library.notes.clone(),
+        field_conflicts: extras.conflicts,
+        notes,
         rule,
         replace_ratings: input.options.replace_ratings,
         work: Work {
@@ -487,6 +516,8 @@ pub(super) fn make(c: &Connection, input: &PlanInput<'_>) -> rusqlite::Result<Im
             history: new_history,
             saved_searches,
             favourites,
+            labels: extras.links,
+            fields: extras.fields,
         },
     })
 }

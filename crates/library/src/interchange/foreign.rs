@@ -290,6 +290,28 @@ pub struct ForeignPlaylist {
     pub kind: ForeignPlaylistKind,
 }
 
+/// An album a label was given to, by its album artist and title.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ForeignAlbum {
+    /// The album artist; `None` for an album of various artists.
+    pub album_artist: Option<String>,
+    /// The title.
+    pub album: String,
+}
+
+/// A label and what it was given to.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ForeignLabel {
+    /// The name.
+    pub name: String,
+    /// The tracks, by location and tags.
+    pub tracks: Vec<ForeignTrack>,
+    /// The albums.
+    pub albums: Vec<ForeignAlbum>,
+    /// The artists, by name.
+    pub artists: Vec<String>,
+}
+
 /// What a reader found in another player's library.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ForeignLibrary {
@@ -302,6 +324,11 @@ pub struct ForeignLibrary {
     /// Saved searches as names and query text (only in an export of Helikodu's own
     /// data).
     pub saved_searches: Vec<(String, String)>,
+    /// Labels with what was given them (only in an export of Helikodu's own data).
+    pub labels: Vec<ForeignLabel>,
+    /// The user's computed and custom fields, in their order (only in an export of
+    /// Helikodu's own data).
+    pub fields: Vec<crate::UserField>,
     /// What the reader left out, in words.
     pub notes: Vec<String>,
 }

@@ -33,7 +33,7 @@ helikodu-cli analyze               # analyse the tracks not yet analysed, as the
 helikodu-cli duplicates            # list the copies of files in the library (lists only)
 helikodu-cli import PLAYER         # import plays, ratings and playlists from another player
 helikodu-cli undo-import           # undo the newest import
-helikodu-cli export-user-data FILE # write ratings, plays, history and playlists to a file
+helikodu-cli export-user-data FILE # write ratings, plays, history, playlists, labels and fields to a file
 helikodu-cli import-user-data FILE # read such a file into the library
 helikodu-cli carry-stats           # carry statistics from replaced files to their replacements
 helikodu-cli write-stats           # write changed play counts and ratings into the files

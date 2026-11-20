@@ -242,7 +242,7 @@ fn find_label(c: &Connection, name: &str) -> rusqlite::Result<Option<(i64, Strin
 }
 
 /// Removes the label `id` if nothing has it.
-fn drop_if_unused(c: &Connection, id: i64) -> rusqlite::Result<()> {
+pub(crate) fn drop_if_unused(c: &Connection, id: i64) -> rusqlite::Result<()> {
     c.prepare_cached(
         "DELETE FROM labels WHERE id = ?1
            AND NOT EXISTS (SELECT 1 FROM label_tracks WHERE label_id = ?1)

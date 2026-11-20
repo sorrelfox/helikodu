@@ -527,6 +527,31 @@ fn labels_and_fields() {
     ]);
     assert_eq!(code, Some(0), "{stderr}");
     assert!(stdout.contains("2020s"), "{stdout}");
+
+    // The labels and fields go into an export of the user data.
+    let export = fx.dir.join("user-data.json");
+    let (code, stdout, stderr) = fx.run(&[os("export-user-data"), export.as_os_str()]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(
+        stdout.contains("1 labels given to 2 items, 2 fields"),
+        "{stdout}"
+    );
     let (code, _, stderr) = fx.run(&[os("fields"), os("remove"), os("decade")]);
     assert_eq!(code, Some(0), "{stderr}");
+
+    // Reading it back defines the field again and gives no label twice.
+    let plan = fx.json(&[os("import-user-data"), export.as_os_str(), os("--json")]);
+    assert_eq!(plan["changes"]["fields"], 1, "{plan}");
+    assert_eq!(plan["changes"]["field_conflicts"], 0, "{plan}");
+    assert_eq!(plan["changes"]["label_links"], 0, "{plan}");
+    let (code, stdout, stderr) =
+        fx.run(&[os("import-user-data"), export.as_os_str(), os("--apply")]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(stdout.contains("fields defined: 1"), "{stdout}");
+    let fields = fx.json(&[os("fields"), os("list"), os("--json")]);
+    assert_eq!(fields["fields"][1]["name"], "decade", "{fields}");
+    let (code, _, stderr) = fx.run(&[os("undo-import")]);
+    assert_eq!(code, Some(0), "{stderr}");
+    let fields = fx.json(&[os("fields"), os("list"), os("--json")]);
+    assert_eq!(fields["fields"].as_array().unwrap().len(), 1, "{fields}");
 }

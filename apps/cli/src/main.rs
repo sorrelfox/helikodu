@@ -81,8 +81,9 @@ enum Command {
     Import(ImportArgs),
     /// Undo the newest import (or carried statistics), or list the imports.
     UndoImport(UndoImportArgs),
-    /// Write ratings, play counts, history, playlists, favourites and saved
-    /// searches to a JSON file, to move them to another installation.
+    /// Write ratings, play counts, history, playlists, favourites, saved
+    /// searches, labels and fields to a JSON file, to move them to another
+    /// installation.
     ExportUserData(ExportUserDataArgs),
     /// Read a file written by export-user-data into the library. Shows what
     /// would change; --apply imports.

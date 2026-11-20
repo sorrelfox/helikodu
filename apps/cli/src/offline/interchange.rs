@@ -14,7 +14,9 @@ use helikodu_service::library::interchange::{
     ImportPlan, ImportSource, MergeOptions, PathMapping, PlannedPlaylistKind, Player,
     default_sources,
 };
-use helikodu_service::library::{CancelToken, MusicLibrary, STATS_BATCH, stats_to_files};
+use helikodu_service::library::{
+    CancelToken, FieldDefinition, MusicLibrary, STATS_BATCH, stats_to_files,
+};
 use serde_json::{Value, json};
 
 use super::database::{DatabaseArgs, app_settings, path_object};
@@ -226,6 +228,29 @@ fn print_plan(out: &mut impl Write, plan: &ImportPlan) -> io::Result<()> {
             t.history, t.favourites, t.saved_searches
         )?;
     }
+    if t.label_links + t.label_unmatched > 0 {
+        writeln!(
+            out,
+            "  labels given: {} ({} new labels); left out, not in the library: {}",
+            t.label_links, t.labels, t.label_unmatched
+        )?;
+    }
+    if t.fields + t.field_conflicts > 0 {
+        writeln!(
+            out,
+            "  fields defined: {}; kept because defined differently here: {}",
+            t.fields, t.field_conflicts
+        )?;
+    }
+    for conflict in &plan.field_conflicts {
+        writeln!(
+            out,
+            "  field {}: kept {}; the file has {}",
+            conflict.name,
+            definition_text(&conflict.ours),
+            definition_text(&conflict.theirs)
+        )?;
+    }
     if !plan.playlists.is_empty() {
         writeln!(out, "Playlists:")?;
         for p in &plan.playlists {
@@ -275,6 +300,23 @@ fn print_plan(out: &mut impl Write, plan: &ImportPlan) -> io::Result<()> {
     Ok(())
 }
 
+/// A field's definition as `fields list` shows it: the expression, or `tag KEY`.
+fn definition_text(definition: &FieldDefinition) -> String {
+    match definition {
+        FieldDefinition::Computed { expression } => expression.clone(),
+        FieldDefinition::Tag { key } => format!("tag {key}"),
+    }
+}
+
+fn definition_json(definition: &FieldDefinition) -> Value {
+    match definition {
+        FieldDefinition::Computed { expression } => {
+            json!({"kind": "computed", "definition": expression})
+        }
+        FieldDefinition::Tag { key } => json!({"kind": "custom", "definition": key}),
+    }
+}
+
 fn plan_json(plan: &ImportPlan) -> Value {
     let m = &plan.matching;
     let t = &plan.totals;
@@ -298,6 +340,17 @@ fn plan_json(plan: &ImportPlan) -> Value {
             json!({"name": p.name, "folder": p.folder, "kind": kind, "detail": detail})
         })
         .collect();
+    let field_conflicts: Vec<Value> = plan
+        .field_conflicts
+        .iter()
+        .map(|c| {
+            json!({
+                "name": c.name,
+                "ours": definition_json(&c.ours),
+                "theirs": definition_json(&c.theirs),
+            })
+        })
+        .collect();
     json!({
         "source": plan.source,
         "player": plan.player.map(|p| p.id()),
@@ -313,7 +366,11 @@ fn plan_json(plan: &ImportPlan) -> Value {
             "first_played": t.first_played, "last_played": t.last_played, "added": t.added,
             "history": t.history, "favourites": t.favourites,
             "saved_searches": t.saved_searches,
+            "labels": t.labels, "label_links": t.label_links,
+            "label_unmatched": t.label_unmatched,
+            "fields": t.fields, "field_conflicts": t.field_conflicts,
         },
+        "field_conflicts": field_conflicts,
         "playlists": playlists,
         "ambiguous": plan.ambiguous,
         "unmatched": plan.unmatched,
@@ -372,13 +429,16 @@ pub(crate) fn export_user_data(args: &ExportUserDataArgs) -> Result<Outcome> {
     let library = args.database.open_existing()?;
     let export = library.export_user_data_to(&args.file)?;
     println!(
-        "Wrote {}: {} tracks with {} history entries, {} playlists, {} favourites, {} saved searches.",
+        "Wrote {}: {} tracks with {} history entries, {} playlists, {} favourites, {} saved searches, {} labels given to {} items, {} fields.",
         args.file.display(),
         export.tracks(),
         export.history(),
         export.playlists(),
         export.favourites(),
-        export.saved_searches()
+        export.saved_searches(),
+        export.labels(),
+        export.label_items(),
+        export.fields()
     );
     Ok(Outcome::Success)
 }

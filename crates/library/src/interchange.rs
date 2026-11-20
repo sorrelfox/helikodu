@@ -39,13 +39,16 @@
 //!   database, often for thousands of tracks at once. An import run is undone on
 //!   its own, newest first: counts lose what the run added (plays made since
 //!   stay), other values go back where they still hold what the run set, and the
-//!   playlists and saved searches it made are deleted.
+//!   playlists and saved searches it made are deleted, as are the labels it gave
+//!   and the fields it defined (a field changed since, or used by another
+//!   field, stays).
 
 mod apply;
 mod carry;
 mod clementine;
 mod foreign;
 mod itunes;
+mod labels_fields;
 mod lollypop;
 mod matching;
 mod merge;
@@ -61,9 +64,11 @@ use std::path::PathBuf;
 
 pub use carry::CarryCandidate;
 pub use foreign::{
-    ForeignItem, ForeignLibrary, ForeignListen, ForeignPlaylist, ForeignPlaylistKind, ForeignTrack,
-    ImportSource, Player, default_sources, default_sources_in, read_source,
+    ForeignAlbum, ForeignItem, ForeignLabel, ForeignLibrary, ForeignListen, ForeignPlaylist,
+    ForeignPlaylistKind, ForeignTrack, ImportSource, Player, default_sources, default_sources_in,
+    read_source,
 };
+pub use labels_fields::FieldConflict;
 pub use plan::{
     ImportPlan, MatchCounts, MergeOptions, PlanTotals, PlannedPlaylist, PlannedPlaylistKind,
 };
@@ -110,7 +115,8 @@ pub struct ImportRun {
     pub undone: bool,
     /// The tracks (identities) whose statistics it changed.
     pub tracks: usize,
-    /// The playlists, saved searches and history entries it made.
+    /// The playlists, saved searches, history entries, favourites, labels given
+    /// and fields defined it added.
     pub rows: usize,
 }
 
@@ -211,22 +217,29 @@ impl crate::Library {
     pub fn apply_import(&self, plan: &ImportPlan) -> Result<ImportRunId, ImportError> {
         let plan = plan.clone();
         let now = now();
+        let fields = !plan.work.fields.is_empty();
         let run = self
             .database()
             .writer()?
             .write(move |c| apply::apply(c, &plan, now))?;
+        if fields {
+            self.install_user_fields();
+        }
         Ok(ImportRunId(run))
     }
 
     /// Undoes the import run `run`, which must be the newest one that is not
     /// undone: counts lose what it added (plays made since stay), ratings, times
     /// and dates go back where they still hold what it set, and the playlists,
-    /// saved searches, history entries and favourites it added are removed.
+    /// saved searches, history entries, favourites and labels it added and the
+    /// fields it defined are removed.
     pub fn undo_import(&self, run: ImportRunId) -> Result<(), ImportError> {
         let now = now();
         self.database()
             .writer()?
-            .write(move |c| apply::undo(c, run.0, now))?
+            .write(move |c| apply::undo(c, run.0, now))??;
+        self.install_user_fields();
+        Ok(())
     }
 
     /// Every import run, newest first.
@@ -235,7 +248,7 @@ impl crate::Library {
     }
 
     /// The user data of the library: ratings, play counts, history, playlists and
-    /// smart playlists, Favourites and saved searches.
+    /// smart playlists, Favourites, saved searches, labels and the user's fields.
     pub fn export_user_data(&self) -> Result<UserDataExport, ImportError> {
         let now = now();
         Ok(self.database().read(|c| user_data::export(c, now))?)

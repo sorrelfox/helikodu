@@ -56,7 +56,7 @@ pub enum FieldError {
 }
 
 /// The definitions stored, in their order.
-fn stored(c: &Connection) -> rusqlite::Result<Vec<UserField>> {
+pub(crate) fn stored(c: &Connection) -> rusqlite::Result<Vec<UserField>> {
     c.prepare_cached("SELECT name, kind, definition FROM user_fields ORDER BY position, name")?
         .query_map([], |row| {
             let name: String = row.get(0)?;
