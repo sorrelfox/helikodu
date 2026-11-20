@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 12:44-0500\n"
+"POT-Creation-Date: 2026-11-19 19:00-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Ukrainian <https://github.com/sorrelfox/helikodu>\n"
@@ -20,9 +20,9 @@ msgstr ""
 #: data/io.github.sorrelfox.Helikodu.desktop:5
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:11
 #: crates/ui-gtk/src/application.rs:184 crates/ui-gtk/src/mini_player.rs:112
-#: crates/ui-gtk/src/window/desktop.rs:324
-#: crates/ui-gtk/src/window/desktop.rs:366
-#: crates/ui-gtk/src/window/desktop.rs:415
+#: crates/ui-gtk/src/window/desktop.rs:330
+#: crates/ui-gtk/src/window/desktop.rs:372
+#: crates/ui-gtk/src/window/desktop.rs:421
 msgid "Helikodu"
 msgstr "Helikodu"
 
@@ -335,7 +335,7 @@ msgstr "Виконавець альбому"
 #: crates/ui-gtk/src/views/smart_playlist.rs:56
 #: crates/ui-gtk/src/views/smart_playlist.rs:1589
 #: crates/ui-gtk/src/views/smart_rules.rs:196
-#: crates/ui-gtk/src/views/smart_rules.rs:548
+#: crates/ui-gtk/src/views/smart_rules.rs:549
 msgid "Title"
 msgstr "Назва"
 
@@ -407,7 +407,7 @@ msgstr "Порядок сортування"
 #: crates/ui-gtk/src/views/smart_playlist.rs:58
 #: crates/ui-gtk/src/views/smart_playlist.rs:1593
 #: crates/ui-gtk/src/views/smart_rules.rs:199
-#: crates/ui-gtk/src/views/smart_rules.rs:554
+#: crates/ui-gtk/src/views/smart_rules.rs:555
 #: crates/ui-gtk/src/views/facet_browser.rs:51
 #: crates/ui-gtk/src/tools/cover_manager.rs:713
 msgid "Album"
@@ -424,7 +424,7 @@ msgstr "Альбом"
 #: crates/ui-gtk/src/window/playlists.rs:228
 #: crates/ui-gtk/src/window/playlists.rs:232
 #: crates/ui-gtk/src/mini_player.rs:181 crates/ui-gtk/src/mini_player.rs:504
-#: crates/ui-gtk/src/window/desktop.rs:429
+#: crates/ui-gtk/src/window/desktop.rs:435
 msgid "Play"
 msgstr "Відтворити"
 
@@ -503,7 +503,7 @@ msgstr "Тривалість"
 msgid "Tracks"
 msgstr "Доріжки"
 
-#: crates/ui-gtk/resources/ui/album.ui:289 crates/ui-gtk/src/window.rs:469
+#: crates/ui-gtk/resources/ui/album.ui:289 crates/ui-gtk/src/window.rs:474
 #: crates/ui-gtk/src/dialogs/maintenance.rs:285
 msgid "Details"
 msgstr "Подробиці"
@@ -536,7 +536,7 @@ msgstr "Показати загальну тривалість"
 #: crates/ui-gtk/src/views/now_playing.rs:564
 #: crates/ui-gtk/src/window/panel/lyrics.rs:242
 #: crates/ui-gtk/src/mini_player.rs:143 crates/ui-gtk/src/mini_player.rs:520
-#: crates/ui-gtk/src/window/desktop.rs:414
+#: crates/ui-gtk/src/window/desktop.rs:420
 msgid "Nothing playing"
 msgstr "Нічого не відтворюється"
 
@@ -553,15 +553,15 @@ msgstr "Додати до обраного"
 #: crates/ui-gtk/resources/ui/deck.ui:132
 #: crates/ui-gtk/resources/ui/deck.ui:134
 #: crates/ui-gtk/resources/ui/main_window.ui:81
-#: crates/ui-gtk/src/play_modes.rs:268 crates/ui-gtk/src/window/desktop.rs:433
+#: crates/ui-gtk/src/play_modes.rs:268 crates/ui-gtk/src/window/desktop.rs:439
 msgid "Previous"
 msgstr "Попередня"
 
 #: crates/ui-gtk/resources/ui/deck.ui:178
 #: crates/ui-gtk/resources/ui/deck.ui:180
 #: crates/ui-gtk/resources/ui/main_window.ui:85 crates/ui-gtk/src/deck.rs:599
-#: crates/ui-gtk/src/window.rs:808 crates/ui-gtk/src/play_modes.rs:269
-#: crates/ui-gtk/src/window/desktop.rs:432
+#: crates/ui-gtk/src/window.rs:813 crates/ui-gtk/src/play_modes.rs:269
+#: crates/ui-gtk/src/window/desktop.rs:438
 msgid "Next"
 msgstr "Наступна"
 
@@ -654,9 +654,9 @@ msgstr "Перейти до поточної доріжки"
 #: crates/ui-gtk/src/dialogs/settings.rs:89
 #: crates/ui-gtk/src/window/panel/signal_path.rs:105
 #: crates/ui-gtk/src/dialogs/track_flags.rs:29
-#: crates/ui-gtk/src/window/play_modes.rs:150
-#: crates/ui-gtk/src/window/play_modes.rs:276
-#: crates/ui-gtk/src/window/play_modes.rs:285 crates/ui-gtk/src/shortcuts.rs:36
+#: crates/ui-gtk/src/window/play_modes.rs:181
+#: crates/ui-gtk/src/window/play_modes.rs:317
+#: crates/ui-gtk/src/window/play_modes.rs:326 crates/ui-gtk/src/shortcuts.rs:36
 msgid "Playback"
 msgstr "Відтворення"
 
@@ -667,7 +667,7 @@ msgstr "Відтворити/призупинити"
 #: crates/ui-gtk/resources/ui/main_window.ui:77 crates/ui-gtk/src/deck.rs:364
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:226
 #: crates/ui-gtk/src/dialogs/settings/output.rs:341
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:434
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:436
 #: crates/ui-gtk/src/play_modes.rs:264 crates/ui-gtk/src/tools/file_tools.rs:75
 #: crates/ui-gtk/src/shortcuts.rs:75 crates/ui-gtk/src/tools/converter.rs:1034
 #: crates/ui-gtk/src/tools/sync_export.rs:728
@@ -773,7 +773,7 @@ msgid "Preferences"
 msgstr "Налаштування"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:183
-#: crates/ui-gtk/src/shortcuts.rs:185 crates/ui-gtk/src/window/desktop.rs:453
+#: crates/ui-gtk/src/shortcuts.rs:185 crates/ui-gtk/src/window/desktop.rs:459
 msgid "Quit"
 msgstr "Вийти"
 
@@ -853,7 +853,7 @@ msgstr "Зберегти як список відтворення"
 
 #: crates/ui-gtk/resources/ui/panel.ui:213
 #: crates/ui-gtk/src/dialogs/settings/library.rs:601
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:511
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:513
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1333
 #: crates/ui-gtk/src/play_modes.rs:249
 msgid "Clear"
@@ -906,16 +906,16 @@ msgstr ""
 "Програвач припинив роботу. Перезапустіть Helikodu, щоб знову відтворювати "
 "музику."
 
-#: crates/ui-gtk/src/backend/service.rs:1903
+#: crates/ui-gtk/src/backend/service.rs:1909
 msgid "No sound (null output)"
 msgstr "Без звуку (нульове виведення)"
 
-#: crates/ui-gtk/src/backend/service.rs:1904
+#: crates/ui-gtk/src/backend/service.rs:1910
 #: crates/ui-gtk/src/popovers/output_switcher.rs:37
 msgid "WAV file"
 msgstr "Файл WAV"
 
-#: crates/ui-gtk/src/backend/service.rs:1906
+#: crates/ui-gtk/src/backend/service.rs:1912
 #: crates/ui-gtk/src/dialogs/first_run.rs:231
 #: crates/ui-gtk/src/dialogs/settings/output.rs:127
 #: crates/ui-gtk/src/dialogs/settings/output.rs:158
@@ -923,39 +923,39 @@ msgstr "Файл WAV"
 msgid "System default"
 msgstr "Типовий пристрій системи"
 
-#: crates/ui-gtk/src/backend/service.rs:1908
+#: crates/ui-gtk/src/backend/service.rs:1914
 #, rust-format
 msgid "Default device ({})"
 msgstr "Типовий пристрій ({})"
 
-#: crates/ui-gtk/src/backend/service.rs:2276
+#: crates/ui-gtk/src/backend/service.rs:2282
 #, rust-format
 msgid "Cannot play {}: {}"
 msgstr "Не вдалося відтворити {}: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2286
+#: crates/ui-gtk/src/backend/service.rs:2292
 msgid ""
 "Helikodu did not end normally last time. The queue was restored, paused."
 msgstr ""
 "Минулого разу Helikodu завершив роботу некоректно. Чергу відновлено, "
 "відтворення призупинено."
 
-#: crates/ui-gtk/src/backend/service.rs:2289
+#: crates/ui-gtk/src/backend/service.rs:2295
 #, rust-format
 msgid "Cannot play this: {}"
 msgstr "Не вдалося це відтворити: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2292
+#: crates/ui-gtk/src/backend/service.rs:2298
 #, rust-format
 msgid "The queue could not be saved: {}"
 msgstr "Не вдалося зберегти чергу: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2295
+#: crates/ui-gtk/src/backend/service.rs:2301
 #, rust-format
 msgid "The playback settings of the track could not be saved: {}"
 msgstr "Не вдалося зберегти параметри відтворення доріжки: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2517
+#: crates/ui-gtk/src/backend/service.rs:2523
 msgid "Playing music"
 msgstr "Відтворення музики"
 
@@ -965,7 +965,7 @@ msgstr "Програвач"
 
 #: crates/ui-gtk/src/deck.rs:250 crates/ui-gtk/src/views/album_tile.rs:261
 #: crates/ui-gtk/src/window/panel.rs:171 crates/ui-gtk/src/window/panel.rs:306
-#: crates/ui-gtk/src/window.rs:804 crates/ui-gtk/src/views/artists.rs:800
+#: crates/ui-gtk/src/window.rs:809 crates/ui-gtk/src/views/artists.rs:800
 #: crates/ui-gtk/src/views/genres.rs:390
 #: crates/ui-gtk/src/views/playlist.rs:488
 #: crates/ui-gtk/src/views/playlist.rs:1080
@@ -983,8 +983,8 @@ msgstr "Програвач"
 #: crates/ui-gtk/src/views/category.rs:518
 #: crates/ui-gtk/src/views/smart_playlist.rs:1657
 #: crates/ui-gtk/src/mini_player.rs:694 crates/ui-gtk/src/views/home.rs:652
-#: crates/ui-gtk/src/views/home.rs:740 crates/ui-gtk/src/window/desktop.rs:404
-#: crates/ui-gtk/src/window/desktop.rs:410
+#: crates/ui-gtk/src/views/home.rs:740 crates/ui-gtk/src/window/desktop.rs:410
+#: crates/ui-gtk/src/window/desktop.rs:416
 #: crates/ui-gtk/src/tools/converter.rs:545
 #: crates/ui-gtk/src/tools/converter.rs:588
 #: crates/ui-gtk/src/tools/converter.rs:602
@@ -1067,7 +1067,7 @@ msgstr "{} кГц / {} біт"
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:59
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:53
 #: crates/ui-gtk/src/widgets/eq_graph.rs:77
-#: crates/ui-gtk/src/views/smart_rules.rs:385
+#: crates/ui-gtk/src/views/smart_rules.rs:386
 #: crates/ui-gtk/src/tools/converter.rs:182
 #, rust-format
 msgid "{} kHz"
@@ -1189,7 +1189,7 @@ msgstr "Рік випуску"
 #: crates/ui-gtk/src/views/smart_playlist.rs:60
 #: crates/ui-gtk/src/views/smart_playlist.rs:634
 #: crates/ui-gtk/src/views/smart_playlist.rs:1604
-#: crates/ui-gtk/src/views/smart_rules.rs:245
+#: crates/ui-gtk/src/views/smart_rules.rs:246
 msgid "Added"
 msgstr "Додано"
 
@@ -1257,7 +1257,7 @@ msgstr "Початок"
 #: crates/ui-gtk/src/views/smart_playlist.rs:57
 #: crates/ui-gtk/src/views/smart_playlist.rs:1591
 #: crates/ui-gtk/src/views/smart_rules.rs:197
-#: crates/ui-gtk/src/views/smart_rules.rs:550
+#: crates/ui-gtk/src/views/smart_rules.rs:551
 #: crates/ui-gtk/src/views/facet_browser.rs:52
 msgid "Artist"
 msgstr "Виконавець"
@@ -1336,7 +1336,7 @@ msgid "Last played"
 msgstr "Востаннє відтворено"
 
 #: crates/ui-gtk/src/views/album.rs:936
-#: crates/ui-gtk/src/views/smart_rules.rs:381
+#: crates/ui-gtk/src/views/smart_rules.rs:382
 #, rust-format
 msgid "{} star"
 msgid_plural "{} stars"
@@ -1470,12 +1470,12 @@ msgstr[0] "{} доріжка попереду · {}"
 msgstr[1] "{} доріжки попереду · {}"
 msgstr[2] "{} доріжок попереду · {}"
 
-#: crates/ui-gtk/src/window.rs:465
+#: crates/ui-gtk/src/window.rs:470
 #, rust-format
 msgid "{} was disconnected. Playback is paused."
 msgstr "{} від’єднано. Відтворення призупинено."
 
-#: crates/ui-gtk/src/window.rs:780
+#: crates/ui-gtk/src/window.rs:785
 #, rust-format
 msgid "The library cannot be read: {}"
 msgstr "Не вдалося прочитати фонотеку: {}"
@@ -2230,7 +2230,7 @@ msgstr ""
 #: crates/ui-gtk/src/tools/rename.rs:59
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:131
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:413
-#: crates/ui-gtk/src/tools.rs:163 crates/ui-gtk/src/dialogs/maintenance.rs:154
+#: crates/ui-gtk/src/tools.rs:190 crates/ui-gtk/src/dialogs/maintenance.rs:154
 msgid "Cancel"
 msgstr "Скасувати"
 
@@ -2697,7 +2697,7 @@ msgstr "Зміни тегів і переміщення файлів"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:581
 #: crates/ui-gtk/src/tools/missing_files.rs:236
 #: crates/ui-gtk/src/tools/missing_files.rs:540
-#: crates/ui-gtk/src/views/smart_rules.rs:392
+#: crates/ui-gtk/src/views/smart_rules.rs:393
 #, rust-format
 msgid "{} day"
 msgid_plural "{} days"
@@ -2755,7 +2755,7 @@ msgstr ""
 "доріжки, наприклад під час перемішування."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:51
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:354
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:356
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:74
 #: crates/ui-gtk/src/play_modes.rs:73 crates/ui-gtk/src/play_modes.rs:83
 #: crates/ui-gtk/src/play_modes.rs:93
@@ -2971,7 +2971,7 @@ msgstr "Фіксовано на 100 % (побітово точно)"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:339
 #: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:259
-#: crates/ui-gtk/src/mini_player.rs:504 crates/ui-gtk/src/window/desktop.rs:429
+#: crates/ui-gtk/src/mini_player.rs:504 crates/ui-gtk/src/window/desktop.rs:435
 msgid "Pause"
 msgstr "Призупинити"
 
@@ -3046,7 +3046,7 @@ msgstr "Буфер"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:543
 #: crates/ui-gtk/src/dialogs/settings/output.rs:556
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:355
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:357
 #: crates/ui-gtk/src/window/panel/signal_path.rs:61
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:444
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:468
@@ -3161,7 +3161,7 @@ msgstr[2] ""
 "переходить до попередньої доріжки."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:128
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:324
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:326
 msgid "Seek step"
 msgstr "Крок перемотування"
 
@@ -3225,99 +3225,102 @@ msgstr "Відновлювати останній сеанс"
 msgid "Start with an empty queue"
 msgstr "Починати з порожньої черги"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:228
-msgid "The queue, the track and the position come back. Playback stays paused."
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:229
+msgid ""
+"The queue, the track and the position come back. Playback continues if it "
+"was playing when Helikodu closed."
 msgstr ""
-"Черга, доріжка й позиція відновлюються. Відтворення залишається призупиненим."
+"Черга, трек і позиція відновлюються. Відтворення продовжиться, якщо воно "
+"тривало під час закриття Helikodu."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:235
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:237
 msgid "Resume long tracks where they stopped"
 msgstr "Продовжувати довгі доріжки з місця зупинки"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:237
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:239
 msgid "Applies to audiobooks and to tracks longer than the time on the right."
 msgstr "Стосується аудіокниг і доріжок, довших за час праворуч."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:248
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:332
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:250
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:334
 msgid "Long tracks"
 msgstr "Довгі доріжки"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:268
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:270
 msgid "Keep the computer awake while music plays"
 msgstr "Не давати комп’ютеру засинати під час відтворення музики"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:270
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:272
 msgid "The computer can sleep again as soon as playback pauses or stops."
 msgstr ""
 "Комп’ютер знову зможе заснути, щойно відтворення буде призупинено або "
 "зупинено."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:288
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:290
 msgid "Pause when the screen locks"
 msgstr "Призупиняти під час блокування екрана"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:294
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:296
 msgid "Pause before the computer goes to sleep"
 msgstr "Призупиняти перед переходом комп’ютера до сну"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:323
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:325
 msgid "Previous button"
 msgstr "Кнопка «Попередня»"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:325
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:327
 msgid "Count a play"
 msgstr "Зараховувати відтворення"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:326
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:328
 msgid "Playing an album"
 msgstr "Відтворення альбому"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:328
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:330
 msgid "Crossfade"
 msgstr "Плавний перехід"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:329
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:331
 msgid "Fades"
 msgstr "Згасання й наростання"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:331
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:333
 msgid "When Helikodu starts"
 msgstr "Під час запуску Helikodu"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:334
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:336
 msgid "Power"
 msgstr "Живлення"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:337
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:339
 msgid "MIDI files"
 msgstr "Файли MIDI"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:342
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:344
 msgid "SID tunes"
 msgstr "Мелодії SID"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:346
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:348
 msgid "Looping tunes"
 msgstr "Зациклені мелодії"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:356
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:358
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:360
 #: crates/ui-gtk/src/window/panel/lyrics.rs:52
 #: crates/ui-gtk/src/tools/verify_files.rs:355
 #, rust-format
 msgid "{} s"
 msgstr "{} с"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:369
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:371
 msgid "between tracks"
 msgstr "між доріжками"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:390
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:392
 msgid "when you skip"
 msgstr "під час перемикання"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:416
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:418
 msgid ""
 "Tracks that follow each other on an album always join without a crossfade. "
 "Nothing is crossfaded on a bit-perfect path."
@@ -3325,45 +3328,45 @@ msgstr ""
 "Доріжки, що йдуть одна за одною в альбомі, завжди з’єднуються без плавного "
 "переходу. На побітово точному шляху плавних переходів немає."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:429
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:431
 msgid "Pause and resume"
 msgstr "Пауза й продовження"
 
 #. Translators: the heading of the fade used when seeking within a track.
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:439
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:441
 msgctxt "fade"
 msgid "Seek"
 msgstr "Перемотування"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:445
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:447
 msgid "Skip to another track"
 msgstr "Перехід до іншої доріжки"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:484
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:486
 msgid "SoundFont"
 msgstr "SoundFont"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:485
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:487
 msgid ""
 "None chosen: a SoundFont installed on the system is used, if there is one."
 msgstr ""
 "Не вибрано: використовується SoundFont, встановлений у системі, якщо такий є."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:486
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:488
 msgid ""
 "MIDI files are played with the instruments of a SoundFont (.sf2 or .sf3)."
 msgstr "Файли MIDI відтворюються інструментами з SoundFont (.sf2 або .sf3)."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:489
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:491
 msgid "Song lengths"
 msgstr "Тривалість мелодій"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:490
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:492
 msgid "Not set: tunes play for the default length, then fade out."
 msgstr ""
 "Не задано: мелодії звучать протягом типової тривалості, а потім згасають."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:491
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:493
 msgid ""
 "Songlengths.md5 of the High Voltage SID Collection gives each tune its "
 "length."
@@ -3371,17 +3374,17 @@ msgstr ""
 "Songlengths.md5 з High Voltage SID Collection задає тривалість кожної "
 "мелодії."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:508
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:510
 #: crates/ui-gtk/src/tools/converter.rs:927
 msgid "Choose…"
 msgstr "Вибрати…"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:513
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:515
 #, rust-format
 msgid "Clear {}"
 msgstr "Очистити: {}"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:569
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:571
 #, rust-format
 msgid "once"
 msgid_plural "{} times"
@@ -3392,12 +3395,12 @@ msgstr[2] "{} разів"
 #. Translators: how a looping tune ends. {0} is a dropdown with how
 #. often ("once", "2 times"), {1} one with a time ("5 s"); reorder
 #. them with {0} and {1} as needed.
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:588
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:590
 #, rust-format
 msgid "play the loop {} then fade out over {}"
 msgstr "програвати цикл {}, потім згасати протягом {}"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:597
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:599
 #, rust-format
 msgid ""
 "For tracker modules and game music that repeat a part. Tunes whose length "
@@ -4588,11 +4591,11 @@ msgstr "Відкрити"
 
 #: crates/ui-gtk/src/views/search.rs:1089
 #: crates/ui-gtk/src/window/playlists.rs:237
-#: crates/ui-gtk/src/window/playlists.rs:239 crates/ui-gtk/src/tools.rs:89
+#: crates/ui-gtk/src/window/playlists.rs:239 crates/ui-gtk/src/tools.rs:116
 msgid "Rename…"
 msgstr "Перейменувати…"
 
-#: crates/ui-gtk/src/views/search.rs:1090 crates/ui-gtk/src/tools.rs:90
+#: crates/ui-gtk/src/views/search.rs:1090 crates/ui-gtk/src/tools.rs:117
 msgid "Delete…"
 msgstr "Видалити…"
 
@@ -4617,7 +4620,7 @@ msgid "The tracks it finds stay in the library."
 msgstr "Доріжки, які він знаходить, залишаться у фонотеці."
 
 #: crates/ui-gtk/src/views/search.rs:1192 crates/ui-gtk/src/window/pages.rs:885
-#: crates/ui-gtk/src/tools.rs:163
+#: crates/ui-gtk/src/tools.rs:190
 msgid "Delete"
 msgstr "Видалити"
 
@@ -7772,31 +7775,35 @@ msgstr "Коли вперше відтворено"
 msgid "When it was last skipped"
 msgstr "Коли востаннє пропущено"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:81
+#: crates/ui-gtk/src/popovers/query_completion.rs:82
+msgid "A label of the track, its album or an artist"
+msgstr "Мітка треку, його альбому або виконавця"
+
+#: crates/ui-gtk/src/popovers/query_completion.rs:85
 msgid "A tag"
 msgstr "Тег"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:158
+#: crates/ui-gtk/src/popovers/query_completion.rs:162
 msgid "Has a value, lyrics or a cover"
 msgstr "Має значення, текст пісні чи обкладинку"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:161
+#: crates/ui-gtk/src/popovers/query_completion.rs:165
 msgid "Lossless, hi-res, compilation or loved"
 msgstr "Без втрат, hi-res, збірка чи улюблене"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:164
+#: crates/ui-gtk/src/popovers/query_completion.rs:168
 msgid "Order of the results"
 msgstr "Порядок результатів"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:165
+#: crates/ui-gtk/src/popovers/query_completion.rs:169
 msgid "How many tracks to keep"
 msgstr "Скільки доріжок залишити"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:215
+#: crates/ui-gtk/src/popovers/query_completion.rs:219
 msgid "Completions"
 msgstr "Варіанти доповнення"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:219
+#: crates/ui-gtk/src/popovers/query_completion.rs:223
 msgid "Tab completes · Up and Down choose · Esc closes"
 msgstr "Tab — доповнити · стрілки вгору й униз — вибрати · Esc — закрити"
 
@@ -7998,7 +8005,7 @@ msgid "Choose a year to see its albums."
 msgstr "Виберіть рік, щоб побачити альбоми цього року."
 
 #: crates/ui-gtk/src/views/category.rs:197
-#: crates/ui-gtk/src/views/smart_rules.rs:540
+#: crates/ui-gtk/src/views/smart_rules.rs:541
 msgid "Newest first"
 msgstr "Спочатку нові"
 
@@ -8450,17 +8457,21 @@ msgstr "Уперше відтворено"
 msgid "Last skipped"
 msgstr "Востаннє пропущено"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:246
+#: crates/ui-gtk/src/views/smart_rules.rs:237
+msgid "Label"
+msgstr "Мітка"
+
+#: crates/ui-gtk/src/views/smart_rules.rs:247
 msgid "Modified"
 msgstr "Змінено"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:373
-#: crates/ui-gtk/src/views/smart_rules.rs:414
-#: crates/ui-gtk/src/views/smart_rules.rs:431
+#: crates/ui-gtk/src/views/smart_rules.rs:374
+#: crates/ui-gtk/src/views/smart_rules.rs:415
+#: crates/ui-gtk/src/views/smart_rules.rs:432
 msgid "Unrated"
 msgstr "Без оцінки"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:391
+#: crates/ui-gtk/src/views/smart_rules.rs:392
 #, rust-format
 msgid "{} hour"
 msgid_plural "{} hours"
@@ -8468,7 +8479,7 @@ msgstr[0] "{} година"
 msgstr[1] "{} години"
 msgstr[2] "{} годин"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:393
+#: crates/ui-gtk/src/views/smart_rules.rs:394
 #, rust-format
 msgid "{} week"
 msgid_plural "{} weeks"
@@ -8476,7 +8487,7 @@ msgstr[0] "{} тиждень"
 msgstr[1] "{} тижні"
 msgstr[2] "{} тижнів"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:394
+#: crates/ui-gtk/src/views/smart_rules.rs:395
 #, rust-format
 msgid "{} month"
 msgid_plural "{} months"
@@ -8484,7 +8495,7 @@ msgstr[0] "{} місяць"
 msgstr[1] "{} місяці"
 msgstr[2] "{} місяців"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:395
+#: crates/ui-gtk/src/views/smart_rules.rs:396
 #, rust-format
 msgid "{} year"
 msgid_plural "{} years"
@@ -8495,124 +8506,124 @@ msgstr[2] "{} років"
 #. Translators: joins the values or the rules of a group of a smart
 #. playlist's rules, "FLAC or DSD", "Rating is 5 stars or Plays is more
 #. than 10"; for three, it joins the first two joined ones with the third.
-#: crates/ui-gtk/src/views/smart_rules.rs:520
+#: crates/ui-gtk/src/views/smart_rules.rs:521
 #, rust-format
 msgctxt "smart rule"
 msgid "{} or {}"
 msgstr "{} або {}"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:522
+#: crates/ui-gtk/src/views/smart_rules.rs:523
 #, rust-format
 msgctxt "smart rule"
 msgid "{} and {}"
 msgstr "{} і {}"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:537
+#: crates/ui-gtk/src/views/smart_rules.rs:538
 msgid "Album order"
 msgstr "Порядок в альбомі"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:539
+#: crates/ui-gtk/src/views/smart_rules.rs:540
 msgid "Date added, newest first"
 msgstr "Дата додавання, спочатку нові"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:544
+#: crates/ui-gtk/src/views/smart_rules.rs:545
 msgid "Date added, oldest first"
 msgstr "Дата додавання, спочатку старі"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:545
+#: crates/ui-gtk/src/views/smart_rules.rs:546
 msgid "Oldest first"
 msgstr "Спочатку старі"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:548
+#: crates/ui-gtk/src/views/smart_rules.rs:549
 msgid "By title"
 msgstr "За назвою"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:551
+#: crates/ui-gtk/src/views/smart_rules.rs:552
 msgid "By artist"
 msgstr "За виконавцем"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:554
+#: crates/ui-gtk/src/views/smart_rules.rs:555
 #: crates/ui-gtk/src/tools/cover_manager.rs:703
 msgid "By album"
 msgstr "За альбомом"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:556
+#: crates/ui-gtk/src/views/smart_rules.rs:557
 msgid "Year, newest first"
 msgstr "Рік, спочатку нові"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:557
+#: crates/ui-gtk/src/views/smart_rules.rs:558
 msgid "Latest year first"
 msgstr "Спочатку найновіші роки"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:561
+#: crates/ui-gtk/src/views/smart_rules.rs:562
 msgid "Year, oldest first"
 msgstr "Рік, спочатку старі"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:562
+#: crates/ui-gtk/src/views/smart_rules.rs:563
 msgid "Earliest year first"
 msgstr "Спочатку найдавніші роки"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:566
+#: crates/ui-gtk/src/views/smart_rules.rs:567
 msgid "Rating, highest first"
 msgstr "Оцінка, спочатку найвищі"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:567
+#: crates/ui-gtk/src/views/smart_rules.rs:568
 msgid "Highest rated first"
 msgstr "Спочатку з найвищою оцінкою"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:571
 #: crates/ui-gtk/src/views/smart_rules.rs:572
+#: crates/ui-gtk/src/views/smart_rules.rs:573
 msgid "Most played first"
 msgstr "Спочатку найчастіше відтворювані"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:576
+#: crates/ui-gtk/src/views/smart_rules.rs:577
 msgid "Last played, most recent first"
 msgstr "Востаннє відтворено, спочатку нещодавні"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:577
+#: crates/ui-gtk/src/views/smart_rules.rs:578
 msgid "Recently played first"
 msgstr "Спочатку нещодавно відтворені"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:581
+#: crates/ui-gtk/src/views/smart_rules.rs:582
 msgid "Random"
 msgstr "Випадково"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:582
+#: crates/ui-gtk/src/views/smart_rules.rs:583
 msgid "In random order"
 msgstr "У випадковому порядку"
 
 #. Translators: units of the limit of a smart playlist, "Limit to [25]
 #. [tracks]"; the number is typed into a box before them.
-#: crates/ui-gtk/src/views/smart_rules.rs:605
+#: crates/ui-gtk/src/views/smart_rules.rs:606
 msgctxt "limit unit"
 msgid "tracks"
 msgstr "доріжок"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:606
+#: crates/ui-gtk/src/views/smart_rules.rs:607
 msgctxt "limit unit"
 msgid "minutes"
 msgstr "хвилин"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:607
+#: crates/ui-gtk/src/views/smart_rules.rs:608
 msgctxt "limit unit"
 msgid "hours"
 msgstr "годин"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:608
+#: crates/ui-gtk/src/views/smart_rules.rs:609
 msgctxt "limit unit"
 msgid "MB"
 msgstr "МБ"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:609
+#: crates/ui-gtk/src/views/smart_rules.rs:610
 msgctxt "limit unit"
 msgid "GB"
 msgstr "ГБ"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:692
+#: crates/ui-gtk/src/views/smart_rules.rs:693
 msgid "In the order of the text"
 msgstr "У порядку тексту"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:699
+#: crates/ui-gtk/src/views/smart_rules.rs:700
 #, rust-format
 msgid "at most {} track"
 msgid_plural "at most {} tracks"
@@ -8620,7 +8631,7 @@ msgstr[0] "не більше {} доріжки"
 msgstr[1] "не більше {} доріжок"
 msgstr[2] "не більше {} доріжок"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:702
+#: crates/ui-gtk/src/views/smart_rules.rs:703
 #, rust-format
 msgid "at most {} minute"
 msgid_plural "at most {} minutes"
@@ -8628,7 +8639,7 @@ msgstr[0] "не більше {} хвилини"
 msgstr[1] "не більше {} хвилин"
 msgstr[2] "не більше {} хвилин"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:706
+#: crates/ui-gtk/src/views/smart_rules.rs:707
 #, rust-format
 msgid "at most {} hour"
 msgid_plural "at most {} hours"
@@ -8636,12 +8647,12 @@ msgstr[0] "не більше {} години"
 msgstr[1] "не більше {} годин"
 msgstr[2] "не більше {} годин"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:708
+#: crates/ui-gtk/src/views/smart_rules.rs:709
 #, rust-format
 msgid "at most {} MB"
 msgstr "не більше {} МБ"
 
-#: crates/ui-gtk/src/views/smart_rules.rs:709
+#: crates/ui-gtk/src/views/smart_rules.rs:710
 #, rust-format
 msgid "at most {} GB"
 msgstr "не більше {} ГБ"
@@ -8845,7 +8856,7 @@ msgstr "Збільшити гучність"
 msgid "Volume down"
 msgstr "Зменшити гучність"
 
-#: crates/ui-gtk/src/shortcuts.rs:104 crates/ui-gtk/src/window/desktop.rs:436
+#: crates/ui-gtk/src/shortcuts.rs:104 crates/ui-gtk/src/window/desktop.rs:442
 msgid "Stop after this track"
 msgstr "Зупинитися після цієї доріжки"
 
@@ -8873,7 +8884,7 @@ msgstr "Копії файлу доріжки"
 msgid "Select all"
 msgstr "Виділити все"
 
-#: crates/ui-gtk/src/shortcuts.rs:166 crates/ui-gtk/src/window/desktop.rs:450
+#: crates/ui-gtk/src/shortcuts.rs:166 crates/ui-gtk/src/window/desktop.rs:456
 msgid "Mini player"
 msgstr "Мініпрогравач"
 
@@ -8927,18 +8938,18 @@ msgstr "Послухати знову"
 msgid "Show Helikodu"
 msgstr "Показати Helikodu"
 
-#: crates/ui-gtk/src/window/desktop.rs:368
+#: crates/ui-gtk/src/window/desktop.rs:374
 msgid ""
 "Helikodu keeps playing in the tray. Quit from the tray menu or with Ctrl+Q."
 msgstr ""
 "Helikodu продовжує відтворення в системному лотку. Щоб вийти, скористайтеся "
 "меню в лотку або натисніть Ctrl+Q."
 
-#: crates/ui-gtk/src/window/desktop.rs:443
+#: crates/ui-gtk/src/window/desktop.rs:449
 msgid "Hide the window"
 msgstr "Приховати вікно"
 
-#: crates/ui-gtk/src/window/desktop.rs:445
+#: crates/ui-gtk/src/window/desktop.rs:451
 msgid "Show the window"
 msgstr "Показати вікно"
 
@@ -9352,7 +9363,59 @@ msgstr "Назва теки була б порожньою."
 msgid "Square brackets are nested too deeply."
 msgstr "Квадратні дужки вкладено надто глибоко."
 
+#: crates/ui-gtk/src/tools.rs:47
+msgid "The expression is nested too deeply."
+msgstr "Вираз вкладено надто глибоко."
+
+#: crates/ui-gtk/src/tools.rs:48
+msgid "A quote is not closed."
+msgstr "Лапку не закрито."
+
 #: crates/ui-gtk/src/tools.rs:49
+msgid "A ( is not closed with )."
+msgstr "Дужку ( не закрито дужкою )."
+
+#: crates/ui-gtk/src/tools.rs:51
+#, rust-format
+msgid "There is no function called {}."
+msgstr "Немає функції з назвою {}."
+
+#. Translators: {} are a function's name and a number.
+#: crates/ui-gtk/src/tools.rs:56
+#, rust-format
+msgid "{} takes {} values."
+msgstr "{}: потрібно значень: {}."
+
+#. Translators: {} are a function's name and two numbers.
+#: crates/ui-gtk/src/tools.rs:61
+#, rust-format
+msgid "{} takes {} to {} values."
+msgstr "{}: потрібно значень: від {} до {}."
+
+#. Translators: {} are a function's name and a number.
+#: crates/ui-gtk/src/tools.rs:66
+#, rust-format
+msgid "{} takes at least {} values."
+msgstr "{}: потрібно значень: не менше {}."
+
+#: crates/ui-gtk/src/tools.rs:70
+msgid "A value is missing."
+msgstr "Бракує значення."
+
+#: crates/ui-gtk/src/tools.rs:71
+#, rust-format
+msgid "{} does not belong here."
+msgstr "{} тут не до місця."
+
+#: crates/ui-gtk/src/tools.rs:72
+msgid "let needs a name first."
+msgstr "Для let спочатку потрібна назва."
+
+#: crates/ui-gtk/src/tools.rs:73
+msgid "raw needs a field."
+msgstr "Для raw потрібне поле."
+
+#: crates/ui-gtk/src/tools.rs:76
 #, rust-format
 msgid "{} At character {}."
 msgstr "{} Позиція символу: {}."
