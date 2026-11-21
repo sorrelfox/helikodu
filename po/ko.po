@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 05:39-0500\n"
+"POT-Creation-Date: 2026-11-21 06:15-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Korean <https://github.com/sorrelfox/helikodu>\n"
@@ -364,7 +364,7 @@ msgstr "추가한 날짜"
 #: crates/ui-gtk/resources/ui/albums.ui:128
 #: crates/ui-gtk/src/window/sidebar.rs:51
 #: crates/ui-gtk/src/views/artists.rs:680
-#: crates/ui-gtk/src/views/search.rs:593 crates/ui-gtk/src/play_modes.rs:69
+#: crates/ui-gtk/src/views/search.rs:593 crates/ui-gtk/src/play_modes.rs:71
 #: crates/ui-gtk/src/views/statistics.rs:615
 #: crates/ui-gtk/src/tools/cover_manager.rs:727
 #: crates/ui-gtk/src/views/labels.rs:243
@@ -433,7 +433,7 @@ msgstr "앨범"
 #: crates/ui-gtk/src/views/actions.rs:190
 #: crates/ui-gtk/src/views/folders.rs:262
 #: crates/ui-gtk/src/views/playlist.rs:192 crates/ui-gtk/src/deck/modes.rs:225
-#: crates/ui-gtk/src/play_modes.rs:261
+#: crates/ui-gtk/src/play_modes.rs:268
 #: crates/ui-gtk/src/views/smart_playlist.rs:493
 #: crates/ui-gtk/src/window/playlists.rs:228
 #: crates/ui-gtk/src/window/playlists.rs:232
@@ -518,7 +518,7 @@ msgstr "길이"
 #: crates/ui-gtk/src/window/sidebar.rs:53
 #: crates/ui-gtk/src/views/search.rs:613 crates/ui-gtk/src/views/tracks.rs:217
 #: crates/ui-gtk/src/views/tracks.rs:274 crates/ui-gtk/src/views/tracks.rs:328
-#: crates/ui-gtk/src/window/pages.rs:447 crates/ui-gtk/src/play_modes.rs:68
+#: crates/ui-gtk/src/window/pages.rs:447 crates/ui-gtk/src/play_modes.rs:70
 #: crates/ui-gtk/src/views/statistics.rs:603
 #: crates/ui-gtk/src/views/labels.rs:255 crates/ui-gtk/src/views/labels.rs:292
 msgid "Tracks"
@@ -575,14 +575,14 @@ msgstr "즐겨찾기에 추가"
 #: crates/ui-gtk/resources/ui/deck.ui:132
 #: crates/ui-gtk/resources/ui/deck.ui:134
 #: crates/ui-gtk/resources/ui/main_window.ui:86
-#: crates/ui-gtk/src/play_modes.rs:268 crates/ui-gtk/src/window/desktop.rs:439
+#: crates/ui-gtk/src/play_modes.rs:275 crates/ui-gtk/src/window/desktop.rs:439
 msgid "Previous"
 msgstr "이전"
 
 #: crates/ui-gtk/resources/ui/deck.ui:178
 #: crates/ui-gtk/resources/ui/deck.ui:180
 #: crates/ui-gtk/resources/ui/main_window.ui:90 crates/ui-gtk/src/deck.rs:599
-#: crates/ui-gtk/src/window.rs:831 crates/ui-gtk/src/play_modes.rs:269
+#: crates/ui-gtk/src/window.rs:831 crates/ui-gtk/src/play_modes.rs:276
 #: crates/ui-gtk/src/window/desktop.rs:438
 msgid "Next"
 msgstr "다음"
@@ -638,14 +638,14 @@ msgid "Edit"
 msgstr "편집"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:40
-#: crates/ui-gtk/src/window/pages.rs:660 crates/ui-gtk/src/shortcuts.rs:153
+#: crates/ui-gtk/src/window/pages.rs:660 crates/ui-gtk/src/shortcuts.rs:161
 #: crates/ui-gtk/src/tools/import.rs:940
 #: crates/ui-gtk/src/tools/replaced.rs:251
 msgid "Undo"
 msgstr "실행 취소"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:44
-#: crates/ui-gtk/src/shortcuts.rs:157
+#: crates/ui-gtk/src/shortcuts.rs:165
 msgid "Redo"
 msgstr "다시 실행"
 
@@ -663,7 +663,7 @@ msgid "View"
 msgstr "보기"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:59
-#: crates/ui-gtk/src/shortcuts.rs:160
+#: crates/ui-gtk/src/shortcuts.rs:168
 msgid "Sidebar"
 msgstr "사이드바"
 
@@ -698,7 +698,7 @@ msgstr "재생/일시 정지"
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:534
 #: crates/ui-gtk/src/dialogs/settings/output.rs:341
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:609
-#: crates/ui-gtk/src/play_modes.rs:264
+#: crates/ui-gtk/src/play_modes.rs:271
 #: crates/ui-gtk/src/tools/file_tools.rs:75
 #: crates/ui-gtk/src/tools/managed_runs.rs:529
 #: crates/ui-gtk/src/shortcuts.rs:75 crates/ui-gtk/src/tools/converter.rs:1034
@@ -707,12 +707,12 @@ msgid "Stop"
 msgstr "정지"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:94
-#: crates/ui-gtk/src/play_modes.rs:276
+#: crates/ui-gtk/src/play_modes.rs:285
 msgid "Seek Back"
 msgstr "뒤로 탐색"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:98
-#: crates/ui-gtk/src/play_modes.rs:277
+#: crates/ui-gtk/src/play_modes.rs:286
 msgid "Seek Forward"
 msgstr "앞으로 탐색"
 
@@ -832,19 +832,19 @@ msgid "Preferences"
 msgstr "기본 설정"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:217
-#: crates/ui-gtk/src/shortcuts.rs:185 crates/ui-gtk/src/window/desktop.rs:459
+#: crates/ui-gtk/src/shortcuts.rs:193 crates/ui-gtk/src/window/desktop.rs:459
 msgid "Quit"
 msgstr "끝내기"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:267
 #: crates/ui-gtk/resources/ui/main_window.ui:269
-#: crates/ui-gtk/src/shortcuts.rs:170
+#: crates/ui-gtk/src/shortcuts.rs:178
 msgid "Back"
 msgstr "뒤로"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:279
 #: crates/ui-gtk/resources/ui/main_window.ui:281
-#: crates/ui-gtk/src/shortcuts.rs:171
+#: crates/ui-gtk/src/shortcuts.rs:179
 msgid "Forward"
 msgstr "앞으로"
 
@@ -875,7 +875,7 @@ msgstr "패널"
 #: crates/ui-gtk/resources/ui/panel.ui:156
 #: crates/ui-gtk/src/views/now_playing.rs:234
 #: crates/ui-gtk/src/views/now_playing.rs:317
-#: crates/ui-gtk/src/play_modes.rs:302 crates/ui-gtk/src/views/history.rs:258
+#: crates/ui-gtk/src/play_modes.rs:311 crates/ui-gtk/src/views/history.rs:258
 #: crates/ui-gtk/src/mini_player.rs:212 crates/ui-gtk/src/mini_player.rs:230
 msgid "Queue"
 msgstr "대기열"
@@ -915,7 +915,7 @@ msgstr "재생 목록으로 저장"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:605
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:686
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1333
-#: crates/ui-gtk/src/play_modes.rs:249
+#: crates/ui-gtk/src/play_modes.rs:256
 msgid "Clear"
 msgstr "지우기"
 
@@ -966,16 +966,16 @@ msgstr "즐겨찾기"
 msgid "The player has stopped. Restart Helikodu to play again."
 msgstr "플레이어가 중지되었습니다. 다시 재생하려면 Helikodu를 다시 시작하십시오."
 
-#: crates/ui-gtk/src/backend/service.rs:2020
+#: crates/ui-gtk/src/backend/service.rs:2032
 msgid "No sound (null output)"
 msgstr "소리 없음(null 출력)"
 
-#: crates/ui-gtk/src/backend/service.rs:2021
+#: crates/ui-gtk/src/backend/service.rs:2033
 #: crates/ui-gtk/src/popovers/output_switcher.rs:37
 msgid "WAV file"
 msgstr "WAV 파일"
 
-#: crates/ui-gtk/src/backend/service.rs:2023
+#: crates/ui-gtk/src/backend/service.rs:2035
 #: crates/ui-gtk/src/dialogs/first_run.rs:231
 #: crates/ui-gtk/src/dialogs/settings/output.rs:127
 #: crates/ui-gtk/src/dialogs/settings/output.rs:158
@@ -983,37 +983,37 @@ msgstr "WAV 파일"
 msgid "System default"
 msgstr "시스템 기본값"
 
-#: crates/ui-gtk/src/backend/service.rs:2025
+#: crates/ui-gtk/src/backend/service.rs:2037
 #, rust-format
 msgid "Default device ({})"
 msgstr "기본 장치({})"
 
-#: crates/ui-gtk/src/backend/service.rs:2393
+#: crates/ui-gtk/src/backend/service.rs:2405
 #, rust-format
 msgid "Cannot play {}: {}"
 msgstr "{} 파일을 재생할 수 없습니다: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2403
+#: crates/ui-gtk/src/backend/service.rs:2415
 msgid ""
 "Helikodu did not end normally last time. The queue was restored, paused."
 msgstr "지난번에 Helikodu가 정상적으로 종료되지 않았습니다. 대기열을 일시 정지 상태로 복원했습니다."
 
-#: crates/ui-gtk/src/backend/service.rs:2406
+#: crates/ui-gtk/src/backend/service.rs:2418
 #, rust-format
 msgid "Cannot play this: {}"
 msgstr "재생할 수 없습니다: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2409
+#: crates/ui-gtk/src/backend/service.rs:2421
 #, rust-format
 msgid "The queue could not be saved: {}"
 msgstr "대기열을 저장할 수 없습니다: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2412
+#: crates/ui-gtk/src/backend/service.rs:2424
 #, rust-format
 msgid "The playback settings of the track could not be saved: {}"
 msgstr "트랙의 재생 설정을 저장할 수 없습니다: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2635
+#: crates/ui-gtk/src/backend/service.rs:2647
 msgid "Playing music"
 msgstr "음악 재생 중"
 
@@ -1070,7 +1070,7 @@ msgstr "앨범에서 {} 보기"
 msgid "Stop After"
 msgstr "정지 시점"
 
-#: crates/ui-gtk/src/deck.rs:369 crates/ui-gtk/src/play_modes.rs:306
+#: crates/ui-gtk/src/deck.rs:369 crates/ui-gtk/src/play_modes.rs:315
 msgid "Sleep Timer…"
 msgstr "취침 타이머…"
 
@@ -1584,7 +1584,7 @@ msgstr "연도"
 #: crates/ui-gtk/src/window/sidebar.rs:58
 #: crates/ui-gtk/src/dialogs/settings/library.rs:639
 #: crates/ui-gtk/src/views/folders.rs:183
-#: crates/ui-gtk/src/views/folders.rs:239 crates/ui-gtk/src/play_modes.rs:70
+#: crates/ui-gtk/src/views/folders.rs:239 crates/ui-gtk/src/play_modes.rs:72
 msgid "Folders"
 msgstr "폴더"
 
@@ -1594,7 +1594,7 @@ msgstr "사이드바 숨기기"
 
 #: crates/ui-gtk/src/window/sidebar.rs:179
 #: crates/ui-gtk/src/views/actions.rs:591
-#: crates/ui-gtk/src/window/pages.rs:798 crates/ui-gtk/src/shortcuts.rs:150
+#: crates/ui-gtk/src/window/pages.rs:798 crates/ui-gtk/src/shortcuts.rs:158
 msgid "New playlist"
 msgstr "새 재생 목록"
 
@@ -2162,7 +2162,7 @@ msgstr "이 변경 사항을 저장하지 못했습니다: {}"
 #: crates/ui-gtk/src/dialogs/settings.rs:229
 #: crates/ui-gtk/src/dialogs/settings.rs:231
 #: crates/ui-gtk/src/dialogs/settings.rs:241
-#: crates/ui-gtk/src/shortcuts.rs:175
+#: crates/ui-gtk/src/shortcuts.rs:183
 msgid "Settings"
 msgstr "설정"
 
@@ -2526,7 +2526,7 @@ msgid "Window style"
 msgstr "창 스타일"
 
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:433
-#: crates/ui-gtk/src/shortcuts.rs:161
+#: crates/ui-gtk/src/shortcuts.rs:169
 msgid "Menu bar"
 msgstr "메뉴 표시줄"
 
@@ -2961,8 +2961,8 @@ msgstr "앨범을 순서대로 재생할 때는 앨범 라우드니스를, 그 �
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:60
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:360
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:74
-#: crates/ui-gtk/src/play_modes.rs:73 crates/ui-gtk/src/play_modes.rs:83
-#: crates/ui-gtk/src/play_modes.rs:93
+#: crates/ui-gtk/src/play_modes.rs:75 crates/ui-gtk/src/play_modes.rs:87
+#: crates/ui-gtk/src/play_modes.rs:97
 msgid "Off"
 msgstr "끔"
 
@@ -3233,7 +3233,7 @@ msgid "Fixed at 100 % (bit-perfect)"
 msgstr "100% 고정(비트 퍼펙트)"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:339
-#: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:259
+#: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:266
 #: crates/ui-gtk/src/mini_player.rs:504
 #: crates/ui-gtk/src/window/desktop.rs:435
 msgid "Pause"
@@ -3736,7 +3736,7 @@ msgstr "설정 안 됨"
 
 #: crates/ui-gtk/src/dialogs/shortcuts.rs:142
 #: crates/ui-gtk/src/dialogs/shortcuts.rs:154
-#: crates/ui-gtk/src/shortcuts.rs:181
+#: crates/ui-gtk/src/shortcuts.rs:189
 msgid "Keyboard shortcuts"
 msgstr "키보드 단축키"
 
@@ -5175,7 +5175,7 @@ msgid "No lyrics for this track"
 msgstr "이 트랙에는 가사가 없습니다"
 
 #: crates/ui-gtk/src/views/now_playing.rs:382
-#: crates/ui-gtk/src/shortcuts.rs:162 crates/ui-gtk/src/mini_player.rs:135
+#: crates/ui-gtk/src/shortcuts.rs:170 crates/ui-gtk/src/mini_player.rs:135
 msgid "Now Playing"
 msgstr "지금 재생 중"
 
@@ -5336,7 +5336,7 @@ msgstr "구간 반복 해제"
 
 #: crates/ui-gtk/src/deck/modes.rs:156
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:88
-#: crates/ui-gtk/src/shortcuts.rs:126
+#: crates/ui-gtk/src/shortcuts.rs:134
 msgid "Sleep timer"
 msgstr "취침 타이머"
 
@@ -5941,156 +5941,184 @@ msgstr "직접 재생할 때만 재생"
 msgid "Volume for this track"
 msgstr "이 트랙의 음량"
 
-#: crates/ui-gtk/src/play_modes.rs:71
+#: crates/ui-gtk/src/play_modes.rs:73
 msgid "Groupings"
 msgstr "그룹"
 
-#: crates/ui-gtk/src/play_modes.rs:72
+#: crates/ui-gtk/src/play_modes.rs:74
 msgid "Tracks Within Each Album"
 msgstr "각 앨범 안의 트랙"
 
-#: crates/ui-gtk/src/play_modes.rs:80 crates/ui-gtk/src/play_modes.rs:90
+#: crates/ui-gtk/src/play_modes.rs:82 crates/ui-gtk/src/play_modes.rs:94
 msgid "This Track"
 msgstr "이 트랙"
 
-#: crates/ui-gtk/src/play_modes.rs:81 crates/ui-gtk/src/play_modes.rs:91
-#: crates/ui-gtk/src/play_modes.rs:101
+#: crates/ui-gtk/src/play_modes.rs:83 crates/ui-gtk/src/play_modes.rs:95
+#: crates/ui-gtk/src/play_modes.rs:105
 msgid "This Album"
 msgstr "이 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:82
+#: crates/ui-gtk/src/play_modes.rs:84
 msgid "The Whole Queue"
 msgstr "대기열 전체"
 
-#: crates/ui-gtk/src/play_modes.rs:92
+#: crates/ui-gtk/src/play_modes.rs:85
+msgid "Continue with Related Tracks"
+msgstr "관련 트랙으로 계속"
+
+#: crates/ui-gtk/src/play_modes.rs:86
+msgid "Auto-DJ"
+msgstr "자동 DJ"
+
+#: crates/ui-gtk/src/play_modes.rs:96
 msgid "The Queue"
 msgstr "대기열 끝"
 
-#: crates/ui-gtk/src/play_modes.rs:100
+#: crates/ui-gtk/src/play_modes.rs:104
 msgid "This Artist"
 msgstr "이 아티스트"
 
-#: crates/ui-gtk/src/play_modes.rs:102
+#: crates/ui-gtk/src/play_modes.rs:106
 msgid "Everything"
 msgstr "전체"
 
-#: crates/ui-gtk/src/play_modes.rs:109
+#: crates/ui-gtk/src/play_modes.rs:113
 msgid "Shuffle: tracks"
 msgstr "무작위 재생: 트랙"
 
-#: crates/ui-gtk/src/play_modes.rs:110
+#: crates/ui-gtk/src/play_modes.rs:114
 msgid "Shuffle: albums"
 msgstr "무작위 재생: 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:111
+#: crates/ui-gtk/src/play_modes.rs:115
 msgid "Shuffle: folders"
 msgstr "무작위 재생: 폴더"
 
-#: crates/ui-gtk/src/play_modes.rs:112
+#: crates/ui-gtk/src/play_modes.rs:116
 msgid "Shuffle: groupings"
 msgstr "무작위 재생: 그룹"
 
-#: crates/ui-gtk/src/play_modes.rs:113
+#: crates/ui-gtk/src/play_modes.rs:117
 msgid "Shuffle: tracks within each album"
 msgstr "무작위 재생: 각 앨범 안의 트랙"
 
-#: crates/ui-gtk/src/play_modes.rs:114
+#: crates/ui-gtk/src/play_modes.rs:118
 msgid "Shuffle: off"
 msgstr "무작위 재생: 끔"
 
-#: crates/ui-gtk/src/play_modes.rs:121
+#: crates/ui-gtk/src/play_modes.rs:125
 msgid "Repeat: this track"
 msgstr "반복: 이 트랙"
 
-#: crates/ui-gtk/src/play_modes.rs:122
+#: crates/ui-gtk/src/play_modes.rs:126
 msgid "Repeat: this album"
 msgstr "반복: 이 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:123
+#: crates/ui-gtk/src/play_modes.rs:127
 msgid "Repeat: the whole queue"
 msgstr "반복: 대기열 전체"
 
-#: crates/ui-gtk/src/play_modes.rs:124
+#: crates/ui-gtk/src/play_modes.rs:128
+msgid "Repeat: continue with related tracks"
+msgstr "반복: 관련 트랙으로 계속"
+
+#: crates/ui-gtk/src/play_modes.rs:129
+msgid "Repeat: Auto-DJ"
+msgstr "반복: 자동 DJ"
+
+#: crates/ui-gtk/src/play_modes.rs:130
 msgid "Repeat: off"
 msgstr "반복: 끔"
 
-#: crates/ui-gtk/src/play_modes.rs:131
+#: crates/ui-gtk/src/play_modes.rs:137
 msgid "stops after this track"
 msgstr "이 트랙 후 정지"
 
-#: crates/ui-gtk/src/play_modes.rs:132
+#: crates/ui-gtk/src/play_modes.rs:138
 msgid "stops after this album"
 msgstr "이 앨범 후 정지"
 
-#: crates/ui-gtk/src/play_modes.rs:133
+#: crates/ui-gtk/src/play_modes.rs:139
 msgid "stops at the end of the queue"
 msgstr "대기열 끝에서 정지"
 
-#: crates/ui-gtk/src/play_modes.rs:228
+#: crates/ui-gtk/src/play_modes.rs:234
 msgid "Set the Start Here"
 msgstr "여기를 시작점으로 설정"
 
-#: crates/ui-gtk/src/play_modes.rs:229
+#: crates/ui-gtk/src/play_modes.rs:235
 msgid "Set the End Here"
 msgstr "여기를 끝점으로 설정"
 
-#: crates/ui-gtk/src/play_modes.rs:230
+#: crates/ui-gtk/src/play_modes.rs:236
 msgid "Clear the Loop"
 msgstr "구간 반복 해제"
 
-#: crates/ui-gtk/src/play_modes.rs:239
+#: crates/ui-gtk/src/play_modes.rs:245
 msgid "Remove Tracks After They Play"
 msgstr "재생이 끝난 트랙 제거"
 
-#: crates/ui-gtk/src/play_modes.rs:243
+#: crates/ui-gtk/src/play_modes.rs:249
 msgid "Continue from the Selected Track"
 msgstr "선택한 트랙부터 계속"
 
-#: crates/ui-gtk/src/play_modes.rs:248
+#: crates/ui-gtk/src/play_modes.rs:252
+msgid "Intro Scan"
+msgstr "인트로 스캔"
+
+#: crates/ui-gtk/src/play_modes.rs:255
 msgid "Save as Playlist…"
 msgstr "재생 목록으로 저장…"
 
-#: crates/ui-gtk/src/play_modes.rs:270
+#: crates/ui-gtk/src/play_modes.rs:277
 msgid "Previous Album"
 msgstr "이전 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:271
+#: crates/ui-gtk/src/play_modes.rs:278
 msgid "Next Album"
 msgstr "다음 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:272
+#: crates/ui-gtk/src/play_modes.rs:279
 msgid "Random Album"
 msgstr "무작위 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:278
+#: crates/ui-gtk/src/play_modes.rs:280
+msgid "Radio Random"
+msgstr "랜덤 라디오"
+
+#: crates/ui-gtk/src/play_modes.rs:281
+msgid "Revert to the Skipped Track"
+msgstr "건너뛴 트랙으로 돌아가기"
+
+#: crates/ui-gtk/src/play_modes.rs:287
 msgid "Loop a Section"
 msgstr "구간 반복"
 
-#: crates/ui-gtk/src/play_modes.rs:284
+#: crates/ui-gtk/src/play_modes.rs:293
 #, rust-format
 msgid "Shuffle: {}"
 msgstr "무작위 재생: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:288
+#: crates/ui-gtk/src/play_modes.rs:297
 #, rust-format
 msgid "Repeat: {}"
 msgstr "반복: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:293
+#: crates/ui-gtk/src/play_modes.rs:302
 #, rust-format
 msgid "Stop After: {}"
 msgstr "정지 시점: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:299
+#: crates/ui-gtk/src/play_modes.rs:308
 #, rust-format
 msgid "Play Only: {}"
 msgstr "재생 범위: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:309
+#: crates/ui-gtk/src/play_modes.rs:318
 msgid "Choose the Output Device…"
 msgstr "출력 장치 선택…"
 
-#: crates/ui-gtk/src/play_modes.rs:312
+#: crates/ui-gtk/src/play_modes.rs:321
 msgid "Output Device"
 msgstr "출력 장치"
 
@@ -9479,35 +9507,47 @@ msgstr "다음 앨범"
 msgid "Random album"
 msgstr "무작위 앨범"
 
-#: crates/ui-gtk/src/shortcuts.rs:127 crates/ui-gtk/src/window/narrow.rs:368
+#: crates/ui-gtk/src/shortcuts.rs:126
+msgid "Radio random"
+msgstr "랜덤 라디오"
+
+#: crates/ui-gtk/src/shortcuts.rs:130
+msgid "Revert to the skipped track"
+msgstr "건너뛴 트랙으로 돌아가기"
+
+#: crates/ui-gtk/src/shortcuts.rs:133
+msgid "Intro scan"
+msgstr "인트로 스캔"
+
+#: crates/ui-gtk/src/shortcuts.rs:135 crates/ui-gtk/src/window/narrow.rs:368
 msgid "Search"
 msgstr "검색"
 
-#: crates/ui-gtk/src/shortcuts.rs:131
+#: crates/ui-gtk/src/shortcuts.rs:139
 msgid "Jump to the playing track"
 msgstr "재생 중인 트랙으로 이동"
 
-#: crates/ui-gtk/src/shortcuts.rs:137
+#: crates/ui-gtk/src/shortcuts.rs:145
 msgid "Track properties"
 msgstr "트랙 속성"
 
-#: crates/ui-gtk/src/shortcuts.rs:143
+#: crates/ui-gtk/src/shortcuts.rs:151
 msgid "Copies of the track's file"
 msgstr "트랙 파일의 사본"
 
-#: crates/ui-gtk/src/shortcuts.rs:146
+#: crates/ui-gtk/src/shortcuts.rs:154
 msgid "Select all"
 msgstr "모두 선택"
 
-#: crates/ui-gtk/src/shortcuts.rs:166 crates/ui-gtk/src/window/desktop.rs:456
+#: crates/ui-gtk/src/shortcuts.rs:174 crates/ui-gtk/src/window/desktop.rs:456
 msgid "Mini player"
 msgstr "미니 플레이어"
 
-#: crates/ui-gtk/src/shortcuts.rs:169
+#: crates/ui-gtk/src/shortcuts.rs:177
 msgid "Next pane"
 msgstr "다음 영역"
 
-#: crates/ui-gtk/src/shortcuts.rs:184
+#: crates/ui-gtk/src/shortcuts.rs:192
 msgid "User guide"
 msgstr "사용자 안내서"
 

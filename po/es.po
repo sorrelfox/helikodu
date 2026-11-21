@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 05:39-0500\n"
+"POT-Creation-Date: 2026-11-21 06:15-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Spanish <https://github.com/sorrelfox/helikodu>\n"
@@ -409,7 +409,7 @@ msgstr "Fecha de adición"
 #: crates/ui-gtk/resources/ui/albums.ui:128
 #: crates/ui-gtk/src/window/sidebar.rs:51
 #: crates/ui-gtk/src/views/artists.rs:680
-#: crates/ui-gtk/src/views/search.rs:593 crates/ui-gtk/src/play_modes.rs:69
+#: crates/ui-gtk/src/views/search.rs:593 crates/ui-gtk/src/play_modes.rs:71
 #: crates/ui-gtk/src/views/statistics.rs:615
 #: crates/ui-gtk/src/tools/cover_manager.rs:727
 #: crates/ui-gtk/src/views/labels.rs:243
@@ -478,7 +478,7 @@ msgstr "Álbum"
 #: crates/ui-gtk/src/views/actions.rs:190
 #: crates/ui-gtk/src/views/folders.rs:262
 #: crates/ui-gtk/src/views/playlist.rs:192 crates/ui-gtk/src/deck/modes.rs:225
-#: crates/ui-gtk/src/play_modes.rs:261
+#: crates/ui-gtk/src/play_modes.rs:268
 #: crates/ui-gtk/src/views/smart_playlist.rs:493
 #: crates/ui-gtk/src/window/playlists.rs:228
 #: crates/ui-gtk/src/window/playlists.rs:232
@@ -563,7 +563,7 @@ msgstr "Duración"
 #: crates/ui-gtk/src/window/sidebar.rs:53
 #: crates/ui-gtk/src/views/search.rs:613 crates/ui-gtk/src/views/tracks.rs:217
 #: crates/ui-gtk/src/views/tracks.rs:274 crates/ui-gtk/src/views/tracks.rs:328
-#: crates/ui-gtk/src/window/pages.rs:447 crates/ui-gtk/src/play_modes.rs:68
+#: crates/ui-gtk/src/window/pages.rs:447 crates/ui-gtk/src/play_modes.rs:70
 #: crates/ui-gtk/src/views/statistics.rs:603
 #: crates/ui-gtk/src/views/labels.rs:255 crates/ui-gtk/src/views/labels.rs:292
 msgid "Tracks"
@@ -620,14 +620,14 @@ msgstr "Añadir a Favoritos"
 #: crates/ui-gtk/resources/ui/deck.ui:132
 #: crates/ui-gtk/resources/ui/deck.ui:134
 #: crates/ui-gtk/resources/ui/main_window.ui:86
-#: crates/ui-gtk/src/play_modes.rs:268 crates/ui-gtk/src/window/desktop.rs:439
+#: crates/ui-gtk/src/play_modes.rs:275 crates/ui-gtk/src/window/desktop.rs:439
 msgid "Previous"
 msgstr "Anterior"
 
 #: crates/ui-gtk/resources/ui/deck.ui:178
 #: crates/ui-gtk/resources/ui/deck.ui:180
 #: crates/ui-gtk/resources/ui/main_window.ui:90 crates/ui-gtk/src/deck.rs:599
-#: crates/ui-gtk/src/window.rs:831 crates/ui-gtk/src/play_modes.rs:269
+#: crates/ui-gtk/src/window.rs:831 crates/ui-gtk/src/play_modes.rs:276
 #: crates/ui-gtk/src/window/desktop.rs:438
 msgid "Next"
 msgstr "Siguiente"
@@ -683,14 +683,14 @@ msgid "Edit"
 msgstr "Editar"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:40
-#: crates/ui-gtk/src/window/pages.rs:660 crates/ui-gtk/src/shortcuts.rs:153
+#: crates/ui-gtk/src/window/pages.rs:660 crates/ui-gtk/src/shortcuts.rs:161
 #: crates/ui-gtk/src/tools/import.rs:940
 #: crates/ui-gtk/src/tools/replaced.rs:251
 msgid "Undo"
 msgstr "Deshacer"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:44
-#: crates/ui-gtk/src/shortcuts.rs:157
+#: crates/ui-gtk/src/shortcuts.rs:165
 msgid "Redo"
 msgstr "Rehacer"
 
@@ -708,7 +708,7 @@ msgid "View"
 msgstr "Ver"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:59
-#: crates/ui-gtk/src/shortcuts.rs:160
+#: crates/ui-gtk/src/shortcuts.rs:168
 msgid "Sidebar"
 msgstr "Barra lateral"
 
@@ -743,7 +743,7 @@ msgstr "Reproducir/Pausar"
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:534
 #: crates/ui-gtk/src/dialogs/settings/output.rs:341
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:609
-#: crates/ui-gtk/src/play_modes.rs:264
+#: crates/ui-gtk/src/play_modes.rs:271
 #: crates/ui-gtk/src/tools/file_tools.rs:75
 #: crates/ui-gtk/src/tools/managed_runs.rs:529
 #: crates/ui-gtk/src/shortcuts.rs:75 crates/ui-gtk/src/tools/converter.rs:1034
@@ -752,12 +752,12 @@ msgid "Stop"
 msgstr "Detener"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:94
-#: crates/ui-gtk/src/play_modes.rs:276
+#: crates/ui-gtk/src/play_modes.rs:285
 msgid "Seek Back"
 msgstr "Retroceder"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:98
-#: crates/ui-gtk/src/play_modes.rs:277
+#: crates/ui-gtk/src/play_modes.rs:286
 msgid "Seek Forward"
 msgstr "Avanzar"
 
@@ -877,19 +877,19 @@ msgid "Preferences"
 msgstr "Preferencias"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:217
-#: crates/ui-gtk/src/shortcuts.rs:185 crates/ui-gtk/src/window/desktop.rs:459
+#: crates/ui-gtk/src/shortcuts.rs:193 crates/ui-gtk/src/window/desktop.rs:459
 msgid "Quit"
 msgstr "Salir"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:267
 #: crates/ui-gtk/resources/ui/main_window.ui:269
-#: crates/ui-gtk/src/shortcuts.rs:170
+#: crates/ui-gtk/src/shortcuts.rs:178
 msgid "Back"
 msgstr "Atrás"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:279
 #: crates/ui-gtk/resources/ui/main_window.ui:281
-#: crates/ui-gtk/src/shortcuts.rs:171
+#: crates/ui-gtk/src/shortcuts.rs:179
 msgid "Forward"
 msgstr "Adelante"
 
@@ -920,7 +920,7 @@ msgstr "Panel"
 #: crates/ui-gtk/resources/ui/panel.ui:156
 #: crates/ui-gtk/src/views/now_playing.rs:234
 #: crates/ui-gtk/src/views/now_playing.rs:317
-#: crates/ui-gtk/src/play_modes.rs:302 crates/ui-gtk/src/views/history.rs:258
+#: crates/ui-gtk/src/play_modes.rs:311 crates/ui-gtk/src/views/history.rs:258
 #: crates/ui-gtk/src/mini_player.rs:212 crates/ui-gtk/src/mini_player.rs:230
 msgid "Queue"
 msgstr "Cola"
@@ -960,7 +960,7 @@ msgstr "Guardar como lista de reproducción"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:605
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:686
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1333
-#: crates/ui-gtk/src/play_modes.rs:249
+#: crates/ui-gtk/src/play_modes.rs:256
 msgid "Clear"
 msgstr "Limpiar"
 
@@ -1012,16 +1012,16 @@ msgid "The player has stopped. Restart Helikodu to play again."
 msgstr ""
 "El reproductor se ha detenido. Reinicie Helikodu para volver a reproducir."
 
-#: crates/ui-gtk/src/backend/service.rs:2020
+#: crates/ui-gtk/src/backend/service.rs:2032
 msgid "No sound (null output)"
 msgstr "Sin sonido (salida nula)"
 
-#: crates/ui-gtk/src/backend/service.rs:2021
+#: crates/ui-gtk/src/backend/service.rs:2033
 #: crates/ui-gtk/src/popovers/output_switcher.rs:37
 msgid "WAV file"
 msgstr "Archivo WAV"
 
-#: crates/ui-gtk/src/backend/service.rs:2023
+#: crates/ui-gtk/src/backend/service.rs:2035
 #: crates/ui-gtk/src/dialogs/first_run.rs:231
 #: crates/ui-gtk/src/dialogs/settings/output.rs:127
 #: crates/ui-gtk/src/dialogs/settings/output.rs:158
@@ -1029,39 +1029,39 @@ msgstr "Archivo WAV"
 msgid "System default"
 msgstr "Predeterminado del sistema"
 
-#: crates/ui-gtk/src/backend/service.rs:2025
+#: crates/ui-gtk/src/backend/service.rs:2037
 #, rust-format
 msgid "Default device ({})"
 msgstr "Dispositivo predeterminado ({})"
 
-#: crates/ui-gtk/src/backend/service.rs:2393
+#: crates/ui-gtk/src/backend/service.rs:2405
 #, rust-format
 msgid "Cannot play {}: {}"
 msgstr "No se puede reproducir {}: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2403
+#: crates/ui-gtk/src/backend/service.rs:2415
 msgid ""
 "Helikodu did not end normally last time. The queue was restored, paused."
 msgstr ""
 "Helikodu no se cerró correctamente la última vez. Se ha restaurado la cola, "
 "en pausa."
 
-#: crates/ui-gtk/src/backend/service.rs:2406
+#: crates/ui-gtk/src/backend/service.rs:2418
 #, rust-format
 msgid "Cannot play this: {}"
 msgstr "No se puede reproducir esto: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2409
+#: crates/ui-gtk/src/backend/service.rs:2421
 #, rust-format
 msgid "The queue could not be saved: {}"
 msgstr "No se pudo guardar la cola: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2412
+#: crates/ui-gtk/src/backend/service.rs:2424
 #, rust-format
 msgid "The playback settings of the track could not be saved: {}"
 msgstr "No se pudo guardar la configuración de reproducción de la pista: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2635
+#: crates/ui-gtk/src/backend/service.rs:2647
 msgid "Playing music"
 msgstr "Reproduciendo música"
 
@@ -1118,7 +1118,7 @@ msgstr "Mostrar {} en su álbum"
 msgid "Stop After"
 msgstr "Detener después de"
 
-#: crates/ui-gtk/src/deck.rs:369 crates/ui-gtk/src/play_modes.rs:306
+#: crates/ui-gtk/src/deck.rs:369 crates/ui-gtk/src/play_modes.rs:315
 msgid "Sleep Timer…"
 msgstr "Temporizador de apagado…"
 
@@ -1641,7 +1641,7 @@ msgstr "Años"
 #: crates/ui-gtk/src/window/sidebar.rs:58
 #: crates/ui-gtk/src/dialogs/settings/library.rs:639
 #: crates/ui-gtk/src/views/folders.rs:183
-#: crates/ui-gtk/src/views/folders.rs:239 crates/ui-gtk/src/play_modes.rs:70
+#: crates/ui-gtk/src/views/folders.rs:239 crates/ui-gtk/src/play_modes.rs:72
 msgid "Folders"
 msgstr "Carpetas"
 
@@ -1651,7 +1651,7 @@ msgstr "Ocultar la barra lateral"
 
 #: crates/ui-gtk/src/window/sidebar.rs:179
 #: crates/ui-gtk/src/views/actions.rs:591
-#: crates/ui-gtk/src/window/pages.rs:798 crates/ui-gtk/src/shortcuts.rs:150
+#: crates/ui-gtk/src/window/pages.rs:798 crates/ui-gtk/src/shortcuts.rs:158
 msgid "New playlist"
 msgstr "Nueva lista de reproducción"
 
@@ -2242,7 +2242,7 @@ msgstr "No se guardó este cambio: {}"
 #: crates/ui-gtk/src/dialogs/settings.rs:229
 #: crates/ui-gtk/src/dialogs/settings.rs:231
 #: crates/ui-gtk/src/dialogs/settings.rs:241
-#: crates/ui-gtk/src/shortcuts.rs:175
+#: crates/ui-gtk/src/shortcuts.rs:183
 msgid "Settings"
 msgstr "Configuración"
 
@@ -2631,7 +2631,7 @@ msgid "Window style"
 msgstr "Estilo de ventana"
 
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:433
-#: crates/ui-gtk/src/shortcuts.rs:161
+#: crates/ui-gtk/src/shortcuts.rs:169
 msgid "Menu bar"
 msgstr "Barra de menú"
 
@@ -3098,8 +3098,8 @@ msgstr ""
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:60
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:360
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:74
-#: crates/ui-gtk/src/play_modes.rs:73 crates/ui-gtk/src/play_modes.rs:83
-#: crates/ui-gtk/src/play_modes.rs:93
+#: crates/ui-gtk/src/play_modes.rs:75 crates/ui-gtk/src/play_modes.rs:87
+#: crates/ui-gtk/src/play_modes.rs:97
 msgid "Off"
 msgstr "Desactivado"
 
@@ -3390,7 +3390,7 @@ msgid "Fixed at 100 % (bit-perfect)"
 msgstr "Fijo al 100 % (bit-perfect)"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:339
-#: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:259
+#: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:266
 #: crates/ui-gtk/src/mini_player.rs:504
 #: crates/ui-gtk/src/window/desktop.rs:435
 msgid "Pause"
@@ -3936,7 +3936,7 @@ msgstr "Sin asignar"
 
 #: crates/ui-gtk/src/dialogs/shortcuts.rs:142
 #: crates/ui-gtk/src/dialogs/shortcuts.rs:154
-#: crates/ui-gtk/src/shortcuts.rs:181
+#: crates/ui-gtk/src/shortcuts.rs:189
 msgid "Keyboard shortcuts"
 msgstr "Atajos del teclado"
 
@@ -5416,7 +5416,7 @@ msgid "No lyrics for this track"
 msgstr "Esta pista no tiene letra"
 
 #: crates/ui-gtk/src/views/now_playing.rs:382
-#: crates/ui-gtk/src/shortcuts.rs:162 crates/ui-gtk/src/mini_player.rs:135
+#: crates/ui-gtk/src/shortcuts.rs:170 crates/ui-gtk/src/mini_player.rs:135
 msgid "Now Playing"
 msgstr "Reproduciendo ahora"
 
@@ -5579,7 +5579,7 @@ msgstr "Quitar el bucle"
 
 #: crates/ui-gtk/src/deck/modes.rs:156
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:88
-#: crates/ui-gtk/src/shortcuts.rs:126
+#: crates/ui-gtk/src/shortcuts.rs:134
 msgid "Sleep timer"
 msgstr "Temporizador de apagado"
 
@@ -6208,156 +6208,184 @@ msgstr "Reproducir solo cuando yo la inicie"
 msgid "Volume for this track"
 msgstr "Volumen de esta pista"
 
-#: crates/ui-gtk/src/play_modes.rs:71
+#: crates/ui-gtk/src/play_modes.rs:73
 msgid "Groupings"
 msgstr "Agrupaciones"
 
-#: crates/ui-gtk/src/play_modes.rs:72
+#: crates/ui-gtk/src/play_modes.rs:74
 msgid "Tracks Within Each Album"
 msgstr "Pistas dentro de cada álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:80 crates/ui-gtk/src/play_modes.rs:90
+#: crates/ui-gtk/src/play_modes.rs:82 crates/ui-gtk/src/play_modes.rs:94
 msgid "This Track"
 msgstr "Esta pista"
 
-#: crates/ui-gtk/src/play_modes.rs:81 crates/ui-gtk/src/play_modes.rs:91
-#: crates/ui-gtk/src/play_modes.rs:101
+#: crates/ui-gtk/src/play_modes.rs:83 crates/ui-gtk/src/play_modes.rs:95
+#: crates/ui-gtk/src/play_modes.rs:105
 msgid "This Album"
 msgstr "Este álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:82
+#: crates/ui-gtk/src/play_modes.rs:84
 msgid "The Whole Queue"
 msgstr "Toda la cola"
 
-#: crates/ui-gtk/src/play_modes.rs:92
+#: crates/ui-gtk/src/play_modes.rs:85
+msgid "Continue with Related Tracks"
+msgstr "Continuar con pistas relacionadas"
+
+#: crates/ui-gtk/src/play_modes.rs:86
+msgid "Auto-DJ"
+msgstr "Auto-DJ"
+
+#: crates/ui-gtk/src/play_modes.rs:96
 msgid "The Queue"
 msgstr "La cola"
 
-#: crates/ui-gtk/src/play_modes.rs:100
+#: crates/ui-gtk/src/play_modes.rs:104
 msgid "This Artist"
 msgstr "Este artista"
 
-#: crates/ui-gtk/src/play_modes.rs:102
+#: crates/ui-gtk/src/play_modes.rs:106
 msgid "Everything"
 msgstr "Todo"
 
-#: crates/ui-gtk/src/play_modes.rs:109
+#: crates/ui-gtk/src/play_modes.rs:113
 msgid "Shuffle: tracks"
 msgstr "Aleatorio: pistas"
 
-#: crates/ui-gtk/src/play_modes.rs:110
+#: crates/ui-gtk/src/play_modes.rs:114
 msgid "Shuffle: albums"
 msgstr "Aleatorio: álbumes"
 
-#: crates/ui-gtk/src/play_modes.rs:111
+#: crates/ui-gtk/src/play_modes.rs:115
 msgid "Shuffle: folders"
 msgstr "Aleatorio: carpetas"
 
-#: crates/ui-gtk/src/play_modes.rs:112
+#: crates/ui-gtk/src/play_modes.rs:116
 msgid "Shuffle: groupings"
 msgstr "Aleatorio: agrupaciones"
 
-#: crates/ui-gtk/src/play_modes.rs:113
+#: crates/ui-gtk/src/play_modes.rs:117
 msgid "Shuffle: tracks within each album"
 msgstr "Aleatorio: pistas dentro de cada álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:114
+#: crates/ui-gtk/src/play_modes.rs:118
 msgid "Shuffle: off"
 msgstr "Aleatorio: desactivado"
 
-#: crates/ui-gtk/src/play_modes.rs:121
+#: crates/ui-gtk/src/play_modes.rs:125
 msgid "Repeat: this track"
 msgstr "Repetir: esta pista"
 
-#: crates/ui-gtk/src/play_modes.rs:122
+#: crates/ui-gtk/src/play_modes.rs:126
 msgid "Repeat: this album"
 msgstr "Repetir: este álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:123
+#: crates/ui-gtk/src/play_modes.rs:127
 msgid "Repeat: the whole queue"
 msgstr "Repetir: toda la cola"
 
-#: crates/ui-gtk/src/play_modes.rs:124
+#: crates/ui-gtk/src/play_modes.rs:128
+msgid "Repeat: continue with related tracks"
+msgstr "Repetir: continuar con pistas relacionadas"
+
+#: crates/ui-gtk/src/play_modes.rs:129
+msgid "Repeat: Auto-DJ"
+msgstr "Repetir: Auto-DJ"
+
+#: crates/ui-gtk/src/play_modes.rs:130
 msgid "Repeat: off"
 msgstr "Repetir: desactivado"
 
-#: crates/ui-gtk/src/play_modes.rs:131
+#: crates/ui-gtk/src/play_modes.rs:137
 msgid "stops after this track"
 msgstr "se detiene después de esta pista"
 
-#: crates/ui-gtk/src/play_modes.rs:132
+#: crates/ui-gtk/src/play_modes.rs:138
 msgid "stops after this album"
 msgstr "se detiene después de este álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:133
+#: crates/ui-gtk/src/play_modes.rs:139
 msgid "stops at the end of the queue"
 msgstr "se detiene al final de la cola"
 
-#: crates/ui-gtk/src/play_modes.rs:228
+#: crates/ui-gtk/src/play_modes.rs:234
 msgid "Set the Start Here"
 msgstr "Marcar el inicio aquí"
 
-#: crates/ui-gtk/src/play_modes.rs:229
+#: crates/ui-gtk/src/play_modes.rs:235
 msgid "Set the End Here"
 msgstr "Marcar el final aquí"
 
-#: crates/ui-gtk/src/play_modes.rs:230
+#: crates/ui-gtk/src/play_modes.rs:236
 msgid "Clear the Loop"
 msgstr "Quitar el bucle"
 
-#: crates/ui-gtk/src/play_modes.rs:239
+#: crates/ui-gtk/src/play_modes.rs:245
 msgid "Remove Tracks After They Play"
 msgstr "Quitar las pistas después de reproducirlas"
 
-#: crates/ui-gtk/src/play_modes.rs:243
+#: crates/ui-gtk/src/play_modes.rs:249
 msgid "Continue from the Selected Track"
 msgstr "Continuar desde la pista seleccionada"
 
-#: crates/ui-gtk/src/play_modes.rs:248
+#: crates/ui-gtk/src/play_modes.rs:252
+msgid "Intro Scan"
+msgstr "Escucha de introducciones"
+
+#: crates/ui-gtk/src/play_modes.rs:255
 msgid "Save as Playlist…"
 msgstr "Guardar como lista de reproducción…"
 
-#: crates/ui-gtk/src/play_modes.rs:270
+#: crates/ui-gtk/src/play_modes.rs:277
 msgid "Previous Album"
 msgstr "Álbum anterior"
 
-#: crates/ui-gtk/src/play_modes.rs:271
+#: crates/ui-gtk/src/play_modes.rs:278
 msgid "Next Album"
 msgstr "Álbum siguiente"
 
-#: crates/ui-gtk/src/play_modes.rs:272
+#: crates/ui-gtk/src/play_modes.rs:279
 msgid "Random Album"
 msgstr "Álbum al azar"
 
-#: crates/ui-gtk/src/play_modes.rs:278
+#: crates/ui-gtk/src/play_modes.rs:280
+msgid "Radio Random"
+msgstr "Radio aleatoria"
+
+#: crates/ui-gtk/src/play_modes.rs:281
+msgid "Revert to the Skipped Track"
+msgstr "Volver a la pista saltada"
+
+#: crates/ui-gtk/src/play_modes.rs:287
 msgid "Loop a Section"
 msgstr "Repetir un fragmento en bucle"
 
-#: crates/ui-gtk/src/play_modes.rs:284
+#: crates/ui-gtk/src/play_modes.rs:293
 #, rust-format
 msgid "Shuffle: {}"
 msgstr "Aleatorio: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:288
+#: crates/ui-gtk/src/play_modes.rs:297
 #, rust-format
 msgid "Repeat: {}"
 msgstr "Repetir: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:293
+#: crates/ui-gtk/src/play_modes.rs:302
 #, rust-format
 msgid "Stop After: {}"
 msgstr "Detener después de: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:299
+#: crates/ui-gtk/src/play_modes.rs:308
 #, rust-format
 msgid "Play Only: {}"
 msgstr "Reproducir solo: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:309
+#: crates/ui-gtk/src/play_modes.rs:318
 msgid "Choose the Output Device…"
 msgstr "Elegir el dispositivo de salida…"
 
-#: crates/ui-gtk/src/play_modes.rs:312
+#: crates/ui-gtk/src/play_modes.rs:321
 msgid "Output Device"
 msgstr "Dispositivo de salida"
 
@@ -9903,35 +9931,47 @@ msgstr "Álbum siguiente"
 msgid "Random album"
 msgstr "Álbum al azar"
 
-#: crates/ui-gtk/src/shortcuts.rs:127 crates/ui-gtk/src/window/narrow.rs:368
+#: crates/ui-gtk/src/shortcuts.rs:126
+msgid "Radio random"
+msgstr "Radio aleatoria"
+
+#: crates/ui-gtk/src/shortcuts.rs:130
+msgid "Revert to the skipped track"
+msgstr "Volver a la pista saltada"
+
+#: crates/ui-gtk/src/shortcuts.rs:133
+msgid "Intro scan"
+msgstr "Escucha de introducciones"
+
+#: crates/ui-gtk/src/shortcuts.rs:135 crates/ui-gtk/src/window/narrow.rs:368
 msgid "Search"
 msgstr "Buscar"
 
-#: crates/ui-gtk/src/shortcuts.rs:131
+#: crates/ui-gtk/src/shortcuts.rs:139
 msgid "Jump to the playing track"
 msgstr "Ir a la pista en reproducción"
 
-#: crates/ui-gtk/src/shortcuts.rs:137
+#: crates/ui-gtk/src/shortcuts.rs:145
 msgid "Track properties"
 msgstr "Propiedades de la pista"
 
-#: crates/ui-gtk/src/shortcuts.rs:143
+#: crates/ui-gtk/src/shortcuts.rs:151
 msgid "Copies of the track's file"
 msgstr "Copias del archivo de la pista"
 
-#: crates/ui-gtk/src/shortcuts.rs:146
+#: crates/ui-gtk/src/shortcuts.rs:154
 msgid "Select all"
 msgstr "Seleccionar todo"
 
-#: crates/ui-gtk/src/shortcuts.rs:166 crates/ui-gtk/src/window/desktop.rs:456
+#: crates/ui-gtk/src/shortcuts.rs:174 crates/ui-gtk/src/window/desktop.rs:456
 msgid "Mini player"
 msgstr "Minirreproductor"
 
-#: crates/ui-gtk/src/shortcuts.rs:169
+#: crates/ui-gtk/src/shortcuts.rs:177
 msgid "Next pane"
 msgstr "Panel siguiente"
 
-#: crates/ui-gtk/src/shortcuts.rs:184
+#: crates/ui-gtk/src/shortcuts.rs:192
 msgid "User guide"
 msgstr "Guía de usuario"
 
