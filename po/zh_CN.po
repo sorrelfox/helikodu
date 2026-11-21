@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 08:09-0500\n"
+"POT-Creation-Date: 2026-11-21 08:33-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Chinese (Simplified) <https://github.com/sorrelfox/helikodu>\n"
@@ -198,17 +198,48 @@ msgid "Your music library in the dark style"
 msgstr "深色样式下的音乐库"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:127
+msgid "More sound processing and smarter playback:"
+msgstr "更多声音处理和更智能的播放："
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+msgid ""
+"A compressor with a night mode, room correction by convolution, pitch shift "
+"and playback speed"
+msgstr "带夜间模式的压缩器、卷积房间校正、变调和播放速度"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+msgid ""
+"The processing stages in an order of your choice, saved as named chains, and"
+" an equalizer for single tracks"
+msgstr "按你选择的顺序排列并保存为命名链的处理阶段，以及单曲均衡器"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+msgid ""
+"Endless play with related tracks, an Auto-DJ, and shuffle that favours or "
+"skips tracks"
+msgstr "用相关曲目无尽播放、自动 DJ，以及优先或跳过曲目的随机播放"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+msgid ""
+"Tracks that sound alike, found on your computer without any online service"
+msgstr "在你的计算机上找到听感相似的曲目，无需任何在线服务"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+msgid "Generator playlists, made by steps"
+msgstr "由步骤构成的生成式播放列表"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:139
 msgid "Track analysis and library features:"
 msgstr "曲目分析与音乐库功能："
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:141
 msgid ""
 "Tracks are analysed in the background: crossfades follow the music, silence "
 "can be left out or skipped, and a leveller evens out tracks without loudness"
 " values"
 msgstr "曲目在后台分析：交叉淡化跟随音乐进行，静音可以省略或跳过，电平调节器会平衡没有响度值的曲目"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
 msgid ""
 "Import play counts, ratings and playlists from Rhythmbox, Strawberry, "
 "Clementine, Lollypop and iTunes, and move your own data to another computer"
@@ -216,62 +247,62 @@ msgstr ""
 "从 Rhythmbox、Strawberry、Clementine、Lollypop 和 iTunes "
 "导入播放次数、评分和播放列表，并将自己的数据迁移到另一台计算机"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
 msgid "Labels for tracks, albums and artists, and fields of your own"
 msgstr "曲目、专辑和艺人的标签，以及自定义字段"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
 msgid "An optional managed music folder"
 msgstr "可选的托管音乐文件夹"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
 msgid ""
 "Naming patterns with functions and conditions, and the track table grouped "
 "by any field"
 msgstr "支持函数和条件的命名模式，以及可按任意字段分组的曲目表"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:134
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:146
 msgid ""
 "Music that was playing when Helikodu closed plays on when it starts again"
 msgstr "关闭 Helikodu 时正在播放的音乐，会在下次启动时继续播放"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:140
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:151
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:152
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:163
 msgid "Fixes for the release candidate:"
 msgstr "候选发布版本的修复："
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
 msgid ""
 "The Flatpak file installs Helikodu from its own signed repository, so that "
 "it gets updates"
 msgstr "Flatpak 文件会从 Helikodu 自己的签名仓库安装，因此可以获得更新"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
 msgid ""
 "The tray menu in KDE Plasma no longer shows wrong items after it changes"
 msgstr "KDE Plasma 的系统托盘菜单在变化后不再显示错误的项目"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:156
 msgid "Every page fits a narrow window"
 msgstr "每个页面都能放进窄窗口"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:157
 msgid "Helikodu uses less memory"
 msgstr "Helikodu 占用的内存更少"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:153
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:165
 msgid "With Now Playing open, the window can be made as small as elsewhere"
 msgstr "打开“正在播放”时，窗口可以像其他界面一样缩小"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:166
 msgid "The Favourite button shows the same heart on every desktop"
 msgstr "收藏按钮在所有桌面上都显示同样的心形"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:167
 msgid "The ring around the cover of the playing album is drawn whole"
 msgstr "正在播放的专辑封面周围的边框会完整显示"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:162
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:174
 msgid ""
 "The release candidate for 1.0: smart playlists and a query language for "
 "search, lyrics, a play history, Home and a mini player, tag tools with undo,"
@@ -282,7 +313,7 @@ msgstr ""
 "1.0 "
 "的候选发布版本：智能播放列表和用于搜索的查询语言、歌词、播放历史、主页和迷你播放器、支持撤销的标签工具、文件整理、格式转换和文件夹同步、封面管理器、波形进度条、音乐库备份、离线用户指南，以及更好的屏幕阅读器和键盘操作支持。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:173
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:185
 msgid ""
 "The first beta: graphic and parametric equalizers, crossfeed, channel mixing"
 " and a limiter, crossfades and fades, loudness measurement, a signal path "
@@ -292,7 +323,7 @@ msgstr ""
 "首个 Beta 版本：图示均衡器和参数均衡器、交叉馈送、声道混合和限幅器、交叉淡化和淡入淡出、响度测量、信号路径视图、PulseAudio 和 JACK"
 " 输出，以及对 Tracker 模块音乐、游戏音乐、SID 音乐和 MIDI 文件的支持。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:183
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:195
 msgid ""
 "The first alpha: a music library with albums, artists, genres, folders, "
 "tracks, search and playlists, gapless and bit-perfect playback with "

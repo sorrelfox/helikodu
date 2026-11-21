@@ -16,7 +16,7 @@
 # is built without its decoder.
 
 pkgname=helikodu
-_srcver=0.9.4
+_srcver=0.9.5
 # Upstream pre-release suffixes (1.0.0-rc1) become 1.0.0rc1, which pacman
 # sorts before 1.0.0.
 pkgver=${_srcver//-/}

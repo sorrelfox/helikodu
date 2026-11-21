@@ -122,6 +122,18 @@ SPDX-License-Identifier: CC0-1.0
   <translation type="gettext">helikodu</translation>
 
   <releases>
+    <release version="0.9.5" date="2026-11-21" type="development">
+      <description>
+        <p>More sound processing and smarter playback:</p>
+        <ul>
+          <li>A compressor with a night mode, room correction by convolution, pitch shift and playback speed</li>
+          <li>The processing stages in an order of your choice, saved as named chains, and an equalizer for single tracks</li>
+          <li>Endless play with related tracks, an Auto-DJ, and shuffle that favours or skips tracks</li>
+          <li>Tracks that sound alike, found on your computer without any online service</li>
+          <li>Generator playlists, made by steps</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.4" date="2026-11-20" type="development">
       <description>
         <p>Track analysis and library features:</p>

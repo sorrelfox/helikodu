@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 08:09-0500\n"
+"POT-Creation-Date: 2026-11-21 08:33-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Japanese <https://github.com/sorrelfox/helikodu>\n"
@@ -201,10 +201,41 @@ msgid "Your music library in the dark style"
 msgstr "ダークスタイルで表示した音楽ライブラリ"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:127
+msgid "More sound processing and smarter playback:"
+msgstr "音声処理の追加と、より賢い再生:"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+msgid ""
+"A compressor with a night mode, room correction by convolution, pitch shift "
+"and playback speed"
+msgstr "ナイトモード付きコンプレッサー、コンボリューションによるルーム補正、ピッチシフト、再生速度"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+msgid ""
+"The processing stages in an order of your choice, saved as named chains, and"
+" an equalizer for single tracks"
+msgstr "好きな順序に並べて名前付きチェーンとして保存できる処理ステージと、トラックごとのイコライザー"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+msgid ""
+"Endless play with related tracks, an Auto-DJ, and shuffle that favours or "
+"skips tracks"
+msgstr "関連トラックでの連続再生、オート DJ、トラックを優先またはスキップするシャッフル"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+msgid ""
+"Tracks that sound alike, found on your computer without any online service"
+msgstr "オンラインサービスを使わずにコンピューター上で見つける、サウンドが似ているトラック"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+msgid "Generator playlists, made by steps"
+msgstr "ステップで作るジェネレータープレイリスト"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:139
 msgid "Track analysis and library features:"
 msgstr "トラック分析とライブラリ機能:"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:141
 msgid ""
 "Tracks are analysed in the background: crossfades follow the music, silence "
 "can be left out or skipped, and a leveller evens out tracks without loudness"
@@ -212,7 +243,7 @@ msgid ""
 msgstr ""
 "トラックはバックグラウンドで分析されます。クロスフェードは音楽に合わせて行われ、無音部分は省いたりスキップしたりでき、ラウドネス値のないトラックはレベラーが揃えます"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
 msgid ""
 "Import play counts, ratings and playlists from Rhythmbox, Strawberry, "
 "Clementine, Lollypop and iTunes, and move your own data to another computer"
@@ -220,62 +251,62 @@ msgstr ""
 "Rhythmbox、Strawberry、Clementine、Lollypop、iTunes "
 "から再生回数、評価、プレイリストをインポートし、自分のデータを別のコンピューターに移せます"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
 msgid "Labels for tracks, albums and artists, and fields of your own"
 msgstr "トラック、アルバム、アーティストのラベルと、独自のフィールド"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
 msgid "An optional managed music folder"
 msgstr "任意で使える管理フォルダー"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
 msgid ""
 "Naming patterns with functions and conditions, and the track table grouped "
 "by any field"
 msgstr "関数と条件を使える命名パターンと、任意のフィールドでグループ化できるトラック表"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:134
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:146
 msgid ""
 "Music that was playing when Helikodu closed plays on when it starts again"
 msgstr "Helikodu を閉じたときに再生していた音楽は、次に起動したときに続きから再生されます"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:140
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:151
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:152
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:163
 msgid "Fixes for the release candidate:"
 msgstr "リリース候補版の修正:"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
 msgid ""
 "The Flatpak file installs Helikodu from its own signed repository, so that "
 "it gets updates"
 msgstr "Flatpak ファイルは Helikodu 独自の署名付きリポジトリからインストールするため、更新を受け取れます"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
 msgid ""
 "The tray menu in KDE Plasma no longer shows wrong items after it changes"
 msgstr "KDE Plasma のシステムトレイメニューが、変更後に誤った項目を表示しなくなりました"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:156
 msgid "Every page fits a narrow window"
 msgstr "すべてのページが狭いウィンドウに収まります"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:157
 msgid "Helikodu uses less memory"
 msgstr "Helikodu のメモリー使用量が減りました"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:153
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:165
 msgid "With Now Playing open, the window can be made as small as elsewhere"
 msgstr "再生中画面を開いていても、ほかの画面と同じ大きさまでウィンドウを小さくできます"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:166
 msgid "The Favourite button shows the same heart on every desktop"
 msgstr "お気に入りボタンはどのデスクトップでも同じハートを表示します"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:167
 msgid "The ring around the cover of the playing album is drawn whole"
 msgstr "再生中のアルバムのカバーを囲む枠が欠けずに描かれます"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:162
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:174
 msgid ""
 "The release candidate for 1.0: smart playlists and a query language for "
 "search, lyrics, a play history, Home and a mini player, tag tools with undo,"
@@ -286,7 +317,7 @@ msgstr ""
 "1.0 のリリース候補版: "
 "スマートプレイリストと検索用のクエリ言語、歌詞、再生履歴、ホームとミニプレーヤー、元に戻せるタグツール、ファイルの整理・変換・フォルダー同期、カバーマネージャー、波形シークバー、ライブラリのバックアップ、オフラインのユーザーガイド、スクリーンリーダーとキーボード操作への対応の改善。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:173
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:185
 msgid ""
 "The first beta: graphic and parametric equalizers, crossfeed, channel mixing"
 " and a limiter, crossfades and fades, loudness measurement, a signal path "
@@ -297,7 +328,7 @@ msgstr ""
 "グラフィックイコライザーとパラメトリックイコライザー、クロスフィード、チャンネルミックスとリミッター、クロスフェードとフェード、ラウドネス測定、信号経路の表示、PulseAudio"
 " と JACK への出力、そしてトラッカーモジュール、ゲーム音楽、SID チューン、MIDI ファイルへの対応。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:183
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:195
 msgid ""
 "The first alpha: a music library with albums, artists, genres, folders, "
 "tracks, search and playlists, gapless and bit-perfect playback with "

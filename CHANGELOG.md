@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-11-21
+
 ### Added
 
 - Helikodu can tell how alike two tracks sound, offline and without any downloaded model: the background track analysis now also notes each track's timbre, rhythm, tonality and dynamics (tracks analysed before are analysed once more). `helikodu-cli similar FILE|TRACK-ID` lists the tracks that sound most like a track, or with `--album` or `--artist` like its album or artist, with a similarity from 0 to 1.
@@ -29,7 +31,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The queue panel lists the tracks that endless play or the Auto-DJ added under **Added by Helikodu**, each with a spark, and ends with a box saying what comes next, with **Change…** and **Turn off**; it says when nothing more can be added.
 - **Start Radio** in the menu of a track, an album or an artist starts endless play from it; **Undo** puts the queue back.
 - Each smart playlist can show its own columns: **Columns**, at the end of its rule line, shows or hides **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length**, and the choice is remembered per smart playlist. The stars of the **Rating** column rate a track.
-
 - **Settings → DSP and EQ** has pages for the compressor (Night, Gentle or your own values, its lookahead, a note that turns the limiter on, and its activity while music plays), convolution (a folder of impulse responses or a file per sample rate, the rate in use, files that cannot be read with the reason, normalization, gain and the share of the processed sound) and pitch shift in whole semitones.
 - The chain on **Settings → DSP and EQ** shows its eight stages in two numbered rows; a stage moves by dragging, with **Alt+Left** and **Alt+Right**, or from its menu, and **Default order** puts the order back. **Saved chains** saves, applies and deletes chains (with **Undo**).
 - The readout of **Settings → DSP and EQ** stays at the bottom of the page and gives the delay the stages add; the Signal path tab lists the DSP stages in the order of the chain, with their delay and the row **Delay added by processing**.

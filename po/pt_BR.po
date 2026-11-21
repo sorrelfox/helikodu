@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 08:09-0500\n"
+"POT-Creation-Date: 2026-11-21 08:33-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Portuguese (Brazil) <https://github.com/sorrelfox/helikodu>\n"
@@ -224,10 +224,49 @@ msgid "Your music library in the dark style"
 msgstr "Sua biblioteca de músicas no estilo escuro"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:127
+msgid "More sound processing and smarter playback:"
+msgstr "Mais processamento de som e uma reprodução mais inteligente:"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+msgid ""
+"A compressor with a night mode, room correction by convolution, pitch shift "
+"and playback speed"
+msgstr ""
+"Um compressor com modo noturno, correção de ambiente por convolução, mudança"
+" de tom e velocidade de reprodução"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+msgid ""
+"The processing stages in an order of your choice, saved as named chains, and"
+" an equalizer for single tracks"
+msgstr ""
+"As etapas de processamento na ordem que você escolher, salvas como cadeias "
+"com nome, e um equalizador para faixas individuais"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+msgid ""
+"Endless play with related tracks, an Auto-DJ, and shuffle that favours or "
+"skips tracks"
+msgstr ""
+"Reprodução sem fim com faixas relacionadas, um Auto-DJ e uma reprodução "
+"aleatória que favorece ou pula faixas"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+msgid ""
+"Tracks that sound alike, found on your computer without any online service"
+msgstr ""
+"Faixas que soam parecidas, encontradas no seu computador sem nenhum serviço "
+"online"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+msgid "Generator playlists, made by steps"
+msgstr "Listas de reprodução geradas, feitas por passos"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:139
 msgid "Track analysis and library features:"
 msgstr "Análise de faixas e recursos da biblioteca:"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:141
 msgid ""
 "Tracks are analysed in the background: crossfades follow the music, silence "
 "can be left out or skipped, and a leveller evens out tracks without loudness"
@@ -237,7 +276,7 @@ msgstr ""
 " música, o silêncio pode ser omitido ou pulado e um nivelador equilibra "
 "faixas sem valores de volume percebido"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
 msgid ""
 "Import play counts, ratings and playlists from Rhythmbox, Strawberry, "
 "Clementine, Lollypop and iTunes, and move your own data to another computer"
@@ -246,15 +285,15 @@ msgstr ""
 "Strawberry, Clementine, Lollypop e iTunes, e leve seus próprios dados para "
 "outro computador"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
 msgid "Labels for tracks, albums and artists, and fields of your own"
 msgstr "Rótulos para faixas, álbuns e artistas, e campos próprios"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
 msgid "An optional managed music folder"
 msgstr "Uma pasta de música gerenciada opcional"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
 msgid ""
 "Naming patterns with functions and conditions, and the track table grouped "
 "by any field"
@@ -262,19 +301,19 @@ msgstr ""
 "Padrões de nome com funções e condições, e a tabela de faixas agrupada por "
 "qualquer campo"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:134
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:146
 msgid ""
 "Music that was playing when Helikodu closed plays on when it starts again"
 msgstr ""
 "A música que tocava quando o Helikodu foi fechado continua quando ele é "
 "aberto de novo"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:140
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:151
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:152
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:163
 msgid "Fixes for the release candidate:"
 msgstr "Correções para a versão candidata a lançamento:"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
 msgid ""
 "The Flatpak file installs Helikodu from its own signed repository, so that "
 "it gets updates"
@@ -282,38 +321,38 @@ msgstr ""
 "O arquivo Flatpak instala o Helikodu do seu próprio repositório assinado, "
 "para que ele receba atualizações"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
 msgid ""
 "The tray menu in KDE Plasma no longer shows wrong items after it changes"
 msgstr ""
 "O menu da bandeja do sistema no KDE Plasma não mostra mais itens errados "
 "depois de mudar"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:156
 msgid "Every page fits a narrow window"
 msgstr "Todas as páginas cabem em uma janela estreita"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:157
 msgid "Helikodu uses less memory"
 msgstr "O Helikodu usa menos memória"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:153
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:165
 msgid "With Now Playing open, the window can be made as small as elsewhere"
 msgstr ""
 "Com “Tocando agora” aberto, a janela pode ficar tão pequena quanto nas "
 "outras telas"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:166
 msgid "The Favourite button shows the same heart on every desktop"
 msgstr ""
 "O botão de Favoritos mostra o mesmo coração em todos os ambientes de desktop"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:167
 msgid "The ring around the cover of the playing album is drawn whole"
 msgstr ""
 "O anel em volta da capa do álbum em reprodução é desenhado por inteiro"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:162
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:174
 msgid ""
 "The release candidate for 1.0: smart playlists and a query language for "
 "search, lyrics, a play history, Home and a mini player, tag tools with undo,"
@@ -329,7 +368,7 @@ msgstr ""
 "biblioteca, um guia do usuário offline e melhor acesso por leitor de tela e "
 "por teclado."
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:173
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:185
 msgid ""
 "The first beta: graphic and parametric equalizers, crossfeed, channel mixing"
 " and a limiter, crossfades and fades, loudness measurement, a signal path "
@@ -342,7 +381,7 @@ msgstr ""
 " e JACK, além de módulos tracker, música de videogame, músicas SID e "
 "arquivos MIDI."
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:183
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:195
 msgid ""
 "The first alpha: a music library with albums, artists, genres, folders, "
 "tracks, search and playlists, gapless and bit-perfect playback with "
