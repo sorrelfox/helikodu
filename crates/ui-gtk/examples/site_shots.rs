@@ -36,9 +36,10 @@ use std::time::{Duration, Instant};
 use gtk::prelude::*;
 use gtk::{gio, glib, graphene};
 use helikodu_model::settings::{FilterKind, ParametricFilter, VolumeControl};
+use helikodu_ui_gtk::backend::services::AnalysisFacts;
 use helikodu_ui_gtk::backend::{
     AlbumKey, AlbumQuery, Backend, MediaKind, OutputInfo, PlayerRequest, SignalLamp, SignalState,
-    TrackKey, Update, sample,
+    StageKind, TrackGrouping, TrackKey, TrackQuery, Update, sample,
 };
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice, set_choice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
@@ -285,6 +286,46 @@ fn spin(ms: u64) {
     }
 }
 
+/// Runs the main loop until `done` holds, for at most `ms` milliseconds;
+/// whether it holds.
+fn wait(ms: u64, done: impl Fn() -> bool) -> bool {
+    let end = Instant::now() + Duration::from_millis(ms);
+    while !done() {
+        if Instant::now() >= end {
+            return false;
+        }
+        spin(20);
+    }
+    true
+}
+
+/// Scrolls the page that holds the widget named `name` of `root` so that the
+/// widget is near its top.
+fn scroll_to(root: &impl IsA<gtk::Widget>, name: &str) {
+    let Some(target) = named::<gtk::Widget>(root, name) else {
+        return;
+    };
+    let mut scroller = target.parent();
+    while let Some(widget) = scroller.clone() {
+        if widget.is::<gtk::ScrolledWindow>() {
+            break;
+        }
+        scroller = widget.parent();
+    }
+    let Some(scroller) = scroller.and_downcast::<gtk::ScrolledWindow>() else {
+        return;
+    };
+    if let Some(point) = scroller
+        .child()
+        .and_then(|body| target.compute_point(&body, &graphene::Point::zero()))
+    {
+        scroller
+            .vadjustment()
+            .set_value(f64::from(point.y()) - 120.0);
+        spin(300);
+    }
+}
+
 fn descendants(root: &gtk::Widget) -> Vec<gtk::Widget> {
     let mut all = Vec::new();
     let mut pending = vec![root.clone()];
@@ -376,6 +417,9 @@ fn shoot_library(application: &gtk::Application, shots: &Shots) {
         "folders",
         "tracks",
         "facets",
+        "labels-popover",
+        "tracks-grouped",
+        "labels",
         "search",
         "query",
         "query-completion",
@@ -469,6 +513,68 @@ fn shoot_library(application: &gtk::Application, shots: &Shots) {
             spin(400);
             shots.window("facets", &main);
             main.set_browsing(false);
+        }
+    }
+    // The Labels popover over an album's page, for three of its tracks: the
+    // album's labels are given in each way, to some of the tracks, to the
+    // album and to its artist.
+    if shots.wanted("labels-popover") {
+        main.open_album(AlbumKey(3));
+        spin(600);
+        let keys: Vec<TrackKey> = library
+            .album(AlbumKey(3))
+            .ok()
+            .flatten()
+            .map(|album| album.tracks().take(3).map(|t| t.key).collect())
+            .unwrap_or_default();
+        main.demo_labels_popover(keys);
+        if wait(3000, || main.labels_popover_rows().len() > 2)
+            && let Some(popover) = main.labels_popover()
+        {
+            main.labels_popover_type("night", false);
+            spin(300);
+            shots.window_with("labels-popover", &main, &popover);
+            popover.popdown();
+        } else {
+            eprintln!("site-shots: labels-popover: the popover did not open");
+            shots.failed.set(true);
+        }
+        spin(200);
+    }
+    // The track table grouped by one of the user's fields.
+    if shots.wanted("tracks-grouped") {
+        main.open_page("tracks");
+        spin(400);
+        main.group_tracks(Some(TrackGrouping::Field("decade".into())));
+        wait(5000, || {
+            main.track_groups()
+                .iter()
+                .any(|(value, _, _)| value.ends_with("0s"))
+        });
+        spin(400);
+        shots.window("tracks-grouped", &main);
+        main.group_tracks(None);
+        spin(300);
+    }
+    if shots.wanted("labels") {
+        main.open_page("labels");
+        if wait(3000, || !main.label_list().is_empty()) {
+            let late = main
+                .label_list()
+                .iter()
+                .position(|(name, _)| name == "late night")
+                .unwrap_or(0);
+            main.choose_label(late);
+            wait(3000, || {
+                main.label_detail_texts()
+                    .iter()
+                    .any(|t| t.starts_with("track:"))
+            });
+            spin(400);
+            shots.window("labels", &main);
+        } else {
+            eprintln!("site-shots: labels: the sample has no labels");
+            shots.failed.set(true);
         }
     }
     if shots.any(&["search", "query", "query-completion"]) {
@@ -566,30 +672,78 @@ fn shoot_library(application: &gtk::Application, shots: &Shots) {
 /// The settings pages, the tag editor, the mini player and the question
 /// before playing at full output level.
 fn shoot_windows(application: &gtk::Application, shots: &Shots) {
-    const SETTINGS: &[&str] = &["output", "loudness", "appearance", "shortcuts", "library"];
-    const EDITOR: &[&str] = &["tag-editor", "tag-tools"];
+    const SETTINGS: &[&str] = &[
+        "output",
+        "playback",
+        "loudness",
+        "appearance",
+        "shortcuts",
+        "library",
+    ];
+    const EDITOR: &[&str] = &["tag-editor", "tag-tools", "file-info-analysis"];
     const MINI: &[&str] = &["mini-player", "mini-player-queue", "mini-player-lyrics"];
     let settings_wanted = SETTINGS
         .iter()
         .any(|page| shots.wanted(&format!("settings-{page}")));
+    let settings_wanted = settings_wanted || shots.wanted("settings-analysis");
     if !(settings_wanted || shots.any(EDITOR) || shots.any(MINI) || shots.wanted("volume-confirm"))
     {
         return;
     }
-    let backend = sample::backend(&playing(120));
+    let (backend, updates) = sample::backend_with_updates(&playing(120));
     let main = main_window(application, &backend, MAIN_SIZE);
     let library = backend.library();
     let albums = library
         .album_keys(&AlbumQuery::default())
         .unwrap_or_default();
 
+    // The settings that the pages show at their best: the leveller at work,
+    // the managed folder on and silence trimmed.
+    if settings_wanted {
+        let music = glib::home_dir().join("Music");
+        let _ = backend
+            .services()
+            .set_managed_folder(&music.join("Library"));
+        let _ = backend.services().update_settings(&mut |s| {
+            s.loudness.leveller = true;
+        });
+        let mut path = sample::signal_path(SignalLamp::LosslessProcessed);
+        if let Some(stage) = path
+            .stages
+            .iter_mut()
+            .find(|s| s.kind == StageKind::Loudness)
+        {
+            stage.detail = "leveller (no loudness values)".into();
+        }
+        let _ = updates.try_send(Update::SignalPath(Some(Box::new(path))));
+        spin(300);
+    }
     for page in SETTINGS {
         let name = format!("settings-{page}");
         if shots.wanted(&name) {
             let settings = main.open_settings(page);
             settings.set_default_size(1080, 780);
+            spin(400);
+            // Scrolled to what is new on the page.
+            match *page {
+                "playback" => scroll_to(&settings, "silence-note"),
+                "library" => {
+                    wait(3000, || {
+                        named::<gtk::Widget>(&settings, "managed-on").is_some()
+                    });
+                }
+                _ => {}
+            }
             shots.window(&name, &settings);
         }
+    }
+    // The Library page further down, at the track analysis.
+    if shots.wanted("settings-analysis") {
+        let settings = main.open_settings("library");
+        settings.set_default_size(1080, 780);
+        spin(400);
+        scroll_to(&settings, "track-analysis");
+        shots.window("settings-analysis", &settings);
     }
     if let Some(settings) = toplevel("settings") {
         settings.close();
@@ -627,6 +781,23 @@ fn shoot_windows(application: &gtk::Application, shots: &Shots) {
                 }
             }
             editor.close();
+        }
+        // File info of a track that was analysed, with its loudness curve.
+        if shots.wanted("file-info-analysis")
+            && let Some(track) = analysed_track(&backend)
+        {
+            spin(300);
+            main.edit_tags(&[track]);
+            if wait(3000, || toplevel("tag-editor").is_some())
+                && let Some(editor) = toplevel("tag-editor")
+            {
+                if let Some(tab) = toggle(&editor, "File info") {
+                    tab.set_active(true);
+                }
+                spin(400);
+                shots.window("file-info-analysis", &editor);
+                editor.close();
+            }
         }
     }
 
@@ -669,6 +840,20 @@ fn shoot_windows(application: &gtk::Application, shots: &Shots) {
         }
     }
     main.destroy();
+}
+
+/// A sample track of more than 200 seconds whose analysis is done.
+fn analysed_track(backend: &Backend) -> Option<TrackKey> {
+    let keys = backend.library().track_keys(&TrackQuery::default()).ok()?;
+    let services = backend.services();
+    keys.chunks(20)
+        .filter_map(|chunk| services.edit_tracks(chunk).ok())
+        .flatten()
+        .find(|t| {
+            matches!(t.facts.analysis, AnalysisFacts::Analysed(_))
+                && t.facts.duration.is_some_and(|d| d.as_secs() > 200)
+        })
+        .map(|t| t.key)
 }
 
 /// Settings › DSP and EQ with each editor, and the signal path while the
@@ -766,6 +951,9 @@ fn shoot_tools(application: &gtk::Application, shots: &Shots) {
         "verify-files",
         "copies",
         "duplicates",
+        "import",
+        "managed-import",
+        "fields",
     ];
     if !shots.any(PICTURES) {
         return;
@@ -837,6 +1025,57 @@ fn shoot_tools(application: &gtk::Application, shots: &Shots) {
         }
         shots.window("duplicates", &finder);
         finder.close();
+    }
+
+    // Import from another player, with the plan read from Rhythmbox.
+    if shots.wanted("import")
+        && let Some(import) = main.open_import(Some("rhythmbox"))
+    {
+        let ready = wait(8000, || {
+            named::<gtk::Button>(&import, "import-apply").is_some_and(|b| b.is_sensitive())
+        });
+        if !ready {
+            eprintln!("site-shots: import: the plan was not read");
+            shots.failed.set(true);
+        }
+        shots.window("import", &import);
+        import.close();
+    }
+    // The plan of adding music to the managed folder.
+    if shots.wanted("managed-import") {
+        let home = glib::home_dir();
+        let _ = backend
+            .services()
+            .set_managed_folder(&home.join("Music").join("Library"));
+        spin(300);
+        let sources = vec![
+            home.join("Downloads").join("bandcamp"),
+            PathBuf::from("/run/media/user/USB-STICK"),
+            home.join("Music").join("Incoming").join("new"),
+        ];
+        if let Some(plan) = main.open_managed_add(sources) {
+            let ready = wait(8000, || {
+                named::<gtk::Button>(&plan, "managed-run").is_some_and(|b| b.is_sensitive())
+            });
+            if !ready {
+                eprintln!("site-shots: managed-import: the plan was not made");
+                shots.failed.set(true);
+            }
+            shots.window("managed-import", &plan);
+            plan.close();
+        }
+    }
+    // Your fields with a computed field chosen and its example values.
+    if shots.wanted("fields")
+        && let Some(fields) = main.open_user_fields()
+    {
+        wait(5000, || {
+            named::<gtk::Entry>(&fields, "fields-name").is_some_and(|e| e.text() == "decade")
+                && named::<gtk::Box>(&fields, "fields-values")
+                    .is_some_and(|b| b.first_child().is_some())
+        });
+        shots.window("fields", &fields);
+        fields.close();
     }
     main.destroy();
 }
