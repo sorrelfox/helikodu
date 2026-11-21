@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Helikodu can tell how alike two tracks sound, offline and without any downloaded model: the background track analysis now also notes each track's timbre, rhythm, tonality and dynamics (tracks analysed before are analysed once more). `helikodu-cli similar FILE|TRACK-ID` lists the tracks that sound most like a track, or with `--album` or `--artist` like its album or artist, with a similarity from 0 to 1.
 - Each smart playlist can show its own columns: **Columns**, at the end of its rule line, shows or hides **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length**, and the choice is remembered per smart playlist. The stars of the **Rating** column rate a track.
 
 ### Changed

@@ -20,7 +20,7 @@
 use std::time::SystemTime;
 
 use helikodu_model::analysis::{
-    LoudnessEnvelope, TrackAnalysis, silences_from_bytes, silences_to_bytes,
+    LoudnessEnvelope, SoundFeatures, TrackAnalysis, silences_from_bytes, silences_to_bytes,
 };
 use helikodu_model::library::TrackId;
 use rusqlite::{Connection, OptionalExtension, Row, params};
@@ -143,7 +143,9 @@ impl Library {
         let now = to_unix_seconds(SystemTime::now());
         self.database()
             .writer()?
-            .write(move |c| store(c, track, version, &outcome, now))
+            .write(move |c| store(c, track, version, &outcome, now))?;
+        self.similarity_changed();
+        Ok(())
     }
 
     /// The analysis of `track`, current or not; `None` if it was never analysed.
@@ -231,7 +233,7 @@ impl Library {
 
 const COLUMNS: &str = "a.track_id, a.version, a.analyzed_at, a.failure, a.sample_rate, a.frames,
      a.audio_start, a.audio_end, a.fade_in_end, a.fade_out_start, a.integrated,
-     a.head_loudness, a.tail_loudness, a.silences, a.envelope";
+     a.head_loudness, a.tail_loudness, a.silences, a.envelope, a.features";
 
 fn stored_from_row(row: &Row<'_>) -> rusqlite::Result<StoredAnalysis> {
     let frame = |i| -> rusqlite::Result<Option<u64>> {
@@ -248,6 +250,7 @@ fn stored_from_row(row: &Row<'_>) -> rusqlite::Result<StoredAnalysis> {
             };
             let silences: Option<Vec<u8>> = row.get(13)?;
             let envelope: Option<Vec<u8>> = row.get(14)?;
+            let features: Option<Vec<u8>> = row.get(15)?;
             AnalysisOutcome::Analyzed(TrackAnalysis {
                 rate: row
                     .get::<_, Option<i64>>(4)?
@@ -268,6 +271,10 @@ fn stored_from_row(row: &Row<'_>) -> rusqlite::Result<StoredAnalysis> {
                     .as_deref()
                     .and_then(LoudnessEnvelope::from_bytes)
                     .unwrap_or_default(),
+                features: features
+                    .as_deref()
+                    .and_then(SoundFeatures::from_bytes)
+                    .map(Box::new),
             })
         }
     };
@@ -276,7 +283,7 @@ fn stored_from_row(row: &Row<'_>) -> rusqlite::Result<StoredAnalysis> {
         version: u32::try_from(row.get::<_, i64>(1)?).unwrap_or(0),
         analyzed_at: from_unix_seconds(row.get(2)?),
         outcome,
-        current: row.get(15)?,
+        current: row.get(16)?,
     })
 }
 
@@ -291,9 +298,9 @@ fn store(
         "INSERT OR REPLACE INTO track_analysis
              (track_id, version, analyzed_at, file_size, file_mtime_ns, start_frame, end_frame,
               failure, sample_rate, frames, audio_start, audio_end, fade_in_end, fade_out_start,
-              integrated, head_loudness, tail_loudness, silences, envelope)
+              integrated, head_loudness, tail_loudness, silences, envelope, features)
          SELECT t.id, ?2, ?3, f.size, f.mtime_ns, t.start_frame, t.end_frame,
-                ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15
+                ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16
          FROM tracks t JOIN files f ON f.id = t.file_id
          WHERE t.id = ?1",
     )?;
@@ -317,6 +324,7 @@ fn store(
                 None::<f64>,
                 None::<Vec<u8>>,
                 None::<Vec<u8>>,
+                None::<Vec<u8>>,
             ])?;
         }
         AnalysisOutcome::Analyzed(a) => {
@@ -337,6 +345,7 @@ fn store(
                 finite(a.tail_lufs),
                 silences,
                 a.envelope.to_bytes(),
+                a.features.as_deref().map(SoundFeatures::to_bytes),
             ])?;
         }
     }

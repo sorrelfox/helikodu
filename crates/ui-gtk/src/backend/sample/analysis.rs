@@ -85,5 +85,6 @@ pub(super) fn sample_analysis(key: TrackKey, length: Option<Duration>) -> Analys
         fade_in_end: Some(audio.start + frames(0.5)),
         fade_out_start: Some(fade_out_start),
         envelope: LoudnessEnvelope::from_lufs(1, lufs),
+        features: None,
     }))
 }

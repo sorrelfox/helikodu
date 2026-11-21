@@ -15,8 +15,11 @@ use std::time::{Duration, SystemTime};
 
 use helikodu_library::{
     AnalysisCoverage, AnalysisOutcome, AnalysisPlan, Library, MeasuredLoudness, ReplayGain,
+    SimilaritySeed,
 };
-use helikodu_model::analysis::{LoudnessEnvelope, SilentSpan, TrackAnalysis};
+use helikodu_model::analysis::{
+    LoudnessEnvelope, SOUND_FEATURES_LEN, SilentSpan, SoundFeatures, TrackAnalysis,
+};
 use helikodu_model::library::TrackId;
 use support::{library, record, tagged};
 
@@ -35,7 +38,13 @@ fn analysis() -> TrackAnalysis {
         fade_in_end: Some(44_100 * 2),
         fade_out_start: Some(44_100 * 190),
         envelope: LoudnessEnvelope::from_lufs(1, (0..200).map(|s| -10.0 - f64::from(s) / 10.0)),
+        features: Some(Box::new(sounding(0.0))),
     }
+}
+
+/// Sound features all at `level`.
+fn sounding(level: f32) -> SoundFeatures {
+    SoundFeatures([level; SOUND_FEATURES_LEN])
 }
 
 fn plan(loudness: Option<u32>) -> AnalysisPlan {
@@ -281,4 +290,99 @@ fn units_take_whole_albums_for_their_loudness() {
         .unwrap()
         .unwrap();
     assert!(!lone_unit.measure_loudness);
+}
+
+#[test]
+fn stored_features_make_tracks_comparable() {
+    let (library, root) = library();
+    let tracks = album(&library, root, 3);
+    let lone = library
+        .upsert_track(record(root, "/music/lone.flac", "lone"))
+        .unwrap()
+        .track;
+    // Nothing analysed: nothing to compare.
+    assert_eq!(library.track_similarity(tracks[0], lone).unwrap(), None);
+    assert!(
+        library
+            .similar_tracks(SimilaritySeed::Track(lone), 5)
+            .unwrap()
+            .is_empty()
+    );
+
+    let with = |level: f32| TrackAnalysis {
+        features: Some(Box::new(sounding(level))),
+        ..analysis()
+    };
+    library
+        .store_analysis(tracks[0], 2, AnalysisOutcome::Analyzed(with(0.0)))
+        .unwrap();
+    library
+        .store_analysis(tracks[1], 2, AnalysisOutcome::Analyzed(with(0.1)))
+        .unwrap();
+    library
+        .store_analysis(lone, 2, AnalysisOutcome::Analyzed(with(5.0)))
+        .unwrap();
+    // The third track is analysed but silent: no features.
+    library
+        .store_analysis(
+            tracks[2],
+            2,
+            AnalysisOutcome::Analyzed(TrackAnalysis {
+                features: None,
+                ..analysis()
+            }),
+        )
+        .unwrap();
+    assert_eq!(
+        library.track_analysis(tracks[1]).unwrap().unwrap().outcome,
+        AnalysisOutcome::Analyzed(with(0.1))
+    );
+
+    let near = library
+        .track_similarity(tracks[0], tracks[1])
+        .unwrap()
+        .unwrap();
+    let far = library.track_similarity(tracks[0], lone).unwrap().unwrap();
+    assert!(near > far, "{near} {far}");
+    assert!((0.0..=1.0).contains(&far) && near <= 1.0);
+    assert_eq!(
+        library.track_similarity(tracks[0], tracks[2]).unwrap(),
+        None
+    );
+
+    let found = library
+        .similar_tracks(SimilaritySeed::Track(tracks[0]), 5)
+        .unwrap();
+    let order: Vec<TrackId> = found.iter().map(|s| s.track).collect();
+    assert_eq!(order, [tracks[1], lone]);
+
+    // An album leaves out its own tracks.
+    let album_id = library.play_keys(&[tracks[0]]).unwrap()[&tracks[0]]
+        .album
+        .unwrap();
+    let found = library
+        .similar_tracks(SimilaritySeed::Album(album_id), 5)
+        .unwrap();
+    let order: Vec<TrackId> = found.iter().map(|s| s.track).collect();
+    assert_eq!(order, [lone]);
+    let artist = library.play_keys(&[tracks[0]]).unwrap()[&tracks[0]]
+        .artist
+        .unwrap();
+    let found = library
+        .similar_tracks(SimilaritySeed::Artist(artist), 5)
+        .unwrap();
+    assert_eq!(found.len(), 1);
+
+    // A changed file drops out until it is analysed again.
+    let mut changed = tagged(root, "/music/r/1.flac", "content-1", "T1", "Band", "Record");
+    changed.tags.track_no = Some(2);
+    changed.file.mtime_ns = Some(2);
+    library.upsert_track(changed).unwrap();
+    library
+        .store_analysis(tracks[2], 2, AnalysisOutcome::Failed("x".into()))
+        .unwrap();
+    assert_eq!(
+        library.track_similarity(tracks[0], tracks[1]).unwrap(),
+        None
+    );
 }

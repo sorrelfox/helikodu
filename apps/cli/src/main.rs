@@ -31,6 +31,7 @@ use self::offline::managed_folder::ManagedFolderArgs;
 use self::offline::play::PlayArgs;
 use self::offline::scan::ScanArgs;
 use self::offline::search::SearchArgs;
+use self::offline::similar::SimilarArgs;
 use self::offline::stats::StatsArgs;
 use self::remote::commands::{
     EnqueueArgs, ExportArgs, JsonArgs, PlayQueryArgs, RateArgs, RepeatArgs, SeekArgs, ShuffleArgs,
@@ -71,9 +72,13 @@ enum Command {
     /// Measure the loudness of library tracks (EBU R128, ReplayGain 2.0) and store
     /// it in the library, optionally also in the files' tags.
     Loudness(LoudnessArgs),
-    /// Analyse the library tracks not analysed yet (silence and loudness envelope),
-    /// as the application does in the background, and store the results.
+    /// Analyse the library tracks not analysed yet (silence, loudness envelope and
+    /// sound features), as the application does in the background, and store the
+    /// results.
     Analyze(AnalyzeArgs),
+    /// List the library tracks that sound most like a track, its album or its
+    /// artist, from the track analysis, with their similarity from 0 to 1.
+    Similar(SimilarArgs),
     /// List the groups of copies (byte-identical files) in the music library.
     Duplicates(DuplicatesArgs),
     /// Import play counts, ratings and playlists from another player (its files
@@ -160,6 +165,7 @@ fn main() -> ExitCode {
         Command::Stats(args) => offline::stats::run(&args),
         Command::Loudness(args) => offline::loudness::run(args),
         Command::Analyze(args) => offline::analyze::run(&args),
+        Command::Similar(args) => offline::similar::run(&args),
         Command::Duplicates(args) => offline::duplicates::run(&args),
         Command::Import(args) => offline::interchange::import(&args),
         Command::UndoImport(args) => offline::interchange::undo_import(&args),

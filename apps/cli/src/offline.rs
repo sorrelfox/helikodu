@@ -15,6 +15,7 @@ pub(crate) mod managed_folder;
 pub(crate) mod play;
 pub(crate) mod scan;
 pub(crate) mod search;
+pub(crate) mod similar;
 pub(crate) mod stats;
 
 mod database;

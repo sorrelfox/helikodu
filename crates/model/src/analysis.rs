@@ -183,6 +183,9 @@ pub struct TrackAnalysis {
     pub fade_out_start: Option<u64>,
     /// The loudness over the whole track.
     pub envelope: LoudnessEnvelope,
+    /// The sound features for similarity; `None` for a silent track and for
+    /// analyses made before they existed.
+    pub features: Option<Box<SoundFeatures>>,
 }
 
 impl TrackAnalysis {
@@ -201,6 +204,71 @@ impl TrackAnalysis {
     /// Whether the track has no audible sound.
     pub fn is_silent(&self) -> bool {
         self.audio.is_none()
+    }
+}
+
+/// The number of values in [`SoundFeatures`].
+pub const SOUND_FEATURES_LEN: usize = 34;
+
+/// The format of [`SoundFeatures::to_bytes`].
+pub const SOUND_FEATURES_FORMAT: u8 = 1;
+
+/// A compact description of how a track sounds, for finding tracks that sound
+/// alike: hand-built statistics of its timbre, rhythm, tonality and dynamics,
+/// made by the track analysis. None of them depends on the track's gain.
+///
+/// The values, in order (frame statistics are over the frames with sound):
+///
+/// - 0 to 11: the means of the mel-frequency cepstral coefficients 1 to 12 (the
+///   shape of the spectrum, coefficient 0, the level, is left out);
+/// - 12 to 23: their standard deviations;
+/// - 24, 25: the mean and the standard deviation of the spectral centroid, in
+///   octaves (log2 of hertz);
+/// - 26: the mean spectral rolloff (85 % of the energy), in octaves;
+/// - 27: the mean spectral flatness in dB (near 0 for noise, very low for tones);
+/// - 28: the zero-crossing rate, log2 of crossings per second plus one;
+/// - 29: onsets per second;
+/// - 30: the mean spectral flux, the rise of the log mel spectrum per band;
+/// - 31: the mean peakiness of the chroma (the strongest pitch class's share);
+/// - 32: the entropy of the track's chroma profile, from 0 to 1;
+/// - 33: the loudness spread, the 95th less the 10th percentile of the loudness
+///   of each second of sound, in LU.
+///
+/// The byte form is a format byte ([`SOUND_FEATURES_FORMAT`]) and the values as
+/// little-endian 32-bit floats.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SoundFeatures(pub [f32; SOUND_FEATURES_LEN]);
+
+impl SoundFeatures {
+    /// The values.
+    pub fn values(&self) -> &[f32; SOUND_FEATURES_LEN] {
+        &self.0
+    }
+
+    /// The byte form.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(1 + 4 * SOUND_FEATURES_LEN);
+        bytes.push(SOUND_FEATURES_FORMAT);
+        for value in self.0 {
+            bytes.extend_from_slice(&value.to_le_bytes());
+        }
+        bytes
+    }
+
+    /// Reads the byte form; `None` for another format or length, or a value that
+    /// is not finite.
+    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        let [SOUND_FEATURES_FORMAT, rest @ ..] = bytes else {
+            return None;
+        };
+        if rest.len() != 4 * SOUND_FEATURES_LEN {
+            return None;
+        }
+        let mut values = [0.0; SOUND_FEATURES_LEN];
+        for (value, chunk) in values.iter_mut().zip(rest.as_chunks::<4>().0) {
+            *value = f32::from_le_bytes(*chunk);
+        }
+        values.iter().all(|v| v.is_finite()).then_some(Self(values))
     }
 }
 
@@ -252,6 +320,25 @@ mod tests {
         assert_eq!(bytes.len(), 32);
         assert_eq!(silences_from_bytes(&bytes), spans);
         assert_eq!(spans[1].len(), 5);
+    }
+
+    #[test]
+    fn sound_features_round_trip() {
+        let mut values = [0.0; SOUND_FEATURES_LEN];
+        for (i, v) in values.iter_mut().enumerate() {
+            *v = i as f32 * -1.5;
+        }
+        let features = SoundFeatures(values);
+        let bytes = features.to_bytes();
+        assert_eq!(bytes.len(), 1 + 4 * SOUND_FEATURES_LEN);
+        assert_eq!(SoundFeatures::from_bytes(&bytes), Some(features));
+        assert_eq!(SoundFeatures::from_bytes(&bytes[..10]), None);
+        let mut other = bytes.clone();
+        other[0] = 2;
+        assert_eq!(SoundFeatures::from_bytes(&other), None);
+        let mut nan = bytes;
+        nan[1..5].copy_from_slice(&f32::NAN.to_le_bytes());
+        assert_eq!(SoundFeatures::from_bytes(&nan), None);
     }
 
     #[test]

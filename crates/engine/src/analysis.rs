@@ -11,7 +11,8 @@
 //!
 //! [`analyze_source`] decodes a source once for the track analysis: where its
 //! sound starts and ends, its silent stretches and its loudness envelope
-//! ([`TrackAnalyzer`]), with the loudness measurement in the same pass when asked.
+//! ([`TrackAnalyzer`]), with the loudness measurement in the same pass when asked,
+//! and the sound features that tell how alike two tracks sound.
 //!
 //! [`waveform_peaks`] decodes a source the same way and keeps the largest sample
 //! of each stretch ([`PeakBuilder`]).
@@ -21,6 +22,7 @@
 //!
 //! [`DecoderRegistry`]: crate::decode::DecoderRegistry
 
+mod features;
 mod loudness;
 mod meter;
 mod peaks;

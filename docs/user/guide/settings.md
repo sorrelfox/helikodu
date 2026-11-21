@@ -55,6 +55,10 @@ Helikodu analyses each library track once, in the background: where its sound st
 
 The analysis works on one track at a time at the lowest priority, and is shown nowhere else.
 
+### Tracks that sound alike
+
+The same pass also notes how each track sounds: how bright or dark, how noisy or tonal, how busy its rhythm and how much its loudness varies. From these Helikodu can tell how alike two tracks sound, on this computer alone: nothing is sent anywhere and no downloaded model is used. It compares sound, not tags, so it can pair tracks from different genres, and the pairing is a guide rather than a verdict. Tracks analysed by an earlier version are analysed once more in the background to get it. For now it is used from the command line: `helikodu-cli similar` lists the tracks that sound most like a track, its album or its artist (see [The command line](command-line.md)).
+
 ## Copies of the same file
 
 Helikodu notices when your library holds the same file more than once: files whose bytes are identical, content and tags (for example an album copied into a second folder). Files that were re-encoded or retagged are not copies. Two paths that lead to the very same file on the disk (a hard link, or a music folder reached through a link) count as one file.

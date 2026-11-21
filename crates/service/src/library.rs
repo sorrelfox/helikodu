@@ -161,6 +161,8 @@ pub use helikodu_library::{
     RatingOutcome, StepProblem, TagEditReport, TagHistory, TagStep, TagStepId, TagStepReport,
 };
 pub use helikodu_library::{SavedSearch, SavedSearchId};
+/// How alike tracks sound, from the sound features of the track analysis.
+pub use helikodu_library::{SimilarTrack, SimilaritySeed};
 
 /// Why a library operation failed.
 #[derive(Debug, thiserror::Error)]
@@ -882,6 +884,30 @@ impl MusicLibrary {
     /// How many tracks have a current track analysis.
     pub fn analysis_coverage(&self) -> Result<AnalysisCoverage, LibraryError> {
         crate::jobs::analysis::coverage(self)
+    }
+
+    /// How alike tracks `a` and `b` sound, from 0 (nothing alike) to 1 (the same
+    /// sound); `None` when either has no current track analysis with sound
+    /// features (not analysed yet, analysed before the features existed, silent,
+    /// or its file is missing).
+    ///
+    /// Cheap after the first call: the features of the whole library are kept in
+    /// memory and refreshed when analyses are stored. Meant for playback that
+    /// picks what comes next (endless play, Auto-DJ) as well as for lists.
+    pub fn track_similarity(&self, a: TrackId, b: TrackId) -> Result<Option<f32>, LibraryError> {
+        Ok(self.library.track_similarity(a, b)?)
+    }
+
+    /// The `limit` tracks that sound most like `seed`, most alike first, with
+    /// their similarity from 0 to 1. Copies of a seed track, and the tracks of a
+    /// seed album or artist, are left out. Empty when nothing of the seed has
+    /// sound features.
+    pub fn similar_tracks(
+        &self,
+        seed: SimilaritySeed,
+        limit: usize,
+    ) -> Result<Vec<SimilarTrack>, LibraryError> {
+        Ok(self.library.similar_tracks(seed, limit)?)
     }
 
     /// How many tracks have loudness values from their tags or measured.

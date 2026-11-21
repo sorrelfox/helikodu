@@ -40,6 +40,7 @@ use crate::stats::{
 #[derive(Debug)]
 pub struct Library {
     db: Database,
+    similarity: crate::similarity::SimilarityCache,
 }
 
 impl Library {
@@ -72,6 +73,11 @@ impl Library {
     /// Switches the sort order to `collation` and rebuilds the indexes that use it.
     pub fn set_collation(&self, collation: LocaleCollation) -> Result<(), DbError> {
         self.db.set_collation(collation)
+    }
+
+    /// The cached similarity index.
+    pub(crate) fn similarity_cache(&self) -> &crate::similarity::SimilarityCache {
+        &self.similarity
     }
 
     /// The database underneath, for direct SQL. Not a stable interface.
@@ -935,7 +941,10 @@ impl Library {
 
 impl From<Database> for Library {
     fn from(db: Database) -> Self {
-        Self { db }
+        Self {
+            db,
+            similarity: crate::similarity::SimilarityCache::default(),
+        }
     }
 }
 

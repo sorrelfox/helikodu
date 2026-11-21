@@ -34,6 +34,7 @@ mod playlists;
 mod query;
 mod scan;
 mod search;
+mod similarity;
 mod statistics;
 mod stats;
 mod tag_journal;
@@ -134,6 +135,7 @@ pub use scan::{
     ScanOptions, ScanSummary, SymlinkPolicy, WORKER_PROGRAM, WorkerOptions, find_worker_program,
 };
 pub use search::{MatchRank, SearchHit, SearchRequest, SearchResults, fold};
+pub use similarity::{SimilarTrack, SimilarityIndex, SimilaritySeed};
 pub use statistics::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 pub use stats::{
     HistoryEntry, HistoryQuery, HistoryTotals, Listen, ListenEnd, ListenOutcome, PlayRules, Rating,

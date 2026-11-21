@@ -31,6 +31,9 @@
 //!   [`BODY_DROP_LU`]. When the ending never reaches it within the last
 //!   [`EDGE_SEARCH_MS`], the fade-out starts at the beginning of that span (and
 //!   likewise for the fade-in at its end).
+//!
+//! The same pass collects the sound features used to find tracks that sound
+//! alike (see the `features` module).
 
 use std::collections::VecDeque;
 
@@ -38,13 +41,14 @@ use helikodu_model::analysis::{LoudnessEnvelope, SilentSpan, TrackAnalysis};
 use helikodu_model::audio::{ChannelLayout, SampleRate};
 use helikodu_model::library::MediaSource;
 
+use super::features::{FeatureExtractor, loudness_spread};
 use super::loudness::{AnalysisError, LoudnessMeter, TrackMeasurement};
 use crate::decode::{DecoderRegistry, PcmBlock};
 
 /// The version of the track analysis. It changes when a change to the analysis
 /// changes its results, so that stored analyses of an older version are made
-/// again.
-pub const ANALYSIS_VERSION: u32 = 1;
+/// again. Version 2 added the sound features.
+pub const ANALYSIS_VERSION: u32 = 2;
 
 /// The RMS level below which a window is silent, in dBFS.
 pub const SILENCE_THRESHOLD_DBFS: f64 = -60.0;
@@ -174,6 +178,7 @@ pub struct TrackAnalyzer {
     head: Vec<Block>,
     tail: VecDeque<Block>,
     scratch: Vec<f32>,
+    features: FeatureExtractor,
 }
 
 impl std::fmt::Debug for TrackAnalyzer {
@@ -225,6 +230,7 @@ impl TrackAnalyzer {
             head: Vec::new(),
             tail: VecDeque::new(),
             scratch: Vec::new(),
+            features: FeatureExtractor::new(rate.hz(), usize::from(layout.channel_count().max(1))),
         })
     }
 
@@ -250,6 +256,7 @@ impl TrackAnalyzer {
     pub fn add_f32(&mut self, interleaved: &[f32]) -> Result<(), AnalysisError> {
         let channels = self.channels;
         let frames = interleaved.len() / channels;
+        self.features.add(&interleaved[..frames * channels]);
         let mut offset = 0;
         while offset < frames {
             let room = usize::try_from(self.block_len - self.block_fill).unwrap_or(usize::MAX);
@@ -390,6 +397,7 @@ impl TrackAnalyzer {
         self.channels = usize::from(layout.channel_count().max(1));
         self.window_len = frames_in(rate.hz(), SILENCE_WINDOW_MS);
         self.block_len = frames_in(rate.hz(), BLOCK_MS);
+        self.features.follow(rate.hz(), self.channels);
         Ok(())
     }
 
@@ -405,6 +413,12 @@ impl TrackAnalyzer {
         }
         let integrated = self.meter.integrated();
         let audio = self.first_sound.zip(self.sound_end).map(|(s, e)| s..e);
+        let spread = loudness_spread(self.seconds.iter().copied().map(energy_to_lufs));
+        let features = self
+            .features
+            .finish(spread)
+            .filter(|_| audio.is_some())
+            .map(Box::new);
 
         let mut analysis = TrackAnalysis {
             rate: self.rate,
@@ -413,6 +427,7 @@ impl TrackAnalyzer {
             silences: std::mem::take(&mut self.silences),
             integrated_lufs: integrated,
             envelope: envelope(&self.seconds),
+            features,
             ..TrackAnalysis::default()
         };
         if let Some(audio) = audio {
@@ -447,7 +462,7 @@ impl TrackAnalyzer {
 }
 
 /// The mean square of a signal at the silence threshold.
-fn threshold_mean_square() -> f64 {
+pub(super) fn threshold_mean_square() -> f64 {
     10f64.powf(SILENCE_THRESHOLD_DBFS / 10.0)
 }
 

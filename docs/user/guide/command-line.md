@@ -30,6 +30,7 @@ helikodu-cli info FILE|TRACK-ID    # show a file's or track's tags and propertie
 helikodu-cli stats                 # library totals and most played tracks
 helikodu-cli loudness --library    # measure the loudness of the tracks not yet measured
 helikodu-cli analyze               # analyse the tracks not yet analysed, as the app does
+helikodu-cli similar FILE|TRACK-ID # the tracks that sound most like a track (--album, --artist)
 helikodu-cli duplicates            # list the copies of files in the library (lists only)
 helikodu-cli import PLAYER         # import plays, ratings and playlists from another player
 helikodu-cli undo-import           # undo the newest import

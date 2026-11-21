@@ -1,6 +1,6 @@
 # helikodu-cli
 
-Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness, analyze, duplicates, managed-folder; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
+Builds `helikodu-cli`: remote control of the running application over D-Bus, and offline tools (play, list-outputs, scan, search, info, stats, loudness, analyze, similar, duplicates, managed-folder; later verify and convert) that use the core directly. It turns arguments into calls on the core and prints the results.
 
 - **May depend on:** `model`, `service`. `cargo xtask check-deps` enforces this.
 - **Unsafe code:** This crate contains no `unsafe` code (`#![forbid(unsafe_code)]`).
@@ -22,6 +22,7 @@ helikodu-cli stats [--top N] [--json] [--database PATH]
 helikodu-cli loudness [--album|--library] [--write-tags] [--threads N] [--worker PATH]
                       [--json] [--database PATH] [FILE|TRACK-ID...]
 helikodu-cli analyze [--no-loudness] [--json] [--database PATH]
+helikodu-cli similar FILE|TRACK-ID [--album|--artist] [--limit N] [--json] [--database PATH]
 helikodu-cli duplicates [--json] [--database PATH]
 helikodu-cli managed-folder show|set|off|import|consolidate|resume|roll-back
                             [--settings PATH] [--database PATH] ...
@@ -224,6 +225,19 @@ Analyses every library track that has no current analysis, one at a time, as the
 ```
 
 The exit code is 1 when a track could not be analysed.
+
+#### similar
+
+Lists the library tracks that sound most like a track (a library file or a track number), from the sound features of the track analysis: most alike first, with the track number, the similarity from 0 to 1, artist, title (or file name), album and length. Copies of the same recording are left out. `--album` compares with the mean of the track's album and leaves out the album's tracks; `--artist` does the same for its first artist. `--limit` (default 20) sets how many. With `--json`:
+
+```json
+{
+  "seed": {"track_id": 12, "album_id": 3},
+  "tracks": [{"track_id": 40, "similarity": 0.83, "title": "…", "artist": "…", "album": "…", "path": "/music/…"}]
+}
+```
+
+The exit code is 1 when nothing was found: the track is not analysed yet (run `analyze`) or is silent.
 
 #### managed-folder
 

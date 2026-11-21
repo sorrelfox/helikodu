@@ -15,6 +15,7 @@ One decoding pass per track (a CUE sheet track or chapter is its own span of the
 | `head_lufs`, `tail_lufs` | The loudness of the first and last 5 s of sound |
 | `fade_in_end`, `fade_out_start` | Where the beginning reaches the track's body level, and where the ending leaves it for good |
 | `envelope` | The loudness of each second (`LoudnessEnvelope`) |
+| `features` | The sound features for similarity (`SoundFeatures`, 34 values); `None` for a silent track |
 
 **Silence.** A 10 ms window is silent when its RMS level (the mean square over all channels) is below −60 dBFS. The threshold is absolute: silence belongs to the signal (digital silence, dither, the noise floor of the recording), and a threshold relative to the track's loudness would call the soft passages of a quiet track silent. −60 dBFS lies above 16-bit dither (about −90 dBFS) and the hiss of tape and vinyl (−70 to −60 dBFS), below anything meant to be heard, and is the default of the common `silencedetect` tools. Shorter pauses than 2 s inside a track are part of the music and are not recorded.
 
@@ -22,7 +23,9 @@ One decoding pass per track (a CUE sheet track or chapter is its own span of the
 
 **Loudness measurement in the same pass.** The pass can also take the EBU R128 measurement of the loudness scanner (integrated loudness, loudness range, sample and true peak), so the track is not decoded a second time. The background job does this only for tracks that have no loudness values at all: no ReplayGain or R128 tags and no current measurement. A lone track gets track values. An album none of whose tracks has values is analysed as a whole and also gets album values, the album measured as one programme (up to 200 tracks; a larger album is left to the loudness scanner). Tracks that have values keep them, so the gains of tagged files never change behind the owner's back. If the job stops in the middle of such an album, the album is decoded whole again next time, for its album values.
 
-The analysis has a version, `ANALYSIS_VERSION` in `helikodu_engine::analysis`. A change that changes the results bumps it, and the job then analyses every track again.
+**Sound features.** The same pass collects a small vector of hand-built statistics for finding tracks that sound alike (no trained model, nothing downloaded): the mono mix in frames of about 46 ms (a power of two of samples, Hann window, one real FFT each, no overlap), silent frames left out; the means and deviations of 12 mel cepstral coefficients (coefficient 0, the level, dropped); spectral centroid, rolloff and flatness over 20 Hz to 16 kHz; zero crossings per second; onsets per second and mean spectral flux; chroma peakiness and the entropy of the chroma profile (independent of the key); and the spread of the per-second loudness. The logarithms use a floor relative to each frame's power, so the vector does not depend on the gain. The module comment of `helikodu_engine::analysis::features` gives the reasons for each choice. It costs about 10 ms of CPU per minute of stereo audio, little next to decoding.
+
+The analysis has a version, `ANALYSIS_VERSION` in `helikodu_engine::analysis`. A change that changes the results bumps it, and the job then analyses every track again. Version 2 added the sound features; the tracks analysed with version 1 are analysed once more (loudness values already measured are kept, not measured again).
 
 ## How it is stored
 
@@ -32,8 +35,11 @@ Two columns hold compact byte forms:
 
 - `envelope`: byte 0 is the format (1), byte 1 the step in seconds, then one byte per step: 0 for no sound, otherwise `LUFS = value / 2 − 120` (0.5 LU steps from −119.5 to +7.5 LUFS). A track longer than an hour gets a step of 2, 4 and so on, so that no envelope has more than 3,600 values.
 - `silences`: 16 bytes per stretch, the first and the end frame as little-endian `u64`; `NULL` when there are none.
+- `features` (migration `0024_sound_features.sql`): a format byte (1) and 34 little-endian `f32`, 137 bytes; `NULL` for silence and before version 2.
 
 A four-minute track takes about 330 bytes: 242 for the envelope and about 90 for the other columns and the row. That is about 33 MB for 100,000 tracks and 165 MB for 500,000, on disk only. The table is read only when a track's analysis is asked for, and browsing and searching never touch it.
+
+**Similarity.** `helikodu_library::SimilarityIndex` holds the features of every current analysis, normalised over the library (each value in standard deviations from the library's mean, leaning on a typical spread while the library holds few tracks, limited to ±4) and weighted in groups so that the 24 timbre values do not outvote rhythm, tonality and dynamics. The similarity of two tracks is `exp(−d²/2)` with `d²` the weighted mean squared difference: 1 for the same sound, about 0.37 for a random pair. A query compares with every track by brute force over one flat `f32` array (136 bytes a track); on a synthetic set of 20,000 tracks an unoptimised build takes about 13 ms a query. The library keeps the index in memory, rebuilds it after analyses are stored and checks the stored features' count and newest time at most every 30 s. `Library::track_similarity(a, b)` and `MusicLibrary::track_similarity` give `Option<f32>` (`None` when either track has no features); `similar_tracks(SimilaritySeed, limit)` gives the closest tracks to a track (copies of it left out), an album or an artist (the mean of their tracks, their own tracks left out). `helikodu-cli similar FILE|TRACK-ID [--album|--artist] [--limit N] [--json]` prints them.
 
 The library API (`helikodu_library`): `store_analysis` (an `AnalysisOutcome`, analysed or failed), `track_analysis` (`StoredAnalysis` with `current`), `tracks_to_analyze` (pending tracks after a track id, a page at a time), `analysis_unit` (the tracks to analyse together under an `AnalysisPlan`) and `analysis_coverage` (`AnalysisCoverage`: tracks, analysed, failed).
 
