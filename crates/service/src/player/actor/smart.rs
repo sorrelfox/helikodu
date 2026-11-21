@@ -59,10 +59,14 @@ impl Actor {
         self.smart = settings;
     }
 
-    /// How alike two tracks sound, for endless play. The sound analysis plugs in
-    /// here; until then nothing is known and the other likenesses decide.
-    fn sound_similarity(&self) -> Box<dyn SoundSimilarity> {
-        Box::new(NoSoundSimilarity)
+    /// How alike two tracks sound, for endless play: the library's similarity
+    /// index while the sound likeness has a weight, otherwise nothing (the index
+    /// is then not built at all).
+    fn sound_similarity(&self) -> std::sync::Arc<dyn SoundSimilarity + Send + Sync> {
+        match &self.library {
+            Some(library) if self.smart.endless.weights.sound > 0 => library.sound_similarity(),
+            _ => std::sync::Arc::new(NoSoundSimilarity),
+        }
     }
 
     /// How many entries after the current one would play.

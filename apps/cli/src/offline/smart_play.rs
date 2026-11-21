@@ -14,8 +14,7 @@ use anyhow::{Context, Result, bail};
 use clap::{Args, Subcommand, ValueEnum};
 use helikodu_model::library::TrackId;
 use helikodu_service::library::{
-    AlbumId, Generator, GeneratorSteps, MusicLibrary, NoSoundSimilarity, PersonId, PlaySeed,
-    time_seed,
+    AlbumId, Generator, GeneratorSteps, MusicLibrary, PersonId, PlaySeed, time_seed,
 };
 use serde_json::{Value, json};
 
@@ -270,7 +269,7 @@ pub(crate) fn related(args: &RelatedArgs) -> Result<Outcome> {
         &HashSet::new(),
         args.count,
         args.random_seed.unwrap_or_else(time_seed),
-        &NoSoundSimilarity,
+        library.sound_similarity().as_ref(),
     )?;
     print_tracks(&library, &tracks, args.json)?;
     Ok(Outcome::Success)

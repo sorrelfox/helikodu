@@ -414,6 +414,12 @@ impl Library {
     }
 }
 
+impl crate::SoundSimilarity for SimilarityIndex {
+    fn similarity(&self, a: TrackId, b: TrackId) -> Option<f64> {
+        SimilarityIndex::similarity(self, a, b).map(f64::from)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -922,6 +922,17 @@ impl MusicLibrary {
         crate::jobs::analysis::coverage(self)
     }
 
+    /// How alike tracks sound, for endless play and the Auto-DJ: the
+    /// library's similarity index, or nothing known when it cannot be read.
+    pub fn sound_similarity(
+        &self,
+    ) -> std::sync::Arc<dyn helikodu_library::SoundSimilarity + Send + Sync> {
+        match self.library.similarity_index() {
+            Ok(index) => index,
+            Err(_) => std::sync::Arc::new(helikodu_library::NoSoundSimilarity),
+        }
+    }
+
     /// How alike tracks `a` and `b` sound, from 0 (nothing alike) to 1 (the same
     /// sound); `None` when either has no current track analysis with sound
     /// features (not analysed yet, analysed before the features existed, silent,
