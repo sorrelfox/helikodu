@@ -142,6 +142,24 @@ pub(crate) fn remove_rows(list: &gtk::ListBox) {
     }
 }
 
+/// Gives the list in `scroller` (whose height is capped by its maximum content
+/// height) a scrollbar only when the list is taller than that cap. A popover
+/// whose content comes to need more room than it was shown with is closed by
+/// GTK at once, and the scrollbar of a short list does: it is taller than one
+/// row and grows when the pointer comes near it.
+pub(crate) fn scroll_when_taller(scroller: &gtk::ScrolledWindow) {
+    let Some(child) = scroller.child() else {
+        return;
+    };
+    let (_, natural, _, _) = child.measure(gtk::Orientation::Vertical, -1);
+    let cap = scroller.max_content_height();
+    scroller.set_vscrollbar_policy(if cap >= 0 && natural > cap {
+        gtk::PolicyType::Automatic
+    } else {
+        gtk::PolicyType::Never
+    });
+}
+
 /// An icon-only button with its tooltip and accessible name.
 pub(crate) fn icon_button(icon: &str, name: &str) -> gtk::Button {
     let button = gtk::Button::from_icon_name(icon);

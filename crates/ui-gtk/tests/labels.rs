@@ -264,6 +264,16 @@ fn the_popover_shows_and_changes_the_states(app: &gtk::Application) {
             .any(|r| r.0.starts_with("New label")),
         "the name of a label is no new label"
     );
+    // A short list has no scrollbar: the scrollbar is taller than a row, and
+    // GTK closes a popover whose content grows past the size it was shown at.
+    window.labels_popover_type("no such label", false);
+    let scroller = descendants(popover.upcast_ref())
+        .into_iter()
+        .find_map(|w| w.downcast::<gtk::ScrolledWindow>().ok())
+        .expect("the list scrolls");
+    assert_eq!(scroller.vscrollbar_policy(), gtk::PolicyType::Never);
+    spin(300);
+    assert!(popover.is_visible(), "a short list keeps the popover open");
     window.labels_popover_type("", false);
 
     // A click on the mixed one gives it to all; the toast says so.

@@ -342,6 +342,13 @@ impl LabelsPopover {
         row.set_child(Some(&label(&tr("Show all labels"), &[])));
         self.list.append(&row);
         self.list.invalidate_headers();
+        if let Some(scroller) = self
+            .list
+            .ancestor(gtk::ScrolledWindow::static_type())
+            .and_downcast::<gtk::ScrolledWindow>()
+        {
+            crate::widgets::scroll_when_taller(&scroller);
+        }
         // A popover shown keeps its size otherwise: it follows the rows.
         if self.popover.is_visible() {
             self.popover.present();

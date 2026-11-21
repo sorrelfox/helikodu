@@ -442,6 +442,7 @@ impl QueryCompletion {
         for choice in &found {
             self.list.append(&row(choice, typed));
         }
+        crate::widgets::scroll_when_taller(&self.scroller);
         self.word.replace((start, word.to_owned()));
         self.choices.replace(found);
         self.select(0);

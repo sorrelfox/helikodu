@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- The Labels list opened from **Labels…** closed again at once when it had only a few rows, as before the first label exists. The list of completions in the search filter could close the same way.
+
 ## [0.9.4] - 2026-11-20
 
 ### Added
