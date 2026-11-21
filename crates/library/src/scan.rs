@@ -22,6 +22,7 @@
 
 pub(crate) mod compare;
 pub(crate) mod filter;
+mod lyrics_files;
 mod options;
 mod pool;
 mod program;

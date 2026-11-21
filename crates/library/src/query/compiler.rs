@@ -569,7 +569,7 @@ impl Sql<'_> {
 
     fn has(&mut self, presence: &Presence) -> String {
         let field = match presence {
-            Presence::Lyrics => return "t.has_lyrics = 1".to_owned(),
+            Presence::Lyrics => return "(t.has_lyrics = 1 OR t.lyrics_file = 1)".to_owned(),
             Presence::Cover => {
                 return "(t.cover_id IS NOT NULL OR a.cover_id IS NOT NULL
                          OR d.cover_id IS NOT NULL)"

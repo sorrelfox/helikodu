@@ -1105,7 +1105,7 @@ pub struct TrackFacts {
     pub file_size: Option<u64>,
     /// The track gain of its file's ReplayGain or R128 tags, in dB.
     pub track_gain_db: Option<f64>,
-    /// Whether its file carries lyrics.
+    /// Whether it has lyrics: in its file's tags, or in a lyrics file beside it.
     pub has_lyrics: bool,
 }
 

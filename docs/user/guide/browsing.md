@@ -33,6 +33,7 @@ Text with a field and an operator is a query: `genre:jazz -genre:fusion`, `ratin
 - **Combining:** words next to each other must all hold; `OR` gives either; a minus or `NOT` excludes; parentheses group.
 - **Order and size:** `sort:added desc` orders the results, `limit:50` keeps the first 50.
 - `has:lyrics`, `has:cover`, `has:rating` test for a value; `is:lossless`, `is:hires`, `is:loved` for a kind of track.
+- `has:lyrics` counts lyrics in the file's tags and a `.lrc` or `.txt` file beside the track with the same base name. A lyrics file added or removed later is noticed by the next scan of its folder, or at once while the library folders are watched.
 - **Labels:** `label:jazz` finds the tracks with a label containing "jazz", given to them, their album or an artist; `label=jazz` the label itself, `has:label` any label. Plain text finds labels too. See [Labels and your own fields](labels-and-fields.md).
 - **Your own fields:** a computed or custom field you defined is named like any other: `decade=1990s`, `mood:calm`. A computed field is compared as text and cannot sort a search.
 

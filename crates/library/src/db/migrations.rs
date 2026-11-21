@@ -72,6 +72,7 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
     migration!(26, "0026", "generators"),
     migration!(27, "0027", "track_equalizer_names"),
     migration!(28, "0028", "generator_places"),
+    migration!(29, "0029", "lyrics_files"),
 ];
 
 /// The schema version this build creates and understands.

@@ -132,7 +132,7 @@ pub struct TrackDetails {
     pub added_at: SystemTime,
     /// When its file disappeared, if it did.
     pub missing_since: Option<SystemTime>,
-    /// Whether its file carries lyrics.
+    /// Whether it has lyrics: in its file's tags, or a `.lrc` or `.txt` file beside it.
     pub has_lyrics: bool,
     /// The size of its file in bytes, as the last scan found it.
     pub file_size: u64,
@@ -219,7 +219,7 @@ fn track_details(c: &Connection, track: TrackId) -> rusqlite::Result<Option<Trac
             "SELECT t.identity_id, d.path, f.name, t.sub_index, t.kind, t.title, t.title_sort,
                     a.title, t.track_no, t.disc_no, t.date, t.year, t.duration_ms,
                     t.sample_rate, t.channels, t.bit_depth, t.bitrate, t.codec, t.container,
-                    t.added_at, f.missing_since, t.has_lyrics, f.size
+                    t.added_at, f.missing_since, (t.has_lyrics OR t.lyrics_file), f.size
              FROM tracks t
              JOIN files f ON f.id = t.file_id
              JOIN dirs d ON d.id = f.dir_id

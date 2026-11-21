@@ -354,7 +354,7 @@ impl Operator {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Presence {
-    /// Lyrics in the file (`has:lyrics`).
+    /// Lyrics in the file's tags or in a `.lrc` or `.txt` file beside it (`has:lyrics`).
     Lyrics,
     /// A cover picture (`has:cover`).
     Cover,

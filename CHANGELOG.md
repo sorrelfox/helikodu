@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - The track table of an album page sorts by **#**, **Title**, **Plays**, **Rating** or **Length**: a click on a heading sorts by it, a second click the other way round, a third goes back to the album's order. Sorted tracks play in the order shown.
 
+### Fixed
+
+- `has:lyrics` also finds tracks with a `.lrc` or `.txt` lyrics file beside them, not only lyrics in the file's tags, and the **Lyrics** fact of the track details says so too. A lyrics file added or removed later is noticed by the next scan or by the folder watcher, without the track being read again.
+
 ## [0.9.5] - 2026-11-21
 
 ### Added

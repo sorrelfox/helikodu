@@ -28,6 +28,7 @@ use std::os::unix::fs::MetadataExt;
 use rusqlite::OptionalExtension;
 
 use super::filter::classify;
+use super::lyrics_files;
 use super::walk::{Found, Stamp};
 use crate::catalog::{self, RootId, TrackChange};
 use crate::copies::{precheck, reconcile};
@@ -78,6 +79,8 @@ pub(crate) fn run_targets(
     let walker = Walker::new(options);
     let mut summary = ScanSummary::default();
     let mut plan = Plan::default();
+    // The parts walked, whose lyrics files are checked at the end.
+    let mut walked: Vec<(RootId, Scope)> = Vec::new();
 
     'roots: for target in targets {
         if cancel.is_cancelled() {
@@ -143,6 +146,7 @@ pub(crate) fn run_targets(
                 break 'roots;
             }
             plan.add_root(root_id, walk, known, options.retry_unreadable);
+            walked.push((root_id, scope));
         }
     }
     if cancel.is_cancelled() {
@@ -189,8 +193,22 @@ pub(crate) fn run_targets(
     if !cancel.is_cancelled() && !aside.is_empty() {
         writer.write(move |c| precheck::record(c, &aside))?;
     }
+    let mut read_copies = Vec::new();
     if !cancel.is_cancelled() {
-        copies_pass(db, options, &touched, false, &mut summary, &emit, cancel)?;
+        copies_pass(
+            db,
+            options,
+            &touched,
+            false,
+            &mut read_copies,
+            &mut summary,
+            &emit,
+            cancel,
+        )?;
+    }
+    if !cancel.is_cancelled() {
+        lyrics_files::refresh_scopes(db, &walked)?;
+        lyrics_files::refresh_files(db, &read_copies)?;
     }
     Ok(finish(summary, started, cancel, &emit))
 }
@@ -213,15 +231,31 @@ pub(crate) fn confirm_copies(
         }
     };
     let mut summary = ScanSummary::default();
-    copies_pass(db, options, touched, all, &mut summary, &emit, cancel)?;
+    let mut read = Vec::new();
+    copies_pass(
+        db,
+        options,
+        touched,
+        all,
+        &mut read,
+        &mut summary,
+        &emit,
+        cancel,
+    )?;
+    if !cancel.is_cancelled() {
+        lyrics_files::refresh_files(db, &read)?;
+    }
     Ok(finish(summary, started, cancel, &emit))
 }
 
+/// The files it reads go into `read`.
+#[allow(clippy::too_many_arguments)]
 fn copies_pass(
     db: &Database,
     options: &ScanOptions,
     touched: &[i64],
     all: bool,
+    read: &mut Vec<i64>,
     summary: &mut ScanSummary,
     emit: &dyn Fn(ScanEvent),
     cancel: &CancelToken,
@@ -245,6 +279,7 @@ fn copies_pass(
             break;
         }
         read_files(db.writer()?, options, to_read, summary, emit, cancel)?;
+        read.extend_from_slice(&ids);
         touched = ids;
         all = false;
     }

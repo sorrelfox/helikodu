@@ -9,6 +9,7 @@
 //! | Event | Rescan |
 //! |---|---|
 //! | a media file or CUE sheet created, written, changed, removed | the files of its folder |
+//! | a lyrics file (`.lrc`, `.txt`) created, written, removed | the files of its folder; unchanged files are not read again |
 //! | a folder created or removed | the folder and everything below it |
 //! | the ignore marker created or removed | its folder and everything below it |
 //! | something renamed | both sides as above; a pair with the same cookie is a move |
@@ -190,7 +191,9 @@ impl Pending {
         now: Instant,
     ) {
         match kind {
-            PathKind::Media => self.add(index, root, Scope::Folder(parent(path)), now),
+            PathKind::Media | PathKind::Lyrics => {
+                self.add(index, root, Scope::Folder(parent(path)), now);
+            }
             PathKind::Marker => self.add(index, root, Scope::Subtree(parent(path)), now),
             PathKind::Other if path.is_dir() => {
                 self.add(index, root, Scope::Subtree(path.to_path_buf()), now);
@@ -202,7 +205,9 @@ impl Pending {
     /// The rescan for a path that is gone, which may have been a folder.
     fn gone(&mut self, index: usize, root: &Path, path: &Path, kind: PathKind, now: Instant) {
         match kind {
-            PathKind::Media => self.add(index, root, Scope::Folder(parent(path)), now),
+            PathKind::Media | PathKind::Lyrics => {
+                self.add(index, root, Scope::Folder(parent(path)), now);
+            }
             PathKind::Marker => self.add(index, root, Scope::Subtree(parent(path)), now),
             PathKind::Other => self.add(index, root, Scope::Subtree(path.to_path_buf()), now),
         }
@@ -216,6 +221,8 @@ impl Pending {
             PathKind::Marker
         } else if classify(name).is_some() {
             PathKind::Media
+        } else if is_lyrics_file(name) {
+            PathKind::Lyrics
         } else {
             PathKind::Other
         }
@@ -337,8 +344,16 @@ enum PathKind {
     Media,
     /// The ignore marker.
     Marker,
+    /// A file that may hold the lyrics of a track beside it: `.lrc` or `.txt`.
+    Lyrics,
     /// Anything else: a folder, or a file the library does not take.
     Other,
+}
+
+fn is_lyrics_file(name: &std::ffi::OsStr) -> bool {
+    Path::new(name)
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("lrc") || e.eq_ignore_ascii_case("txt"))
 }
 
 fn parent(path: &Path) -> PathBuf {
