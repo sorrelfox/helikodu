@@ -8,7 +8,7 @@ use helikodu_model::player::{EngineError, LoopRange, PlaybackItem};
 
 use crate::decode::{BlockSamples, Decoder, DecoderInfo, DecoderRegistry, PcmBlock};
 use crate::output::SampleWriter;
-use crate::pipeline::{PathPlan, SourceChain, SourceFormat};
+use crate::pipeline::{PathPlan, SourceChain, SourceFormat, TimeScale};
 
 /// The most input frames the processing chain takes at once.
 const MAX_BLOCK: usize = 4096;
@@ -237,10 +237,10 @@ impl Source {
         Ok(())
     }
 
-    /// The frames, at the device rate of the attached plan, that the source has
-    /// still to give from now to its end; `None` when its length is not known.
-    /// Resampling makes `n` frames `ceil(n × to / from)`, so this is exact for
-    /// sources whose length is.
+    /// The frames, at the device rate and speed of the attached plan, that the
+    /// source has still to give from now to its end (listening time); `None` when
+    /// its length is not known. The chain's length is exact (see
+    /// [`TimeScale::rendered`]), so this is exact for sources whose length is.
     /// `None` too while an A-B loop will bring playback back to its start.
     pub(super) fn remaining_frames(&self) -> Option<u64> {
         if self.loops() {
@@ -250,8 +250,8 @@ impl Source {
         Some(total.saturating_sub(self.rendered))
     }
 
-    /// The frames of the whole source at the device rate of the attached plan, or
-    /// at the source rate before one is attached.
+    /// The frames of the whole source at the device rate and speed of the attached
+    /// plan, or at the source rate before one is attached.
     pub(super) fn total_frames(&self) -> Option<u64> {
         self.output_frames(0)
     }
@@ -272,9 +272,15 @@ impl Source {
             .map(|&(a, b)| b.min(last).saturating_sub(a))
             .sum();
         let frames = last.saturating_sub(from).saturating_sub(skipped);
-        let to = self.plan.as_ref().map_or(rate, |plan| plan.device.rate);
-        let total = (u128::from(frames) * u128::from(to.hz())).div_ceil(u128::from(rate.hz()));
-        Some(u64::try_from(total).unwrap_or(u64::MAX))
+        Some(self.scale().rendered(frames))
+    }
+
+    /// How the source's frames and the ring buffer's convert: those of the
+    /// attached plan, or one to one before one is attached.
+    pub(super) fn scale(&self) -> TimeScale {
+        self.plan
+            .as_ref()
+            .map_or_else(|| TimeScale::new(self.rate(), self.rate()), PathPlan::scale)
     }
 
     /// Moves to the gain of `plan`, a plan for the same source and device that may
@@ -513,6 +519,7 @@ impl Source {
             plan.gain.is_none()
                 && plan.channel_mix.is_none()
                 && plan.resample.is_none()
+                && plan.speed.is_none()
                 && !plan.crossfade
                 && !plan.dsp
         });

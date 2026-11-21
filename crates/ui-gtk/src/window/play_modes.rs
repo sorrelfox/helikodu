@@ -138,11 +138,17 @@ impl MainWindow {
                 Change::Queue => {
                     window.take_start_selection(view);
                     window.select_cursor(view);
+                    if let Some(application) = window.application() {
+                        crate::play_modes::sync_revert(&application, view);
+                    }
                 }
                 Change::Cursor => window.select_cursor(view),
                 _ => {}
             }
         });
+        if let Some(application) = self.application() {
+            crate::play_modes::sync_revert(&application, &at_start);
+        }
         // The queue the player restored, when it comes.
         self.imp().awaiting_queue.set(true);
         if !at_start.queue.items.is_empty() {

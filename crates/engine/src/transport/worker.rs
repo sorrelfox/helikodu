@@ -286,6 +286,7 @@ impl Worker {
             } => {
                 self.update_settings(output, loudness.into(), *dsp);
             }
+            EngineCommand::SetSpeed(speed) => self.set_speed(speed),
         }
     }
 
@@ -389,10 +390,15 @@ impl Worker {
             return;
         }
         // A crossfade into the next item begins its length before the end.
-        // A trailing silence that may be left out ends the item earlier.
-        let lead = self.config.near_end + self.crossfade_lead() + self.tail_lead(&segment.item);
+        // A trailing silence that may be left out ends the item earlier. The lead
+        // is listening time; what is left of the item is track time, which the
+        // speed shortens or lengthens.
+        let scale = segment.scale;
+        let lead = self.config.near_end
+            + self.crossfade_lead()
+            + scale.listening(self.tail_lead(&segment.item));
         let close = segment.length.is_some_and(|length| {
-            length.as_duration().saturating_sub(position.as_duration()) <= lead
+            scale.listening(length.as_duration().saturating_sub(position.as_duration())) <= lead
         });
         // Rendered to the end already: it ends within the buffer length.
         let rendered = self.timeline.len() > 1 || self.rendered_to_end(id);

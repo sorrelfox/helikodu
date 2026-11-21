@@ -181,6 +181,27 @@ pub(crate) fn intro_scan(args: &IntroScanArgs) -> Result<Outcome> {
     Ok(Outcome::Success)
 }
 
+#[derive(Debug, Args)]
+pub(crate) struct SpeedArgs {
+    /// The speed, from 0.5 to 2; 1 plays at the normal speed.
+    rate: f64,
+    /// Keep the pitch: the tempo changes (the default).
+    #[arg(long, conflicts_with = "tape")]
+    keep_pitch: bool,
+    /// Let the pitch follow the speed, as on a tape.
+    #[arg(long)]
+    tape: bool,
+}
+
+/// Plays at another speed until the application ends.
+pub(crate) fn speed(args: &SpeedArgs) -> Result<Outcome> {
+    if !(0.5..=2.0).contains(&args.rate) {
+        bail!("the speed must be from 0.5 to 2");
+    }
+    Remote::connect()?.run("SetSpeed", &(args.rate, !args.tape))?;
+    Ok(Outcome::Success)
+}
+
 /// Starts endless play from a track, album or artist.
 pub(crate) fn start_radio(args: &StartRadioArgs) -> Result<Outcome> {
     let (kind, id) = args.seed.remote();

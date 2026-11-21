@@ -14,7 +14,7 @@ use super::source::Source;
 use super::timeline::Segment;
 use super::worker::{Drain, Resume, Worker};
 use crate::output::DeviceAction;
-use crate::pipeline::Transition;
+use crate::pipeline::{SpeedPlan, TimeScale, Transition};
 
 /// Digital silence, written to a freewheeling sink while a fade out finishes after
 /// the last rendered frame.
@@ -543,6 +543,21 @@ impl Worker {
         self.schedule(at, DeviceAction::Dop(dop));
     }
 
+    /// How `source`'s frames convert to ring frames: as its plan says once it is
+    /// attached, otherwise at the speed the settings ask for on the open stream.
+    pub(super) fn scale_of(&self, source: &Source) -> TimeScale {
+        if source.plan().is_some() {
+            return source.scale();
+        }
+        let device = self
+            .output
+            .as_ref()
+            .map_or(source.rate(), |output| output.spec().rate);
+        let processing = &self.config.processing;
+        let speed = SpeedPlan::new(source.rate(), processing.speed, processing.resampler);
+        TimeScale::new(source.rate(), device).with_speed(speed.as_ref())
+    }
+
     /// A timeline segment for `source` from its current position.
     pub(super) fn segment_of(&self, source: &Source, at: u64) -> Segment {
         Segment {
@@ -551,10 +566,7 @@ impl Worker {
             spec: source.spec(),
             length: source.length(),
             start_frames: source.position(),
-            device_rate: self
-                .output
-                .as_ref()
-                .map_or(source.rate(), |output| output.spec().rate),
+            scale: self.scale_of(source),
             error: None,
             mix_from: None,
             rewinds: Vec::new(),

@@ -46,6 +46,13 @@ methods are only ever added.
     <method name="SetVolume">
       <arg name="volume" type="d" direction="in"/>
     </method>
+    <!-- Plays at another speed, 0.5 to 2.0, until the program ends;
+         keep_pitch false lets the pitch follow the speed, as on a tape.
+         Positions stay those of the track. -->
+    <method name="SetSpeed">
+      <arg name="rate" type="d" direction="in"/>
+      <arg name="keep_pitch" type="b" direction="in"/>
+    </method>
     <!-- off, tracks, albums, folders, groupings or within-album. -->
     <method name="SetShuffle">
       <arg name="mode" type="s" direction="in"/>

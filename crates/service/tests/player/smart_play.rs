@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Smarter playback through the player, on WAV and null sinks: endless play and the
-//! Auto-DJ adding library tracks, the rating floor of shuffle, Revert, Radio Random
-//! and intro scan.
+//! Auto-DJ adding library tracks, the rating floor of shuffle, Revert (and
+//! whether it has somewhere to go), Radio Random, and intro scan, also at another
+//! speed.
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -13,7 +14,7 @@ use std::time::Duration;
 use helikodu_library::{DatabaseConfig, Library, Rating};
 use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::player::{QueueContext, RepeatMode, ShuffleMode};
-use helikodu_model::settings::{PlaybackSettings, SmartPlaySettings};
+use helikodu_model::settings::{PlaybackSettings, SmartPlaySettings, SpeedSettings};
 use helikodu_service::bus::Subscription;
 use helikodu_service::library::MusicLibrary;
 use helikodu_service::player::{Player, PlayerCommand, PlayerEvent, SinkPacing};
@@ -152,6 +153,18 @@ fn the_rating_floor_passes_tracks_over_while_shuffling() {
     assert!(!played.contains(&s.files[2]));
 }
 
+/// Waits until `done` holds, for at most five seconds.
+fn eventually(what: &str, done: impl Fn() -> bool) {
+    let end = std::time::Instant::now() + Duration::from_secs(5);
+    while !done() {
+        assert!(
+            std::time::Instant::now() < end,
+            "timed out waiting for {what}"
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
 fn position_past(millis: u64) -> impl Fn(&PlayerEvent) -> bool {
     move |e| matches!(e, PlayerEvent::Position { position, .. } if position.as_duration() >= Duration::from_millis(millis))
 }
@@ -162,10 +175,13 @@ fn revert_goes_back_to_the_skipped_track_where_it_was() {
     play(&s, &s.tracks);
     assert_eq!(next_path(&s.events), s.files[0]);
     until(&s.events, position_past(600));
+    assert!(!s.player.queue().can_revert, "nothing to revert to yet");
     s.player.send(PlayerCommand::Next).unwrap();
     assert_eq!(next_path(&s.events), s.files[1]);
+    eventually("Revert to have a track", || s.player.queue().can_revert);
     s.player.send(PlayerCommand::Revert).unwrap();
     assert_eq!(next_path(&s.events), s.files[0]);
+    eventually("Revert to have none", || !s.player.queue().can_revert);
     // It starts where it was skipped, not at the start.
     let (event, _) = until(&s.events, |e| matches!(e, PlayerEvent::Position { .. }));
     assert!(position_past(500)(&event), "{event:?}");
@@ -212,4 +228,33 @@ fn intro_scan_plays_the_start_of_each_track() {
         .unwrap();
     assert!(longest < Duration::from_secs(5), "{longest:?}");
     assert!(matches!(end, PlayerEvent::Ended { .. }));
+}
+
+#[test]
+fn intro_scan_counts_listening_time_at_another_speed() {
+    let mut settings = smart();
+    settings.intro_scan_s = 1;
+    // In real time: freewheeling, the sink runs far ahead of the positions. Long
+    // tracks: intro scan waits while the next track is being prepared.
+    let s = setup("intro_scan_speed", 2, 30_000, true, settings);
+    let speed = SpeedSettings::at(2.0, true);
+    s.player.send(PlayerCommand::SetSpeed(speed)).unwrap();
+    until(&s.events, |e| *e == PlayerEvent::SpeedChanged(speed));
+    assert_eq!(s.player.status().speed, speed);
+    s.player.send(PlayerCommand::SetIntroScan(true)).unwrap();
+    play(&s, &s.tracks);
+    let (_, seen) = until(&s.events, |e| matches!(e, PlayerEvent::Ended { .. }));
+    // A second of listening at twice the speed is two of each track.
+    let longest = seen
+        .iter()
+        .filter_map(|e| match e {
+            PlayerEvent::Position { position, .. } => Some(position.as_duration()),
+            _ => None,
+        })
+        .max()
+        .unwrap();
+    assert!(
+        longest >= Duration::from_millis(1_800) && longest < Duration::from_secs(3),
+        "{longest:?}"
+    );
 }

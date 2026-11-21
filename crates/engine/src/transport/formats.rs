@@ -116,6 +116,7 @@ pub(super) fn keeps_dop(plan: &PathPlan) -> bool {
         && plan.gain.is_none()
         && plan.channel_mix.is_none()
         && plan.resample.is_none()
+        && plan.speed.is_none()
         && !plan.crossfade
         && !plan.dsp
         && plan.dsp_stages.is_empty()

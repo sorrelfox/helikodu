@@ -4,7 +4,8 @@
 //! The play modes against the sample backend: the Playback menu with the modes
 //! in its labels, the deck's shuffle and repeat buttons, stop after, the A-B
 //! loop chip and its shortcuts, the sleep timer popover and chip, the queue
-//! panel's selection as the cursor, the tag editor's Playback group, the play
+//! panel's selection as the cursor, Revert enabled only with a skipped track to
+//! go back to, the tag editor's Playback group, the play
 //! button's menu, the deck's icon sizes under two icon themes, and no frames
 //! drawn while paused with the chips shown. `HELIKODU_PLAYMODE_SHOTS=DIR`
 //! saves screenshots, dark and light, to `DIR`.
@@ -310,6 +311,20 @@ fn play_mode_queue_cursor(app: &gtk::Application) {
         list.selected_row()
             .is_some_and(|r| r.widget_name() == entry.as_str())
     });
+    window.destroy();
+}
+
+/// "Revert to the Skipped Track" is disabled until "Next" has moved on from a
+/// track, and again once it has gone back to it.
+fn play_mode_revert_needs_a_skipped_track(app: &gtk::Application) {
+    let (window, backend) = playing_window(app);
+    let enabled = || app.lookup_action("revert").is_some_and(|a| a.is_enabled());
+    spin(50);
+    assert!(!enabled(), "Revert is enabled with nothing to go back to");
+    backend.send(PlayerRequest::Next);
+    wait_for("Revert enabled after Next", enabled);
+    app.activate_action("revert", None);
+    wait_for("Revert disabled after going back", || !enabled());
     window.destroy();
 }
 
@@ -708,6 +723,10 @@ const TESTS: &[Test] = &[
     ),
     ("play_mode_sleep_timer", play_mode_sleep_timer),
     ("play_mode_queue_cursor", play_mode_queue_cursor),
+    (
+        "play_mode_revert_needs_a_skipped_track",
+        play_mode_revert_needs_a_skipped_track,
+    ),
     (
         "play_mode_start_selects_current",
         play_mode_start_selects_current,

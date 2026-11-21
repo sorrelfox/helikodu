@@ -17,6 +17,7 @@
 //! | Channel mapping, downmix, upmix | [`MixMatrix`] | per source |
 //! | ReplayGain / R128 gain | [`GainStage`], [`resolve_gain`] | per source |
 //! | Leveller (tracks without loudness values) | [`Leveller`] | per source |
+//! | Playback speed (tape or tempo) | [`SpeedPlan`], [`TempoStage`] | per source |
 //! | Resampling | [`ResampleStage`] | per source |
 //! | Crossfade (equal power) | [`equal_power`] | where two sources are mixed |
 //! | Software volume (`a = p³`) | [`SoftwareVolume`] | on the mixed stream |
@@ -38,6 +39,7 @@ mod loudness;
 mod path_plan;
 mod ramp;
 mod resample;
+mod speed;
 mod volume;
 
 pub use self::chain::{OutputChain, SourceChain};
@@ -59,4 +61,5 @@ pub use self::path_plan::{
 };
 pub use self::ramp::{FadeDurations, FadeState, Fader, SmoothedGain, Transition, equal_power};
 pub use self::resample::{ResampleMethod, ResampleStage, ResamplerQuality};
+pub use self::speed::{PlaybackSpeed, SpeedPlan, TempoStage, TimeScale};
 pub use self::volume::{SharedVolume, SoftwareVolume};

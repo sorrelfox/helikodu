@@ -180,3 +180,42 @@ fn list_outputs_failure_exits_with_1() {
     assert_eq!(output.status.code(), Some(1));
     assert!(text(&output.stderr).contains("wav"));
 }
+
+#[test]
+fn dsp_speed_writes_the_settings_file() {
+    let dir = folder("dsp-speed");
+    let settings = dir.join("settings.toml");
+    let path = settings.to_str().unwrap();
+    let output = cli(&["dsp", "--settings", path, "speed", "1.25", "--tape"]);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert_eq!(
+        text(&output.stdout),
+        "Speed: 1.25×, the pitch following it.\n"
+    );
+    let written = fs::read_to_string(&settings).unwrap();
+    assert!(written.contains("[dsp.speed]"), "{written}");
+    assert!(written.contains("rate = 1.25"), "{written}");
+    assert!(written.contains("keep_pitch = false"), "{written}");
+    // Without a choice the pitch does as before; 1 switches the speed off.
+    let output = cli(&["dsp", "--settings", path, "speed", "0.8"]);
+    assert_eq!(
+        text(&output.stdout),
+        "Speed: 0.8×, the pitch following it.\n"
+    );
+    let output = cli(&["dsp", "--settings", path, "speed", "1", "--keep-pitch"]);
+    assert_eq!(text(&output.stdout), "The speed is normal.\n");
+    let written = fs::read_to_string(&settings).unwrap();
+    assert!(written.contains("enabled = false") && written.contains("keep_pitch = true"));
+    let output = cli(&["dsp", "--settings", path, "speed", "2.5"]);
+    assert_eq!(output.status.code(), Some(1));
+    let output = cli(&[
+        "dsp",
+        "--settings",
+        path,
+        "speed",
+        "1.5",
+        "--tape",
+        "--keep-pitch",
+    ]);
+    assert_eq!(output.status.code(), Some(2));
+}

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! `helikodu-cli dsp`: the order of the DSP chain, saved chains, the compressor,
-//! convolution, pitch shift and the equalizers of single tracks. Changes are
+//! convolution, pitch shift, the playback speed and the equalizers of single
+//! tracks. Changes are
 //! written to the settings file, which a running application follows.
 
 use std::io::{self, Write};
@@ -13,7 +14,7 @@ use clap::{Args, Subcommand, ValueEnum};
 use helikodu_model::library::TrackId;
 use helikodu_model::settings::{
     BuiltInPreset, ChainStage, CompressorPreset, DspSettings, EqMode, EqualizerSettings,
-    ImpulseFile, PitchSettings,
+    ImpulseFile, PitchSettings, SpeedSettings,
 };
 use helikodu_service::autoeq;
 use helikodu_service::bus::EventBus;
@@ -117,6 +118,18 @@ enum DspCommand {
         /// The shift in semitones; fractions are cents.
         #[arg(allow_negative_numbers = true)]
         semitones: f64,
+    },
+    /// Play at this speed (0.5 to 2); 1 switches the speed off. Without
+    /// --keep-pitch or --tape the pitch does as set before (kept by default).
+    Speed {
+        /// The speed, as a factor of the normal one.
+        rate: f64,
+        /// Keep the pitch: the tempo changes.
+        #[arg(long, conflicts_with = "tape")]
+        keep_pitch: bool,
+        /// Let the pitch follow the speed, as on a tape.
+        #[arg(long)]
+        tape: bool,
     },
     /// Show, set and remove the equalizers of single tracks, stored in the library.
     #[command(subcommand)]
@@ -316,6 +329,33 @@ pub(crate) fn run(args: &DspArgs) -> Result<Outcome> {
                 writeln!(out, "Pitch shift is off.")?;
             } else {
                 writeln!(out, "Pitch shift: {semitones:+} semitones.")?;
+            }
+        }
+        DspCommand::Speed {
+            rate,
+            keep_pitch,
+            tape,
+        } => {
+            let rate = *rate;
+            if !SpeedSettings::RATE_RANGE.contains(&rate) {
+                bail!("the speed must be from 0.5 to 2");
+            }
+            let mut kept = true;
+            change(&mut |dsp| {
+                if *keep_pitch || *tape {
+                    dsp.speed.keep_pitch = *keep_pitch;
+                }
+                dsp.speed.rate = rate;
+                dsp.speed.enabled = rate != 1.0;
+                kept = dsp.speed.keep_pitch;
+                Ok(())
+            })?;
+            if rate == 1.0 {
+                writeln!(out, "The speed is normal.")?;
+            } else if kept {
+                writeln!(out, "Speed: {rate}×, keeping the pitch.")?;
+            } else {
+                writeln!(out, "Speed: {rate}×, the pitch following it.")?;
             }
         }
         DspCommand::TrackEq(command) => track_eq(&mut out, &store, command)?,
@@ -624,6 +664,14 @@ fn print_chain(out: &mut impl Write, dsp: &DspSettings) -> Result<()> {
     if !dsp.track_equalizer {
         writeln!(out, "Track equalizers are not used.")?;
     }
+    if dsp.speed.is_active() {
+        let pitch = if dsp.speed.keep_pitch {
+            "keeping the pitch"
+        } else {
+            "the pitch following it"
+        };
+        writeln!(out, "Speed: {}×, {pitch}.", dsp.speed.effective_rate())?;
+    }
     Ok(())
 }
 
@@ -647,5 +695,9 @@ fn show_json(dsp: &DspSettings) -> Value {
         "stages": stages,
         "chains": chains,
         "track_equalizer": dsp.track_equalizer,
+        "speed": {
+            "rate": dsp.speed.effective_rate(),
+            "keep_pitch": dsp.speed.keep_pitch,
+        },
     })
 }

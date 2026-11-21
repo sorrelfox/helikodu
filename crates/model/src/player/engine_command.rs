@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use super::{ItemId, PlaybackItem, Volume};
 use crate::audio::{MediaTime, OutputSelection};
 use crate::settings::{
-    DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, TransitionSettings,
+    DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, SpeedSettings,
+    TransitionSettings,
 };
 
 /// A command to the engine. The engine answers with [`EngineEvent`](super::EngineEvent)s.
@@ -85,6 +86,10 @@ pub enum EngineCommand {
         /// The section, or `None` to end the loop.
         range: Option<LoopRange>,
     },
+    /// Play at another speed (the `[dsp.speed]` table), replacing the one of the
+    /// last `UpdateSettings`. Positions stay those of the items; while playing,
+    /// playback goes on at the heard position at the new speed.
+    SetSpeed(SpeedSettings),
 }
 
 /// A section of an item, from `start` to just before `end`, for an A-B loop.

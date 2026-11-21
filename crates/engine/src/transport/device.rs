@@ -23,7 +23,8 @@ use crate::output::{
     connect_backend_with,
 };
 use crate::pipeline::{
-    LoudnessInfo, PathPlan, PathRequest, ProcessingSettings, VolumePlan, stream_config,
+    LoudnessInfo, PathPlan, PathRequest, PlaybackSpeed, ProcessingSettings, VolumePlan,
+    stream_config,
 };
 
 /// The connected backend, kept between streams: connecting to a sound server takes
@@ -404,8 +405,9 @@ impl Worker {
 }
 
 /// The processing plan of `source` on `output` with `settings`, with the DSP
-/// chain's stages `dsp`. On a stream in exclusive mode the leveller is left out
-/// when the path would be bit-perfect without it.
+/// chain's stages `dsp`. On a stream in exclusive mode the leveller and the
+/// playback speed are left out when the path would be bit-perfect without them:
+/// bit-perfect output turns them off.
 pub(super) fn plan_for(
     settings: &ProcessingSettings,
     output: &Output,
@@ -413,9 +415,10 @@ pub(super) fn plan_for(
     dsp: DspPlan,
 ) -> PathPlan {
     let plan = plain_plan(settings, output, source).with_dsp(dsp);
-    if output.mode == OutputMode::Exclusive && plan.leveller.is_some() {
+    if output.mode == OutputMode::Exclusive && (plan.leveller.is_some() || plan.speed.is_some()) {
         let mut without = *settings;
         without.loudness.leveller = false;
+        without.speed = PlaybackSpeed::NORMAL;
         let plain = plain_plan(&without, output, source).with_dsp(dsp);
         if plain.is_bit_perfect() {
             return plain;

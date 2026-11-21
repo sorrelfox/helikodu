@@ -27,8 +27,8 @@ use helikodu_model::settings::{OutputFormat, OutputSettings, SampleRatePolicy, V
 
 use super::{
     ClippingPrevention, FadeDurations, GainDecision, GainSource, LevellerPlan, LoudnessInfo,
-    LoudnessSettings, MixKind, MixMatrix, MixOptions, REFERENCE_LUFS, ResampleMethod,
-    ResamplerQuality, TpdfDither, resolve_track_gain,
+    LoudnessSettings, MixKind, MixMatrix, MixOptions, PlaybackSpeed, REFERENCE_LUFS,
+    ResampleMethod, ResamplerQuality, SpeedPlan, TimeScale, TpdfDither, resolve_track_gain,
 };
 use crate::dsp::{
     CompressorPlan, ConvolutionPlan, CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan,
@@ -107,6 +107,8 @@ pub struct ProcessingSettings {
     pub mix: MixOptions,
     /// Anti-click fade lengths.
     pub fades: FadeDurations,
+    /// The playback speed.
+    pub speed: PlaybackSpeed,
 }
 
 /// Everything the plan is computed from.
@@ -216,6 +218,8 @@ pub enum PlannedStage {
     Convolution(ConvolutionPlan),
     /// Pitch shift.
     Pitch(PitchPlan),
+    /// Playback speed.
+    Speed(SpeedPlan),
     /// Software volume.
     Volume(Volume),
     /// TPDF dither to an integer width.
@@ -240,6 +244,7 @@ impl fmt::Display for PlannedStage {
             Self::Compressor(stage) => stage.fmt(f),
             Self::Convolution(stage) => stage.fmt(f),
             Self::Pitch(stage) => stage.fmt(f),
+            Self::Speed(stage) => stage.fmt(f),
             Self::Volume(volume) => write!(f, "volume {:.0} %", volume.position() * 100.0),
             Self::Dither { bits } => write!(f, "TPDF dither {bits}-bit"),
         }
@@ -263,6 +268,8 @@ pub struct PathPlan {
     pub channel_mix: Option<ChannelMixPlan>,
     /// Resampling, unless the rates match.
     pub resample: Option<ResamplePlan>,
+    /// Another speed than the normal one.
+    pub speed: Option<SpeedPlan>,
     /// Whether the track is crossfaded.
     pub crossfade: bool,
     /// Whether the DSP chain is active.
@@ -312,9 +319,11 @@ impl PathPlan {
             method: ResampleMethod::for_rates(source.spec.rate, device.rate),
             quality: settings.resampler,
         });
+        let speed = SpeedPlan::new(source.spec.rate, settings.speed, settings.resampler);
         let processed = gain.is_some()
             || channel_mix.is_some()
             || resample.is_some()
+            || speed.is_some()
             || request.dsp
             || request.crossfade;
         let exact = format_is_exact(&source, device.format);
@@ -326,6 +335,7 @@ impl PathPlan {
             leveller,
             channel_mix,
             resample,
+            speed,
             crossfade: request.crossfade,
             dsp: request.dsp,
             dsp_stages: DspPlan::default(),
@@ -347,6 +357,12 @@ impl PathPlan {
         self
     }
 
+    /// How the source's frames and the device's frames convert, at the plan's
+    /// speed.
+    pub fn scale(&self) -> TimeScale {
+        TimeScale::new(self.source.spec.rate, self.device.rate).with_speed(self.speed.as_ref())
+    }
+
     /// Whether the device receives the decoded samples unchanged.
     pub fn is_bit_perfect(&self) -> bool {
         !self.always_dither && !self.volume.touches_samples()
@@ -366,6 +382,7 @@ impl PathPlan {
         let mut stages = Vec::new();
         stages.extend(self.channel_mix.map(PlannedStage::ChannelMix));
         stages.extend(self.gain.map(PlannedStage::Gain));
+        stages.extend(self.speed.map(PlannedStage::Speed));
         stages.extend(self.resample.map(PlannedStage::Resample));
         if self.crossfade {
             stages.push(PlannedStage::Crossfade);

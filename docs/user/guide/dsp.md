@@ -23,7 +23,7 @@ The same file can also be the equalizer of single tracks: `helikodu-cli dsp trac
 
 ## More processing in the settings file
 
-The compressor, convolution, pitch shift, the order of the stages, saved chains and the equalizers of single tracks have no page in the settings window yet. You set them in `settings.toml` (see [Settings](settings.md)) or with `helikodu-cli dsp`, which writes the same file. The running program reads a changed file the next time it starts. Every one of these is off by default; when they are off, playback stays bit-perfect.
+The compressor, convolution, pitch shift, the playback speed, the order of the stages, saved chains and the equalizers of single tracks have no page in the settings window yet. You set them in `settings.toml` (see [Settings](settings.md)) or with `helikodu-cli dsp`, which writes the same file. The running program reads a changed file the next time it starts. Every one of these is off by default; when they are off, playback stays bit-perfect.
 
 ### Compressor and night mode
 
@@ -80,6 +80,23 @@ semitones = -2.0         # -12 to +12
 ```
 
 `helikodu-cli dsp pitch -2` sets it; `helikodu-cli dsp pitch 0` switches it off.
+
+### Playback speed
+
+Plays faster or slower, from half the speed to twice the speed. With `keep_pitch = true` (the default) the tempo changes and the pitch stays, as for audiobooks, podcasts or practising along; with `keep_pitch = false` the pitch follows the speed, as when a tape or a record runs faster or slower.
+
+```toml
+[dsp.speed]
+enabled = true
+rate = 1.25              # 0.5 to 2
+keep_pitch = true        # false: the pitch follows the speed
+```
+
+Times stay those of the track: a track of 4:00 still shows 4:00 at 1.25×, its position moves through it faster than the clock, and it ends after 3:12. Seeking, the A-B loop, jumping over silence and the position that desktop controls show all work in the track's own time. Crossfades, fades and the sleep timer keep their lengths in real time: a crossfade of 5 seconds lasts 5 seconds at any speed, and **Intro Scan** plays its seconds of listening, which cover more or less of each track. Desktop controls see the speed as the playback rate, and can set it (from 0.5 to 2).
+
+The speed applies to each track before the tracks are mixed, so it is not one of the stages in `order` and is not kept in saved chains. In exclusive mode, when nothing else changes the samples, bit-perfect playback wins and tracks play at their normal speed; in shared mode, or when another stage is on, the speed applies. The signal path shows it with the resampler.
+
+`helikodu-cli dsp speed 1.25` sets it (`--tape` lets the pitch follow, `--keep-pitch` keeps it; without either, it stays as it was), and `helikodu-cli dsp speed 1` goes back to the normal speed. `helikodu-cli speed 1.25 [--tape]` changes the speed of the running program at once, until it ends; playback goes on where it was. The settings file gives the speed it starts with.
 
 ### The order of the stages and saved chains
 

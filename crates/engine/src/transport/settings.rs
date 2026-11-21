@@ -23,15 +23,19 @@
 //!   crossfades to them on the audio rendered from then on; the plan of the current
 //!   item follows (dither, the signal path). The resampler quality and the LFE
 //!   option of the downmix apply to items planned later.
+//! - A change of the playback speed keeps the stream, but not the audio buffered
+//!   at the old speed: while playing, the engine fades out, and continues at the
+//!   heard position at the new speed with a fade in, as after a seek
+//!   (`Reconfiguring`). While paused or stopped it applies when playback starts.
 
 use helikodu_model::player::TransportState;
-use helikodu_model::settings::{DspSettings, OutputSettings};
+use helikodu_model::settings::{DspSettings, OutputSettings, SpeedSettings};
 
 use super::device::plan_for;
 use super::worker::Worker;
 use crate::dsp::{DspChain, processing_settings};
 use crate::output::DeviceAction;
-use crate::pipeline::LoudnessSettings;
+use crate::pipeline::{LoudnessSettings, Transition};
 
 impl Worker {
     pub(super) fn update_settings(
@@ -50,7 +54,9 @@ impl Worker {
         self.config.output = output;
         self.config.processing.loudness = loudness;
         let redsp = self.config.dsp != dsp;
+        let speed = self.config.processing.speed;
         self.config.processing = processing_settings(self.config.processing, &dsp);
+        let respeed = self.config.processing.speed != speed;
         if let Some(chain) = &mut self.dsp {
             chain.set_settings(&dsp);
         }
@@ -73,9 +79,32 @@ impl Worker {
             } else {
                 self.close_output();
             }
+        } else if respeed && playing {
+            self.restart_where_heard();
         } else if (regain || redsp) && playing {
             self.retune_gain();
         }
+    }
+
+    /// Plays at the speed `speed` from now on.
+    pub(super) fn set_speed(&mut self, speed: SpeedSettings) {
+        let mut dsp = self.config.dsp.clone();
+        dsp.speed = speed;
+        let output = self.config.output.clone();
+        let loudness = self.config.processing.loudness;
+        self.update_settings(output, loudness, dsp);
+    }
+
+    /// Fades out and continues at the heard position on the same stream, with the
+    /// items planned anew: for a change of speed, which the audio already buffered
+    /// does not have. For playing and draining states.
+    pub(super) fn restart_where_heard(&mut self) {
+        self.set_state(TransportState::Reconfiguring);
+        let Some(resume) = self.stop_where_heard(Transition::Seek) else {
+            self.stop();
+            return;
+        };
+        self.continue_at(resume, Some(Transition::Seek));
     }
 
     /// Moves the current item's gain to what the settings now give it, from the

@@ -345,13 +345,21 @@ pub(crate) fn signal_path(plan: &PathPlan, context: &PathContext) -> SignalPath 
         }
         None => stage(StageKind::Loudness, StageState::Off, String::new()),
     }
-    match plan.resample {
-        Some(resample) => stage(
+    // The playback speed shows with the resampler, which carries it out at the
+    // tape kind.
+    match (plan.resample, plan.speed) {
+        (Some(resample), Some(speed)) => stage(
+            StageKind::Resampler,
+            StageState::Active,
+            format!("{speed}, {resample}"),
+        ),
+        (None, Some(speed)) => stage(StageKind::Resampler, StageState::Active, speed.to_string()),
+        (Some(resample), None) => stage(
             StageKind::Resampler,
             StageState::Active,
             resample.to_string(),
         ),
-        None => stage(
+        (None, None) => stage(
             StageKind::Resampler,
             StageState::NotNeeded,
             kilohertz(device.rate),

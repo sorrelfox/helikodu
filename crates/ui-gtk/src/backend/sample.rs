@@ -1370,6 +1370,8 @@ struct FakeState {
     ab_loop: Option<(super::LoopPoints, Option<u64>)>,
     sleep: Option<super::SleepTimer>,
     cursor: Option<u64>,
+    /// The queue positions "Next" moved on from, newest last, for "Revert".
+    skipped: Vec<usize>,
 }
 
 /// A player that only pretends: it follows requests and reports updates at once.
@@ -1414,6 +1416,7 @@ impl FakePlayer {
             context: state.context.clone(),
             items: state.queue.clone(),
             current: state.current,
+            can_revert: state.skipped.iter().any(|&i| i < state.queue.len()),
         };
         let elapsed = state.elapsed;
         drop(state);
@@ -1655,7 +1658,16 @@ impl PlayerControl for FakePlayer {
             }
             // The sample player has no session to play on with.
             PlayerRequest::ResumeSession | PlayerRequest::SessionEnding => {}
-            PlayerRequest::Next => self.step(1),
+            PlayerRequest::Next => {
+                {
+                    // "Revert" goes back to the track "Next" moved on from.
+                    let mut state = self.state.borrow_mut();
+                    if let Some(current) = state.current {
+                        state.skipped.push(current);
+                    }
+                }
+                self.step(1);
+            }
             PlayerRequest::Previous => self.step(-1),
             PlayerRequest::Seek(to) => {
                 let length = {
@@ -1767,8 +1779,25 @@ impl FakePlayer {
             PlayerRequest::SetPlayScope(scope) => self.change_modes(|m| m.scope = scope),
             PlayerRequest::SetFollowCursor(on) => self.change_modes(|m| m.follow_cursor = on),
             PlayerRequest::SetIntroScan(on) => self.change_modes(|m| m.intro_scan = on),
-            // The sample library has no statistics or positions to go back to.
-            PlayerRequest::Revert | PlayerRequest::RadioRandom | PlayerRequest::StartRadio(_) => {}
+            PlayerRequest::Revert => {
+                {
+                    let mut state = self.state.borrow_mut();
+                    let Some(index) = state.skipped.pop() else {
+                        return;
+                    };
+                    if index >= state.queue.len() {
+                        return;
+                    }
+                    state.current = Some(index);
+                    state.state = PlaybackState::Playing;
+                    state.elapsed = Duration::ZERO;
+                }
+                self.announce();
+            }
+            // The sample library has no statistics to go on, and no audio.
+            PlayerRequest::RadioRandom
+            | PlayerRequest::StartRadio(_)
+            | PlayerRequest::SetSpeed { .. } => {}
             PlayerRequest::SetStopAfterMode(mode) => {
                 {
                     let mut state = self.state.borrow_mut();

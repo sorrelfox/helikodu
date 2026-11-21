@@ -161,6 +161,10 @@ impl FakeApp {
         self.note(format!("ExportPlaylist {playlist} {path}"));
         48
     }
+
+    fn set_speed(&self, rate: f64, keep_pitch: bool) {
+        self.note(format!("SetSpeed {rate:.2} {keep_pitch}"));
+    }
 }
 
 /// Serves the stand-in on `bus`; it serves while the connection lives.
@@ -215,6 +219,7 @@ fn every_method_the_commands_call_is_in_the_interface() {
         "PlayQuery",
         "Rate",
         "ExportPlaylist",
+        "SetSpeed",
     ] {
         assert!(
             INTERFACE_XML.contains(&format!("<method name=\"{method}\"")),
@@ -273,6 +278,8 @@ fn the_commands_reach_the_running_application() {
         &["rate", "4"],
         &["rate", "none", "--track", "12"],
         &["export-playlist", "Late evening", "/tmp/late.m3u8"],
+        &["speed", "1.25"],
+        &["speed", "0.75", "--tape"],
     ] {
         let output = cli(address, args);
         assert!(
@@ -305,6 +312,8 @@ fn the_commands_reach_the_running_application() {
     assert_eq!(output.status.code(), Some(1));
     let output = cli(address, &["seek", "soon"]);
     assert_eq!(output.status.code(), Some(1));
+    let output = cli(address, &["speed", "3"]);
+    assert_eq!(output.status.code(), Some(1));
 
     let calls = calls.lock().unwrap().clone();
     assert_eq!(
@@ -322,6 +331,8 @@ fn the_commands_reach_the_running_application() {
             "Rate 0 4".to_owned(),
             "Rate 12 -1".to_owned(),
             "ExportPlaylist Late evening /tmp/late.m3u8".to_owned(),
+            "SetSpeed 1.25 true".to_owned(),
+            "SetSpeed 0.75 false".to_owned(),
             format!("Enqueue {} true", file.display()),
             "PlayQuery nothing false".to_owned(),
             "Rate 99 3".to_owned(),

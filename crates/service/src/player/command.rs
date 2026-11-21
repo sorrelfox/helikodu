@@ -14,7 +14,7 @@ use helikodu_model::player::{
 };
 use helikodu_model::settings::{
     DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, SmartPlaySettings,
-    TransitionSettings,
+    SpeedSettings, TransitionSettings,
 };
 
 use super::config::PlayerPrefs;
@@ -185,6 +185,10 @@ pub enum PlayerCommand {
     ExtendSleepTimer(Duration),
     /// Turn the sleep timer off.
     CancelSleepTimer,
+    /// Play at another speed, keeping the pitch or not, until the program ends
+    /// (it wins over the `[dsp.speed]` settings until then). Positions stay those
+    /// of the track; playback goes on where it is at the new speed.
+    SetSpeed(SpeedSettings),
     /// Change the playback flags of a library track; they are stored in the library
     /// and apply to the queue at once (the volume from the next time it plays).
     SetTrackFlags {

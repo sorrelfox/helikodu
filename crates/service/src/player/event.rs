@@ -13,6 +13,8 @@ use helikodu_model::player::{
     StopAfter, TrackFlags, TransportState, Volume,
 };
 
+use helikodu_model::settings::SpeedSettings;
+
 use super::timers::{AbLoop, SleepTimerStatus};
 
 /// Something the player reports. Every event comes from the player's own thread, in
@@ -118,6 +120,8 @@ pub enum PlayerEvent {
     LoopChanged(Option<AbLoop>),
     /// The sleep timer started, changed or ended (`None`).
     SleepTimerChanged(Option<SleepTimerStatus>),
+    /// The playback speed changed (the settings', or one set with `SetSpeed`).
+    SpeedChanged(SpeedSettings),
     /// The entry selected for "Continue from the selected track" changed.
     CursorChanged(Option<EntryId>),
     /// The playback flags of a library track were changed through the player.

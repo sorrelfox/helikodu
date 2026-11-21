@@ -12,7 +12,9 @@
 //!   applies as below.
 //! - **Between tracks.** With crossfades on, the render side mixes the next item
 //!   into the last frames of the current one: outgoing gain `cos(πt/2)`, incoming
-//!   `sin(πt/2)`, after each item's own gain and resampling and before the DSP chain.
+//!   `sin(πt/2)`, after each item's own gain, speed and resampling and before the
+//!   DSP chain. Its length is listening time: a crossfade of 5 seconds lasts 5
+//!   seconds at any speed.
 //!   The window is the setting's length, shortened to half of either item for short
 //!   tracks and to what is left of the current one when the next one comes late. It
 //!   starts where the current item has that many frames left, which its length gives
@@ -358,16 +360,15 @@ impl Worker {
         if self.config.transitions.keep_albums_gapless && current.item().same_album(next.item()) {
             return None;
         }
-        let next_total = next.total_frames().map(|frames| {
-            let frames = u128::from(frames) * u128::from(rate) / u128::from(next.rate().hz());
-            u64::try_from(frames).unwrap_or(u64::MAX)
-        })?;
+        // The next item is not attached yet: its frames at its own rate, played
+        // at the speed it will get.
+        let next_total = self.scale_of(next).rendered(next.total_frames()?);
         // From the analysis: the outgoing item's fade, its trailing silence left out
         // (the end set when the next item became known).
         if self.config.transitions.analysed_crossfade()
             && current.end().is_some()
             && next.item().analysis.is_some()
-            && let Some(overlap) = analysed_overlap(current, rate)
+            && let Some(overlap) = analysed_overlap(current, &current.scale())
         {
             length = length.min(overlap.max(frames_of(MIN_CROSSFADE, rate)));
         }
@@ -395,9 +396,7 @@ impl Worker {
         // The incoming item is heard from the middle of the window on.
         let half = length / 2;
         let mut segment = self.segment_of(&incoming, window + half);
-        let source_rate = u128::from(incoming.rate().hz());
-        segment.start_frames +=
-            u64::try_from(u128::from(half) * source_rate / u128::from(rate)).unwrap_or(u64::MAX);
+        segment.start_frames += segment.to_source(half);
         if let Some(outgoing) = self.timeline.segment_mut(id) {
             outgoing.mix_from = Some(window);
         }

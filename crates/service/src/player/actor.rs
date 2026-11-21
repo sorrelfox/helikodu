@@ -23,7 +23,7 @@ use helikodu_model::player::{
     TrackFlags, TransportState, Volume,
 };
 use helikodu_model::settings::EqualizerSettings;
-use helikodu_model::settings::{SmartPlaySettings, below_rating};
+use helikodu_model::settings::{SmartPlaySettings, SpeedSettings, below_rating};
 
 use super::command::{ContextRequest, PlayerCommand};
 use super::config::{PlayerPrefs, SessionConfig};
@@ -123,6 +123,8 @@ pub(super) struct Startup {
     pub(super) library: Option<MusicLibrary>,
     /// The smarter playback settings.
     pub(super) smart_play: SmartPlaySettings,
+    /// The playback speed of the settings.
+    pub(super) speed: SpeedSettings,
     /// The random numbers of endless play, the Auto-DJ and Radio Random.
     pub(super) draws: Rng,
 }
@@ -204,6 +206,13 @@ pub(super) struct Actor {
     radio_seek: Option<(EntryId, f64)>,
     /// The random numbers of endless play, the Auto-DJ and Radio Random.
     draws: Rng,
+    /// The playback speed of the settings.
+    speed: SpeedSettings,
+    /// The speed set while the program runs (`SetSpeed`), which wins over the
+    /// settings' until the program ends.
+    speed_override: Option<SpeedSettings>,
+    /// Whether "Revert" had somewhere to go when the queue was last published.
+    published_revert: bool,
 }
 
 impl Actor {
@@ -275,6 +284,9 @@ impl Actor {
             skipped: Vec::new(),
             radio_seek: None,
             draws: startup.draws,
+            speed: startup.speed,
+            speed_override: None,
+            published_revert: false,
         }
         .with_smart_play(startup.smart_play)
         .with_keys()
@@ -298,6 +310,7 @@ impl Actor {
             self.emit(PlayerEvent::Notice(notice));
         }
         self.emit(PlayerEvent::VolumeChanged(self.volume));
+        self.publish_speed();
         self.after_input();
         loop {
             let input = match self.wait_due_in() {
@@ -391,14 +404,17 @@ impl Actor {
     /// Publishes what changed while handling an input, names what plays in the crash
     /// sentinel, and saves the session when it is due.
     fn after_input(&mut self) {
-        if self.queue.version() != self.published_version {
+        let can_revert = self.can_revert();
+        if self.queue.version() != self.published_version || can_revert != self.published_revert {
             self.published_version = self.queue.version();
+            self.published_revert = can_revert;
             self.shared.set_queue(QueueSnapshot {
                 version: self.queue.version(),
                 context: self.queue.context().clone(),
                 entries: self.queue.items().to_vec(),
                 current: self.queue.current_index(),
                 modes: self.queue.modes(),
+                can_revert,
             });
             self.emit(PlayerEvent::QueueChanged {
                 version: self.queue.version(),
@@ -762,14 +778,43 @@ impl Actor {
             PlayerCommand::ConfigureAudio {
                 output,
                 loudness,
-                dsp,
+                mut dsp,
             } => {
+                self.speed = dsp.speed;
+                // A speed set while running stays until the program ends.
+                if let Some(speed) = self.speed_override {
+                    dsp.speed = speed;
+                }
                 self.send(EngineCommand::UpdateSettings {
                     output,
                     loudness,
                     dsp,
                 });
+                self.publish_speed();
             }
+            PlayerCommand::SetSpeed(speed) => {
+                self.speed_override = Some(speed);
+                self.send(EngineCommand::SetSpeed(speed));
+                self.publish_speed();
+            }
+        }
+    }
+
+    /// The speed playback runs at: the one set while running, or the settings'.
+    pub(super) fn speed(&self) -> SpeedSettings {
+        self.speed_override.unwrap_or(self.speed)
+    }
+
+    /// Puts the speed into the status and announces it when it changed.
+    fn publish_speed(&mut self) {
+        let speed = self.speed();
+        let mut changed = false;
+        self.shared.update_status(|s| {
+            changed = s.speed != speed;
+            s.speed = speed;
+        });
+        if changed {
+            self.emit(PlayerEvent::SpeedChanged(speed));
         }
     }
 

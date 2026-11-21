@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - A dynamics compressor with a night mode, for listening at a low volume: `[dsp.compressor]` in the settings file, or `helikodu-cli dsp compressor`. It sits just before the limiter.
 - Convolution with an impulse response per sample rate (room correction from REW and similar programs), from a folder of WAV files or a file per rate, with normalization, gain and a wet/dry mix: `[dsp.convolution]`, or `helikodu-cli dsp convolution`. The delay it adds is shown in the signal path.
 - Pitch shift that keeps the tempo, up to 12 semitones either way: `[dsp.pitch]`, or `helikodu-cli dsp pitch`.
+- Playback speed from 0.5× to 2×, keeping the pitch or letting it follow the speed as on a tape: `[dsp.speed]` in the settings file, or `helikodu-cli dsp speed`. `helikodu-cli speed` and desktop controls (the MPRIS playback rate) change it while music plays. Times, seeking and the A-B loop stay in the track's own time; crossfades, fades and intro scan keep their real lengths.
 - The stages of the DSP chain can be put in another order, and orders with their stages saved as named chains and chosen while music plays: `dsp.order` and `[[dsp.chains]]`, or `helikodu-cli dsp order` and `helikodu-cli dsp chain`.
 - A library track can have an equalizer of its own, which replaces the equalizer of the settings while it plays: `helikodu-cli dsp track-eq`.
 - `helikodu-cli play --dsp` plays files through the DSP chain of the settings file.
@@ -26,6 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Every menu is now in title case, as the main menu was: the context menus of tracks, albums, artists, playlists and labels, the playback menus, the sort and group menus ("Add to Queue", "Edit Tags…", "Stop After").
 - On an album page, the facts of the selected track come first in the details column, above the album's.
+- **Revert to the Skipped Track** is greyed out while there is no track to go back to.
 
 ### Fixed
 

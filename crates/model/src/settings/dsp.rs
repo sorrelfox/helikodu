@@ -13,6 +13,7 @@ mod chain;
 mod compressor;
 mod convolution;
 mod pitch;
+mod speed;
 
 use std::ops::RangeInclusive;
 
@@ -24,6 +25,7 @@ pub use self::chain::{ChainStage, SavedChain};
 pub use self::compressor::{CompressorPreset, CompressorSettings, CompressorValues};
 pub use self::convolution::{ConvolutionSettings, ImpulseFile};
 pub use self::pitch::PitchSettings;
+pub use self::speed::SpeedSettings;
 
 /// The centre frequencies of the 10-band graphic equalizer, in Hz: octaves from
 /// 31.5 Hz to 16 kHz (ISO 266).
@@ -113,6 +115,11 @@ pub const GRAPHIC_31_BANDS_HZ: [f64; 31] = [
 /// [dsp.pitch]
 /// enabled = false
 /// semitones = 0.0              # -12 to +12
+///
+/// [dsp.speed]                  # per track, ahead of the chain
+/// enabled = false
+/// rate = 1.0                   # 0.5 to 2
+/// keep_pitch = true            # false: the pitch follows the speed (tape)
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -134,6 +141,9 @@ pub struct DspSettings {
     pub convolution: ConvolutionSettings,
     /// Pitch shift.
     pub pitch: PitchSettings,
+    /// Playback speed. Not a stage of the chain: it applies to each track before
+    /// the tracks are mixed, and is not part of `order` or the saved chains.
+    pub speed: SpeedSettings,
     /// The order of the stages. Stages it leaves out follow in the default order.
     pub order: Vec<ChainStage>,
     /// The saved chains.
@@ -154,6 +164,7 @@ impl Default for DspSettings {
             compressor: CompressorSettings::default(),
             convolution: ConvolutionSettings::default(),
             pitch: PitchSettings::default(),
+            speed: SpeedSettings::default(),
             order: ChainStage::DEFAULT_ORDER.to_vec(),
             chains: Vec::new(),
             track_equalizer: true,
@@ -171,6 +182,7 @@ impl DspSettings {
         self.compressor.validate()?;
         self.convolution.validate()?;
         self.pitch.validate()?;
+        self.speed.validate()?;
         chain::check_unique("dsp.order", &self.order)?;
         for (i, saved) in self.chains.iter().enumerate() {
             let key = format!("dsp.chains[{i}]");
@@ -966,7 +978,8 @@ mod tests {
                     [dsp.compressor]\nenabled = true\npreset = \"gentle\"\n\
                     [dsp.convolution]\nenabled = true\nfolder = \"/ir\"\nwet_percent = 50.0\n\
                     [[dsp.convolution.files]]\nrate_hz = 48000\npath = \"/ir/48.wav\"\n\
-                    [dsp.pitch]\nenabled = true\nsemitones = -2.5\n";
+                    [dsp.pitch]\nenabled = true\nsemitones = -2.5\n\
+                    [dsp.speed]\nenabled = true\nrate = 1.5\nkeep_pitch = false\n";
         let settings: Settings = toml::from_str(text).unwrap();
         let dsp = &settings.dsp;
         assert_eq!(settings.validate(), Ok(()));
@@ -977,6 +990,7 @@ mod tests {
         );
         assert!(dsp.convolution.normalize);
         assert_eq!(dsp.pitch.semitones, -2.5);
+        assert_eq!(dsp.speed, SpeedSettings::at(1.5, false));
         assert_eq!(dsp.chains[0].stages, [ChainStage::Convolution]);
         assert!(dsp.track_equalizer);
         let back: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();

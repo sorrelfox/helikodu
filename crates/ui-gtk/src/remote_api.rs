@@ -226,6 +226,13 @@ fn read_call(method: &str, args: &glib::Variant) -> Result<Call, String> {
             Call::Export(playlist, path)
         }
         "Revert" => Call::Request(PlayerRequest::Revert),
+        "SetSpeed" => {
+            let (rate, keep_pitch) = args.get::<(f64, bool)>().ok_or_else(bad)?;
+            if !(0.5..=2.0).contains(&rate) {
+                return Err("the speed is from 0.5 to 2.0".into());
+            }
+            Call::Request(PlayerRequest::SetSpeed { rate, keep_pitch })
+        }
         "RadioRandom" => Call::Request(PlayerRequest::RadioRandom),
         "SetIntroScan" => {
             let (on,) = args.get::<(bool,)>().ok_or_else(bad)?;
@@ -581,6 +588,15 @@ mod tests {
         );
         assert!(read_call("SetVolume", &(1.5f64,).to_variant()).is_err());
         assert_eq!(
+            read_call("SetSpeed", &(1.25f64, false).to_variant()),
+            Ok(Call::Request(PlayerRequest::SetSpeed {
+                rate: 1.25,
+                keep_pitch: false
+            }))
+        );
+        assert!(read_call("SetSpeed", &(3.0f64, true).to_variant()).is_err());
+        assert!(read_call("SetSpeed", &(f64::NAN, true).to_variant()).is_err());
+        assert_eq!(
             read_call("Rate", &(0u64, -1i32).to_variant()),
             Ok(Call::Rate(0, None))
         );
@@ -613,6 +629,7 @@ mod tests {
             "Seek",
             "SetPosition",
             "SetVolume",
+            "SetSpeed",
             "SetShuffle",
             "SetRepeat",
             "Enqueue",

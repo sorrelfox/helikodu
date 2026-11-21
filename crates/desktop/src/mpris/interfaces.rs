@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use helikodu_model::audio::MediaTime;
 use helikodu_model::player::{ShuffleMode, Volume};
+use helikodu_model::settings::SpeedSettings;
 use helikodu_service::player::PlayerCommand;
 use zbus::object_server::SignalEmitter;
 use zbus::{ObjectPath, OwnedObjectPath, OwnedVariant, fdo, interface};
@@ -215,17 +216,25 @@ impl Player {
         Ok(())
     }
 
-    /// Playback runs at its own rate only.
+    /// The playback speed. Positions are the track's own time, so clients that
+    /// interpolate move them this much faster than the clock.
     #[zbus(property)]
     fn rate(&self) -> f64 {
-        1.0
+        self.shared.state().published().rate
     }
 
-    /// A rate of 0 pauses, as the specification allows; other rates are ignored.
+    /// A rate of 0 pauses, as the specification allows; a rate from 0.5 to 2
+    /// plays at that speed, keeping the pitch as it is set to; other rates are
+    /// ignored.
     #[zbus(property)]
     fn set_rate(&self, value: f64) {
         if value == 0.0 {
             self.send(PlayerCommand::Pause);
+        } else if SpeedSettings::RATE_RANGE.contains(&value) {
+            let keep_pitch = self.shared.state().speed().keep_pitch;
+            let speed = SpeedSettings::at(value, keep_pitch);
+            self.shared.state().assume(|state| state.set_speed(speed));
+            self.send(PlayerCommand::SetSpeed(speed));
         }
     }
 
@@ -275,12 +284,12 @@ impl Player {
 
     #[zbus(property(emits_changed_signal = "const"))]
     fn minimum_rate(&self) -> f64 {
-        1.0
+        *SpeedSettings::RATE_RANGE.start()
     }
 
     #[zbus(property(emits_changed_signal = "const"))]
     fn maximum_rate(&self) -> f64 {
-        1.0
+        *SpeedSettings::RATE_RANGE.end()
     }
 
     #[zbus(property)]

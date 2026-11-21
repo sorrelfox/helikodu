@@ -18,6 +18,11 @@
 //!   over. Stretches that begin in the first [`SKIP_GUARD`] of a track are kept.
 //! - **Bit-perfect.** None of this on a bit-perfect path in exclusive mode.
 //!
+//! The margins, the silence kept and the guard are track time (they belong to the
+//! music); what the transport derives from them for the ring buffer (the
+//! trailing silence still to cut, the overlap of a crossfade, `NearEnd`'s lead)
+//! is converted to listening time with the item's speed.
+//!
 //! Positions stay those of the file: a track that starts after its leading silence
 //! reports its first position there, and a jump over silence moves the position
 //! forward as a seek would. The length reported is the file's.
@@ -36,7 +41,7 @@ use helikodu_model::settings::TransitionSettings;
 
 use super::source::Source;
 use super::worker::Worker;
-use crate::pipeline::PathPlan;
+use crate::pipeline::{PathPlan, TimeScale};
 
 /// The silence kept before and after the sound of a trimmed track.
 pub(super) const MARGIN: Duration = Duration::from_millis(10);
@@ -83,18 +88,20 @@ pub(super) fn head_start(source: &Source) -> Option<u64> {
     (start > 0).then_some(start)
 }
 
-/// The overlap the analysis gives a crossfade out of `source`, in frames at
-/// `rate`: from where the track begins to fade out for good to the end of its sound
-/// (and the margin after it). Without a fade that is the last half second or so.
-pub(super) fn analysed_overlap(source: &Source, rate: u32) -> Option<u64> {
+/// The overlap the analysis gives a crossfade out of `source`, in ring frames of
+/// `scale` (listening time): from where the track begins to fade out for good to
+/// the end of its sound (and the margin after it). Without a fade that is the last
+/// half second or so.
+pub(super) fn analysed_overlap(source: &Source, scale: &TimeScale) -> Option<u64> {
     let analysis = source.item().analysis.as_deref()?;
     let audio = analysis.audio.as_ref()?;
     let fade = analysis
         .fade_out_start
         .unwrap_or(audio.end)
         .clamp(audio.start, audio.end);
+    let rate = scale.source_rate().hz();
     let frames = at_rate(audio.end - fade, analysis.rate, rate) + frames_of(MARGIN, rate);
-    Some(frames)
+    Some(scale.to_ring(frames))
 }
 
 /// The silent stretches of `source` to jump over with `transitions`, in source
@@ -202,13 +209,8 @@ impl Worker {
         }
         let end = tail_end(current)?;
         let length = current.length()?.frames_at(current.rate());
-        let rate = self.output.as_ref()?.spec().rate.hz();
-        Some(at_rate(
-            length.saturating_sub(end),
-            current.rate().hz(),
-            rate,
-        ))
-        .filter(|&f| f > 0)
+        self.output.as_ref()?;
+        Some(current.scale().to_ring(length.saturating_sub(end))).filter(|&f| f > 0)
     }
 
     /// How many frames a freewheeling sink may render before it waits for the next
@@ -229,7 +231,7 @@ impl Worker {
     }
 
     /// How much earlier `NearEnd` comes for `item`: its trailing silence, when it
-    /// may be left out.
+    /// may be left out, in track time.
     pub(super) fn tail_lead(&self, item: &PlaybackItem) -> Duration {
         let transitions = &self.config.transitions;
         if !(transitions.trim_silence || transitions.analysed_crossfade())
@@ -368,7 +370,7 @@ mod tests {
             spec,
             length: source.length(),
             start_frames: source.position(),
-            device_rate: spec.rate,
+            scale: crate::pipeline::TimeScale::new(spec.rate, spec.rate),
             error: None,
             mix_from: None,
             rewinds: Vec::new(),

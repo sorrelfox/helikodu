@@ -42,6 +42,7 @@ helikodu-cli managed-folder ...    # the managed folder: show, set, import, cons
 helikodu-cli labels list|add|...   # labels of tracks, albums and artists
 helikodu-cli fields list|define|... # computed and custom fields
 helikodu-cli dsp show|order|chain|... # the DSP chain in the settings file (see Equalizer and sound processing)
+helikodu-cli dsp speed 1.25 [--tape]  # the playback speed in the settings file; 1 is the normal speed
 ```
 
 Some examples:
@@ -112,6 +113,7 @@ helikodu-cli rate 4 | none [--track ID]         # rate the playing track (or a l
 helikodu-cli export-playlist PLAYLIST FILE      # write a playlist as M3U8, M3U, PLS or XSPF
 helikodu-cli revert | radio-random              # back to the skipped track; a random track at a random point
 helikodu-cli intro-scan on|off                  # play only the first seconds of each track
+helikodu-cli speed 1.25 [--tape|--keep-pitch]   # play faster or slower (0.5 to 2) until the program ends
 helikodu-cli start-radio --track ID             # endless play from a track (or --album, --artist)
 helikodu-cli generator play NAME                # play a generator playlist
 ```

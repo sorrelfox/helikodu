@@ -22,4 +22,5 @@ mod gapless;
 mod media;
 mod session;
 mod settings;
+mod speed;
 mod transitions;

@@ -25,7 +25,8 @@ pub struct EngineConfig {
     /// mixing and fade lengths.
     pub processing: ProcessingSettings,
     /// The `[dsp]` settings: the DSP chain (until `UpdateSettings` replaces them).
-    /// The resampler quality and the LFE option in them take effect through
+    /// The resampler quality, the LFE option and the playback speed in them take
+    /// effect through
     /// `processing`, which [`dsp::processing_settings`](crate::dsp::processing_settings)
     /// fills from them; `UpdateSettings` does that itself.
     pub dsp: DspSettings,

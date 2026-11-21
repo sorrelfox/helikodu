@@ -25,8 +25,9 @@ use super::timeline::Segment;
 use super::worker::Worker;
 use crate::output::DeviceAction;
 
-/// With resampling, how far (in source frames) a recorded move back may lie from the
-/// loop's end and still count as one at the end: the resampler holds some input.
+/// With resampling (or another speed), how far (in source frames) a recorded move
+/// back may lie from the loop's end and still count as one at the end: the
+/// resampler holds some input.
 const RESAMPLED_SLACK: u64 = 4096;
 
 impl Worker {
@@ -141,10 +142,13 @@ impl Worker {
             .min(rendered_end);
         let rate = heard.spec.rate;
         let frames = range.map(|r| (r.start.frames_at(rate), r.end.frames_at(rate)));
-        let slack = if heard.spec.rate == heard.device_rate {
+        let slack = if heard.scale.is_identity() {
             0
-        } else {
+        } else if heard.scale.is_normal_speed() {
             RESAMPLED_SLACK
+        } else {
+            // The tempo stage holds some 40 ms of input back as well.
+            RESAMPLED_SLACK.max(u64::from(rate.hz()) / 10)
         };
         // Only the heard item, rendered alone, with nothing after it.
         let alone = self.timeline.len() == 1
@@ -333,7 +337,7 @@ mod tests {
             ),
             length: None,
             start_frames: 0,
-            device_rate: SampleRate::HZ_44100,
+            scale: crate::pipeline::TimeScale::new(SampleRate::HZ_44100, SampleRate::HZ_44100),
             error: None,
             mix_from: None,
             rewinds: Vec::new(),

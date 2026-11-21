@@ -346,6 +346,17 @@ pub(crate) fn sync_actions(application: &gtk::Application, view: &PlayerView) {
     set("intro-scan", m.intro_scan.to_variant());
 }
 
+/// Enables "Revert to the Skipped Track" only while the player has a track of
+/// the queue to go back to.
+pub(crate) fn sync_revert(application: &gtk::Application, view: &PlayerView) {
+    if let Some(action) = application
+        .lookup_action("revert")
+        .and_downcast::<gio::SimpleAction>()
+    {
+        action.set_enabled(view.queue.can_revert);
+    }
+}
+
 /// A stateful action whose target names a choice; activating it sends the
 /// request `request` makes of the target. The state follows the player.
 fn choice_action(
@@ -403,6 +414,10 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
         let action = gio::SimpleAction::new(name, None);
         let b = backend.clone();
         action.connect_activate(move |_, _| b.send(request.clone()));
+        // Nothing to revert to until "Next" has moved on from a track.
+        if name == "revert" {
+            action.set_enabled(false);
+        }
         application.add_action(&action);
     }
     choice_action(application, backend, "shuffle", "off", |id| {

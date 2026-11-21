@@ -218,6 +218,13 @@ impl Actor {
         }
     }
 
+    /// Whether "Revert" has an entry still in the queue to go back to.
+    pub(super) fn can_revert(&self) -> bool {
+        self.skipped
+            .iter()
+            .any(|(entry, _)| self.queue.index_of(*entry).is_some())
+    }
+
     /// "Revert": back to the entry "Next" last moved on from, where it was.
     pub(super) fn revert(&mut self) {
         while let Some((entry, at)) = self.skipped.pop() {
@@ -259,9 +266,11 @@ impl Actor {
         }
     }
 
-    /// Intro scan: moves on once the playing entry has played its first seconds.
+    /// Intro scan: moves on once the playing entry has played its first seconds,
+    /// of listening time: at another speed they cover more or less of the track.
     pub(super) fn check_intro_scan(&mut self, position: MediaTime) {
-        let scan = Duration::from_secs(self.smart.intro_scan_s.into());
+        let scan = Duration::from_secs(self.smart.intro_scan_s.into())
+            .mul_f64(self.speed().effective_rate());
         if self.queue.modes().intro_scan
             && !self.exhausted
             && self.in_flight.is_none()

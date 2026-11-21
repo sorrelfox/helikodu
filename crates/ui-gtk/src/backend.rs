@@ -1332,6 +1332,14 @@ pub enum PlayerRequest {
     SetIntroScan(bool),
     /// "Revert": back to the track "Next" last moved on from, where it was.
     Revert,
+    /// Play at another speed (0.5 to 2), keeping the pitch or not, until the
+    /// program ends.
+    SetSpeed {
+        /// The speed, as a factor of the normal one.
+        rate: f64,
+        /// Whether the pitch stays (tempo) or follows the speed (tape).
+        keep_pitch: bool,
+    },
     /// "Radio Random": a random track of the queue, from a random point in it.
     RadioRandom,
     /// Starts endless play from a library track, album or artist.
@@ -1570,6 +1578,8 @@ pub struct QueueSnapshot {
     pub items: Vec<TrackRow>,
     /// The index of the current track.
     pub current: Option<usize>,
+    /// Whether "Revert" has a track of the queue to go back to.
+    pub can_revert: bool,
 }
 
 /// What the core reports.

@@ -35,7 +35,7 @@ pub use dsp::{
     CompressorSettings, CompressorValues, ConvolutionSettings, CrossfeedPreset, CrossfeedSettings,
     DspSettings, EqMode, EqualizerSettings, FilterKind, GRAPHIC_10_BANDS_HZ, GRAPHIC_31_BANDS_HZ,
     GraphicPreset, ImpulseFile, LimiterSettings, ParametricFilter, PitchSettings, ResamplerQuality,
-    SavedChain,
+    SavedChain, SpeedSettings,
 };
 pub use library::{
     DuplicateScan, DuplicateSettings, LibrarySettings, ManagedFolderSettings, ManagedMode,

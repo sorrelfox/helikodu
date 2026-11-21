@@ -37,7 +37,7 @@ use self::offline::smart_play::{AutoDjArgs, GeneratorArgs, RelatedArgs};
 use self::offline::stats::StatsArgs;
 use self::remote::commands::{
     EnqueueArgs, ExportArgs, IntroScanArgs, JsonArgs, PlayQueryArgs, RateArgs, RepeatArgs,
-    SeekArgs, ShuffleArgs, StartRadioArgs, Transport, VolumeArgs,
+    SeekArgs, ShuffleArgs, SpeedArgs, StartRadioArgs, Transport, VolumeArgs,
 };
 
 /// The exit code of a runtime error.
@@ -170,6 +170,9 @@ enum Command {
     /// Start endless play from a library track, album or artist in the running
     /// application.
     StartRadio(StartRadioArgs),
+    /// Play at another speed (0.5 to 2) in the running application, until it
+    /// ends; `helikodu-cli dsp speed` sets the speed it starts with.
+    Speed(SpeedArgs),
 }
 
 /// How a command ended, when it did not fail outright.
@@ -227,6 +230,7 @@ fn main() -> ExitCode {
         Command::RadioRandom => remote::commands::transport(Transport::RadioRandom),
         Command::IntroScan(args) => remote::commands::intro_scan(&args),
         Command::StartRadio(args) => remote::commands::start_radio(&args),
+        Command::Speed(args) => remote::commands::speed(&args),
     };
     match result {
         Ok(Outcome::Success) => ExitCode::SUCCESS,

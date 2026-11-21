@@ -4,7 +4,8 @@
 //! The stages of a [`PathPlan`], built and wired together.
 //!
 //! [`SourceChain`] runs per source, ahead of playback: channel mixing, loudness gain
-//! (with the leveller for tracks without loudness values) and resampling, from the decoder's `f32` frames to frames in the device's rate and
+//! (with the leveller for tracks without loudness values), the playback speed and
+//! resampling, from the decoder's `f32` frames to frames in the device's rate and
 //! layout. [`OutputChain`] runs on the mixed stream just before it reaches the
 //! device: software volume, anti-click fades and dither. Both allocate only when
 //! built.
@@ -15,10 +16,10 @@ use helikodu_model::analysis::TrackAnalysis;
 
 use super::{
     FadeDurations, FadeState, Fader, GainStage, Leveller, LevellerPlan, MixMatrix, PathPlan,
-    PipelineError, ResampleStage, SoftwareVolume, TpdfDither, Transition,
+    PipelineError, ResampleStage, SoftwareVolume, TempoStage, TpdfDither, Transition,
 };
 
-/// Channel mixing, gain and resampling for one source.
+/// Channel mixing, gain, playback speed and resampling for one source.
 #[derive(Debug)]
 pub struct SourceChain {
     rate: u32,
@@ -32,8 +33,10 @@ pub struct SourceChain {
     analysis: Option<Arc<TrackAnalysis>>,
     /// The source frame of the next input frame, as far as the chain knows.
     position: u64,
+    /// The tempo change that keeps the pitch, at another speed.
+    tempo: Option<TempoStage>,
     resample: Option<ResampleStage>,
-    /// Mixed frames on their way to the resampler.
+    /// Mixed frames on their way to the tempo stage or the resampler.
     scratch: Box<[f32]>,
 }
 
@@ -59,11 +62,25 @@ impl SourceChain {
             return Err(PipelineError::InvalidShape("block size of zero"));
         }
         let rate = plan.source.spec.rate.hz();
-        let resample = plan
-            .resample
-            .map(|r| ResampleStage::new(r.from, r.to, output_channels, r.quality))
-            .transpose()?;
-        let scratch_len = if resample.is_some() {
+        // At another speed the pitch either stays (a time stretch, then the usual
+        // resampling) or follows (the source resampled as if its rate were the
+        // played one).
+        let tempo = plan
+            .speed
+            .filter(|speed| speed.keep_pitch)
+            .map(|speed| TempoStage::new(&speed, output_channels, max_block));
+        let resample = match plan.speed.filter(|speed| !speed.keep_pitch) {
+            Some(tape) => (tape.played != plan.device.rate)
+                .then(|| {
+                    ResampleStage::new(tape.played, plan.device.rate, output_channels, tape.quality)
+                })
+                .transpose()?,
+            None => plan
+                .resample
+                .map(|r| ResampleStage::new(r.from, r.to, output_channels, r.quality))
+                .transpose()?,
+        };
+        let scratch_len = if resample.is_some() || tempo.is_some() {
             max_block * output_channels
         } else {
             0
@@ -82,6 +99,7 @@ impl SourceChain {
                 .map(|l| Leveller::new(l, rate, output_channels, analysis.clone())),
             analysis,
             position: 0,
+            tempo,
             resample,
             scratch: vec![0.0; scratch_len].into_boxed_slice(),
         })
@@ -105,9 +123,13 @@ impl SourceChain {
     /// The output space, in frames, that lets [`process`](Self::process) take a full
     /// block, and lets [`finish`](Self::finish) make progress.
     pub fn max_output_frames(&self) -> usize {
+        let frames = self
+            .tempo
+            .as_ref()
+            .map_or(self.max_block, TempoStage::capacity);
         self.resample
             .as_ref()
-            .map_or(self.max_block, |r| r.max_output_frames(self.max_block))
+            .map_or(frames, |r| r.max_output_frames(frames))
     }
 
     /// The gain stage, to change the gain while playing.
@@ -165,6 +187,9 @@ impl SourceChain {
     /// input frames taken and output frames written. Frames not taken (beyond
     /// [`max_block`](Self::max_block), or for lack of output room) must be passed again.
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) -> (usize, usize) {
+        if self.tempo.is_some() {
+            return self.process_stretched(input, output);
+        }
         let out_room = output.len() / self.output_channels;
         let mut frames = (input.len() / self.input_channels).min(self.max_block);
         frames = match &self.resample {
@@ -200,14 +225,106 @@ impl SourceChain {
         }
     }
 
+    /// Mixing, gain and the leveller on `frames` frames of `input`, into `scratch`.
+    fn prepare(&mut self, input: &[f32], frames: usize) {
+        let input = &input[..frames * self.input_channels];
+        let mixed = &mut self.scratch[..frames * self.output_channels];
+        match &self.mix {
+            Some(mix) => {
+                mix.apply(input, mixed);
+            }
+            None => mixed.copy_from_slice(input),
+        }
+        if let Some(gain) = &mut self.gain {
+            gain.apply(mixed);
+        }
+        if let Some(leveller) = &mut self.leveller {
+            leveller.apply(mixed);
+        }
+        self.position += frames as u64;
+    }
+
+    /// [`process`](Self::process) with the tempo stage: what it holds goes on
+    /// first; a new block is taken only once it has passed everything on.
+    fn process_stretched(&mut self, input: &[f32], output: &mut [f32]) -> (usize, usize) {
+        let mut written = self.pass_stretched(output);
+        if self.tempo.as_ref().is_none_or(|t| t.pending() > 0) {
+            return (0, written);
+        }
+        let frames = (input.len() / self.input_channels).min(self.max_block);
+        if frames == 0 {
+            return (0, written);
+        }
+        self.prepare(input, frames);
+        if let Some(tempo) = &mut self.tempo {
+            tempo.push(&self.scratch[..frames * self.output_channels]);
+        }
+        written += self.pass_stretched(&mut output[written * self.output_channels..]);
+        (frames, written)
+    }
+
+    /// Passes what the tempo stage holds on to the resampler, or to `output`.
+    /// Returns the frames written to `output`.
+    fn pass_stretched(&mut self, output: &mut [f32]) -> usize {
+        let Some(tempo) = &mut self.tempo else {
+            return 0;
+        };
+        let channels = self.output_channels;
+        let ready = tempo.ready();
+        let (taken, written) = match &mut self.resample {
+            Some(resample) => resample.process(ready, output),
+            None => {
+                let n = (ready.len() / channels).min(output.len() / channels);
+                output[..n * channels].copy_from_slice(&ready[..n * channels]);
+                (n, n)
+            }
+        };
+        tempo.consume(taken);
+        written
+    }
+
     /// Ends the source: writes what is still inside the stages into `output` and
     /// returns the number of frames written. Call until it returns 0.
     pub fn finish(&mut self, output: &mut [f32]) -> usize {
+        if let Some(tempo) = &mut self.tempo
+            && !tempo.is_done()
+        {
+            // What waits goes on, then the stretcher's tail.
+            loop {
+                let pending = self.tempo.as_ref().map_or(0, TempoStage::pending);
+                if pending == 0 {
+                    break;
+                }
+                let written = self.pass_stretched(output);
+                let left = self.tempo.as_ref().map_or(0, TempoStage::pending);
+                if written > 0 || left == pending {
+                    return written;
+                }
+            }
+            if let Some(tempo) = &mut self.tempo {
+                tempo.finish();
+            }
+            loop {
+                let pending = self.tempo.as_ref().map_or(0, TempoStage::pending);
+                let written = self.pass_stretched(output);
+                let done = self.tempo.as_ref().is_none_or(TempoStage::is_done);
+                let left = self.tempo.as_ref().map_or(0, TempoStage::pending);
+                if written > 0 {
+                    return written;
+                }
+                if done || left == pending {
+                    break;
+                }
+            }
+        }
         self.resample.as_mut().map_or(0, |r| r.finish(output))
     }
 
     /// Clears the stages' state, for a seek or a new stream.
     pub fn reset(&mut self) {
+        if let Some(tempo) = &mut self.tempo {
+            tempo.reset();
+        }
         if let Some(resample) = &mut self.resample {
             resample.reset();
         }

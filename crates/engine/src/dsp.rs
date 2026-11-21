@@ -48,7 +48,7 @@ use std::fmt;
 
 use helikodu_model::settings::{DspSettings, ResamplerQuality as QualitySetting};
 
-use crate::pipeline::{ProcessingSettings, ResamplerQuality};
+use crate::pipeline::{PlaybackSpeed, ProcessingSettings, ResamplerQuality};
 
 pub use self::biquad::{Cascade, Coefficients, MAX_RELATIVE_FREQUENCY};
 pub use self::chain::DspChain;
@@ -85,7 +85,8 @@ pub trait DspStage: fmt::Debug + Send {
 }
 
 /// The processing settings with the parts the `[dsp]` table decides: the resampler
-/// quality and whether surround downmixes include the LFE channel.
+/// quality, whether surround downmixes include the LFE channel, and the playback
+/// speed.
 pub fn processing_settings(
     mut settings: ProcessingSettings,
     dsp: &DspSettings,
@@ -97,6 +98,10 @@ pub fn processing_settings(
         QualitySetting::Maximum => ResamplerQuality::Maximum,
     };
     settings.mix.include_lfe = dsp.channel_mix.include_lfe;
+    settings.speed = PlaybackSpeed {
+        rate: dsp.speed.effective_rate(),
+        keep_pitch: dsp.speed.keep_pitch,
+    };
     settings
 }
 

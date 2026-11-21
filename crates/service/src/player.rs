@@ -133,6 +133,7 @@ impl Player {
             prefs: config.prefs,
             library: config.library.clone(),
             smart_play: config.smart_play.clone(),
+            speed: config.dsp.speed,
             draws: config
                 .shuffle_seed
                 .map_or_else(Rng::from_entropy, |seed| Rng::new(seed.rotate_left(17))),

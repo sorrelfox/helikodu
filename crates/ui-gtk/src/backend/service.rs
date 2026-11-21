@@ -1945,6 +1945,9 @@ impl PlayerControl for ServicePlayer {
             PlayerRequest::RandomAlbum => self.command(PlayerCommand::RandomAlbum),
             PlayerRequest::SetIntroScan(on) => self.command(PlayerCommand::SetIntroScan(on)),
             PlayerRequest::Revert => self.command(PlayerCommand::Revert),
+            PlayerRequest::SetSpeed { rate, keep_pitch } => self.command(PlayerCommand::SetSpeed(
+                helikodu_model::settings::SpeedSettings::at(rate, keep_pitch),
+            )),
             PlayerRequest::RadioRandom => self.command(PlayerCommand::RadioRandom),
             PlayerRequest::StartRadio(seed) => {
                 use helikodu_service::library::{AlbumId, PersonId, PlaySeed};
@@ -2178,6 +2181,7 @@ impl Forwarder {
                 context: snapshot.context.title.clone(),
                 items,
                 current: snapshot.current,
+                can_revert: snapshot.can_revert,
             }));
             return;
         };
@@ -2219,6 +2223,7 @@ impl Forwarder {
                 context: snapshot.context.title.clone(),
                 items,
                 current: snapshot.current,
+                can_revert: snapshot.can_revert,
             }));
         });
     }

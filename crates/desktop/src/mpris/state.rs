@@ -15,6 +15,7 @@ use helikodu_model::library::TrackRef;
 use helikodu_model::player::{
     ContextSource, EntryId, PlayModes, PlaybackState, QueueEntry, RepeatMode, ShuffleMode, Volume,
 };
+use helikodu_model::settings::SpeedSettings;
 use helikodu_service::player::{PlayerEvent, PlayerStatus, QueueSnapshot};
 
 use super::{TrackDetails, file_uri, track_id};
@@ -67,6 +68,9 @@ pub(crate) struct Properties {
     pub(crate) can_play: bool,
     pub(crate) can_pause: bool,
     pub(crate) can_seek: bool,
+    /// The playback speed: positions are track time, which runs this much
+    /// faster than the clock.
+    pub(crate) rate: f64,
 }
 
 /// A property that changed, with its new value.
@@ -137,6 +141,8 @@ pub(crate) struct State {
     playback: PlaybackState,
     modes: PlayModes,
     volume: f64,
+    /// The playback speed, and whether the pitch follows it.
+    speed: SpeedSettings,
     current: Option<Current>,
     /// The current entry's place in the queue (play order) and the queue's length.
     index: Option<usize>,
@@ -164,6 +170,7 @@ impl State {
             playback: PlaybackState::Stopped,
             modes: PlayModes::default(),
             volume: f64::from(Volume::FULL.position()),
+            speed: SpeedSettings::default(),
             current: None,
             index: None,
             count: 0,
@@ -185,6 +192,7 @@ impl State {
                 can_play: false,
                 can_pause: false,
                 can_seek: false,
+                rate: 1.0,
             },
         };
         state.published = state.properties();
@@ -214,6 +222,7 @@ impl State {
             can_play: has_track || self.count > 0,
             can_pause: has_track,
             can_seek: has_track && self.length().is_some(),
+            rate: self.speed.effective_rate(),
         }
     }
 
@@ -246,6 +255,9 @@ impl State {
         self.playback = status.playback;
         self.modes = status.modes;
         self.volume = f64::from(status.volume.position());
+        if status.speed != self.speed {
+            self.set_speed(status.speed);
+        }
         self.count = queue.entries.len();
         self.index = queue.current;
         self.tracks = shown_entries(&queue.entries, queue.current).to_vec();
@@ -357,6 +369,20 @@ impl State {
         }
     }
 
+    /// The playback speed, and whether the pitch follows it.
+    pub(crate) fn speed(&self) -> SpeedSettings {
+        self.speed
+    }
+
+    /// Plays at `speed` from now on, as far as the interpolation goes: the
+    /// position is anchored where it is before the speed changes.
+    pub(crate) fn set_speed(&mut self, speed: SpeedSettings) {
+        let now = Instant::now();
+        let position = self.position_now(now);
+        self.speed = speed;
+        self.set_position(position, now);
+    }
+
     /// The entry the held details belong to.
     pub(crate) fn details_entry(&self) -> Option<EntryId> {
         self.details.as_ref().map(|(entry, ..)| *entry)
@@ -464,6 +490,9 @@ impl State {
         if now.volume.to_bits() != old.volume.to_bits() {
             changed.push(Changed::Real("Volume", now.volume));
         }
+        if now.rate.to_bits() != old.rate.to_bits() {
+            changed.push(Changed::Real("Rate", now.rate));
+        }
         if now.metadata != old.metadata {
             changed.push(Changed::Metadata(now.metadata.clone()));
         }
@@ -498,7 +527,10 @@ impl State {
 
     fn position_now(&self, now: Instant) -> Duration {
         let position = if self.playback == PlaybackState::Playing {
-            self.position + now.saturating_duration_since(self.position_at)
+            // Positions are track time: at another speed it runs faster or slower
+            // than the clock.
+            let elapsed = now.saturating_duration_since(self.position_at);
+            self.position + elapsed.mul_f64(self.speed.effective_rate())
         } else {
             self.position
         };
@@ -724,6 +756,30 @@ mod tests {
             SampleRate::HZ_44100,
             ChannelLayout::STEREO,
         )
+    }
+
+    #[test]
+    fn the_rate_is_the_speed_and_positions_run_at_it() {
+        let mut state = State::new();
+        let status = PlayerStatus {
+            playback: PlaybackState::Playing,
+            speed: SpeedSettings::at(1.5, true),
+            ..PlayerStatus::default()
+        };
+        state.sync(&status, &QueueSnapshot::default(), true);
+        assert!(
+            state
+                .announce(None)
+                .changed
+                .contains(&Changed::Real("Rate", 1.5))
+        );
+        let now = Instant::now();
+        state.set_position(Duration::from_secs(10), now);
+        // Two seconds of the clock are three of the track.
+        assert_eq!(
+            state.position_now(now + Duration::from_secs(2)),
+            Duration::from_secs(13)
+        );
     }
 
     fn track_changed(index: usize, count: usize, entry: u64) -> PlayerEvent {

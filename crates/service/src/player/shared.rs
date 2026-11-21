@@ -14,6 +14,8 @@ use helikodu_model::player::{
     SignalPath, StopAfter, TransportState, Volume,
 };
 
+use helikodu_model::settings::SpeedSettings;
+
 use super::timers::{AbLoop, SleepTimerStatus};
 
 /// The queue as it is at one version.
@@ -30,6 +32,8 @@ pub struct QueueSnapshot {
     pub current: Option<usize>,
     /// The play modes.
     pub modes: PlayModes,
+    /// Whether "Revert" has an entry of the queue to go back to.
+    pub can_revert: bool,
 }
 
 impl QueueSnapshot {
@@ -134,6 +138,10 @@ pub struct PlayerStatus {
     /// The restored session was playing when the program ended and waits for
     /// [`ResumeSession`](super::PlayerCommand::ResumeSession) to play on.
     pub resume_pending: bool,
+    /// The playback speed: the settings', or one set with
+    /// [`SetSpeed`](super::PlayerCommand::SetSpeed). Positions stay those of the
+    /// track at any speed.
+    pub speed: SpeedSettings,
 }
 
 impl Default for PlayerStatus {
@@ -154,6 +162,7 @@ impl Default for PlayerStatus {
             sleep_timer: None,
             cursor: None,
             resume_pending: false,
+            speed: SpeedSettings::default(),
         }
     }
 }

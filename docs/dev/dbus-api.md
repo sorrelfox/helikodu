@@ -37,6 +37,7 @@ The interface is versioned by its name. Version 1 is `Control1`; its `Version` p
 | `Revert` | | | Goes back to the track "Next" last moved on from, where it was |
 | `RadioRandom` | | | Plays a random track of the queue from a random point (a tenth to seven tenths in) |
 | `SetIntroScan` | `b` on | | Intro scan: only the first `playback.intro_scan_s` seconds of each track play |
+| `SetSpeed` | `d` rate, `b` keep_pitch | | Plays at a speed from 0.5 to 2 until the program ends; `keep_pitch` false lets the pitch follow the speed. Positions stay those of the track |
 | `StartRadio` | `s` kind, `t` id | | Starts endless play from a library `track`, `album` or `artist` (the numbers `search` and the JSON show); the repeat mode becomes `endless` |
 | `PlayTracks` | `at` tracks, `s` title | `u` tracks | Replaces the queue with library tracks by their numbers and plays them |
 

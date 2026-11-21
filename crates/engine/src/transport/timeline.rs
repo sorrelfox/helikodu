@@ -17,11 +17,18 @@
 //!
 //! An A-B loop moves an item back within its segment: the segment records each ring
 //! position where that happens (a rewind) and the item's position there.
+//!
+//! Ring positions are listening time; an item's positions are its own time (track
+//! time). The segment's [`TimeScale`] converts between them, with the item's
+//! speed: at 1.25× a second of the ring holds 1.25 seconds of the item, and a
+//! 4:00 track still reports 4:00 at its end.
 
 use std::collections::VecDeque;
 
-use helikodu_model::audio::{AudioSpec, MediaTime, SampleRate};
+use helikodu_model::audio::{AudioSpec, MediaTime};
 use helikodu_model::player::{EngineError, EngineEvent, ItemId, PlaybackItem, TrackEndReason};
+
+use crate::pipeline::TimeScale;
 
 /// Where an item starts in the ring buffer.
 #[derive(Debug, Clone)]
@@ -34,8 +41,8 @@ pub(super) struct Segment {
     pub(super) length: Option<MediaTime>,
     /// The item's position at `ring_start`, in frames at the source rate.
     pub(super) start_frames: u64,
-    /// The rate of the ring buffer.
-    pub(super) device_rate: SampleRate,
+    /// How the item's frames convert to ring frames: the two rates and the speed.
+    pub(super) scale: TimeScale,
     /// The error that ended the item early, once the render side has met it.
     pub(super) error: Option<EngineError>,
     /// The ring position from which the item is crossfaded into the next one.
@@ -74,16 +81,12 @@ impl Segment {
 
     /// `frames` ring frames as frames at the source rate, rounded down.
     pub(super) fn to_source(&self, frames: u64) -> u64 {
-        let scaled = u128::from(frames) * u128::from(self.spec.rate.hz())
-            / u128::from(self.device_rate.hz());
-        u64::try_from(scaled).unwrap_or(u64::MAX)
+        self.scale.to_source(frames)
     }
 
     /// `frames` frames at the source rate as ring frames, rounded up.
     pub(super) fn to_ring(&self, frames: u64) -> u64 {
-        let scaled = (u128::from(frames) * u128::from(self.device_rate.hz()))
-            .div_ceil(u128::from(self.spec.rate.hz()));
-        u64::try_from(scaled).unwrap_or(u64::MAX)
+        self.scale.to_ring(frames)
     }
 
     /// Records that the item goes on at `frames` from the ring position `at`.
@@ -251,7 +254,7 @@ impl Timeline {
 
 #[cfg(test)]
 mod tests {
-    use helikodu_model::audio::{ChannelLayout, Endianness, SampleFormat};
+    use helikodu_model::audio::{ChannelLayout, Endianness, SampleFormat, SampleRate};
     use helikodu_model::library::MediaSource;
 
     use super::*;
@@ -267,7 +270,7 @@ mod tests {
             ),
             length: Some(MediaTime::from_frames(100_000, SampleRate::HZ_44100)),
             start_frames,
-            device_rate: SampleRate::HZ_48000,
+            scale: TimeScale::new(SampleRate::HZ_44100, SampleRate::HZ_48000),
             error: None,
             mix_from: None,
             rewinds: Vec::new(),
@@ -288,10 +291,28 @@ mod tests {
     }
 
     #[test]
+    fn positions_stay_in_track_time_at_another_speed() {
+        use crate::pipeline::{PlaybackSpeed, ResamplerQuality, SpeedPlan};
+        let mut s = segment(1, 0, 0);
+        let speed = PlaybackSpeed {
+            rate: 1.25,
+            keep_pitch: true,
+        };
+        let plan = SpeedPlan::new(SampleRate::HZ_44100, speed, ResamplerQuality::High);
+        s.scale = s.scale.with_speed(plan.as_ref());
+        // One second of listening is 1.25 seconds of the track.
+        assert_eq!(
+            s.position_at(48_000),
+            MediaTime::from_frames(55_125, SampleRate::HZ_44100)
+        );
+        assert_eq!(s.to_ring(55_125), 48_000);
+    }
+
+    #[test]
     fn rewinds_move_the_position_back() {
         // At the source rate, so that ring frames are item frames.
         let mut s = segment(1, 1000, 0);
-        s.device_rate = SampleRate::HZ_44100;
+        s.scale = TimeScale::new(SampleRate::HZ_44100, SampleRate::HZ_44100);
         s.rewind(31_000, 10_000);
         s.rewind(51_000, 10_000);
         let at = |s: &Segment, ring| s.position_at(ring).frames_at(SampleRate::HZ_44100);

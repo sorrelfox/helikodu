@@ -14,8 +14,8 @@ use std::cell::Cell;
 
 use helikodu_engine::pipeline::{
     FadeDurations, LoudnessInfo, LoudnessMode, LoudnessSettings, OutputChain, PathPlan,
-    PathRequest, ProcessingSettings, SharedVolume, SoftwareVolume, SourceChain, SourceFormat,
-    Transition, VolumePlan,
+    PathRequest, PlaybackSpeed, ProcessingSettings, SharedVolume, SoftwareVolume, SourceChain,
+    SourceFormat, Transition, VolumePlan,
 };
 use helikodu_model::audio::{AudioSpec, ChannelLayout, Endianness, SampleFormat, SampleRate};
 use helikodu_model::player::Volume;
@@ -77,6 +77,10 @@ fn allocations(f: impl FnOnce()) -> usize {
 }
 
 fn plan(source_hz: u32, device_hz: u32) -> PathPlan {
+    plan_at(source_hz, device_hz, PlaybackSpeed::NORMAL)
+}
+
+fn plan_at(source_hz: u32, device_hz: u32, speed: PlaybackSpeed) -> PathPlan {
     let source = AudioSpec::new(
         SampleFormat::F32(Endianness::NATIVE),
         SampleRate::new(source_hz).unwrap(),
@@ -105,6 +109,7 @@ fn plan(source_hz: u32, device_hz: u32) -> PathPlan {
             mode: LoudnessMode::Track,
             ..LoudnessSettings::default()
         },
+        speed,
         ..ProcessingSettings::default()
     };
     PathPlan::new(&request, &settings)
@@ -157,6 +162,43 @@ fn processing_does_not_allocate() {
             }
         });
         assert_eq!(count, 0, "{from} -> {to}: {count} allocations");
+    }
+}
+
+#[test]
+fn another_speed_does_not_allocate() {
+    for (speed, keep_pitch, to) in [
+        (1.5, true, 48_000),
+        (0.5, true, 44_100),
+        (0.75, false, 48_000),
+    ] {
+        let plan = plan_at(
+            44_100,
+            to,
+            PlaybackSpeed {
+                rate: speed,
+                keep_pitch,
+            },
+        );
+        assert!(plan.speed.is_some());
+        let block = 1000;
+        let mut source = SourceChain::new(&plan, block).unwrap();
+        let input: Vec<f32> = (0..block * 6).map(|i| (i % 97) as f32 / 200.0).collect();
+        let mut buffer = vec![0.0f32; source.max_output_frames() * 2];
+        let count = allocations(|| {
+            for i in 0..30 {
+                if i == 12 {
+                    source.reset();
+                }
+                let mut rest = &input[..];
+                while !rest.is_empty() {
+                    let (taken, _) = source.process(rest, &mut buffer);
+                    rest = &rest[taken * 6..];
+                }
+            }
+            while source.finish(&mut buffer) > 0 {}
+        });
+        assert_eq!(count, 0, "{speed} {keep_pitch}: {count} allocations");
     }
 }
 
