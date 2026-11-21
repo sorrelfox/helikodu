@@ -58,9 +58,9 @@ The **Playback** menu (in the main menu) has the transport and every play mode:
 - **Loop a Section**: **Set the Start Here** and **Set the End Here** mark an A-B loop at the playing position; the section then repeats without a gap until you choose **Clear the Loop**, here or with the cross on the loop's chip on the deck.
 - **Sleep Timer…** pauses playback after a number of minutes, fading out, or at the end of the track that is playing then. A chip on the deck shows the time left; click it to add ten minutes or turn the timer off.
 
-The deck shows the active modes, the loop's marks on the seek bar, and chips for the loop and the timer.
+The deck shows the active modes, the loop's marks on the seek bar, and chips for the loop, the timer and a playback speed other than 1× (see [Playback speed](dsp.md#playback-speed)). The repeat button is grey when repeat is off and in the accent colour when it is on; it carries a "1" when one track repeats, and a plus between its arrows for **Continue with Related Tracks** and **Auto-DJ**, the two modes that add tracks. Its tooltip names the mode. **Revert to the Skipped Track** is greyed out until a track was left with **Next**, and again once it has gone back; it then says where it went back to ("Back to “Glass Harbour” at 2:14").
 
-Each track in your library can also have its own settings, under **Playback** in the **File info** tab of the [tag editor](tags.md): **Leave out when shuffling**, **Play only when I start it myself** (automatic playback passes over it), and **Volume for this track**. They are kept in the library, not in the file, and apply at once.
+Each track in your library can also have its own settings, under **Playback** in the **File info** tab of the [tag editor](tags.md): **Leave out when shuffling**, **Play only when I start it myself** (automatic playback passes over it), and **Volume for this track**. They are kept in the library, not in the file, and apply at once. **Equalizer for this track** gives a track an equalizer of its own (see [An equalizer for one track](dsp.md#an-equalizer-for-one-track)).
 
 ## Smarter shuffle, endless play and the Auto-DJ
 

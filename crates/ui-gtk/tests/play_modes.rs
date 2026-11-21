@@ -5,9 +5,11 @@
 //! in its labels, the deck's shuffle and repeat buttons, stop after, the A-B
 //! loop chip and its shortcuts, the sleep timer popover and chip, the queue
 //! panel's selection as the cursor, Revert enabled only with a skipped track to
-//! go back to, the tag editor's Playback group, the play
-//! button's menu, the deck's icon sizes under two icon themes, and no frames
-//! drawn while paused with the chips shown. `HELIKODU_PLAYMODE_SHOTS=DIR`
+//! go back to and the toast after it, the repeat button's plus for the modes
+//! that add tracks, the speed chip and popover, the tag editor's Playback
+//! group with the equalizer of a track and the context menu's equalizer items,
+//! the play button's menu, the deck's icon sizes under two icon themes, and no
+//! frames drawn while paused with the chips shown. `HELIKODU_PLAYMODE_SHOTS=DIR`
 //! saves screenshots, dark and light, to `DIR`.
 //!
 //! GTK needs a display and the main thread, so this program has its own main
@@ -32,7 +34,10 @@ use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use helikodu_ui_gtk::backend::{AlbumQuery, Backend, PlayerRequest, SleepWhen, TrackKey, sample};
+use helikodu_ui_gtk::backend::{
+    AlbumQuery, Backend, OutputInfo, PlayerRequest, SignalState, SleepWhen, TrackEqualizer,
+    TrackKey, Update, sample,
+};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice, set_choice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display, snapshot};
 
@@ -325,6 +330,365 @@ fn play_mode_revert_needs_a_skipped_track(app: &gtk::Application) {
     wait_for("Revert enabled after Next", enabled);
     app.activate_action("revert", None);
     wait_for("Revert disabled after going back", || !enabled());
+    window.destroy();
+}
+
+/// "Revert to the Skipped Track" says where it went back to.
+fn play_mode_revert_toast(app: &gtk::Application) {
+    let (window, backend) = playing_window(app);
+    let title = |w: &MainWindow| w.toast_text().unwrap_or_default();
+    backend.send(PlayerRequest::Next);
+    let enabled = || app.lookup_action("revert").is_some_and(|a| a.is_enabled());
+    wait_for("Revert enabled after Next", enabled);
+    app.activate_action("revert", None);
+    wait_for("the toast after Revert", || {
+        title(&window).starts_with("Back to “")
+    });
+    assert!(
+        title(&window).ends_with("” at 1:42"),
+        "the toast gives the place: {}",
+        title(&window)
+    );
+    window.destroy();
+}
+
+/// The two repeat modes that add tracks show a plus between the arrows, and
+/// the tooltip and the label of the menu tell them apart.
+fn play_mode_repeat_plus(app: &gtk::Application) {
+    let (window, _) = playing_window(app);
+    let (_, repeat) = window.deck_mode_buttons();
+    app.activate_action("repeat", Some(&"endless".to_variant()));
+    wait_for("endless play", || {
+        repeat.tooltip_text().as_deref() == Some("Repeat: continue with related tracks")
+    });
+    assert_eq!(
+        repeat.icon_name().as_deref(),
+        Some("helikodu-repeat-plus-symbolic")
+    );
+    assert!(repeat.has_css_class("active"));
+    wait_for("the short label", || {
+        has(&window.playback_menu_labels(), "Repeat: Related Tracks")
+    });
+    app.activate_action("repeat", Some(&"auto-dj".to_variant()));
+    wait_for("the Auto-DJ", || {
+        repeat.tooltip_text().as_deref() == Some("Repeat: Auto-DJ")
+    });
+    assert_eq!(
+        repeat.icon_name().as_deref(),
+        Some("helikodu-repeat-plus-symbolic")
+    );
+    assert!(has(&window.playback_menu_labels(), "Repeat: Auto-DJ"));
+    app.activate_action("repeat", Some(&"all".to_variant()));
+    wait_for("the whole queue", || {
+        repeat.icon_name().as_deref() == Some("helikodu-repeat-symbolic")
+    });
+    window.destroy();
+}
+
+/// The speed chip shows while the speed is not 1×; the popover sets the
+/// speed, the pitch and, when asked, the settings; "Back to normal" ends it;
+/// on a bit-perfect path the chip says that the speed is not applied.
+fn play_mode_speed(app: &gtk::Application) {
+    let (backend, updates) = sample::backend_with_updates(&sample::SampleOptions {
+        albums: 40,
+        playing: Some((0, 2, 102)),
+    });
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    window.set_default_size(1440, 900);
+    window.present();
+    spin(200);
+    assert_eq!(window.deck_speed_chip(), None, "no chip at 1×");
+    assert!(has(&window.playback_menu_labels(), "Speed…"));
+    let mut labels = Vec::new();
+    let menu = window
+        .demo_play_menu()
+        .downcast::<gtk::PopoverMenu>()
+        .unwrap();
+    menu_labels(&menu.menu_model().unwrap(), &mut labels);
+    menu.popdown();
+    assert!(
+        has(&labels, "Speed…"),
+        "the play menu has Speed…: {labels:?}"
+    );
+
+    WidgetExt::activate_action(&window, "win.speed", None).unwrap();
+    let popover = window.open_speed().unwrap();
+    wait_for("the speed popover", || popover.is_visible());
+    button(&popover, "1.25×").emit_clicked();
+    wait_for("the speed chip", || {
+        window.deck_speed_chip().as_deref() == Some("1.25×")
+    });
+    assert!(button(&popover, "1.25×").has_css_class("chosen"));
+    wait_for("Speed… leaves the Playback menu", || {
+        !has(&window.playback_menu_labels(), "Speed…")
+    });
+    let chip = descendants(window.upcast_ref())
+        .into_iter()
+        .find(|w| w.widget_name() == "speed-chip")
+        .unwrap();
+    assert_eq!(
+        chip.tooltip_text().as_deref(),
+        Some("Speed: 1.25 times, the pitch stays")
+    );
+    // The pitch follows the speed, like a tape.
+    descendants(popover.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::ToggleButton>().ok())
+        .find(|b| b.label().as_deref() == Some("Follows the speed"))
+        .unwrap()
+        .set_active(true);
+    wait_for("the tape kind", || {
+        chip.tooltip_text().as_deref() == Some("Speed: 1.25 times, the pitch follows the speed")
+    });
+    // Kept for the next start only when asked.
+    let services = backend.services();
+    assert!(!services.settings().dsp.speed.is_active());
+    let keep = descendants(popover.upcast_ref())
+        .into_iter()
+        .find_map(|w| w.downcast::<gtk::CheckButton>().ok())
+        .unwrap();
+    keep.set_active(true);
+    let speed = services.settings().dsp.speed;
+    assert!(speed.enabled && (speed.rate - 1.25).abs() < 1e-9 && !speed.keep_pitch);
+    button(&popover, "1.5×").emit_clicked();
+    wait_for("the new speed", || {
+        window.deck_speed_chip().as_deref() == Some("1.5×")
+    });
+    assert!((services.settings().dsp.speed.rate - 1.5).abs() < 1e-9);
+    // Listening time: 1:42 of a track, at 1.5×.
+    let ends = descendants(popover.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Label>().ok())
+        .any(|l| l.has_css_class("hk-sleep-left") && l.text().contains(':'));
+    assert!(ends, "the popover gives the listening time");
+
+    // Bit-perfect output: the speed is not applied.
+    updates
+        .send_blocking(Update::Output(OutputInfo {
+            device: "Studio Interface".into(),
+            signal: SignalState::BitPerfect,
+            sample_rate: Some(96_000),
+            bits: Some(24),
+        }))
+        .unwrap();
+    wait_for("not applied", || {
+        window.deck_speed_chip().as_deref() == Some("1.5× · not applied")
+    });
+    assert!(chip.has_css_class("not-applied"));
+    let notice = descendants(popover.upcast_ref())
+        .into_iter()
+        .find(|w| w.has_css_class("hk-speed-not-applied"))
+        .unwrap();
+    assert!(notice.is_visible());
+
+    button(&popover, "Back to normal").emit_clicked();
+    wait_for("no chip", || window.deck_speed_chip().is_none());
+    assert!(
+        !services.settings().dsp.speed.is_active(),
+        "the settings follow while the box is ticked"
+    );
+    popover.popdown();
+    window.destroy();
+}
+
+/// The first track of the first album, and the window showing its album.
+fn first_album_track(window: &MainWindow, backend: &Backend) -> (TrackKey, TrackKey) {
+    let library = backend.library();
+    let album = library.album_keys(&AlbumQuery::default()).unwrap()[0];
+    let detail = library.album(album).unwrap().unwrap();
+    let keys: Vec<TrackKey> = detail.tracks().map(|t| t.key).collect();
+    let (first, second) = (keys[0], keys[1]);
+    window.open_album(album);
+    (first, second)
+}
+
+/// The descendant of the open tag editor named `name`.
+fn in_editor(name: &str) -> Option<gtk::Widget> {
+    let editor = toplevel("tag-editor")?;
+    descendants(editor.upcast_ref())
+        .into_iter()
+        .find(|w| w.widget_name() == name)
+}
+
+/// The equalizer of a track in the tag editor's File info tab: none, a
+/// preset, the current equalizer, the same for all tracks, removed; and the
+/// context menu's items.
+fn play_mode_track_equalizer(app: &gtk::Application) {
+    let (window, backend) = playing_window(app);
+    let services = backend.services();
+    let (first, second) = first_album_track(&window, &backend);
+    window.edit_tags(&[first, second]);
+    wait_for("the equalizer row", || {
+        in_editor("track-equalizer").is_some()
+    });
+    let button = in_editor("track-equalizer")
+        .and_downcast::<gtk::MenuButton>()
+        .unwrap();
+    let row = in_editor("track-equalizer-row").unwrap();
+    let texts = |root: &gtk::Widget| -> Vec<String> {
+        descendants(root)
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::Label>().ok())
+            .filter(|l| l.is_visible())
+            .map(|l| l.text().to_string())
+            .collect()
+    };
+    wait_for("None", || texts(&row).iter().any(|t| t == "None"));
+    assert!(
+        texts(&row)
+            .iter()
+            .any(|t| t == "The main equalizer applies.")
+    );
+    // A preset, by its place in the list: "Bass boost".
+    row.activate_action("trackeq.preset", Some(&1u32.to_variant()))
+        .unwrap();
+    wait_for("the preset", || {
+        services
+            .track_equalizer(first)
+            .unwrap()
+            .is_some_and(|eq| eq.name == "Bass boost")
+    });
+    wait_for("the row names it", || {
+        texts(&row).iter().any(|t| t == "Bass boost")
+    });
+    assert!(
+        texts(&row)
+            .iter()
+            .any(|t| t.starts_with("Graphic, 10 bands · preamp"))
+    );
+    assert_eq!(button.tooltip_text().as_deref(), Some("Bass boost"));
+    // The same for both tracks of the editor.
+    let mut labels = Vec::new();
+    menu_labels(
+        &button.menu_model().unwrap_or_else(|| {
+            button.popup();
+            button.popdown();
+            button.menu_model().unwrap()
+        }),
+        &mut labels,
+    );
+    assert!(has(&labels, "Use for All 2 Tracks"), "{labels:?}");
+    assert!(has(&labels, "Import AutoEQ File…"));
+    row.activate_action("trackeq.all", None).unwrap();
+    wait_for("the second track", || {
+        services
+            .track_equalizer(second)
+            .unwrap()
+            .is_some_and(|eq| eq.name == "Bass boost")
+    });
+    // The main equalizer as it is now.
+    row.activate_action("trackeq.current", None).unwrap();
+    wait_for("a copy of the main equalizer", || {
+        services
+            .track_equalizer(first)
+            .unwrap()
+            .is_some_and(|eq| eq.name.starts_with("Copy of") || eq.name == "Own settings")
+    });
+    row.activate_action("trackeq.remove", None).unwrap();
+    wait_for("removed", || {
+        services.track_equalizer(first).unwrap().is_none()
+    });
+    wait_for("None again", || texts(&row).iter().any(|t| t == "None"));
+    toplevel("tag-editor").unwrap().close();
+    spin(50);
+
+    // Turned off in the settings: the button is insensitive.
+    services
+        .update_settings(&mut |s| s.dsp.track_equalizer = false)
+        .unwrap();
+    window.edit_tags(&[first]);
+    wait_for("the row again", || in_editor("track-equalizer").is_some());
+    let button = in_editor("track-equalizer").unwrap();
+    let row = in_editor("track-equalizer-row").unwrap();
+    assert!(!button.is_sensitive());
+    assert!(
+        texts(&row)
+            .iter()
+            .any(|t| t == "Equalizers of single tracks are turned off in Settings › DSP and EQ.")
+    );
+    assert!(
+        texts(&row).iter().all(|t| !t.starts_with("Use for All")),
+        "one track, no Use for All"
+    );
+    toplevel("tag-editor").unwrap().close();
+    services
+        .update_settings(&mut |s| s.dsp.track_equalizer = true)
+        .unwrap();
+    spin(50);
+
+    // The context menu: "Equalizer for This Track…" opens File info with the
+    // row focused; "No Equalizer for This Track" only for tracks with one.
+    wait_for("the album page", || {
+        !window.album_track_ratings().is_empty()
+    });
+    spin(300);
+    let menu = window.demo_album_track_menu().unwrap();
+    wait_for("the menu", || menu.is_visible());
+    let model = menu
+        .downcast_ref::<gtk::PopoverMenu>()
+        .unwrap()
+        .menu_model()
+        .unwrap();
+    let mut labels = Vec::new();
+    menu_labels(&model, &mut labels);
+    assert!(has(&labels, "Equalizer for This Track…"), "{labels:?}");
+    assert!(has(&labels, "No Equalizer for This Track"));
+    let no_eq = || {
+        window
+            .lookup_action("sel-no-track-equalizer")
+            .is_some_and(|a| a.is_enabled())
+    };
+    wait_for("No Equalizer available", no_eq);
+    menu.popdown();
+    WidgetExt::activate_action(&window, "win.sel-track-equalizer", None).unwrap();
+    wait_for("the editor at the row", || {
+        let (Some(editor), Some(button)) = (toplevel("tag-editor"), in_editor("track-equalizer"))
+        else {
+            return false;
+        };
+        gtk::prelude::RootExt::focus(&editor).is_some_and(|f| f == button || f.is_ancestor(&button))
+    });
+    toplevel("tag-editor").unwrap().close();
+    spin(50);
+    services
+        .set_track_equalizers(
+            &[first],
+            Some(&TrackEqualizer {
+                name: "Bright master fix".into(),
+                settings: helikodu_model::settings::EqualizerSettings {
+                    enabled: true,
+                    ..services.settings().dsp.equalizer.clone()
+                },
+            }),
+        )
+        .unwrap();
+    let menu = window.demo_album_track_menu().unwrap();
+    wait_for("the menu", || menu.is_visible());
+    wait_for("No Equalizer enabled", no_eq);
+    menu.popdown();
+    WidgetExt::activate_action(&window, "win.sel-no-track-equalizer", None).unwrap();
+    wait_for("no equalizer at all", || {
+        services
+            .track_equalizer(first)
+            .unwrap()
+            .is_some_and(|eq| eq.name == "No equalizer" && !eq.settings.enabled)
+    });
+    // Already without one: the item is unavailable.
+    let menu = window.demo_album_track_menu().unwrap();
+    wait_for("the menu", || menu.is_visible());
+    spin(200);
+    assert!(!no_eq(), "the track already plays without an equalizer");
+    menu.popdown();
+    // File info names it.
+    window.edit_tags(&[first]);
+    wait_for("the row", || in_editor("track-equalizer-row").is_some());
+    let row = in_editor("track-equalizer-row").unwrap();
+    wait_for("its name", || {
+        texts(&row).iter().any(|t| t == "No equalizer")
+    });
+    toplevel("tag-editor").unwrap().close();
+    spin(50);
     window.destroy();
 }
 
@@ -705,8 +1069,59 @@ fn play_mode_screenshots(app: &gtk::Application) {
             popover.unparent();
         }
     }
-    set_choice(SchemeChoice::Dark, AccentChoice::Amber);
+    // The speed chip and its popover; the repeat button with its plus.
     backend.send(PlayerRequest::CancelSleepTimer);
+    backend.send(PlayerRequest::SetLoop(None));
+    backend.send(PlayerRequest::SetSpeed {
+        rate: 1.25,
+        keep_pitch: true,
+    });
+    app.activate_action("repeat", Some(&"auto-dj".to_variant()));
+    for (scheme, suffix) in [(SchemeChoice::Dark, "dark"), (SchemeChoice::Light, "light")] {
+        set_choice(scheme, AccentChoice::Amber);
+        let popover = window.open_speed().unwrap();
+        shot_window(&format!("speed-{suffix}"));
+        shot_popover(&popover, &format!("speed-popover-{suffix}"));
+        popover.popdown();
+    }
+    set_choice(SchemeChoice::Dark, AccentChoice::Amber);
+    backend.send(PlayerRequest::SetSpeed {
+        rate: 1.0,
+        keep_pitch: true,
+    });
+    // The equalizer of a track in File info, with two tracks in the editor.
+    let (first, second) = first_album_track(&window, &backend);
+    backend
+        .services()
+        .set_track_equalizers(
+            &[first],
+            Some(&TrackEqualizer {
+                name: "Bright master fix".into(),
+                settings: backend.services().settings().dsp.equalizer.clone(),
+            }),
+        )
+        .unwrap();
+    window.edit_tags(&[first, second]);
+    wait_for("the equalizer row", || {
+        in_editor("track-equalizer").is_some()
+    });
+    let editor = toplevel("tag-editor").unwrap();
+    if let Some(info) = descendants(editor.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::ToggleButton>().ok())
+        .find(|b| b.label().as_deref() == Some("File info"))
+    {
+        info.set_active(true);
+    }
+    for (scheme, suffix) in [(SchemeChoice::Dark, "dark"), (SchemeChoice::Light, "light")] {
+        set_choice(scheme, AccentChoice::Amber);
+        spin(500);
+        let path = folder.join(format!("track-equalizer-{suffix}{tag}.png"));
+        snapshot::save_png(&editor, &path).unwrap();
+        println!("wrote {}", path.display());
+    }
+    editor.close();
+    set_choice(SchemeChoice::Dark, AccentChoice::Amber);
     window.destroy();
 }
 
@@ -732,6 +1147,10 @@ const TESTS: &[Test] = &[
         play_mode_start_selects_current,
     ),
     ("play_mode_track_flags", play_mode_track_flags),
+    ("play_mode_revert_toast", play_mode_revert_toast),
+    ("play_mode_repeat_plus", play_mode_repeat_plus),
+    ("play_mode_speed", play_mode_speed),
+    ("play_mode_track_equalizer", play_mode_track_equalizer),
     ("play_mode_play_button_menu", play_mode_play_button_menu),
     ("play_mode_deck_icon_sizes", play_mode_deck_icon_sizes),
     (

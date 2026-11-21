@@ -30,3 +30,12 @@ entry.hk-cell-edit {
   background-color: var(--hk-field); box-shadow: 0 0 0 3px var(--hk-sel); color: var(--hk-t1);
 }
 .hk-cell.hk-edit-preview { color: var(--hk-accent-text); }
+
+/* ---- The equalizer of a track (File info, Playback) --------------------- */
+
+.hk-track-eq { margin-top: 0; }
+.hk-track-eq-row { min-height: 34px; }
+menubutton.hk-track-eq-button > button { font-weight: 500; border-color: var(--hk-line2); border-radius: 6px; }
+.hk-track-eq-detail { font-size: 11px; }
+.hk-track-eq-line { font-size: 12px; }
+popover.hk-track-eq-menu > contents { min-width: 232px; }

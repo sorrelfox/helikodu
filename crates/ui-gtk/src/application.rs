@@ -93,6 +93,8 @@ fn check_icons(display: &gtk::gdk::Display) {
         "helikodu-shuffle-symbolic",
         "helikodu-repeat-symbolic",
         "helikodu-repeat-one-symbolic",
+        "helikodu-repeat-plus-symbolic",
+        "helikodu-gauge-symbolic",
         "helikodu-moon-symbolic",
         "helikodu-copies-symbolic",
         "audio-volume-high-symbolic",

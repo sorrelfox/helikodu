@@ -11,9 +11,9 @@ use std::time::{Duration, Instant};
 use gtk::glib;
 
 use crate::backend::{
-    AlbumKey, Backend, LoopPoints, NowPlaying, OutputInfo, PlayModes, PlaybackState, PlaybackStats,
-    QueueSnapshot, Repeat, RepeatMode, ShuffleMode, SignalPath, SleepTimer, StopAfter, TrackKey,
-    Update,
+    AlbumKey, Backend, LoopPoints, NowPlaying, OutputInfo, PlayModes, PlaybackSpeed, PlaybackState,
+    PlaybackStats, QueueSnapshot, Repeat, RepeatMode, ShuffleMode, SignalPath, SleepTimer,
+    StopAfter, TrackKey, Update,
 };
 
 /// The tracks whose rows show as playing: the playing track and, when the
@@ -92,12 +92,29 @@ pub(crate) struct PlayerView {
     pub(crate) waveform: Option<std::sync::Arc<[u8]>>,
     /// The tracks whose rows show as playing.
     pub(crate) playing: PlayingKeys,
+    /// The playback speed.
+    pub(crate) speed: PlaybackSpeed,
 }
 
 impl PlayerView {
     /// The album of the playing track.
     pub(crate) fn album(&self) -> Option<AlbumKey> {
         self.now.as_ref().map(|n| n.track.album)
+    }
+
+    /// Whether the speed is set but not applied: playback is bit-perfect, so
+    /// tracks play at their normal speed.
+    pub(crate) fn speed_not_applied(&self) -> bool {
+        !self.speed.is_normal() && self.output.signal == crate::backend::SignalState::BitPerfect
+    }
+
+    /// The listening time until the track ends, at the speed that applies.
+    pub(crate) fn listening_left(&self) -> Option<Duration> {
+        let left = self.length?.saturating_sub(self.elapsed);
+        if self.speed.is_normal() || self.speed_not_applied() || self.speed.rate <= 0.0 {
+            return Some(left);
+        }
+        Some(left.div_f64(self.speed.rate))
     }
 
     /// The time left on the sleep timer now, counted down from its report.
@@ -132,6 +149,8 @@ pub(crate) enum Change {
     /// Which rows show as playing ([`PlayerView::playing`]); follows each
     /// track change, and again when the main copy of a playing copy is known.
     Playing,
+    /// The playback speed.
+    Speed,
 }
 
 type Listener = Box<dyn Fn(&PlayerView, Change)>;
@@ -203,6 +222,7 @@ impl Playback {
             Change::Cursor,
             Change::Waveform,
             Change::Playing,
+            Change::Speed,
         ] {
             listener(&view, change);
         }
@@ -321,6 +341,10 @@ impl Playback {
                 Update::Stats(stats) => {
                     view.stats = Some(stats);
                     &[Change::Stats]
+                }
+                Update::Speed(speed) => {
+                    view.speed = speed;
+                    &[Change::Speed]
                 }
                 // The playing track keeps its new rating; the listeners show it.
                 Update::RatingChanged { track, stars } => {

@@ -15,6 +15,7 @@ mod chapters;
 mod compact;
 mod favourite;
 mod modes;
+mod speed;
 
 use crate::backend::{Backend, CoverKey, PlaybackState, PlayerRequest, SignalState};
 use crate::format;
@@ -89,6 +90,10 @@ mod imp {
         pub(super) sleep_popover: RefCell<Option<Rc<crate::popovers::sleep_timer::SleepPopover>>>,
         /// The countdown of the sleep chip while a timer runs.
         pub(super) sleep_tick: RefCell<Option<glib::SourceId>>,
+        /// The speed chip before the time left, and its text.
+        pub(super) speed_chip: RefCell<Option<(gtk::Button, gtk::Label)>>,
+        /// The speed popover.
+        pub(super) speed_popover: RefCell<Option<Rc<crate::popovers::speed::SpeedPopover>>>,
         /// The player's state, for the mode buttons' handlers.
         pub(super) playback: RefCell<std::rc::Weak<Playback>>,
         /// "Artist · Album" as links, in place of the subtitle while playing.
@@ -157,6 +162,7 @@ impl Deck {
         imp.covers.replace(Some(covers.clone()));
         imp.playback.replace(Rc::downgrade(playback));
         self.setup_modes(backend, playback);
+        self.setup_speed(backend, playback);
         imp.backend.replace(Some(backend.clone()));
         let b = backend.clone();
         let weak = self.downgrade();
@@ -367,6 +373,10 @@ impl Deck {
             &crate::play_modes::stop_after_menu(),
         );
         stop.append(Some(&tr("Sleep Timer…")), Some("win.sleep-timer"));
+        // While the speed is not 1× its chip opens the popover.
+        if self.speed_chip_text().is_none() {
+            stop.append(Some(&tr("Speed…")), Some("win.speed"));
+        }
         menu.append_section(None, &stop);
         let jump = gtk::gio::Menu::new();
         jump.append(
@@ -446,7 +456,10 @@ impl Deck {
     fn update(&self, view: &PlayerView, change: Change) {
         let imp = self.imp();
         match change {
-            Change::Position => self.show_times(view),
+            Change::Position => {
+                self.show_times(view);
+                self.tick_speed(view);
+            }
             Change::State | Change::Track => {
                 // Nothing plays: the flat band of the idle deck.
                 if view.now.is_none() {
@@ -532,7 +545,10 @@ impl Deck {
                 let name = fill(&tr("Output: {}, {}"), &[&device, &text]);
                 imp.output
                     .update_property(&[gtk::accessible::Property::Label(&name)]);
+                // Whether the speed applies follows the path.
+                self.show_speed(view);
             }
+            Change::Speed => self.show_speed(view),
             Change::Modes => self.show_modes(view),
             Change::Loop => self.show_loop(view),
             Change::Sleep => self.show_sleep(view),

@@ -175,6 +175,8 @@ pub struct SampleLibrary {
     cover_file: Option<PathBuf>,
     /// The playback flags set through the player.
     flags: Mutex<HashMap<TrackKey, super::TrackFlags>>,
+    /// The equalizers of single tracks.
+    equalizers: Mutex<HashMap<TrackKey, super::TrackEqualizer>>,
     /// The copies moved to the trash and the main copies chosen.
     copies: Mutex<copies::CopyState>,
     /// The saved searches.
@@ -376,6 +378,7 @@ impl SampleLibrary {
             loaded: usize::MAX,
             cover_file: None,
             flags: Mutex::new(HashMap::new()),
+            equalizers: Mutex::new(HashMap::new()),
             copies: Mutex::new(copies::CopyState::default()),
             searches: Mutex::new(query::sample_searches()),
             kinds: Mutex::new(HashMap::new()),
@@ -1370,8 +1373,11 @@ struct FakeState {
     ab_loop: Option<(super::LoopPoints, Option<u64>)>,
     sleep: Option<super::SleepTimer>,
     cursor: Option<u64>,
-    /// The queue positions "Next" moved on from, newest last, for "Revert".
-    skipped: Vec<usize>,
+    /// The queue positions "Next" moved on from and where they were, newest
+    /// last, for "Revert".
+    skipped: Vec<(usize, Duration)>,
+    /// The playback speed.
+    speed: super::PlaybackSpeed,
 }
 
 /// A player that only pretends: it follows requests and reports updates at once.
@@ -1416,14 +1422,22 @@ impl FakePlayer {
             context: state.context.clone(),
             items: state.queue.clone(),
             current: state.current,
-            can_revert: state.skipped.iter().any(|&i| i < state.queue.len()),
+            can_revert: state.skipped.iter().any(|&(i, _)| i < state.queue.len()),
         };
         let elapsed = state.elapsed;
+        // Another speed changes the samples, as the player's would.
+        let lamp = if state.speed.is_normal() {
+            super::SignalLamp::BitPerfect
+        } else {
+            super::SignalLamp::LosslessProcessed
+        };
         drop(state);
-        let signal = if now.is_some() {
+        let signal = if now.is_none() {
+            SignalState::Idle
+        } else if lamp == super::SignalLamp::BitPerfect {
             SignalState::BitPerfect
         } else {
-            SignalState::Idle
+            SignalState::Processed { dsp: false }
         };
         self.emit(Update::Queue(snapshot));
         self.emit(Update::NowPlaying(now));
@@ -1432,7 +1446,7 @@ impl FakePlayer {
         if signal == SignalState::Idle {
             self.emit(Update::SignalPath(None));
         } else {
-            let path = signal_path(super::SignalLamp::BitPerfect);
+            let path = signal_path(lamp);
             self.emit(Update::SignalPath(Some(Box::new(path))));
             self.emit(Update::Stats(playback_stats()));
         }
@@ -1663,7 +1677,8 @@ impl PlayerControl for FakePlayer {
                     // "Revert" goes back to the track "Next" moved on from.
                     let mut state = self.state.borrow_mut();
                     if let Some(current) = state.current {
-                        state.skipped.push(current);
+                        let at = state.elapsed;
+                        state.skipped.push((current, at));
                     }
                 }
                 self.step(1);
@@ -1782,7 +1797,7 @@ impl FakePlayer {
             PlayerRequest::Revert => {
                 {
                     let mut state = self.state.borrow_mut();
-                    let Some(index) = state.skipped.pop() else {
+                    let Some((index, at)) = state.skipped.pop() else {
                         return;
                     };
                     if index >= state.queue.len() {
@@ -1790,14 +1805,25 @@ impl FakePlayer {
                     }
                     state.current = Some(index);
                     state.state = PlaybackState::Playing;
-                    state.elapsed = Duration::ZERO;
+                    state.elapsed = at;
                 }
                 self.announce();
             }
             // The sample library has no statistics to go on, and no audio.
-            PlayerRequest::RadioRandom
-            | PlayerRequest::StartRadio(_)
-            | PlayerRequest::SetSpeed { .. } => {}
+            PlayerRequest::SetSpeed { rate, keep_pitch } => {
+                let speed = super::PlaybackSpeed { rate, keep_pitch };
+                let changed = {
+                    let mut state = self.state.borrow_mut();
+                    let changed = state.speed != speed;
+                    state.speed = speed;
+                    changed
+                };
+                if changed {
+                    self.emit(Update::Speed(speed));
+                    self.announce();
+                }
+            }
+            PlayerRequest::RadioRandom | PlayerRequest::StartRadio(_) => {}
             PlayerRequest::SetStopAfterMode(mode) => {
                 {
                     let mut state = self.state.borrow_mut();

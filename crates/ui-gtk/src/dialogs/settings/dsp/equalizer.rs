@@ -61,7 +61,7 @@ fn preamp_text(eq: &EqualizerSettings) -> String {
 }
 
 /// A preset's gains for `bands` bands.
-fn preset_gains(octaves: &[f64], bands: usize) -> Vec<f64> {
+pub(crate) fn preset_gains(octaves: &[f64], bands: usize) -> Vec<f64> {
     match (octaves.len(), bands) {
         (10, 31) => {
             let mut ten = [0.0; 10];
@@ -81,7 +81,7 @@ fn preset_gains(octaves: &[f64], bands: usize) -> Vec<f64> {
 }
 
 /// The translated name of a built-in preset.
-fn preset_name(preset: &BuiltInPreset) -> String {
+pub(crate) fn preset_name(preset: &BuiltInPreset) -> String {
     match preset.id {
         "flat" => tr("Flat"),
         "bass-boost" => tr("Bass boost"),
@@ -101,7 +101,7 @@ fn preset_name(preset: &BuiltInPreset) -> String {
 }
 
 /// The entries of the preset list: the built-in presets, then the user's.
-fn preset_entries(eq: &EqualizerSettings) -> Vec<(String, Vec<f64>)> {
+pub(crate) fn preset_entries(eq: &EqualizerSettings) -> Vec<(String, Vec<f64>)> {
     BuiltInPreset::ALL
         .iter()
         .map(|p| (preset_name(p), p.octaves.to_vec()))
@@ -110,7 +110,7 @@ fn preset_entries(eq: &EqualizerSettings) -> Vec<(String, Vec<f64>)> {
 }
 
 /// Which entry the bands of the mode in use match, if any.
-fn matching_preset(eq: &EqualizerSettings) -> Option<usize> {
+pub(crate) fn matching_preset(eq: &EqualizerSettings) -> Option<usize> {
     let gains = eq.graphic_gains()?;
     preset_entries(eq).iter().position(|(_, bands)| {
         let bands = preset_gains(bands, gains.len());

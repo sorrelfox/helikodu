@@ -11,7 +11,7 @@
 //! control is dragged the changes are passed on at most every 80 ms, the last
 //! one always.
 
-mod equalizer;
+pub(crate) mod equalizer;
 mod stages;
 
 use std::cell::{Cell, RefCell};

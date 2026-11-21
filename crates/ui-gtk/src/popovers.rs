@@ -7,3 +7,4 @@ pub(crate) mod labels;
 pub(crate) mod output_switcher;
 pub(crate) mod query_completion;
 pub(crate) mod sleep_timer;
+pub(crate) mod speed;

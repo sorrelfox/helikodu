@@ -17,6 +17,7 @@ pub(crate) mod maintenance;
 pub(crate) mod settings;
 pub(crate) mod shortcuts;
 pub(crate) mod tag_editor;
+pub(crate) mod track_equalizer;
 pub(crate) mod track_flags;
 pub(crate) mod user_guide;
 pub(crate) mod volume_confirm;

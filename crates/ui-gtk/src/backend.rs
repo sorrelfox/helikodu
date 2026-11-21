@@ -1569,6 +1569,42 @@ pub struct LyricsView {
     pub offset_ms: i64,
 }
 
+/// The playback speed: the speed itself and whether the pitch stays.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlaybackSpeed {
+    /// The speed, as a factor of the normal one (0.5 to 2).
+    pub rate: f64,
+    /// Whether the pitch stays (tempo) or follows the speed (tape).
+    pub keep_pitch: bool,
+}
+
+impl Default for PlaybackSpeed {
+    fn default() -> Self {
+        Self {
+            rate: 1.0,
+            keep_pitch: true,
+        }
+    }
+}
+
+impl PlaybackSpeed {
+    /// Whether playback runs at the normal speed.
+    pub fn is_normal(&self) -> bool {
+        (self.rate - 1.0).abs() < 1e-6
+    }
+}
+
+/// The equalizer of one track, chosen as a whole: it replaces the main
+/// equalizer while the track plays.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TrackEqualizer {
+    /// What it is called: a preset's name, "Copy of" one, or the name of an
+    /// imported file.
+    pub name: String,
+    /// The equalizer.
+    pub settings: helikodu_model::settings::EqualizerSettings,
+}
+
 /// The queue as the panel shows it.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct QueueSnapshot {
@@ -1697,6 +1733,9 @@ pub enum Update {
     /// A measurement of the analyzer, while one is followed
     /// ([`Backend::follow_analyzer`]) and sound is played.
     Analyzer(Arc<AnalyzerFrame>),
+    /// The playback speed changed (the settings', or one set with
+    /// [`PlayerRequest::SetSpeed`]).
+    Speed(PlaybackSpeed),
 }
 
 /// Takes requests on the main thread.

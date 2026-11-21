@@ -981,6 +981,59 @@ impl Services for MemoryServices {
         Some(flags.get(&track).copied().unwrap_or_default())
     }
 
+    fn track_equalizer(
+        &self,
+        track: TrackKey,
+    ) -> Result<Option<super::super::TrackEqualizer>, BackendError> {
+        let Some(library) = self.library.as_ref() else {
+            return Ok(None);
+        };
+        let equalizers = library
+            .equalizers
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        Ok(equalizers.get(&track).cloned())
+    }
+
+    fn set_track_equalizers(
+        &self,
+        tracks: &[TrackKey],
+        equalizer: Option<&super::super::TrackEqualizer>,
+    ) -> Result<(), BackendError> {
+        let library = self
+            .library
+            .as_ref()
+            .ok_or_else(|| BackendError("no library".into()))?;
+        let mut equalizers = library
+            .equalizers
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        for track in tracks {
+            if library.track(*track).is_none() {
+                continue;
+            }
+            match equalizer {
+                Some(eq) => {
+                    equalizers.insert(*track, eq.clone());
+                }
+                None => {
+                    equalizers.remove(track);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn any_track_equalizer(&self, tracks: &[TrackKey]) -> bool {
+        self.library.as_ref().is_some_and(|library| {
+            let equalizers = library
+                .equalizers
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            tracks.iter().any(|t| equalizers.contains_key(t))
+        })
+    }
+
     fn backups(&self) -> Option<super::super::services::BackupsInfo> {
         self.library.as_ref()?;
         let made = self.lock().backup_made;

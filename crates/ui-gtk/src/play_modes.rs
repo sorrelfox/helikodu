@@ -88,6 +88,25 @@ pub(crate) fn repeat_name(mode: RepeatMode) -> String {
     }
 }
 
+/// The repeat mode as the label of the Repeat submenu names it: the long
+/// one shorter ("Repeat: Related Tracks").
+pub(crate) fn repeat_label(mode: RepeatMode) -> String {
+    match mode {
+        RepeatMode::Endless => tr("Related Tracks"),
+        other => repeat_name(other),
+    }
+}
+
+/// The repeat button's icon: a "1" for one track, a plus between the arrows
+/// for the two modes that add tracks.
+pub(crate) fn repeat_icon(mode: RepeatMode) -> &'static str {
+    match mode {
+        RepeatMode::One => "helikodu-repeat-one-symbolic",
+        RepeatMode::Endless | RepeatMode::AutoDj => "helikodu-repeat-plus-symbolic",
+        _ => "helikodu-repeat-symbolic",
+    }
+}
+
 /// The stop-after choice as the menu names it.
 pub(crate) fn stop_after_name(mode: StopAfter) -> String {
     match mode {
@@ -294,7 +313,7 @@ pub(crate) fn fill_playback_menu(menu: &gio::Menu, view: &PlayerView) {
         &shuffle_menu(),
     );
     modes.append_submenu(
-        Some(&fill(&tr("Repeat: {}"), &[&repeat_name(m.repeat)])),
+        Some(&fill(&tr("Repeat: {}"), &[&repeat_label(m.repeat)])),
         &repeat_menu(),
     );
     modes.append_submenu(
@@ -313,6 +332,10 @@ pub(crate) fn fill_playback_menu(menu: &gio::Menu, view: &PlayerView) {
 
     let rest = gio::Menu::new();
     rest.append(Some(&tr("Sleep Timer…")), Some("win.sleep-timer"));
+    // While the speed is not 1× its chip on the deck opens the popover.
+    if view.speed.is_normal() {
+        rest.append(Some(&tr("Speed…")), Some("win.speed"));
+    }
     let output = gio::Menu::new();
     output.append(
         Some(&tr("Choose the Output Device…")),

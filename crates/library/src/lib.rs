@@ -157,6 +157,7 @@ pub use tag_journal::{
     TagStepReport,
 };
 pub use tag_writes::{RateError, RatingOutcome, TagWriteReport, TagWriteSettings};
+pub use track_equalizers::NamedEqualizer;
 pub use track_source::TrackSource;
 pub use user_fields::FieldError;
 pub use watch::{PollReason, RescanReason, WatchEvent, WatchMode, WatchOptions, Watcher};

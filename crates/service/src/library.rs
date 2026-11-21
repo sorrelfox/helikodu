@@ -96,6 +96,8 @@ pub use self::smart_play::{
 pub use self::source::TrackSource;
 pub use self::stats_import::{STATS_BATCH, stats_to_files};
 pub use self::stats_writes::StatsWriteOptions;
+/// The equalizer of a track with its name.
+pub use helikodu_library::NamedEqualizer;
 pub use helikodu_library::PlayKeys;
 /// Imports from other players and of exported user data, statistics carried to a
 /// replacement, and statistics written into the files.
@@ -581,6 +583,32 @@ impl MusicLibrary {
         equalizer: Option<&EqualizerSettings>,
     ) -> Result<(), LibraryError> {
         Ok(self.library.set_track_equalizer(track, equalizer)?)
+    }
+
+    /// The equalizer of `track` with the name it was given, if one was set.
+    pub fn named_track_equalizer(
+        &self,
+        track: TrackId,
+    ) -> Result<Option<NamedEqualizer>, LibraryError> {
+        Ok(self.library.named_track_equalizer(track)?)
+    }
+
+    /// Sets the equalizer of `track` with its `name`, or removes it with `None`.
+    /// It applies from the next time the track starts.
+    pub fn set_named_track_equalizer(
+        &self,
+        track: TrackId,
+        equalizer: Option<&EqualizerSettings>,
+        name: Option<&str>,
+    ) -> Result<(), LibraryError> {
+        Ok(self
+            .library
+            .set_named_track_equalizer(track, equalizer, name)?)
+    }
+
+    /// Whether any of `tracks` has an equalizer of its own.
+    pub fn any_track_equalizer(&self, tracks: &[TrackId]) -> Result<bool, LibraryError> {
+        Ok(self.library.any_track_equalizer(tracks)?)
     }
 
     /// The tracks that have an equalizer of their own.

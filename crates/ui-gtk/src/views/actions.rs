@@ -8,7 +8,8 @@
 //! the menu is open, and its `win.sel-*` actions act on it: play, play next,
 //! add to the queue or a playlist, go to the album or artist, edit tags, rate,
 //! open the containing folder, show the copies of a track's file, open the
-//! Labels popover, and remove from a playlist or the queue.
+//! Labels popover, choose the tracks' own equalizer or none at all, and
+//! remove from a playlist or the queue.
 
 use std::rc::Rc;
 
@@ -268,6 +269,26 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         rate.append_item(&none);
         edit.append_submenu(Some(&tr("Rate")), &rate);
         edit.append_item(&item(&tr("Labels…"), "win.sel-labels"));
+        let several = match target {
+            Target::Tracks { rows, .. } => rows.len() > 1,
+            _ => false,
+        };
+        edit.append_item(&item(
+            &if several {
+                tr("Equalizer for These Tracks…")
+            } else {
+                tr("Equalizer for This Track…")
+            },
+            "win.sel-track-equalizer",
+        ));
+        edit.append_item(&item(
+            &if several {
+                tr("No Equalizer for These Tracks")
+            } else {
+                tr("No Equalizer for This Track")
+            },
+            "win.sel-no-track-equalizer",
+        ));
         menu.append_section(None, &edit);
         let folder = gio::Menu::new();
         folder.append_item(&item(&tr("Open Containing Folder"), "win.sel-open-folder"));
@@ -337,6 +358,68 @@ fn relabel(model: &gio::Menu, from: &str, to: &str) {
     }
 }
 
+/// Makes "No Equalizer for This Track" sensitive unless every track of
+/// `target` already plays without an equalizer: insensitive at once, then as
+/// the library says.
+fn follow_track_equalizers(window: &MainWindow, target: &Target) {
+    let Some(action) = window
+        .lookup_action("sel-no-track-equalizer")
+        .and_downcast::<gio::SimpleAction>()
+    else {
+        return;
+    };
+    action.set_enabled(false);
+    let Some(backend) = window.backend() else {
+        return;
+    };
+    let keys: Vec<TrackKey> = target.rows().iter().map(|r| r.key).collect();
+    if keys.is_empty() {
+        return;
+    }
+    let services = backend.services();
+    glib::spawn_future_local(async move {
+        let some_with = backend
+            .work(move || {
+                keys.iter().any(|k| {
+                    !services
+                        .track_equalizer(*k)
+                        .ok()
+                        .flatten()
+                        .is_some_and(|eq| crate::dialogs::track_equalizer::is_none(&eq))
+                })
+            })
+            .await
+            .unwrap_or(false);
+        action.set_enabled(some_with);
+    });
+}
+
+/// Makes the tracks of `target` play without any equalizer, the main one
+/// included.
+fn no_track_equalizers(window: &MainWindow, backend: Backend, target: Target) {
+    let keys: Vec<TrackKey> = target.rows().iter().map(|r| r.key).collect();
+    if keys.is_empty() {
+        return;
+    }
+    let services = backend.services();
+    let weak = window.downgrade();
+    glib::spawn_future_local(async move {
+        let none = crate::dialogs::track_equalizer::no_equalizer();
+        let result = backend
+            .work(move || services.set_track_equalizers(&keys, Some(&none)))
+            .await;
+        if let (Some(Err(error)), Some(window)) = (result, weak.upgrade()) {
+            window.toast(
+                &fill(
+                    &tr("The equalizer of the track could not be saved: {}"),
+                    &[&error.0],
+                ),
+                true,
+            );
+        }
+    });
+}
+
 /// Pops up the context menu of `target` on `widget`, at the pointer position
 /// `at` in its coordinates, or at its middle for the keyboard.
 pub(crate) fn popup(
@@ -368,6 +451,10 @@ pub(crate) fn popup_with(
     };
     if pinned {
         relabel(&model, &tr("Pin to the Sidebar"), &tr("Unpin"));
+    }
+    // "No Equalizer for This Track" only for tracks that have one.
+    if let Target::Tracks { .. } = &target {
+        follow_track_equalizers(&window, &target);
     }
     window.set_target(Some(target));
     let popover = gtk::PopoverMenu::from_model(Some(&model));
@@ -861,6 +948,18 @@ pub(crate) fn install(window: &MainWindow) {
         });
     });
     let trash = simple("sel-trash", trash_tracks);
+    let track_equalizer = simple("sel-track-equalizer", |w, b, t| {
+        let w2 = w.downgrade();
+        glib::spawn_future_local(async move {
+            let keys = t.keys(&b).await;
+            if let Some(window) = w2.upgrade()
+                && !keys.is_empty()
+            {
+                crate::dialogs::tag_editor::open_on_equalizer(&window, &keys);
+            }
+        });
+    });
+    let no_track_equalizer = simple("sel-no-track-equalizer", no_track_equalizers);
     let copies = gio::ActionEntry::builder("show-copies")
         .parameter_type(Some(glib::VariantTy::UINT64))
         .activate(|window: &MainWindow, _, target| {
@@ -906,5 +1005,7 @@ pub(crate) fn install(window: &MainWindow) {
         organize,
         verify,
         trash,
+        track_equalizer,
+        no_track_equalizer,
     ]);
 }

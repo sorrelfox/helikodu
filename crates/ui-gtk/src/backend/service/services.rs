@@ -1336,6 +1336,53 @@ impl Services for ServiceServices {
             .ok()
     }
 
+    fn track_equalizer(
+        &self,
+        track: TrackKey,
+    ) -> Result<Option<crate::backend::TrackEqualizer>, BackendError> {
+        if track.0 == 0 {
+            return Ok(None);
+        }
+        let found = self
+            .music()?
+            .named_track_equalizer(TrackId::new(track.0))
+            .map_err(error)?;
+        Ok(found.map(|eq| crate::backend::TrackEqualizer {
+            name: eq.name.unwrap_or_default(),
+            settings: eq.settings,
+        }))
+    }
+
+    fn set_track_equalizers(
+        &self,
+        tracks: &[TrackKey],
+        equalizer: Option<&crate::backend::TrackEqualizer>,
+    ) -> Result<(), BackendError> {
+        let music = self.music()?;
+        for track in tracks.iter().filter(|t| t.0 != 0) {
+            music
+                .set_named_track_equalizer(
+                    TrackId::new(track.0),
+                    equalizer.map(|eq| &eq.settings),
+                    equalizer.map(|eq| eq.name.as_str()),
+                )
+                .map_err(error)?;
+        }
+        Ok(())
+    }
+
+    fn any_track_equalizer(&self, tracks: &[TrackKey]) -> bool {
+        let ids: Vec<TrackId> = tracks
+            .iter()
+            .filter(|t| t.0 != 0)
+            .map(|t| TrackId::new(t.0))
+            .collect();
+        self.music()
+            .ok()
+            .and_then(|music| music.any_track_equalizer(&ids).ok())
+            .unwrap_or(false)
+    }
+
     fn backups(&self) -> Option<BackupsInfo> {
         let music = self.service.library()?.library();
         let backups = music.backups();

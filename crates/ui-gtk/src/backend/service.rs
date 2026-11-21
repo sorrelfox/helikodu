@@ -2001,6 +2001,14 @@ fn loop_points(ab: Option<helikodu_service::player::AbLoop>) -> Option<super::Lo
 }
 
 /// The sleep timer as the window shows it.
+/// The speed playback runs at, as the deck shows it.
+fn playback_speed(speed: helikodu_model::settings::SpeedSettings) -> super::PlaybackSpeed {
+    super::PlaybackSpeed {
+        rate: speed.effective_rate(),
+        keep_pitch: speed.keep_pitch,
+    }
+}
+
 fn sleep_timer(
     timer: Option<helikodu_service::player::SleepTimerStatus>,
 ) -> Option<super::SleepTimer> {
@@ -2371,6 +2379,7 @@ impl Forwarder {
             PlayerEvent::SleepTimerChanged(timer) => {
                 self.send(Update::SleepTimer(sleep_timer(*timer)))
             }
+            PlayerEvent::SpeedChanged(speed) => self.send(Update::Speed(playback_speed(*speed))),
             PlayerEvent::CursorChanged(entry) => self.send(Update::Cursor(entry.map(EntryId::get))),
             PlayerEvent::TrackFlagsChanged { track, flags } => self.send(Update::TrackFlags {
                 track: TrackKey(track.get()),
@@ -2511,7 +2520,8 @@ impl Forwarder {
             && self.send(Update::StopAfterMode(status.stop_after))
             && self.send(Update::Loop(loop_points(status.ab_loop)))
             && self.send(Update::SleepTimer(sleep_timer(status.sleep_timer)))
-            && self.send(Update::Cursor(status.cursor.map(EntryId::get)));
+            && self.send(Update::Cursor(status.cursor.map(EntryId::get)))
+            && self.send(Update::Speed(playback_speed(status.speed)));
         self.send_queue();
         if let Some(path) = &status.signal_path {
             self.path_known = true;

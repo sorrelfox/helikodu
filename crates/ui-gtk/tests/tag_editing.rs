@@ -4,7 +4,9 @@
 //! The tag editor over the running service: a library generated with the
 //! `ffmpeg` tool (two FLAC files and a Matroska file, whose tags can only be
 //! read) is scanned, edited through the dialog and read back from the files
-//! and from the library. Nothing is played; the output is the null sink.
+//! and from the library; the equalizer of a track is kept in the library and
+//! the playback speed follows the player. Nothing is played; the output is the
+//! null sink.
 //!
 //! Like `dialogs.rs`, this program runs only under the headless compositor:
 //!
@@ -30,7 +32,9 @@ use gtk::{gio, glib};
 use helikodu_service::files::AppDirs;
 use helikodu_service::library::{MusicLibrary, ScanRequest, read_file_info};
 use helikodu_service::{LibraryChoice, Service, ServiceConfig};
-use helikodu_ui_gtk::backend::{Backend, TrackKey, TrackQuery, service};
+use helikodu_ui_gtk::backend::{
+    Backend, PlayerRequest, TrackEqualizer, TrackKey, TrackQuery, service,
+};
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
 
@@ -623,6 +627,56 @@ fn edits_in_the_track_table(app: &gtk::Application) {
     });
 }
 
+/// The equalizer of a track is kept in the library through the service and
+/// shown in File info; a speed set while running reaches the deck's chip.
+fn keeps_track_equalizers_and_follows_the_speed(app: &gtk::Application) {
+    let (window, backend, _) = window_over(app, "ui-track-equalizer");
+    let keys = keys(&backend);
+    let flac: Vec<TrackKey> = keys[..2].iter().map(|(_, k)| *k).collect();
+    let services = backend.services();
+    assert!(services.track_equalizer(flac[0]).unwrap().is_none());
+    assert!(!services.any_track_equalizer(&flac));
+    let mut settings = services.settings().dsp.equalizer.clone();
+    settings.enabled = true;
+    services
+        .set_track_equalizers(
+            &flac,
+            Some(&TrackEqualizer {
+                name: "Bright master fix".into(),
+                settings,
+            }),
+        )
+        .unwrap();
+    assert_eq!(
+        services.track_equalizer(flac[1]).unwrap().unwrap().name,
+        "Bright master fix"
+    );
+    assert!(services.any_track_equalizer(&flac[..1]));
+    window.edit_tags(&flac[..1]);
+    wait_for("the tag editor", || toplevel("tag-editor").is_some());
+    let editor = toplevel("tag-editor").unwrap();
+    wait_for("the name of the equalizer", || {
+        labels(&editor).iter().any(|l| l == "Bright master fix")
+    });
+    editor.close();
+    services.set_track_equalizers(&flac, None).unwrap();
+    assert!(!services.any_track_equalizer(&flac));
+
+    backend.send(PlayerRequest::SetSpeed {
+        rate: 1.25,
+        keep_pitch: false,
+    });
+    wait_for("the speed chip", || {
+        window.deck_speed_chip().as_deref() == Some("1.25×")
+    });
+    backend.send(PlayerRequest::SetSpeed {
+        rate: 1.0,
+        keep_pitch: true,
+    });
+    wait_for("no speed chip", || window.deck_speed_chip().is_none());
+    window.destroy();
+}
+
 type Test = (&'static str, fn(&gtk::Application));
 
 const TESTS: &[Test] = &[
@@ -634,6 +688,10 @@ const TESTS: &[Test] = &[
     ("undoes_and_redoes_a_save", undoes_and_redoes_a_save),
     ("tag_tools_fill_the_editor", tag_tools_fill_the_editor),
     ("edits_in_the_track_table", edits_in_the_track_table),
+    (
+        "keeps_track_equalizers_and_follows_the_speed",
+        keeps_track_equalizers_and_follows_the_speed,
+    ),
 ];
 
 fn main() -> ExitCode {

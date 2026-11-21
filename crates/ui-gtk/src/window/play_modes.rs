@@ -90,7 +90,13 @@ impl MainWindow {
                 window.save_follow_playing(on);
             })
             .build();
-        self.add_action_entries([sleep, output, follow]);
+        let speed = gio::ActionEntry::builder("speed")
+            .activate(|window: &Self, _, _| {
+                window.imp().deck.open_speed();
+            })
+            .build();
+        self.add_action_entries([sleep, output, follow, speed]);
+        self.setup_revert_toast(playback);
 
         self.setup_queue_cursor(backend, playback);
 
@@ -104,11 +110,12 @@ impl MainWindow {
         playback.connect(move |view, change| {
             let Some(window) = weak.upgrade() else { return };
             match change {
-                Change::Modes | Change::State => {
+                Change::Modes | Change::State | Change::Speed => {
                     let key = (
                         view.state == crate::backend::PlaybackState::Playing,
                         view.modes,
                         view.stop_after_mode,
+                        view.speed.is_normal(),
                     );
                     if shown.replace(Some(key)) != Some(key) {
                         let open = window
@@ -155,6 +162,69 @@ impl MainWindow {
             self.take_start_selection(&at_start);
             self.select_cursor(&at_start);
         }
+    }
+
+    /// "Revert to the Skipped Track" says where it went back to: the track
+    /// and the position, once the player has moved there.
+    fn setup_revert_toast(&self, playback: &Rc<Playback>) {
+        // 0: nothing asked; 1: Revert asked; 2: its track started.
+        let step = Rc::new(std::cell::Cell::new(0u8));
+        if let Some(action) = self
+            .application()
+            .and_then(|a| a.lookup_action("revert"))
+            .and_downcast::<gio::SimpleAction>()
+        {
+            let step = step.clone();
+            action.connect_activate(move |_, _| step.set(1));
+        }
+        let weak = self.downgrade();
+        let shown = Rc::new(std::cell::Cell::new(false));
+        playback.connect(move |view, change| {
+            let Some(window) = weak.upgrade() else { return };
+            match (change, step.get()) {
+                (Change::Track, 1) if view.now.is_some() => {
+                    step.set(2);
+                    shown.set(false);
+                    // Paused at the start, no position follows: say it anyway.
+                    let weak = window.downgrade();
+                    let step = step.clone();
+                    let shown = shown.clone();
+                    glib::timeout_add_local_once(
+                        std::time::Duration::from_millis(1500),
+                        move || {
+                            if let Some(window) = weak.upgrade()
+                                && step.get() == 2
+                                && !shown.get()
+                            {
+                                step.set(0);
+                                window.toast_reverted();
+                            }
+                        },
+                    );
+                }
+                (Change::Position, 2) if view.elapsed > std::time::Duration::ZERO => {
+                    step.set(0);
+                    shown.set(true);
+                    window.toast_reverted();
+                }
+                _ => {}
+            }
+        });
+    }
+
+    /// "Back to “Glass Harbour” at 2:14".
+    fn toast_reverted(&self) {
+        let Some(view) = self.imp().playback.borrow().as_ref().map(|p| p.view()) else {
+            return;
+        };
+        let Some(now) = &view.now else { return };
+        self.toast(
+            &crate::i18n::fill(
+                &tr("Back to “{}” at {}"),
+                &[&now.track.title, &crate::format::duration(view.elapsed)],
+            ),
+            false,
+        );
     }
 
     /// The first queue shown: its current entry is selected (without making
@@ -370,6 +440,18 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn open_sleep_timer(&self) -> Option<gtk::Popover> {
         self.imp().deck.open_sleep_timer()
+    }
+
+    /// Opens the speed popover.
+    #[doc(hidden)]
+    pub fn open_speed(&self) -> Option<gtk::Popover> {
+        self.imp().deck.open_speed()
+    }
+
+    /// The text of the deck's speed chip, while shown.
+    #[doc(hidden)]
+    pub fn deck_speed_chip(&self) -> Option<String> {
+        self.imp().deck.speed_chip_text()
     }
 
     /// The queue panel's list.

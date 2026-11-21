@@ -21,6 +21,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The Auto-DJ: **Repeat** ▸ **Auto-DJ** keeps tracks from the library queued ahead, picked by a query, rating and play count (`[playback.auto_dj]`); `helikodu-cli auto-dj` lists what it would pick.
 - **Radio Random**, **Revert to the Skipped Track** and **Intro Scan** in the **Playback** menu (also `helikodu-cli radio-random`, `revert` and `intro-scan`; `playback.intro_scan_s` sets the seconds).
 - Generator playlists, made by steps (source, filters, sorts, per-artist and per-album caps, a limit, leaving out another playlist's tracks), with `helikodu-cli generator`.
+- A track's own equalizer is chosen in the tag editor: **Equalizer for this track** in the **Playback** group of **File info** takes a copy of the current equalizer, a preset or an AutoEQ file, for one track or all tracks in the editor. **Equalizer for This Track…** and **No Equalizer for This Track**, which plays the tracks without any equalizer, are in the context menu of tracks.
+- The playback speed can be set from the deck: **Speed…** in the **Playback** menu and the play button's menu opens a popover with the speed, whether the pitch stays, the pitch shift and **Start with this speed next time**; a chip before the time left shows a speed other than 1×.
 - Each smart playlist can show its own columns: **Columns**, at the end of its rule line, shows or hides **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length**, and the choice is remembered per smart playlist. The stars of the **Rating** column rate a track.
 
 ### Changed
@@ -28,6 +30,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Every menu is now in title case, as the main menu was: the context menus of tracks, albums, artists, playlists and labels, the playback menus, the sort and group menus ("Add to Queue", "Edit Tags…", "Stop After").
 - On an album page, the facts of the selected track come first in the details column, above the album's.
 - **Revert to the Skipped Track** is greyed out while there is no track to go back to.
+- The repeat button shows a plus between its arrows for **Continue with Related Tracks** and **Auto-DJ**, and the **Playback** menu reads "Repeat: Related Tracks" for the first. **Revert to the Skipped Track** tells where it went back to.
 
 ### Fixed
 

@@ -40,6 +40,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <file>icons/scalable/actions/helikodu-shuffle-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-repeat-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-repeat-one-symbolic.svg</file>
+    <file>icons/scalable/actions/helikodu-repeat-plus-symbolic.svg</file>
+    <file>icons/scalable/actions/helikodu-gauge-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-moon-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-copies-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-heart-symbolic.svg</file>

@@ -56,3 +56,37 @@ fn a_track_equalizer_round_trips() {
         Err(DbError::UnknownTrack(_))
     ));
 }
+
+#[test]
+fn a_track_equalizer_keeps_its_name() {
+    let (library, root) = library();
+    let track = library
+        .upsert_track(record(root, "/music/a.flac", "a"))
+        .unwrap()
+        .track;
+    let other = library
+        .upsert_track(record(root, "/music/b.flac", "b"))
+        .unwrap()
+        .track;
+    assert!(!library.any_track_equalizer(&[track, other]).unwrap());
+    let eq = EqualizerSettings {
+        enabled: true,
+        ..EqualizerSettings::default()
+    };
+    library
+        .set_named_track_equalizer(track, Some(&eq), Some("Bright master fix"))
+        .unwrap();
+    let named = library.named_track_equalizer(track).unwrap().unwrap();
+    assert_eq!(named.name.as_deref(), Some("Bright master fix"));
+    assert_eq!(named.settings, eq);
+    assert!(library.any_track_equalizer(&[other, track]).unwrap());
+    assert!(!library.any_track_equalizer(&[other]).unwrap());
+    // Set without a name, it has none.
+    library.set_track_equalizer(track, Some(&eq)).unwrap();
+    assert_eq!(
+        library.named_track_equalizer(track).unwrap().unwrap().name,
+        None
+    );
+    library.set_track_equalizer(track, None).unwrap();
+    assert!(!library.any_track_equalizer(&[track]).unwrap());
+}

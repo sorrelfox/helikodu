@@ -1548,6 +1548,15 @@ fn fill_info(editor: &Rc<Editor>, index: usize) {
     ));
     // Kept in the library and applied at once, not part of "Save".
     if let Some(group) = super::track_flags::playback_group(&editor.backend, track.key) {
+        // The track's own equalizer, also kept in the library.
+        let keys: Vec<TrackKey> = editor.tracks.iter().map(|t| t.key).collect();
+        let main = editor.main.upgrade();
+        group.append(&super::track_equalizer::row(
+            &editor.backend,
+            main.as_ref(),
+            track.key,
+            &keys,
+        ));
         right.append(&group);
     }
     columns.append(&right);
@@ -1653,7 +1662,12 @@ fn file_list(editor: &Rc<Editor>) -> gtk::Box {
     side
 }
 
-fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::Window {
+fn build(
+    main: &MainWindow,
+    backend: &Backend,
+    tracks: Vec<EditTrack>,
+    equalizer: bool,
+) -> gtk::Window {
     let parent = main.upcast_ref::<gtk::Window>();
     let window = dialog_window(Some(parent), NAME, &tr("Edit tags"), (960, 720), false);
     let n = tracks.len();
@@ -1773,7 +1787,8 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
         tabs.append(&button);
         buttons.push(button);
     }
-    buttons[0].set_active(true);
+    // From "Equalizer for This Track…": File info, with its row focused.
+    buttons[if equalizer { 3 } else { 0 }].set_active(true);
     editor.tab_buttons.replace(buttons);
     let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     spacer.set_hexpand(true);
@@ -1814,12 +1829,37 @@ fn build(main: &MainWindow, backend: &Backend, tracks: Vec<EditTrack>) -> gtk::W
     root.append(&footer);
     window.set_child(Some(&root));
     window.set_default_widget(Some(&save));
+    let info = editor.info.downgrade();
     let keep = RefCell::new(Some(editor));
     window.connect_destroy(move |_| {
         keep.borrow_mut().take();
     });
     window.present();
+    if equalizer {
+        // Once the tab is shown.
+        glib::idle_add_local_once(move || {
+            if let Some(info) = info.upgrade() {
+                focus_equalizer(&info);
+            }
+        });
+    }
     window
+}
+
+/// Focuses the menu button of "Equalizer for this track" in `info`.
+fn focus_equalizer(info: &gtk::Box) {
+    let mut pending: Vec<gtk::Widget> = vec![info.clone().upcast()];
+    while let Some(widget) = pending.pop() {
+        if widget.widget_name() == super::track_equalizer::BUTTON {
+            widget.grab_focus();
+            return;
+        }
+        let mut child = widget.first_child();
+        while let Some(c) = child {
+            child = c.next_sibling();
+            pending.push(c);
+        }
+    }
 }
 
 /// The compact "Tag tools" button at the end of the tab strip: a menu of the
@@ -1859,6 +1899,16 @@ fn tools_button(editor: &Rc<Editor>) -> gtk::MenuButton {
 
 /// Opens the tag editor over `main` for `tracks`, once their tags are read.
 pub(crate) fn open(main: &MainWindow, tracks: &[TrackKey]) {
+    open_with(main, tracks, false);
+}
+
+/// Opens the tag editor over `main` for `tracks` at File info, with
+/// "Equalizer for this track" focused.
+pub(crate) fn open_on_equalizer(main: &MainWindow, tracks: &[TrackKey]) {
+    open_with(main, tracks, true);
+}
+
+fn open_with(main: &MainWindow, tracks: &[TrackKey], equalizer: bool) {
     let Some(backend) = main.backend() else {
         return;
     };
@@ -1875,7 +1925,7 @@ pub(crate) fn open(main: &MainWindow, tracks: &[TrackKey]) {
         let Some(main) = weak.upgrade() else { return };
         match loaded {
             Ok(tracks) if !tracks.is_empty() => {
-                build(&main, &backend, tracks);
+                build(&main, &backend, tracks, equalizer);
             }
             Ok(_) => main.toast(&tr("These tracks are no longer in the library."), true),
             Err(error) => main.toast(&fill(&tr("The tags cannot be read: {}"), &[&error.0]), true),

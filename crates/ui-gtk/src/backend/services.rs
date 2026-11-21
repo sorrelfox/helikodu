@@ -42,7 +42,7 @@ pub use helikodu_service::library::{
     Transfer,
 };
 
-use super::{AudioFormat, BackendError, CoverKey, TrackKey};
+use super::{AudioFormat, BackendError, CoverKey, TrackEqualizer, TrackKey};
 
 /// How a library folder is kept current.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -803,6 +803,31 @@ pub trait Services: fmt::Debug + Send + Sync {
     fn track_flags(&self, track: TrackKey) -> Option<helikodu_model::player::TrackFlags> {
         let _ = track;
         None
+    }
+
+    /// The equalizer of the library track `track`, if it has one of its own.
+    /// Blocking.
+    fn track_equalizer(&self, track: TrackKey) -> Result<Option<TrackEqualizer>, BackendError> {
+        let _ = track;
+        Ok(None)
+    }
+
+    /// Gives each of `tracks` `equalizer`, or with `None` takes their own
+    /// equalizers away; it applies from the next time a track starts.
+    /// Blocking.
+    fn set_track_equalizers(
+        &self,
+        tracks: &[TrackKey],
+        equalizer: Option<&TrackEqualizer>,
+    ) -> Result<(), BackendError> {
+        let _ = (tracks, equalizer);
+        Err(no_files())
+    }
+
+    /// Whether any of `tracks` has an equalizer of its own. Blocking.
+    fn any_track_equalizer(&self, tracks: &[TrackKey]) -> bool {
+        let _ = tracks;
+        false
     }
 
     /// The backups of the library database; `None` without a library.

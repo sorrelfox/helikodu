@@ -19,11 +19,11 @@ The AutoEQ project publishes equalizer settings that bring many headphones and e
 1. On the AutoEQ website (autoeq.app), choose your headphones and download the parametric equalizer settings as `ParametricEQ.txt` (the format for EqualizerAPO).
 2. In **Settings → DSP and EQ**, choose **Parametric** and **Import AutoEQ file**, and pick the downloaded file. **Save preset** keeps it, for example under the name of the headphones; presets can be kept per output device.
 
-The same file can also be the equalizer of single tracks: `helikodu-cli dsp track-eq set ID --autoeq FILE` (see [More processing in the settings file](#more-processing-in-the-settings-file)).
+The same file can also be the equalizer of single tracks: **Import AutoEQ File…** under **Equalizer for this track** in the tag editor (see [An equalizer for one track](#an-equalizer-for-one-track)), or `helikodu-cli dsp track-eq set ID --autoeq FILE`.
 
 ## More processing in the settings file
 
-The compressor, convolution, pitch shift, the playback speed, the order of the stages, saved chains and the equalizers of single tracks have no page in the settings window yet. You set them in `settings.toml` (see [Settings](settings.md)) or with `helikodu-cli dsp`, which writes the same file. The running program reads a changed file the next time it starts. Every one of these is off by default; when they are off, playback stays bit-perfect.
+The compressor, convolution, pitch shift, the order of the stages and saved chains have no page in the settings window yet; the playback speed is set from the deck, and the equalizer of a track in the tag editor (both below). You set them in `settings.toml` (see [Settings](settings.md)) or with `helikodu-cli dsp`, which writes the same file. The running program reads a changed file the next time it starts. Every one of these is off by default; when they are off, playback stays bit-perfect.
 
 ### Compressor and night mode
 
@@ -83,7 +83,9 @@ semitones = -2.0         # -12 to +12
 
 ### Playback speed
 
-Plays faster or slower, from half the speed to twice the speed. With `keep_pitch = true` (the default) the tempo changes and the pitch stays, as for audiobooks, podcasts or practising along; with `keep_pitch = false` the pitch follows the speed, as when a tape or a record runs faster or slower.
+Plays faster or slower, from half the speed to twice the speed.
+
+**On the deck:** **Speed…** in the **Playback** menu, or in the menu of the play button (right-click it), opens the speed popover above the deck: a slider from 0.5× to 2× in steps of 0.05 with the quick choices 0.75×, 1×, 1.25×, 1.5× and 2×; **The pitch**, which **Stays** or **Follows the speed**; the **Pitch shift** of the pitch stage, since the two are often used together; and **Back to normal**, which sets the speed to 1× and leaves the pitch shift alone. **Ends in** gives the listening time until the playing track ends. While the speed is not 1×, a chip with a gauge before the time left on the deck shows it ("1.25×") and opens the popover. The popover changes the speed until Helikodu closes; tick **Start with this speed next time** to also write it to the settings file, now and at every later change (untick it and the settings go back to the normal speed). When bit-perfect playback wins (below), the chip reads "1.25× · not applied" and the popover says so. With `keep_pitch = true` (the default) the tempo changes and the pitch stays, as for audiobooks, podcasts or practising along; with `keep_pitch = false` the pitch follows the speed, as when a tape or a record runs faster or slower.
 
 ```toml
 [dsp.speed]
@@ -127,6 +129,8 @@ The stage names are `pitch`, `equalizer`, `convolution`, `crossfeed`, `channel-m
 ### An equalizer for one track
 
 A library track can have an equalizer of its own, which replaces the equalizer of the settings while it plays, and only then. It is stored in the library with the track's play count and rating, and never written to the file. `dsp.track_equalizer = false` makes every track play with the equalizer of the settings. In exclusive mode a track's equalizer is left out when the rest of the path is bit-perfect, as the leveller is.
+
+**In the tag editor:** **Equalizer for this track**, in the **Playback** group of the **File info** tab, names the track's equalizer ("None" without one) and chooses a whole one: **Use the Current Equalizer** takes a copy of the main equalizer as it is now (named "Copy of" its preset, or "Own settings"), **Use a Preset** one of the built-in or your own presets, and **Import AutoEQ File…** a `ParametricEQ.txt` file, named after the file. With several tracks in the editor, **Use for All 3 Tracks** gives the others a copy of it; **Remove** takes it away. The line under the row gives its kind, its size and its preamp, and says when it does not apply. Its filters are not edited here: shape the main equalizer by ear, then take it over with **Use the Current Equalizer**. **Equalizer for This Track…** in the context menu of tracks opens the tag editor there; **No Equalizer for This Track** makes the selected tracks play without any equalizer, the main one included (the row then reads "No equalizer"; **Remove** goes back to the main equalizer).
 
 | Command | What it does |
 |---|---|

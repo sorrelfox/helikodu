@@ -248,11 +248,7 @@ impl Deck {
             imp.shuffle.add_css_class("active");
         }
         imp.repeat
-            .set_icon_name(if modes.repeat == RepeatMode::One {
-                "helikodu-repeat-one-symbolic"
-            } else {
-                "helikodu-repeat-symbolic"
-            });
+            .set_icon_name(play_modes::repeat_icon(modes.repeat));
         let name = play_modes::repeat_tooltip(modes.repeat);
         imp.repeat.set_tooltip_text(Some(&name));
         imp.repeat
