@@ -29,6 +29,7 @@ use helikodu_model::player::{
     EnqueueAt, EntryId, PlayModes, QueueContext, QueueEntry, RepeatMode, ShuffleMode, StopAfter,
     TrackFlags,
 };
+use helikodu_model::settings::{PlayFacts, PlayWeight, play_weight};
 
 use super::rng::Rng;
 
@@ -50,6 +51,11 @@ pub(crate) struct EntryKeys {
     pub(crate) grouping: Option<String>,
     pub(crate) artist: Option<String>,
     pub(crate) flags: TrackFlags,
+    /// The statistics a weighted shuffle weighs.
+    pub(crate) play: PlayFacts,
+    /// Passed over while shuffling: rated below `playback.shuffle.min_rating` or
+    /// found by `playback.shuffle.skip_query`.
+    pub(crate) shuffle_skip: bool,
 }
 
 impl EntryKeys {
@@ -110,6 +116,12 @@ static NO_KEYS: EntryKeys = EntryKeys {
         manual_only: false,
         volume_half_db: 0,
     },
+    play: PlayFacts {
+        rating: None,
+        plays: 0,
+        days_since_played: None,
+    },
+    shuffle_skip: false,
 };
 
 #[derive(Debug, Clone)]
@@ -125,6 +137,8 @@ pub(crate) struct Queue {
     last_id: u64,
     rng: Rng,
     version: u64,
+    /// What shuffling by tracks favours (`playback.shuffle.weight_by`).
+    weights: Vec<PlayWeight>,
 }
 
 impl Queue {
@@ -140,6 +154,7 @@ impl Queue {
             last_id: 0,
             rng,
             version: 0,
+            weights: Vec::new(),
         }
     }
 
@@ -185,6 +200,7 @@ impl Queue {
             last_id,
             rng,
             version: 1,
+            weights: Vec::new(),
         }
     }
 
@@ -258,6 +274,30 @@ impl Queue {
     pub(crate) fn rekey(&mut self, keys_of: impl FnOnce(&[QueueEntry]) -> Vec<EntryKeys>) {
         let keys = keys_of(&self.items);
         self.keys = self.items.iter().map(|e| e.id).zip(keys).collect();
+    }
+
+    /// Sets what shuffling by tracks favours. The order already drawn is kept; the
+    /// next one drawn follows the weights.
+    pub(crate) fn set_weights(&mut self, weights: Vec<PlayWeight>) {
+        if weights != self.weights {
+            self.weights = weights;
+            self.next_cycle = None;
+        }
+    }
+
+    /// Orders `ids` at random for shuffling by tracks: evenly, or with the favoured
+    /// tracks more likely to come early when weights are set.
+    fn shuffle_tracks(&mut self, ids: &mut Vec<EntryId>) {
+        if self.weights.is_empty() {
+            self.rng.shuffle(ids);
+            return;
+        }
+        let weights: HashMap<EntryId, f64> = ids
+            .iter()
+            .map(|id| (*id, play_weight(&self.weights, &self.keys(*id).play)))
+            .collect();
+        self.rng
+            .weighted_order(ids, |id| weights.get(id).copied().unwrap_or(1.0));
     }
 
     /// Sets the flags of every entry of `track`.
@@ -349,7 +389,7 @@ impl Queue {
         let mode = self.modes.shuffle;
         if mode == ShuffleMode::Tracks || mode == ShuffleMode::Off {
             if mode == ShuffleMode::Tracks {
-                self.rng.shuffle(&mut ids);
+                self.shuffle_tracks(&mut ids);
             }
             return ids.into_iter().map(|id| vec![id]).collect();
         }
@@ -410,7 +450,13 @@ impl Queue {
     fn shuffle_upcoming(&mut self) {
         let from = self.current.map_or(0, |c| c + 1);
         if self.modes.shuffle == ShuffleMode::Tracks {
-            self.rng.shuffle(&mut self.items[from..]);
+            if self.weights.is_empty() {
+                self.rng.shuffle(&mut self.items[from..]);
+            } else {
+                let mut ids: Vec<EntryId> = self.items[from..].iter().map(|e| e.id).collect();
+                self.shuffle_tracks(&mut ids);
+                self.reorder_from(from, &ids);
+            }
             return;
         }
         let lead = self.current().map(|e| e.id);
@@ -1129,10 +1175,53 @@ mod tests {
                     folder: Some(format!("f{}", (i - 1) / 3)),
                     grouping: (i % 3 != 0).then(|| format!("g{}", (i - 1) / 4)),
                     artist: Some(format!("p{}", i % 2)),
-                    flags: TrackFlags::default(),
+                    ..EntryKeys::default()
                 },
             })
             .collect()
+    }
+
+    #[test]
+    fn weighted_shuffle_plays_the_favoured_early_and_everything_once() {
+        let rated = |n: u64| -> Vec<Keyed> {
+            (1..=n)
+                .map(|i| Keyed {
+                    track: TrackRef::Library(TrackId::new(i)),
+                    keys: EntryKeys {
+                        play: PlayFacts {
+                            rating: Some(if i <= 10 { 10 } else { 0 }),
+                            ..PlayFacts::default()
+                        },
+                        ..EntryKeys::default()
+                    },
+                })
+                .collect()
+        };
+        let mut early = 0;
+        for seed in 0..20 {
+            let mut queue = Queue::new(Rng::new(seed));
+            queue.set_weights(vec![PlayWeight::Rating]);
+            queue.replace(QueueContext::files(), rated(100), 0);
+            queue.set_shuffle(ShuffleMode::Tracks);
+            let numbers = track_numbers(&queue);
+            let mut sorted = numbers.clone();
+            sorted.sort_unstable();
+            assert_eq!(sorted, (1..=100).collect::<Vec<_>>());
+            early += numbers[1..21].iter().filter(|n| **n <= 10).count();
+            assert_consistent(&queue);
+        }
+        // Ten favoured tracks in a hundred: an even shuffle puts two of them in
+        // the first twenty places; the weights put most of them there.
+        assert!(early > 20 * 6, "{early}");
+        // The same seed draws the same order.
+        let order = |seed| {
+            let mut queue = Queue::new(Rng::new(seed));
+            queue.set_weights(vec![PlayWeight::Rating]);
+            queue.replace(QueueContext::files(), rated(30), 0);
+            queue.set_shuffle(ShuffleMode::Tracks);
+            track_numbers(&queue)
+        };
+        assert_eq!(order(3), order(3));
     }
 
     fn number_of(queue: &Queue, id: EntryId) -> u64 {
@@ -1328,7 +1417,9 @@ mod tests {
                 }
             }
             _ => match repeat {
-                RepeatMode::Off => {
+                // The queue alone ends under endless play and the Auto-DJ: the
+                // player adds the tracks that follow.
+                RepeatMode::Off | RepeatMode::Endless | RepeatMode::AutoDj => {
                     assert!(stopped && distinct, "{what}");
                     assert_eq!(played.len(), upcoming, "{what}: {played:?}");
                 }

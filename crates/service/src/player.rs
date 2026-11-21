@@ -132,6 +132,10 @@ impl Player {
             session: None,
             prefs: config.prefs,
             library: config.library.clone(),
+            smart_play: config.smart_play.clone(),
+            draws: config
+                .shuffle_seed
+                .map_or_else(Rng::from_entropy, |seed| Rng::new(seed.rotate_left(17))),
         };
         if let Some(session_config) = &config.session {
             let mut files = SessionFiles::new(&session_config.dir);

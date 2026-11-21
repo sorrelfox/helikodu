@@ -49,17 +49,68 @@ Right-click the play button (or press and hold it) for its menu: **Stop**, **Sto
 The **Playback** menu (in the main menu) has the transport and every play mode:
 
 - **Previous Album**, **Next Album** and **Random Album** jump between albums in the queue.
+- **Radio Random** plays a random track of the queue from a random point in it. **Revert to the Skipped Track** goes back to the track you last left with **Next**, at the point where you left it.
 - **Shuffle**: **Tracks**, **Albums** (the albums in a random order, each played in order), **Folders**, **Groupings** (by the `GROUPING` tag) or **Tracks Within Each Album**. "Previous" retraces the order in which tracks actually played.
-- **Repeat**: **This Track**, **This Album** or **The Whole Queue**.
+- **Repeat**: **This Track**, **This Album**, **The Whole Queue**, **Continue with Related Tracks** or **Auto-DJ**. See [Endless play and the Auto-DJ](#endless-play-and-the-auto-dj).
 - **Stop After**: **This Track**, **This Album** or **The Queue**.
 - **Play Only**: **This Artist** or **This Album** keeps playback within the artist or album of the playing track.
-- **Queue**: **Remove Tracks After They Play**, and **Continue from the Selected Track**, which makes the next track follow the entry you selected in a list.
+- **Queue**: **Remove Tracks After They Play**, **Continue from the Selected Track**, which makes the next track follow the entry you selected in a list, and **Intro Scan**, which plays only the first seconds of each track (ten unless `intro_scan_s` says otherwise).
 - **Loop a Section**: **Set the Start Here** and **Set the End Here** mark an A-B loop at the playing position; the section then repeats without a gap until you choose **Clear the Loop**, here or with the cross on the loop's chip on the deck.
 - **Sleep Timer…** pauses playback after a number of minutes, fading out, or at the end of the track that is playing then. A chip on the deck shows the time left; click it to add ten minutes or turn the timer off.
 
 The deck shows the active modes, the loop's marks on the seek bar, and chips for the loop and the timer.
 
 Each track in your library can also have its own settings, under **Playback** in the **File info** tab of the [tag editor](tags.md): **Leave out when shuffling**, **Play only when I start it myself** (automatic playback passes over it), and **Volume for this track**. They are kept in the library, not in the file, and apply at once.
+
+## Smarter shuffle, endless play and the Auto-DJ
+
+These work from your library, offline, and have no page in the settings window yet: they are set in the settings file, `~/.config/helikodu/settings.toml`, and take effect as soon as the file is saved.
+
+### Weighted and filtered shuffle
+
+```toml
+[playback.shuffle]
+weight_by = ["rating", "not-recently-played"]   # also: "less-played"
+min_rating = 4                                  # in half stars: skip tracks rated below two stars
+skip_query = "genre:Christmas"                  # tracks this query finds are passed over
+```
+
+With `weight_by`, shuffling by tracks brings the favoured tracks up earlier: higher rated ones (tracks without a rating count as three stars), those not played for a long time, or those played less. Every track still plays once per round. `min_rating` and `skip_query` (the query language of the search field) pass tracks over in every shuffle mode, as **Leave out when shuffling** does. Tracks without a rating are never passed over by `min_rating`.
+
+### Endless play and the Auto-DJ
+
+**Repeat** ▸ **Continue with Related Tracks** adds tracks to the end of the queue whenever it runs out: tracks like the last one of the queue, its album or its artist (`seed`), by artist, album artist, genre, release year, labels and play statistics. Tracks played or queued lately are not added again.
+
+```toml
+[playback.endless]
+seed = "track"     # track | album | artist
+batch = 10         # tracks added each time
+window = 100       # no repeats within this many tracks
+year_range = 5     # years either side that count as the same time
+filter = ""        # a query the added tracks must match
+
+[playback.endless.weights]   # 0 to 10: how much each likeness counts
+artist = 4
+album_artist = 3
+genre = 3
+year = 2
+labels = 2
+statistics = 1
+sound = 0
+```
+
+**Repeat** ▸ **Auto-DJ** keeps a number of tracks from your library queued after the playing one, so the music never stops. It works from an empty queue too: choose it and press Play.
+
+```toml
+[playback.auto_dj]
+ahead = 5                                # tracks kept queued
+filter = "genre:Jazz OR genre:Soul"      # empty for the whole library
+weight_by = ["rating", "less-played"]
+min_rating = 0
+window = 200
+```
+
+From the command line, `helikodu-cli related --track ID` (or `--album`, `--artist`) and `helikodu-cli auto-dj` list what would be added; `helikodu-cli start-radio --track ID` starts endless play in the running application, and `helikodu-cli revert`, `helikodu-cli radio-random` and `helikodu-cli intro-scan on|off` work as the menu items do.
 
 ## The queue
 

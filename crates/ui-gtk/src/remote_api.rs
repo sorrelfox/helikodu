@@ -23,8 +23,8 @@ use helikodu_desktop::app_api::{
 use serde_json::{Value, json};
 
 use crate::backend::{
-    Backend, PlaybackState, PlayerRequest, PlaylistType, RepeatMode, ShuffleMode, SignalState,
-    TrackKey, TrackQuery, TrackRow,
+    Backend, PlaybackState, PlayerRequest, PlaylistType, RadioSeed, RepeatMode, ShuffleMode,
+    SignalState, TrackKey, TrackQuery, TrackRow,
 };
 use crate::play_modes::{repeat_id, shuffle_id};
 use crate::playback::{Playback, PlayerView};
@@ -40,11 +40,13 @@ const SHUFFLE_MODES: [ShuffleMode; 6] = [
 ];
 
 /// The repeat modes by the names the interface takes.
-const REPEAT_MODES: [RepeatMode; 4] = [
+const REPEAT_MODES: [RepeatMode; 6] = [
     RepeatMode::Off,
     RepeatMode::One,
     RepeatMode::Album,
     RepeatMode::All,
+    RepeatMode::Endless,
+    RepeatMode::AutoDj,
 ];
 
 /// The most tracks a query plays or enqueues at once.
@@ -222,6 +224,35 @@ fn read_call(method: &str, args: &glib::Variant) -> Result<Call, String> {
                 return Err("the file must be an absolute path".into());
             }
             Call::Export(playlist, path)
+        }
+        "Revert" => Call::Request(PlayerRequest::Revert),
+        "RadioRandom" => Call::Request(PlayerRequest::RadioRandom),
+        "SetIntroScan" => {
+            let (on,) = args.get::<(bool,)>().ok_or_else(bad)?;
+            Call::Request(PlayerRequest::SetIntroScan(on))
+        }
+        "StartRadio" => {
+            let (kind, id) = args.get::<(String, u64)>().ok_or_else(bad)?;
+            let number = i64::try_from(id).map_err(|_| bad())?;
+            let seed = match kind.as_str() {
+                "track" => RadioSeed::Track(id),
+                "album" => RadioSeed::Album(number),
+                "artist" => RadioSeed::Artist(number),
+                _ => return Err("the kind is track, album or artist".into()),
+            };
+            Call::Request(PlayerRequest::StartRadio(seed))
+        }
+        "PlayTracks" => {
+            let (tracks, title) = args.get::<(Vec<u64>, String)>().ok_or_else(bad)?;
+            if tracks.is_empty() {
+                return Err("there are no tracks to play".into());
+            }
+            Call::Request(PlayerRequest::PlayTracks {
+                tracks: tracks.into_iter().map(TrackKey).collect(),
+                start: 0,
+                title,
+                shuffle: false,
+            })
         }
         other => return Err(format!("no method {other}")),
     })
@@ -524,6 +555,30 @@ mod tests {
             )))
         );
         assert!(read_call("SetRepeat", &("sometimes",).to_variant()).is_err());
+        assert_eq!(
+            read_call("SetRepeat", &("auto-dj",).to_variant()),
+            Ok(Call::Request(PlayerRequest::SetRepeatMode(
+                RepeatMode::AutoDj
+            )))
+        );
+        assert_eq!(
+            read_call("StartRadio", &("album".to_owned(), 4u64).to_variant()),
+            Ok(Call::Request(PlayerRequest::StartRadio(RadioSeed::Album(
+                4
+            ))))
+        );
+        assert!(read_call("StartRadio", &("genre".to_owned(), 4u64).to_variant()).is_err());
+        assert_eq!(
+            read_call("SetIntroScan", &(true,).to_variant()),
+            Ok(Call::Request(PlayerRequest::SetIntroScan(true)))
+        );
+        assert!(
+            read_call(
+                "PlayTracks",
+                &(Vec::<u64>::new(), "x".to_owned()).to_variant()
+            )
+            .is_err()
+        );
         assert!(read_call("SetVolume", &(1.5f64,).to_variant()).is_err());
         assert_eq!(
             read_call("Rate", &(0u64, -1i32).to_variant()),

@@ -198,6 +198,7 @@ impl State {
             (true, Some(index)) => {
                 index + 1 < self.count
                     || matches!(self.modes.repeat, RepeatMode::All | RepeatMode::Album)
+                    || self.modes.repeat.continues_from_library()
             }
             _ => false,
         };

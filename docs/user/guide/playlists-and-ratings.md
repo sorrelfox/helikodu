@@ -47,6 +47,31 @@ Opened from the sidebar, a smart playlist shows its rules in words above its tra
 
 The right side shows how many tracks match, and the tracks themselves, as you edit. **Done editing** returns to the playlist. To reorder the tracks by hand, **Save a Copy as a Playlist** in **More**.
 
+## Generator playlists
+
+A generator playlist is made by steps: a source, then filters, sorts, caps and a limit, each working on what the step before left. It keeps its last result and is made again each time it is opened, or only when you ask (`--keep`). Generator playlists have no place in the sidebar yet; they are made and played with `helikodu-cli generator`:
+
+```text
+# The source: library, playlist "Name" or query <query>.
+from library
+# Keeps what a query finds (the query language of the search field).
+where rating>=4
+# Leaves out the tracks of a playlist, smart playlist or other generator.
+exclude playlist "Heard this week"
+# rating, plays, skips, last-played, added, year, title, artist, album, length
+# or random, then asc (the default) or desc.
+sort last-played
+per-artist 2
+per-album 1
+# Or: limit 90 minutes.
+limit 50
+```
+
+- `helikodu-cli generator add "Forgotten favourites" --steps-file steps.txt` adds one (`--steps TEXT` takes the steps directly, `--steps-file -` reads them from the standard input).
+- `generator list`, `show NAME` (the steps as text, to edit and give back with `edit NAME --steps-file`), `edit NAME --name NEW --on-open yes|no`, `remove NAME`.
+- `generator run NAME` makes it again and lists its tracks; `generator open NAME` lists them as opening shows them; `generator preview --steps TEXT` tries steps without saving them.
+- `generator play NAME` plays it in the running application.
+
 ## Playlist files in the library folders
 
 With **Import playlist files found in the folders** on (**Settings** ▸ **Library**), the M3U, M3U8, PLS and XSPF files in your library folders become playlists after each scan. They show a file icon in the sidebar and follow their files: when a file changes, its playlist changes too (and **Ctrl+Z** brings back the previous entries), unless the playlist is locked.

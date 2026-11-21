@@ -50,7 +50,7 @@ methods are only ever added.
     <method name="SetShuffle">
       <arg name="mode" type="s" direction="in"/>
     </method>
-    <!-- off, one, album or all. -->
+    <!-- off, one, album, all, endless or auto-dj. -->
     <method name="SetRepeat">
       <arg name="mode" type="s" direction="in"/>
     </method>
@@ -87,6 +87,27 @@ methods are only ever added.
       <arg name="playlist" type="s" direction="in"/>
       <arg name="path" type="s" direction="in"/>
       <arg name="entries" type="u" direction="out"/>
+    </method>
+    <!-- Back to the track "Next" last moved on from, where it was. -->
+    <method name="Revert"/>
+    <!-- A random track of the queue, from a random point in it. -->
+    <method name="RadioRandom"/>
+    <!-- Intro scan on or off: only the first seconds of each track play. -->
+    <method name="SetIntroScan">
+      <arg name="on" type="b" direction="in"/>
+    </method>
+    <!-- Starts endless play from a library track, album or artist: kind is
+         track, album or artist, id its number. -->
+    <method name="StartRadio">
+      <arg name="kind" type="s" direction="in"/>
+      <arg name="id" type="t" direction="in"/>
+    </method>
+    <!-- Replaces the queue with library tracks, by their numbers, and plays
+         them; title names them in the queue. Returns how many. -->
+    <method name="PlayTracks">
+      <arg name="tracks" type="at" direction="in"/>
+      <arg name="title" type="s" direction="in"/>
+      <arg name="count" type="u" direction="out"/>
     </method>
   </interface>
 </node>

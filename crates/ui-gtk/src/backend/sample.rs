@@ -1766,6 +1766,9 @@ impl FakePlayer {
             PlayerRequest::SetConsume(on) => self.change_modes(|m| m.consume = on),
             PlayerRequest::SetPlayScope(scope) => self.change_modes(|m| m.scope = scope),
             PlayerRequest::SetFollowCursor(on) => self.change_modes(|m| m.follow_cursor = on),
+            PlayerRequest::SetIntroScan(on) => self.change_modes(|m| m.intro_scan = on),
+            // The sample library has no statistics or positions to go back to.
+            PlayerRequest::Revert | PlayerRequest::RadioRandom | PlayerRequest::StartRadio(_) => {}
             PlayerRequest::SetStopAfterMode(mode) => {
                 {
                     let mut state = self.state.borrow_mut();

@@ -15,6 +15,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The stages of the DSP chain can be put in another order, and orders with their stages saved as named chains and chosen while music plays: `dsp.order` and `[[dsp.chains]]`, or `helikodu-cli dsp order` and `helikodu-cli dsp chain`.
 - A library track can have an equalizer of its own, which replaces the equalizer of the settings while it plays: `helikodu-cli dsp track-eq`.
 - `helikodu-cli play --dsp` plays files through the DSP chain of the settings file.
+- Weighted and filtered shuffle: in the settings file, `[playback.shuffle]` favours higher rated, long unplayed or less played tracks (`weight_by`), and passes over tracks rated below `min_rating` or found by `skip_query`.
+- Endless play: **Repeat** ▸ **Continue with Related Tracks** adds tracks related to the last track, its album or its artist when the queue runs out, scored on artist, genre, year, labels and play statistics (`[playback.endless]`). `helikodu-cli related` lists them; `helikodu-cli start-radio` starts endless play from a track, album or artist.
+- The Auto-DJ: **Repeat** ▸ **Auto-DJ** keeps tracks from the library queued ahead, picked by a query, rating and play count (`[playback.auto_dj]`); `helikodu-cli auto-dj` lists what it would pick.
+- **Radio Random**, **Revert to the Skipped Track** and **Intro Scan** in the **Playback** menu (also `helikodu-cli radio-random`, `revert` and `intro-scan`; `playback.intro_scan_s` sets the seconds).
+- Generator playlists, made by steps (source, filters, sorts, per-artist and per-album caps, a limit, leaving out another playlist's tracks), with `helikodu-cli generator`.
 - Each smart playlist can show its own columns: **Columns**, at the end of its rule line, shows or hides **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length**, and the choice is remembered per smart playlist. The stars of the **Rating** column rate a track.
 
 ### Changed

@@ -32,6 +32,8 @@ pub(crate) enum Transport {
     Stop,
     Next,
     Previous,
+    Revert,
+    RadioRandom,
 }
 
 #[derive(Debug, Args)]
@@ -79,6 +81,10 @@ pub(crate) enum RepeatArg {
     Album,
     /// The queue starts again.
     All,
+    /// Tracks related to the last one are added when the queue runs out.
+    Endless,
+    /// Tracks from the library are kept queued ahead (`[playback.auto_dj]`).
+    AutoDj,
 }
 
 #[derive(Debug, Args)]
@@ -142,8 +148,43 @@ pub(crate) fn transport(command: Transport) -> Result<Outcome> {
         Transport::Stop => "Stop",
         Transport::Next => "Next",
         Transport::Previous => "Previous",
+        Transport::Revert => "Revert",
+        Transport::RadioRandom => "RadioRandom",
     };
     remote.run(method, &())?;
+    Ok(Outcome::Success)
+}
+
+/// `on` or `off`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub(crate) enum Switch {
+    On,
+    Off,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct IntroScanArgs {
+    /// Intro scan on or off.
+    #[arg(value_enum)]
+    state: Switch,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct StartRadioArgs {
+    #[command(flatten)]
+    seed: crate::offline::smart_play::SeedArgs,
+}
+
+/// Turns intro scan on or off.
+pub(crate) fn intro_scan(args: &IntroScanArgs) -> Result<Outcome> {
+    Remote::connect()?.run("SetIntroScan", &(args.state == Switch::On,))?;
+    Ok(Outcome::Success)
+}
+
+/// Starts endless play from a track, album or artist.
+pub(crate) fn start_radio(args: &StartRadioArgs) -> Result<Outcome> {
+    let (kind, id) = args.seed.remote();
+    Remote::connect()?.run("StartRadio", &(kind, id))?;
     Ok(Outcome::Success)
 }
 
@@ -298,6 +339,8 @@ pub(crate) fn repeat(args: &RepeatArgs) -> Result<Outcome> {
         RepeatArg::One => "one",
         RepeatArg::Album => "album",
         RepeatArg::All => "all",
+        RepeatArg::Endless => "endless",
+        RepeatArg::AutoDj => "auto-dj",
     };
     Remote::connect()?.run("SetRepeat", &(name,))?;
     Ok(Outcome::Success)

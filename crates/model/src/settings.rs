@@ -17,6 +17,7 @@ mod loudness;
 mod output;
 mod playback;
 mod shortcuts;
+mod smart_play;
 mod transitions;
 mod ui_state;
 
@@ -47,6 +48,10 @@ pub use output::{
 };
 pub use playback::{ContextAction, PlaybackSettings, StartAction};
 pub use shortcuts::{MAX_KEYS_PER_ACTION, ShortcutSettings};
+pub use smart_play::{
+    AutoDjSettings, EndlessSettings, PlayFacts, PlayWeight, RelatedWeights, SeedKind,
+    ShuffleSettings, SmartPlaySettings, below_rating, play_weight,
+};
 pub use transitions::TransitionSettings;
 pub use ui_state::{MiniPlayerState, PaneState, UiState, WindowState};
 

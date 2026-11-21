@@ -18,6 +18,7 @@ mod covers;
 mod db;
 mod details;
 mod expressions;
+mod generators;
 mod grouping;
 mod history;
 pub mod interchange;
@@ -35,6 +36,7 @@ mod query;
 mod scan;
 mod search;
 mod similarity;
+mod smart_play;
 mod statistics;
 mod stats;
 mod tag_journal;
@@ -76,6 +78,10 @@ pub use db::{
 };
 pub use details::{
     FileDetails, LibraryTotals, PlayedTrack, ReadFileError, TrackDetails, read_file_details,
+};
+pub use generators::{
+    Generator, GeneratorError, GeneratorId, GeneratorSort, GeneratorSource, GeneratorStep,
+    GeneratorSteps, StepError,
 };
 pub use grouping::{GroupBy, TrackGroup};
 /// The content hash of a cover, the key of the thumbnail cache.
@@ -137,6 +143,10 @@ pub use scan::{
 };
 pub use search::{MatchRank, SearchHit, SearchRequest, SearchResults, fold};
 pub use similarity::{SimilarTrack, SimilarityIndex, SimilaritySeed};
+pub use smart_play::{
+    NoSoundSimilarity, PickError, PlaySeed, SeedProfile, SoundSimilarity, TrackFacts, pick_auto_dj,
+    pick_related, related_score, time_seed, weighted_pick,
+};
 pub use statistics::{LibraryStatistics, PlayedAlbum, PlayedArtist, StatisticsRequest};
 pub use stats::{
     HistoryEntry, HistoryQuery, HistoryTotals, Listen, ListenEnd, ListenOutcome, PlayRules, Rating,

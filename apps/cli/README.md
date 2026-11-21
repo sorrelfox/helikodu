@@ -31,11 +31,16 @@ helikodu-cli play-pause|pause|resume|stop|next|previous
 helikodu-cli seek POSITION            # 83, 1:23, +10, -5
 helikodu-cli volume [LEVEL]           # 0..100, +5, -5
 helikodu-cli shuffle off|tracks|albums|folders|groupings|within-album
-helikodu-cli repeat off|one|album|all
+helikodu-cli repeat off|one|album|all|endless|auto-dj
 helikodu-cli enqueue [--next] FILE...|--query QUERY
 helikodu-cli play-query [--shuffle] QUERY...
 helikodu-cli rate STARS|none [--track ID]
 helikodu-cli export-playlist PLAYLIST FILE
+helikodu-cli revert | radio-random | intro-scan on|off
+helikodu-cli start-radio --track ID|--album ID|--artist ID
+helikodu-cli related --track ID|--album ID|--artist ID [--count N] [--random-seed N]
+helikodu-cli auto-dj [--count N] [--random-seed N]
+helikodu-cli generator list|show|add|edit|remove|run|open|preview|play
 helikodu-cli --version
 ```
 
@@ -260,7 +265,7 @@ The managed media folder (`[library.managed]` in the settings file; see the user
 
 ### The commands for the running application
 
-`status`, `queue`, `playlists`, the transport, `seek`, `volume`, `shuffle`, `repeat`, `enqueue`, `play-query`, `rate` and `export-playlist` call the interface `io.github.sorrelfox.Helikodu.Control1` of the running application on the session bus. They first ask the bus whether the application owns its name and never start it: when it does not, or there is no session bus, they print `Helikodu is not running` and exit with 4. An error the application returns (no such playlist, no library track playing) is printed and exits with 1. `--json` prints the application's JSON as it comes; the text form is for people.
+`status`, `queue`, `playlists`, the transport, `seek`, `volume`, `shuffle`, `repeat`, `enqueue`, `play-query`, `rate`, `export-playlist`, `revert`, `radio-random`, `intro-scan`, `start-radio` and `generator play` call the interface `io.github.sorrelfox.Helikodu.Control1` of the running application on the session bus. They first ask the bus whether the application owns its name and never start it: when it does not, or there is no session bus, they print `Helikodu is not running` and exit with 4. An error the application returns (no such playlist, no library track playing) is printed and exits with 1. `--json` prints the application's JSON as it comes; the text form is for people.
 
 ### Exit codes
 

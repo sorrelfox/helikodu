@@ -39,6 +39,7 @@ mod managed;
 mod playlists;
 mod query;
 mod service;
+mod smart_play;
 mod sorting;
 mod source;
 mod stats_import;
@@ -86,6 +87,11 @@ pub use self::query::{
 };
 pub use self::service::{
     LibraryEvent, LibraryService, LibraryServiceOptions, QueueItemInfo, WatchSettings,
+};
+pub use self::smart_play::{
+    Generator, GeneratorError, GeneratorId, GeneratorSort, GeneratorSource, GeneratorStep,
+    GeneratorSteps, NoSoundSimilarity, PickError, PlaySeed, SeedProfile, SoundSimilarity,
+    StepError, TrackFacts, related_score, time_seed,
 };
 pub use self::source::TrackSource;
 pub use self::stats_import::{STATS_BATCH, stats_to_files};
@@ -234,6 +240,12 @@ pub enum LibraryError {
         /// Why.
         reason: String,
     },
+    /// Tracks could not be picked for smarter playback.
+    #[error(transparent)]
+    Pick(#[from] PickError),
+    /// A generator playlist could not be stored or run.
+    #[error(transparent)]
+    Generator(#[from] GeneratorError),
     /// The folder of the database could not be created, or a scan thread could not
     /// be started.
     #[error("{context}: {source}")]

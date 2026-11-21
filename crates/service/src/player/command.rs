@@ -13,12 +13,13 @@ use helikodu_model::player::{
     TrackFlags, Volume,
 };
 use helikodu_model::settings::{
-    DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, TransitionSettings,
+    DecoderSettings, DspSettings, LoudnessSettings, OutputSettings, SmartPlaySettings,
+    TransitionSettings,
 };
 
 use super::config::PlayerPrefs;
 use super::timers::SleepWhen;
-use crate::library::{AlbumId, GenreId, PersonId, YearSpan};
+use crate::library::{AlbumId, GenreId, PersonId, PlaySeed, YearSpan};
 
 /// A context the service turns into tracks by asking the library.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -144,6 +145,19 @@ pub enum PlayerCommand {
     SetPlayScope(PlayScope),
     /// "Continue from the selected track" on or off.
     SetFollowCursor(bool),
+    /// Intro scan on or off: only the first seconds of each track play
+    /// (`playback.intro_scan_s`).
+    SetIntroScan(bool),
+    /// "Revert": back to the entry "Next" last moved on from, where it was.
+    /// Nothing happens when there is none still in the queue.
+    Revert,
+    /// "Radio Random": a random entry of the queue, from a random point in it.
+    RadioRandom,
+    /// Starts endless play from `seed`: a track plays first, an album plays
+    /// through, an artist starts with related tracks; tracks related to the seed
+    /// follow whenever the queue runs out (the repeat mode becomes
+    /// [`RepeatMode::Endless`]).
+    StartRadio(PlaySeed),
     /// The entry selected in the queue, for "Continue from the selected track".
     SetCursor(Option<EntryId>),
     /// Go to the first track of the next album in the queue.
@@ -186,6 +200,9 @@ pub enum PlayerCommand {
     NextOutput,
     /// Change how the player behaves (from the playback settings).
     Configure(PlayerPrefs),
+    /// Change weighted and filtered shuffle, endless play, the Auto-DJ and intro
+    /// scan (from the playback settings).
+    ConfigureSmartPlay(SmartPlaySettings),
     /// Apply the `[output]` and `[loudness]` settings while playing: a new sample
     /// rate policy, sample format, buffer length or volume control reopens the stream
     /// at the same position; loudness changes ramp the gain without a gap. The backend,

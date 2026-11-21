@@ -28,12 +28,17 @@ The interface is versioned by its name. Version 1 is `Control1`; its `Version` p
 | `SetPosition` | `t` position_ms | | Moves to the position in the playing track |
 | `SetVolume` | `d` volume | | The volume control, 0.0 to 1.0 (the position of the slider) |
 | `SetShuffle` | `s` mode | | `off`, `tracks`, `albums`, `folders`, `groupings` or `within-album` |
-| `SetRepeat` | `s` mode | | `off`, `one`, `album` or `all` |
+| `SetRepeat` | `s` mode | | `off`, `one`, `album`, `all`, `endless` (continue with related tracks) or `auto-dj` |
 | `Enqueue` | `as` files, `b` next | `u` added | Adds files (absolute paths or `file://` URIs) after the playing track when `next`, at the end otherwise |
 | `EnqueueQuery` | `s` query, `b` next | `u` added | Adds the library tracks the query finds (at most 10,000), as `Enqueue` |
 | `PlayQuery` | `s` query, `b` shuffle | `u` tracks | Replaces the queue with the tracks the query finds and plays them; nothing changes when it finds none |
 | `Rate` | `t` track, `i` stars | | Rates a library track (0 for the playing track) with 0 to 5 stars, or removes its rating with −1 |
 | `ExportPlaylist` | `s` playlist, `s` path | `u` entries | Writes a playlist, given by its name or its number, to an absolute path; the extension picks the format (`m3u8`, `m3u`, `pls`, `xspf`) |
+| `Revert` | | | Goes back to the track "Next" last moved on from, where it was |
+| `RadioRandom` | | | Plays a random track of the queue from a random point (a tenth to seven tenths in) |
+| `SetIntroScan` | `b` on | | Intro scan: only the first `playback.intro_scan_s` seconds of each track play |
+| `StartRadio` | `s` kind, `t` id | | Starts endless play from a library `track`, `album` or `artist` (the numbers `search` and the JSON show); the repeat mode becomes `endless` |
+| `PlayTracks` | `at` tracks, `s` title | `u` tracks | Replaces the queue with library tracks by their numbers and plays them |
 
 A query is text in the query language of the search field (`genre:jazz rating>=4 sort:added desc`); text without fields searches for its words.
 

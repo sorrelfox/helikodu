@@ -3,8 +3,10 @@
 
 //! The service actor: the one thread that owns the queue and the engine.
 
+mod smart;
+
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
@@ -21,6 +23,7 @@ use helikodu_model::player::{
     TrackFlags, TransportState, Volume,
 };
 use helikodu_model::settings::EqualizerSettings;
+use helikodu_model::settings::{SmartPlaySettings, below_rating};
 
 use super::command::{ContextRequest, PlayerCommand};
 use super::config::{PlayerPrefs, SessionConfig};
@@ -28,6 +31,7 @@ use super::listen::{ListenTracker, Recorded, Recorder};
 use super::loudness::LoudnessTags;
 use super::outputs::{next_output, output_choices};
 use super::queue::{Advance, EntryKeys, Keyed, Queue};
+use super::rng::Rng;
 use super::session::{SESSION_VERSION, SavedSession, SessionFiles, Strike};
 use super::shared::{NowPlaying, QueueSnapshot, Shared};
 use super::timers::{AbLoop, SLEEP_FADE, SleepTimerStatus, SleepWhen};
@@ -117,6 +121,10 @@ pub(super) struct Startup {
     pub(super) session: Option<(SessionFiles, SessionConfig)>,
     pub(super) prefs: PlayerPrefs,
     pub(super) library: Option<MusicLibrary>,
+    /// The smarter playback settings.
+    pub(super) smart_play: SmartPlaySettings,
+    /// The random numbers of endless play, the Auto-DJ and Radio Random.
+    pub(super) draws: Rng,
 }
 
 pub(super) struct Actor {
@@ -180,6 +188,22 @@ pub(super) struct Actor {
     /// The A-B loop of the item playing.
     ab: Option<(ItemId, AbLoop)>,
     sleep: Option<Sleep>,
+    /// The smarter playback settings.
+    smart: SmartPlaySettings,
+    /// The tracks `playback.shuffle.skip_query` finds.
+    shuffle_skips: HashSet<TrackId>,
+    /// What endless play continues from, once chosen; a new queue forgets it.
+    endless_seed: Option<helikodu_library::PlaySeed>,
+    /// The library tracks that started lately, newest last.
+    recent: VecDeque<TrackId>,
+    /// The entries "Next" moved on from, newest last, with where they were, for
+    /// "Revert".
+    skipped: Vec<(EntryId, MediaTime)>,
+    /// Radio Random: the entry to move into once it starts, and how far (a share
+    /// of its length).
+    radio_seek: Option<(EntryId, f64)>,
+    /// The random numbers of endless play, the Auto-DJ and Radio Random.
+    draws: Rng,
 }
 
 impl Actor {
@@ -244,7 +268,15 @@ impl Actor {
             cursor: None,
             ab: None,
             sleep: None,
+            smart: SmartPlaySettings::default(),
+            shuffle_skips: HashSet::new(),
+            endless_seed: None,
+            recent: VecDeque::new(),
+            skipped: Vec::new(),
+            radio_seek: None,
+            draws: startup.draws,
         }
+        .with_smart_play(startup.smart_play)
         .with_keys()
     }
 
@@ -599,6 +631,7 @@ impl Actor {
             }
             PlayerCommand::SetRepeat(repeat) => {
                 self.queue.set_repeat(repeat);
+                self.continue_queue();
                 self.modes_changed();
             }
             PlayerCommand::SetConsume(consume) => {
@@ -706,6 +739,17 @@ impl Actor {
                 }
             }
             PlayerCommand::Configure(prefs) => self.prefs = prefs,
+            PlayerCommand::ConfigureSmartPlay(settings) => self.configure_smart_play(settings),
+            PlayerCommand::SetIntroScan(intro_scan) => {
+                self.queue.set_other_modes(PlayModes {
+                    intro_scan,
+                    ..self.queue.modes()
+                });
+                self.modes_changed();
+            }
+            PlayerCommand::Revert => self.revert(),
+            PlayerCommand::RadioRandom => self.radio_random(),
+            PlayerCommand::StartRadio(seed) => self.start_radio(seed),
             PlayerCommand::ConfigureTransitions(transitions) => {
                 self.send(EngineCommand::SetTransitions(transitions));
             }
@@ -755,7 +799,8 @@ impl Actor {
             };
             if self.unplayable.contains(&entry.id)
                 || keys.flags.manual_only
-                || (modes.shuffle != ShuffleMode::Off && keys.flags.skip_in_shuffle)
+                || (modes.shuffle != ShuffleMode::Off
+                    && (keys.flags.skip_in_shuffle || keys.shuffle_skip))
                 || outside
             {
                 skipper.excluded.insert(entry.id);
@@ -851,17 +896,27 @@ impl Actor {
             .collect();
         let ids: Vec<TrackId> = in_library.iter().flatten().copied().collect();
         let found = library.play_keys(&ids).unwrap_or_default();
+        let facts = library.play_facts(&ids).unwrap_or_default();
         tracks
             .iter()
             .zip(in_library)
             .map(|(track, id)| match id.and_then(|id| found.get(&id)) {
-                Some(keys) => EntryKeys {
-                    album: keys.album.map(|album| format!("album:{album}")),
-                    folder: Some(format!("folder:{:?}", keys.folder)),
-                    grouping: keys.grouping.as_ref().map(|g| format!("grouping:{g}")),
-                    artist: keys.artist.map(|person| format!("person:{person}")),
-                    flags: keys.flags,
-                },
+                Some(keys) => {
+                    let play = id
+                        .and_then(|id| facts.get(&id))
+                        .copied()
+                        .unwrap_or_default();
+                    EntryKeys {
+                        album: keys.album.map(|album| format!("album:{album}")),
+                        folder: Some(format!("folder:{:?}", keys.folder)),
+                        grouping: keys.grouping.as_ref().map(|g| format!("grouping:{g}")),
+                        artist: keys.artist.map(|person| format!("person:{person}")),
+                        flags: keys.flags,
+                        play,
+                        shuffle_skip: below_rating(self.smart.shuffle.min_rating, play.rating)
+                            || id.is_some_and(|id| self.shuffle_skips.contains(&id)),
+                    }
+                }
                 None => EntryKeys::of_track(track),
             })
             .collect()
@@ -1024,6 +1079,8 @@ impl Actor {
     }
 
     fn play_tracks(&mut self, context: QueueContext, tracks: Vec<TrackRef>, start: usize) {
+        self.endless_seed = None;
+        self.skipped.clear();
         let tracks = self.keyed(tracks);
         let append = self.prefs.append_contexts && self.queue.len() > 0;
         let first = if append {
@@ -1214,6 +1271,9 @@ impl Actor {
         match self.engine_state {
             TransportState::Paused => self.send(EngineCommand::Play),
             TransportState::Stopped if self.in_flight.is_none() => {
+                if self.queue.current().is_none() {
+                    self.continue_queue();
+                }
                 let entry = match self.queue.current() {
                     Some(entry) => Some(entry.id),
                     None => self.peek_next(Advance::User),
@@ -1229,9 +1289,19 @@ impl Actor {
     }
 
     fn next(&mut self) {
+        self.next_from(true);
+    }
+
+    /// Moves to the next entry as "Next" does; `remember` notes the entry moved on
+    /// from for "Revert".
+    fn next_from(&mut self, remember: bool) {
         if self.queue.current().is_none() {
             return;
         }
+        if remember {
+            self.remember_skip();
+        }
+        self.continue_queue();
         let target = match self.cursor_target() {
             Some(cursor) => Some(cursor),
             None => self.peek_next(Advance::User),
@@ -1518,6 +1588,7 @@ impl Actor {
     /// or the sleep timer stops playback after it, the selected entry for "Continue
     /// from the selected track", otherwise the next one of the play modes.
     fn wanted_next(&mut self) -> Option<EntryId> {
+        self.continue_queue();
         let stop_after = if self.sleep_stops_after_track() {
             StopAfter::Track
         } else {
@@ -1602,6 +1673,7 @@ impl Actor {
                         position,
                         length,
                     });
+                    self.check_intro_scan(position);
                 }
             }
             EngineEvent::NearEnd { item } => {
@@ -1691,6 +1763,7 @@ impl Actor {
                 Some(self.listen_context(slot.entry)),
             ));
         }
+        self.started_smart(&slot, length);
         let index = self.queue.index_of(slot.entry).unwrap_or(0);
         let now_playing = NowPlaying {
             entry: slot.entry,

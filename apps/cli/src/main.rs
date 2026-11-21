@@ -33,10 +33,11 @@ use self::offline::play::PlayArgs;
 use self::offline::scan::ScanArgs;
 use self::offline::search::SearchArgs;
 use self::offline::similar::SimilarArgs;
+use self::offline::smart_play::{AutoDjArgs, GeneratorArgs, RelatedArgs};
 use self::offline::stats::StatsArgs;
 use self::remote::commands::{
-    EnqueueArgs, ExportArgs, JsonArgs, PlayQueryArgs, RateArgs, RepeatArgs, SeekArgs, ShuffleArgs,
-    Transport, VolumeArgs,
+    EnqueueArgs, ExportArgs, IntroScanArgs, JsonArgs, PlayQueryArgs, RateArgs, RepeatArgs,
+    SeekArgs, ShuffleArgs, StartRadioArgs, Transport, VolumeArgs,
 };
 
 /// The exit code of a runtime error.
@@ -111,6 +112,15 @@ enum Command {
     /// Show and change the DSP chain in the settings file: its order, saved chains,
     /// the compressor, convolution, pitch shift, and the equalizers of single tracks.
     Dsp(DspArgs),
+    /// List the library tracks endless play would add after a track, album or
+    /// artist (with the `[playback.endless]` settings).
+    Related(RelatedArgs),
+    /// List the library tracks the Auto-DJ would add (with the
+    /// `[playback.auto_dj]` settings).
+    AutoDj(AutoDjArgs),
+    /// List, add, change, run and play generator playlists: playlists made by
+    /// steps (source, filters, sorts, caps, limit).
+    Generator(GeneratorArgs),
     /// Show what the running application plays.
     Status(JsonArgs),
     /// Show the queue of the running application.
@@ -148,6 +158,18 @@ enum Command {
     Rate(RateArgs),
     /// Write a playlist of the running application to a file.
     ExportPlaylist(ExportArgs),
+    /// Go back to the track "Next" last moved on from, where it was, in the
+    /// running application.
+    Revert,
+    /// Play a random track of the queue from a random point in it, in the
+    /// running application.
+    RadioRandom,
+    /// Turn intro scan (only the first seconds of each track) on or off in the
+    /// running application.
+    IntroScan(IntroScanArgs),
+    /// Start endless play from a library track, album or artist in the running
+    /// application.
+    StartRadio(StartRadioArgs),
 }
 
 /// How a command ended, when it did not fail outright.
@@ -181,6 +203,9 @@ fn main() -> ExitCode {
         Command::Labels(args) => offline::labels::run(&args),
         Command::Fields(args) => offline::fields::run(&args),
         Command::Dsp(args) => offline::dsp::run(&args),
+        Command::Related(args) => offline::smart_play::related(&args),
+        Command::AutoDj(args) => offline::smart_play::auto_dj(&args),
+        Command::Generator(args) => offline::smart_play::generator(&args),
         Command::Status(args) => remote::commands::status(&args),
         Command::Queue(args) => remote::commands::queue(&args),
         Command::Playlists(args) => remote::commands::playlists(&args),
@@ -198,6 +223,10 @@ fn main() -> ExitCode {
         Command::PlayQuery(args) => remote::commands::play_query(&args),
         Command::Rate(args) => remote::commands::rate(&args),
         Command::ExportPlaylist(args) => remote::commands::export_playlist(&args),
+        Command::Revert => remote::commands::transport(Transport::Revert),
+        Command::RadioRandom => remote::commands::transport(Transport::RadioRandom),
+        Command::IntroScan(args) => remote::commands::intro_scan(&args),
+        Command::StartRadio(args) => remote::commands::start_radio(&args),
     };
     match result {
         Ok(Outcome::Success) => ExitCode::SUCCESS,

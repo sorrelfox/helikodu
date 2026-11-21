@@ -21,7 +21,7 @@ use helikodu_model::player::Volume;
 use helikodu_model::settings::{
     ClippingPrevention as ClippingSetting, ContextAction, DecoderSettings, DspSettings,
     LoudnessMode as LoudnessSetting, LoudnessSettings as LoudnessTable, OutputSettings,
-    PlaybackSettings, TransitionSettings,
+    PlaybackSettings, SmartPlaySettings, TransitionSettings,
 };
 
 use super::PlayerError;
@@ -192,6 +192,10 @@ pub struct PlayerConfig {
     pub replay_gain: ReplayGain,
     /// How the player behaves.
     pub prefs: PlayerPrefs,
+    /// Weighted and filtered shuffle, endless play, the Auto-DJ and intro scan
+    /// (`[playback.shuffle]`, `[playback.endless]`, `[playback.auto_dj]`,
+    /// `playback.intro_scan_s`).
+    pub smart_play: SmartPlaySettings,
     /// The library: plays library tracks, resolves contexts and records statistics.
     /// Without it only files play and nothing is recorded.
     pub library: Option<MusicLibrary>,
@@ -237,6 +241,7 @@ impl PlayerConfig {
             pacing: SinkPacing::RealTime,
             replay_gain: ReplayGain::default(),
             prefs: PlayerPrefs::default(),
+            smart_play: PlaybackSettings::default().smart_play(),
             library: None,
             session: None,
             clock: SystemClock::shared(),

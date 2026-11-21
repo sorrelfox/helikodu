@@ -208,6 +208,7 @@ impl Service {
             pacing: config.pacing,
             replay_gain: ReplayGain::from_settings(&current.loudness),
             prefs: PlayerPrefs::from_settings(&current.playback),
+            smart_play: current.playback.smart_play(),
             library: music,
             session: Some(session),
             clock: Arc::clone(&config.clock),
@@ -422,6 +423,8 @@ fn keep_in_step(
                 if groups.contains(&SettingsGroup::Playback) {
                     let prefs = PlayerPrefs::from_settings(&now.playback);
                     let _ = player.send(PlayerCommand::Configure(prefs));
+                    let smart = now.playback.smart_play();
+                    let _ = player.send(PlayerCommand::ConfigureSmartPlay(smart));
                     let transitions = now.playback.transitions;
                     let _ = player.send(PlayerCommand::ConfigureTransitions(transitions));
                     let decoders = now.playback.decoders.clone();

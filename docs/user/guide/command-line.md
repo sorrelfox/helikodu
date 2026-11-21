@@ -104,13 +104,19 @@ helikodu-cli play-pause | pause | resume | stop | next | previous
 helikodu-cli seek 1:23             # a position; +10 and -5 seek by seconds
 helikodu-cli volume [50|+5|-5]     # print or set the volume (0 to 100)
 helikodu-cli shuffle off|tracks|albums|folders|groupings|within-album
-helikodu-cli repeat off|one|album|all
+helikodu-cli repeat off|one|album|all|endless|auto-dj
 helikodu-cli enqueue [--next] FILE...           # add files at the end, or after the playing track
 helikodu-cli enqueue [--next] --query QUERY     # add the library tracks a query finds
 helikodu-cli play-query [--shuffle] QUERY...    # replace the queue with them and play
 helikodu-cli rate 4 | none [--track ID]         # rate the playing track (or a library track)
 helikodu-cli export-playlist PLAYLIST FILE      # write a playlist as M3U8, M3U, PLS or XSPF
+helikodu-cli revert | radio-random              # back to the skipped track; a random track at a random point
+helikodu-cli intro-scan on|off                  # play only the first seconds of each track
+helikodu-cli start-radio --track ID             # endless play from a track (or --album, --artist)
+helikodu-cli generator play NAME                # play a generator playlist
 ```
+
+`helikodu-cli related` and `helikodu-cli auto-dj` list what endless play and the Auto-DJ would add, and `helikodu-cli generator` makes and changes generator playlists; see [Playing music](playing.md#smarter-shuffle-endless-play-and-the-auto-dj) and [Generator playlists](playlists-and-ratings.md#generator-playlists).
 
 A query is written as in the search field, for example `helikodu-cli play-query --shuffle 'genre:jazz rating>=4'`. Playback asked for this way asks for the same confirmation as in the window when the output plays at full volume. Other programs can use the same interface; its description is in the developer documentation (`docs/dev/dbus-api.md`).
 

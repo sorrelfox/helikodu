@@ -555,3 +555,69 @@ fn labels_and_fields() {
     let fields = fx.json(&[os("fields"), os("list"), os("--json")]);
     assert_eq!(fields["fields"].as_array().unwrap().len(), 1, "{fields}");
 }
+
+#[test]
+fn generator_playlists() {
+    if !have_ffmpeg() {
+        return;
+    }
+    let fx = Fixture::new("generators");
+    let worker = worker_program();
+    let (code, _, stderr) = fx.run(&[
+        os("scan"),
+        fx.music.as_os_str(),
+        os("--exclude"),
+        os("Skip"),
+        os("--worker"),
+        worker.as_os_str(),
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+
+    let steps = "from library\nwhere genre:Ambient\nsort title desc\nper-album 1\n";
+    let (code, stdout, stderr) = fx.run(&[
+        os("generator"),
+        os("add"),
+        os("Ambient pick"),
+        os("--steps"),
+        os(steps),
+        os("--keep"),
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(stdout.contains("Ambient pick"), "{stdout}");
+    let listed = fx.json(&[os("generator"), os("list"), os("--json")]);
+    assert_eq!(listed[0]["name"], "Ambient pick");
+    assert_eq!(listed[0]["on_open"], false);
+    assert_eq!(listed[0]["tracks"], Value::Null);
+
+    let tracks = fx.json(&[os("generator"), os("run"), os("ambient pick"), os("--json")]);
+    let tracks = tracks.as_array().unwrap();
+    assert_eq!(tracks.len(), 1, "{tracks:?}");
+    assert_eq!(tracks[0]["title"], "Noon Shadow");
+    let (code, stdout, _) = fx.run(&[os("generator"), os("show"), os("Ambient pick")]);
+    assert_eq!(code, Some(0));
+    assert_eq!(stdout, steps);
+
+    let (code, _, stderr) = fx.run(&[
+        os("generator"),
+        os("preview"),
+        os("--steps"),
+        os("from library\nsort by colour"),
+    ]);
+    assert_eq!(code, Some(1));
+    assert!(stderr.contains("line 2"), "{stderr}");
+
+    let (code, _, stderr) = fx.run(&[
+        os("generator"),
+        os("edit"),
+        os("Ambient pick"),
+        os("--name"),
+        os("Calm"),
+        os("--on-open"),
+        os("yes"),
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+    let (code, _, stderr) = fx.run(&[os("generator"), os("remove"), os("calm")]);
+    assert_eq!(code, Some(0), "{stderr}");
+    let listed = fx.json(&[os("generator"), os("list"), os("--json")]);
+    assert_eq!(listed.as_array().unwrap().len(), 0);
+}

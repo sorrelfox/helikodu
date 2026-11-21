@@ -1943,6 +1943,18 @@ impl PlayerControl for ServicePlayer {
             PlayerRequest::NextAlbum => self.command(PlayerCommand::NextAlbum),
             PlayerRequest::PreviousAlbum => self.command(PlayerCommand::PreviousAlbum),
             PlayerRequest::RandomAlbum => self.command(PlayerCommand::RandomAlbum),
+            PlayerRequest::SetIntroScan(on) => self.command(PlayerCommand::SetIntroScan(on)),
+            PlayerRequest::Revert => self.command(PlayerCommand::Revert),
+            PlayerRequest::RadioRandom => self.command(PlayerCommand::RadioRandom),
+            PlayerRequest::StartRadio(seed) => {
+                use helikodu_service::library::{AlbumId, PersonId, PlaySeed};
+                let seed = match seed {
+                    super::RadioSeed::Track(id) => PlaySeed::Track(TrackId::new(id)),
+                    super::RadioSeed::Album(id) => PlaySeed::Album(AlbumId::from_raw(id)),
+                    super::RadioSeed::Artist(id) => PlaySeed::Artist(PersonId::from_raw(id)),
+                };
+                self.command(PlayerCommand::StartRadio(seed));
+            }
             PlayerRequest::LoopStartHere => self.command(PlayerCommand::LoopStartHere),
             PlayerRequest::LoopEndHere => self.command(PlayerCommand::LoopEndHere),
             PlayerRequest::SetLoop(None) => self.command(PlayerCommand::SetLoop(None)),

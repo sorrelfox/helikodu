@@ -1165,6 +1165,17 @@ impl UiStateAccess for MemoryUiState {
     }
 }
 
+/// What endless play starts from, by the library's numbers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RadioSeed {
+    /// A track.
+    Track(u64),
+    /// An album.
+    Album(i64),
+    /// An artist.
+    Artist(i64),
+}
+
 /// What the user asks the player to do.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlayerRequest {
@@ -1317,6 +1328,14 @@ pub enum PlayerRequest {
     PreviousAlbum,
     /// The first track of an album of the queue chosen at random.
     RandomAlbum,
+    /// Intro scan on or off: only the first seconds of each track play.
+    SetIntroScan(bool),
+    /// "Revert": back to the track "Next" last moved on from, where it was.
+    Revert,
+    /// "Radio Random": a random track of the queue, from a random point in it.
+    RadioRandom,
+    /// Starts endless play from a library track, album or artist.
+    StartRadio(RadioSeed),
     /// Sets the start of the A-B loop at the playing position.
     LoopStartHere,
     /// Sets the end of the A-B loop at the playing position; the loop then plays.

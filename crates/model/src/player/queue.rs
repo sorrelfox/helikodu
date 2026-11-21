@@ -183,11 +183,30 @@ pub enum RepeatMode {
     /// The album of the current entry plays again and again: after its last track
     /// in play order, its first one follows.
     Album,
+    /// Endless play: when the queue runs out, tracks from the library related to a
+    /// seed (the last track, its album or its artist) are added to its end
+    /// (`[playback.endless]`).
+    Endless,
+    /// The Auto-DJ: tracks from the library, picked by rules, are kept queued
+    /// ahead of the playing one (`[playback.auto_dj]`).
+    AutoDj,
 }
 
 impl RepeatMode {
     /// Every mode, in the order the menus list them.
-    pub const ALL: [Self; 4] = [Self::Off, Self::One, Self::Album, Self::All];
+    pub const ALL: [Self; 6] = [
+        Self::Off,
+        Self::One,
+        Self::Album,
+        Self::All,
+        Self::Endless,
+        Self::AutoDj,
+    ];
+
+    /// Whether the mode adds tracks from the library to the queue.
+    pub const fn continues_from_library(self) -> bool {
+        matches!(self, Self::Endless | Self::AutoDj)
+    }
 }
 
 /// Whether playback stops at a point instead of going on.
@@ -251,6 +270,10 @@ pub struct PlayModes {
     /// of the next in play order.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub follow_cursor: bool,
+    /// Intro scan: only the first seconds of each track play
+    /// (`playback.intro_scan_s`), then the next one starts.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub intro_scan: bool,
 }
 
 impl PlayModes {
@@ -262,6 +285,7 @@ impl PlayModes {
             consume: false,
             scope: PlayScope::Everything,
             follow_cursor: false,
+            intro_scan: false,
         }
     }
 }
@@ -351,6 +375,10 @@ mod tests {
             r#"{"shuffle":"within_album","repeat":"album","consume":true,"scope":"artist","follow_cursor":true}"#
         );
         assert_eq!(serde_json::from_str::<PlayModes>(&json).unwrap(), modes);
+        assert_eq!(
+            serde_json::to_string(&RepeatMode::AutoDj).unwrap(),
+            r#""auto_dj""#
+        );
         assert_eq!(
             serde_json::to_string(&StopAfter::Queue).unwrap(),
             r#""queue""#

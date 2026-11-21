@@ -7,7 +7,10 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use super::{DecoderSettings, SettingsError, TransitionSettings, check_range};
+use super::{
+    AutoDjSettings, DecoderSettings, EndlessSettings, SettingsError, ShuffleSettings,
+    SmartPlaySettings, TransitionSettings, check_range,
+};
 
 /// How the player behaves: the `[playback]` table.
 ///
@@ -24,6 +27,11 @@ use super::{DecoderSettings, SettingsError, TransitionSettings, check_range};
 /// keep_awake = true
 /// pause_on_lock = false
 /// pause_before_sleep = true
+/// intro_scan_s = 10               # seconds of each track that intro scan plays
+///
+/// [playback.shuffle]              # weighted and filtered shuffle, see `ShuffleSettings`
+/// [playback.endless]              # endless play from a seed, see `EndlessSettings`
+/// [playback.auto_dj]              # the Auto-DJ, see `AutoDjSettings`
 ///
 /// [playback.transitions]          # crossfades and fades, see `TransitionSettings`
 /// crossfade = false
@@ -62,6 +70,14 @@ pub struct PlaybackSettings {
     /// Whether playback pauses before the computer goes to sleep (applied from a later
     /// version).
     pub pause_before_sleep: bool,
+    /// How many seconds of each track intro scan plays (3 to 120).
+    pub intro_scan_s: u32,
+    /// Weighted and filtered shuffle: the `[playback.shuffle]` table.
+    pub shuffle: ShuffleSettings,
+    /// Endless play from a seed: the `[playback.endless]` table.
+    pub endless: EndlessSettings,
+    /// The Auto-DJ: the `[playback.auto_dj]` table.
+    pub auto_dj: AutoDjSettings,
     /// The crossfades and fades: the `[playback.transitions]` table.
     pub transitions: TransitionSettings,
     /// The long-tail decoders: the `[playback.decoders]` table.
@@ -82,6 +98,10 @@ impl Default for PlaybackSettings {
             keep_awake: true,
             pause_on_lock: false,
             pause_before_sleep: true,
+            intro_scan_s: 10,
+            shuffle: ShuffleSettings::default(),
+            endless: EndlessSettings::default(),
+            auto_dj: AutoDjSettings::default(),
             transitions: TransitionSettings::default(),
             decoders: DecoderSettings::default(),
         }
@@ -112,8 +132,20 @@ impl PlaybackSettings {
             self.long_track_minutes,
             1..=600,
         )?;
+        check_range("playback.intro_scan_s", self.intro_scan_s, 3..=120)?;
+        super::smart_play::validate(&self.shuffle, &self.endless, &self.auto_dj)?;
         self.transitions.validate()?;
         self.decoders.validate()
+    }
+
+    /// The smarter playback settings, as the player takes them.
+    pub fn smart_play(&self) -> SmartPlaySettings {
+        SmartPlaySettings {
+            shuffle: self.shuffle.clone(),
+            endless: self.endless.clone(),
+            auto_dj: self.auto_dj.clone(),
+            intro_scan_s: self.intro_scan_s,
+        }
     }
 
     /// How much of a track must have played for "Previous" to restart it, or `None`

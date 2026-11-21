@@ -39,6 +39,8 @@ pub(crate) fn repeat_id(mode: RepeatMode) -> &'static str {
         RepeatMode::One => "one",
         RepeatMode::Album => "album",
         RepeatMode::All => "all",
+        RepeatMode::Endless => "endless",
+        RepeatMode::AutoDj => "auto-dj",
         _ => "off",
     }
 }
@@ -80,6 +82,8 @@ pub(crate) fn repeat_name(mode: RepeatMode) -> String {
         RepeatMode::One => tr("This Track"),
         RepeatMode::Album => tr("This Album"),
         RepeatMode::All => tr("The Whole Queue"),
+        RepeatMode::Endless => tr("Continue with Related Tracks"),
+        RepeatMode::AutoDj => tr("Auto-DJ"),
         _ => tr("Off"),
     }
 }
@@ -121,6 +125,8 @@ pub(crate) fn repeat_tooltip(mode: RepeatMode) -> String {
         RepeatMode::One => tr("Repeat: this track"),
         RepeatMode::Album => tr("Repeat: this album"),
         RepeatMode::All => tr("Repeat: the whole queue"),
+        RepeatMode::Endless => tr("Repeat: continue with related tracks"),
+        RepeatMode::AutoDj => tr("Repeat: Auto-DJ"),
         _ => tr("Repeat: off"),
     }
 }
@@ -243,6 +249,7 @@ pub(crate) fn queue_menu() -> gio::Menu {
         Some(&tr("Continue from the Selected Track")),
         Some("app.follow-cursor"),
     );
+    modes.append(Some(&tr("Intro Scan")), Some("app.intro-scan"));
     menu.append_section(None, &modes);
     let edits = gio::Menu::new();
     edits.append(Some(&tr("Save as Playlist…")), Some("win.save-queue"));
@@ -270,6 +277,8 @@ pub(crate) fn fill_playback_menu(menu: &gio::Menu, view: &PlayerView) {
     moves.append(Some(&tr("Previous Album")), Some("app.previous-album"));
     moves.append(Some(&tr("Next Album")), Some("app.next-album"));
     moves.append(Some(&tr("Random Album")), Some("app.random-album"));
+    moves.append(Some(&tr("Radio Random")), Some("app.radio-random"));
+    moves.append(Some(&tr("Revert to the Skipped Track")), Some("app.revert"));
     menu.append_section(None, &moves);
 
     let seeks = gio::Menu::new();
@@ -334,6 +343,7 @@ pub(crate) fn sync_actions(application: &gtk::Application, view: &PlayerView) {
     set("play-scope", scope_id(m.scope).to_variant());
     set("consume", m.consume.to_variant());
     set("follow-cursor", m.follow_cursor.to_variant());
+    set("intro-scan", m.intro_scan.to_variant());
 }
 
 /// A stateful action whose target names a choice; activating it sends the
@@ -384,6 +394,8 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
         ("previous-album", PlayerRequest::PreviousAlbum),
         ("next-album", PlayerRequest::NextAlbum),
         ("random-album", PlayerRequest::RandomAlbum),
+        ("radio-random", PlayerRequest::RadioRandom),
+        ("revert", PlayerRequest::Revert),
         ("loop-start", PlayerRequest::LoopStartHere),
         ("loop-end", PlayerRequest::LoopEndHere),
         ("loop-clear", PlayerRequest::SetLoop(None)),
@@ -423,6 +435,12 @@ pub(crate) fn install_actions(application: &gtk::Application, backend: &Backend)
         backend,
         "follow-cursor",
         PlayerRequest::SetFollowCursor,
+    );
+    switch_action(
+        application,
+        backend,
+        "intro-scan",
+        PlayerRequest::SetIntroScan,
     );
 }
 

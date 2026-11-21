@@ -18,4 +18,5 @@ mod modes;
 mod play_modes;
 mod queue;
 mod session;
+mod smart_play;
 mod stats;

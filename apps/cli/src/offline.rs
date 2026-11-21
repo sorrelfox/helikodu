@@ -17,6 +17,7 @@ pub(crate) mod play;
 pub(crate) mod scan;
 pub(crate) mod search;
 pub(crate) mod similar;
+pub(crate) mod smart_play;
 pub(crate) mod stats;
 
 mod database;

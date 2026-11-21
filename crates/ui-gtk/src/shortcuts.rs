@@ -123,6 +123,14 @@ pub(crate) fn bindings() -> Vec<Binding> {
         b(Playback, "app.previous-album", tr("Previous album"), &[]),
         b(Playback, "app.next-album", tr("Next album"), &[]),
         b(Playback, "app.random-album", tr("Random album"), &[]),
+        b(Playback, "app.radio-random", tr("Radio random"), &[]),
+        b(
+            Playback,
+            "app.revert",
+            tr("Revert to the skipped track"),
+            &[],
+        ),
+        b(Playback, "app.intro-scan", tr("Intro scan"), &[]),
         b(Playback, "win.sleep-timer", tr("Sleep timer"), &[]),
         b(Library, "win.search", tr("Search"), &["<Control>f"]),
         b(
