@@ -208,7 +208,50 @@ fn an_artist_photo_shows_in_the_hero_and_the_list(app: &gtk::Application) {
 
 type Test = (&'static str, fn(&gtk::Application));
 
+fn the_album_table_sorts_by_its_columns(app: &gtk::Application) {
+    let (window, _) = window(app);
+    window.open_album(AlbumKey(1));
+    wait_for("the tracks", 2, || window.album_track_titles().len() > 2);
+    let album_order = window.album_track_titles();
+    assert_eq!(
+        window.album_headers(),
+        ["#", "Title", "Plays", "Rating", "Length"]
+    );
+    // Title: ascending, descending, then the album's order again.
+    window.album_click_header(1);
+    let mut ascending = album_order.clone();
+    ascending.sort_by_key(|t| t.to_lowercase());
+    assert_eq!(window.album_track_titles(), ascending);
+    assert_eq!(window.album_headers()[1], "Title ↑");
+    window.album_click_header(1);
+    let descending: Vec<String> = window.album_track_titles();
+    assert_eq!(descending.first(), ascending.last());
+    assert_eq!(window.album_headers()[1], "Title ↓");
+    window.album_click_header(1);
+    assert_eq!(window.album_track_titles(), album_order);
+    assert_eq!(window.album_headers()[1], "Title");
+    // # descending reverses the album's order; another column takes over.
+    window.album_click_header(0);
+    window.album_click_header(0);
+    let mut reversed = album_order.clone();
+    reversed.reverse();
+    assert_eq!(window.album_track_titles(), reversed);
+    window.album_click_header(4);
+    assert_eq!(window.album_headers()[0], "#");
+    assert_eq!(window.album_headers()[4], "Length ↑");
+    // Another album starts in its own order.
+    window.open_album(AlbumKey(2));
+    wait_for("the other album", 2, || {
+        window.album_headers()[4] == "Length"
+    });
+    window.destroy();
+}
+
 const TESTS: &[Test] = &[
+    (
+        "the_album_table_sorts_by_its_columns",
+        the_album_table_sorts_by_its_columns,
+    ),
     (
         "composers_and_years_list_and_play",
         composers_and_years_list_and_play,

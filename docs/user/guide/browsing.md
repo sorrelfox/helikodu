@@ -60,6 +60,8 @@ Double-click an album cover to play the album at once. A single click opens its 
 
 On the album page, **Play** plays the album from the start, **Shuffle** in random order, and **Add to queue** adds it to the end of the queue; **More** opens the album's menu. Click a track to play the album from that track. Under **Details**, **Edit tags** opens the [tag editor](tags.md) for all its tracks and **Open folder** shows the album folder in your file manager.
 
+A click on a column heading of the track table (**#**, **Title**, **Plays**, **Rating**, **Length**) sorts the tracks by it, a second click sorts the other way round, and a third goes back to the album's own order; while sorted, the discs' headings are left out, and **Play** and a double-click play the tracks in the order shown. Another album starts in its own order. An audiobook keeps its chapters in order.
+
 Select a track to see its own facts above the album's: its artist when it differs from the album artist, composer, number, length, format, track gain, plays, when it was last played, rating, when it was added, whether it has lyrics, its copies, its file size and its file. With a track selected, **Open folder** shows that track's folder.
 
 Drag the left border of the **Details** column to make it wider or narrower; when the page is too narrow for it beside the tracks, it is under them. The width is kept for every album and audiobook page and the next time Helikodu starts.

@@ -61,6 +61,18 @@ mod imp {
         #[template_child]
         pub(super) title_column: TemplateChild<gtk::Label>,
         #[template_child]
+        pub(super) number_column: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) number_sort: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) title_sort: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) plays_sort: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) rating_sort: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) length_sort: TemplateChild<gtk::Button>,
+        #[template_child]
         pub(super) plays_column: TemplateChild<gtk::Label>,
         #[template_child]
         pub(super) rating_column: TemplateChild<gtk::Label>,
@@ -114,6 +126,9 @@ mod imp {
         /// A track to select once the album is shown.
         pub(super) select: Cell<Option<TrackKey>>,
         pub(super) generation: Cell<u64>,
+        /// The column the tracks are sorted by for this visit, and whether
+        /// descending; none for the album's own order.
+        pub(super) sort: Cell<Option<(super::SortColumn, bool)>>,
         pub(super) covers: RefCell<Option<Rc<CoverCache>>>,
         /// The album's label chips.
         pub(super) chips: RefCell<Option<Rc<crate::views::label_chips::LabelChips>>>,
@@ -157,13 +172,16 @@ mod imp {
                 let weak = obj.downgrade();
                 button.connect_clicked(move |_| {
                     if let Some(page) = weak.upgrade() {
-                        // An audiobook continues where listening stopped.
+                        // An audiobook continues where listening stopped; a
+                        // sorted album starts with the first track shown.
                         let start = page
                             .imp()
                             .book
                             .borrow()
                             .as_ref()
-                            .map_or(0, |b| b.continue_at);
+                            .map(|b| b.continue_at)
+                            .or_else(|| page.sorted_order().and_then(|o| o.first().copied()))
+                            .unwrap_or(0);
                         page.play_from(start, shuffle);
                     }
                 });
@@ -196,6 +214,20 @@ mod imp {
                     page.play_from(index, false);
                 }
             });
+            for (button, column) in [
+                (self.number_sort.get(), super::SortColumn::Number),
+                (self.title_sort.get(), super::SortColumn::Title),
+                (self.plays_sort.get(), super::SortColumn::Plays),
+                (self.rating_sort.get(), super::SortColumn::Rating),
+                (self.length_sort.get(), super::SortColumn::Length),
+            ] {
+                let weak = obj.downgrade();
+                button.connect_clicked(move |_| {
+                    if let Some(page) = weak.upgrade() {
+                        page.sort_by(column);
+                    }
+                });
+            }
         }
     }
 
@@ -214,6 +246,17 @@ impl Default for AlbumPage {
     fn default() -> Self {
         glib::Object::new()
     }
+}
+
+/// A column the tracks can be sorted by.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) enum SortColumn {
+    #[default]
+    Number,
+    Title,
+    Plays,
+    Rating,
+    Length,
 }
 
 fn track_row(index: usize, track: &TrackRow, playing: bool) -> gtk::ListBoxRow {
@@ -426,7 +469,9 @@ impl AlbumPage {
         let Some(backend) = imp.backend.borrow().clone() else {
             return;
         };
-        imp.album.set(Some(key));
+        if imp.album.replace(Some(key)) != Some(key) {
+            imp.sort.set(None);
+        }
         let generation = imp.generation.get() + 1;
         imp.generation.set(generation);
         let weak = self.downgrade();
@@ -699,6 +744,17 @@ impl AlbumPage {
             }
             return;
         }
+        if let Some(order) = self.sorted_order() {
+            // Sorted: one list, without the discs' headings.
+            let tracks: Vec<&TrackRow> = detail.tracks().collect();
+            for index in order {
+                if let Some(track) = tracks.get(index) {
+                    imp.tracks
+                        .append(&track_row(index, track, playing.contains(track.key)));
+                }
+            }
+            return;
+        }
         let several = detail.discs.len() > 1;
         let mut index = 0;
         for disc in &detail.discs {
@@ -755,8 +811,169 @@ impl AlbumPage {
         }
     }
 
+    /// Sorts the tracks by `column` for this visit: ascending, then
+    /// descending, then the album's own order again.
+    fn sort_by(&self, column: SortColumn) {
+        let imp = self.imp();
+        let next = match imp.sort.get() {
+            Some((c, false)) if c == column => Some((column, true)),
+            Some((c, true)) if c == column => None,
+            _ => Some((column, false)),
+        };
+        imp.sort.set(next);
+        self.show_sort(imp.book.borrow().is_some());
+        let selected = self.selected_track().map(|t| t.key);
+        self.show_tracks();
+        if let Some(key) = selected {
+            self.select_track(key);
+        }
+    }
+
+    /// The indices of the album's tracks in the order shown, while sorted.
+    fn sorted_order(&self) -> Option<Vec<usize>> {
+        let imp = self.imp();
+        let (column, descending) = imp.sort.get()?;
+        if imp.book.borrow().is_some() {
+            return None;
+        }
+        let detail = imp.detail.borrow();
+        let tracks: Vec<&TrackRow> = detail.as_ref()?.tracks().collect();
+        let mut order: Vec<usize> = (0..tracks.len()).collect();
+        order.sort_by(|&a, &b| {
+            let (x, y) = (tracks[a], tracks[b]);
+            let by = match column {
+                SortColumn::Number => a.cmp(&b),
+                SortColumn::Title => x.title.to_lowercase().cmp(&y.title.to_lowercase()),
+                SortColumn::Plays => x.plays.cmp(&y.plays),
+                SortColumn::Rating => x.rating.cmp(&y.rating),
+                SortColumn::Length => x.duration.cmp(&y.duration),
+            };
+            // Equal values keep the album's order.
+            let by = if descending { by.reverse() } else { by };
+            by.then(a.cmp(&b))
+        });
+        Some(order)
+    }
+
+    /// Puts the arrow on the sorted column's header; `is_book` names the
+    /// columns of an audiobook.
+    fn show_sort(&self, is_book: bool) {
+        let imp = self.imp();
+        let sort = imp.sort.get();
+        for (label, column, text) in [
+            (imp.number_column.get(), SortColumn::Number, "#".to_owned()),
+            (
+                imp.title_column.get(),
+                SortColumn::Title,
+                if is_book { tr("Chapter") } else { tr("Title") },
+            ),
+            (
+                imp.plays_column.get(),
+                SortColumn::Plays,
+                if is_book {
+                    tr("Starts at")
+                } else {
+                    tr("Plays")
+                },
+            ),
+            (imp.rating_column.get(), SortColumn::Rating, tr("Rating")),
+            (imp.length_column.get(), SortColumn::Length, tr("Length")),
+        ] {
+            let arrow = match sort {
+                Some((c, descending)) if c == column => {
+                    if descending {
+                        " ↓"
+                    } else {
+                        " ↑"
+                    }
+                }
+                _ => "",
+            };
+            label.set_text(&format!("{text}{arrow}"));
+            if arrow.is_empty() {
+                label.remove_css_class("hk-sort-key");
+            } else {
+                label.add_css_class("hk-sort-key");
+            }
+        }
+    }
+
+    /// The headers' texts, with the arrow of the sorted column (for tests).
+    pub(crate) fn header_texts(&self) -> Vec<String> {
+        let imp = self.imp();
+        [
+            imp.number_column.get(),
+            imp.title_column.get(),
+            imp.plays_column.get(),
+            imp.rating_column.get(),
+            imp.length_column.get(),
+        ]
+        .iter()
+        .filter(|l| l.is_visible() && l.parent().is_some_and(|p| p.is_visible()))
+        .map(|l| l.text().to_string())
+        .collect()
+    }
+
+    /// The titles of the track rows, top to bottom (for tests).
+    pub(crate) fn shown_titles(&self) -> Vec<String> {
+        let imp = self.imp();
+        let detail = imp.detail.borrow();
+        let Some(detail) = detail.as_ref() else {
+            return Vec::new();
+        };
+        let tracks: Vec<&TrackRow> = detail.tracks().collect();
+        let mut titles = Vec::new();
+        let mut index = 0;
+        while let Some(row) = imp.tracks.row_at_index(index) {
+            index += 1;
+            if let Some(track) = row
+                .widget_name()
+                .parse::<usize>()
+                .ok()
+                .and_then(|i| tracks.get(i))
+            {
+                titles.push(track.title.clone());
+            }
+        }
+        titles
+    }
+
+    /// Clicks a column header, as the user does (for tests).
+    pub(crate) fn click_header(&self, index: usize) {
+        let imp = self.imp();
+        let buttons = [
+            imp.number_sort.get(),
+            imp.title_sort.get(),
+            imp.plays_sort.get(),
+            imp.rating_sort.get(),
+            imp.length_sort.get(),
+        ];
+        if let Some(button) = buttons.get(index) {
+            button.emit_clicked();
+        }
+    }
+
     fn play_from(&self, start: usize, shuffle: bool) {
         let imp = self.imp();
+        // Sorted for this visit: the tracks play in the order shown.
+        if let (Some(order), Some(backend)) = (self.sorted_order(), imp.backend.borrow().as_ref()) {
+            let detail = imp.detail.borrow();
+            let Some(detail) = detail.as_ref() else {
+                return;
+            };
+            let tracks: Vec<TrackKey> = order
+                .iter()
+                .filter_map(|&i| detail.tracks().nth(i).map(|t| t.key))
+                .collect();
+            let start = order.iter().position(|&i| i == start).unwrap_or(0);
+            backend.send(PlayerRequest::PlayTracks {
+                tracks,
+                start,
+                title: detail.row.title.clone(),
+                shuffle,
+            });
+            return;
+        }
         if let (Some(backend), Some(album)) = (imp.backend.borrow().as_ref(), imp.album.get()) {
             backend.send(PlayerRequest::PlayAlbum {
                 album,
@@ -793,7 +1010,20 @@ impl AlbumPage {
         });
         imp.plays_column
             .set_size_request(if is_book { 70 } else { 56 }, -1);
-        imp.rating_column.set_visible(!is_book);
+        imp.rating_sort.set_visible(!is_book);
+        for button in [
+            imp.number_sort.get(),
+            imp.title_sort.get(),
+            imp.plays_sort.get(),
+            imp.rating_sort.get(),
+            imp.length_sort.get(),
+        ] {
+            button.set_sensitive(!is_book);
+        }
+        if is_book {
+            imp.sort.set(None);
+        }
+        self.show_sort(is_book);
         imp.length_column
             .set_size_request(if is_book { 56 } else { 48 }, -1);
         imp.kind_quiet.set(true);

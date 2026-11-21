@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- The track table of an album page sorts by **#**, **Title**, **Plays**, **Rating** or **Length**: a click on a heading sorts by it, a second click the other way round, a third goes back to the album's order. Sorted tracks play in the order shown.
+
 ## [0.9.5] - 2026-11-21
 
 ### Added

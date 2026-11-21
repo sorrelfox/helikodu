@@ -1048,6 +1048,36 @@ impl MainWindow {
             .unwrap_or_default()
     }
 
+    /// The album page's column headers, with the arrow of the sorted one.
+    #[doc(hidden)]
+    pub fn album_headers(&self) -> Vec<String> {
+        self.imp()
+            .album
+            .borrow()
+            .as_ref()
+            .map(AlbumPage::header_texts)
+            .unwrap_or_default()
+    }
+
+    /// Clicks the album page's column header at `index` (0 is #).
+    #[doc(hidden)]
+    pub fn album_click_header(&self, index: usize) {
+        if let Some(page) = self.imp().album.borrow().as_ref() {
+            page.click_header(index);
+        }
+    }
+
+    /// The titles of the album page's track rows, top to bottom.
+    #[doc(hidden)]
+    pub fn album_track_titles(&self) -> Vec<String> {
+        self.imp()
+            .album
+            .borrow()
+            .as_ref()
+            .map(AlbumPage::shown_titles)
+            .unwrap_or_default()
+    }
+
     /// Goes back in the view history.
     #[doc(hidden)]
     pub fn go_back(&self) {
