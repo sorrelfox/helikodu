@@ -127,7 +127,7 @@ The **Browse** button opens three linked lists above the table: **Genre**, **Alb
 
 **Show Similar Tracks** in the menu of a track, an album or an artist lists the tracks whose sound comes closest to it: how bright each track is, how noisy or tonal, how busy its rhythm and how much its loudness varies. Tags are not used, so the list can cross genres; take it as a guide. For an album or an artist their own tracks are left out.
 
-- **How alike** shows a bar and a word: **Very close**, **Close** or **Somewhat alike**. Tracks that are less alike are never listed.
+- **How alike** shows a bar and a word: **Very close**, **Close** or **Somewhat alike**. Tracks that are less alike are never listed. In a narrow window the table keeps the title with the artist under it, the word without its bar, and the length.
 - The list shows the 50 closest tracks; **Show 50 more** adds the next ones while there are any.
 - **Play**, **Add to queue** and **Start radio** act on the list; **Save as playlist** makes an ordinary playlist of it. Tracks play on a double click or **Enter**, have the usual menu, and can be dragged to the queue or a playlist. **Back** returns to where you came from.
 - The list needs the [track analysis](settings.md#tracks-that-sound-alike). Until the analysis has reached the track (or while too few tracks are analysed, or with the analysis turned off) the page says so and shows how far the analysis is; the list appears by itself once it is there.

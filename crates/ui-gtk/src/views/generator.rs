@@ -35,6 +35,7 @@ use crate::format;
 use crate::i18n::{fill, ntr, tr};
 use crate::models::CoverCache;
 use crate::playback::Playback;
+use crate::popovers::query_completion::QueryCompletion;
 use crate::views::actions::Target;
 use crate::views::artists::button;
 use crate::views::table::PlayingRows;
@@ -92,6 +93,8 @@ pub(crate) struct GeneratorView {
     playlists: RefCell<Vec<String>>,
     /// The step row to focus once the rows are built again.
     focus_step: Cell<Option<usize>>,
+    /// The query entries of the step rows and their completions, top to bottom.
+    completions: RefCell<Vec<(glib::WeakRef<gtk::Entry>, std::rc::Weak<QueryCompletion>)>>,
     _playing: Rc<PlayingRows>,
 }
 
@@ -347,6 +350,7 @@ impl GeneratorView {
             pending: RefCell::new(None),
             playlists: RefCell::new(Vec::new()),
             focus_step: Cell::new(None),
+            completions: RefCell::new(Vec::new()),
             _playing: playing.clone(),
         });
         follow_playing(&playing, playback);
@@ -451,9 +455,12 @@ impl GeneratorView {
                 },
             }
         };
+        // The narrow window keeps the number, the title and the length.
         let mut columns = vec![
-            Column::new("number", "#".into(), 22, ColumnKind::Number).right(),
-            Column::new("title", tr("Title"), 0, ColumnKind::TitleWithCover),
+            Column::new("number", "#".into(), 22, ColumnKind::Number)
+                .right()
+                .kept_narrow(),
+            Column::new("title", tr("Title"), 0, ColumnKind::TitleWithCover).kept_narrow(),
             Column::new("artist", tr("Artist"), 0, ColumnKind::Text),
             Column::new("album", tr("Album"), 0, ColumnKind::Text),
         ];
@@ -469,7 +476,11 @@ impl GeneratorView {
         if let Some(b) = extra {
             columns.push(Column::new(sort_id(b), sort_label(b), 104, ColumnKind::Text).right());
         }
-        columns.push(Column::new("length", tr("Length"), 48, ColumnKind::Text).right());
+        columns.push(
+            Column::new("length", tr("Length"), 48, ColumnKind::Text)
+                .right()
+                .kept_narrow(),
+        );
         for column in &mut columns {
             column.arrow = arrow(column.id);
         }
@@ -1055,6 +1066,7 @@ impl GeneratorView {
 
     /// Builds the step rows from the edited steps.
     fn build_steps(self: &Rc<Self>) {
+        self.completions.borrow_mut().clear();
         while let Some(child) = self.steps_box.first_child() {
             self.steps_box.remove(&child);
         }
@@ -1314,7 +1326,34 @@ impl GeneratorView {
             set(&view, text);
             view.steps_changed(false);
         });
+        let completion = QueryCompletion::attach(&entry, &self.backend);
+        self.completions
+            .borrow_mut()
+            .push((entry.downgrade(), Rc::downgrade(&completion)));
         entry
+    }
+
+    /// Follows the narrow window: the page's table keeps the number, the title
+    /// with the artist under it, and the length.
+    pub(crate) fn set_narrow(&self, narrow: bool) {
+        self.view.set_narrow(narrow);
+    }
+
+    /// Types `text` into the `nth` query entry of the steps and returns what
+    /// its completion lists (for tests).
+    pub(crate) fn demo_step_completion(&self, nth: usize, text: &str) -> Vec<String> {
+        let found = self.completions.borrow().get(nth).cloned();
+        let Some((entry, completion)) = found else {
+            return Vec::new();
+        };
+        let (Some(entry), Some(completion)) = (entry.upgrade(), completion.upgrade()) else {
+            return Vec::new();
+        };
+        entry.grab_focus();
+        entry.set_text(text);
+        entry.set_position(-1);
+        completion.update();
+        completion.names()
     }
 
     fn number_entry(
@@ -1773,6 +1812,7 @@ impl GeneratorView {
             status: self.status_left.text().to_string(),
             tracks: self.shown.borrow().len(),
             headers: self.view.header_texts(),
+            artist_under: self.view.first_row_shape().0,
             editing: self.editing.get(),
             steps,
             notice,
@@ -1801,6 +1841,8 @@ pub struct GeneratorState {
     pub tracks: usize,
     /// The table's headers.
     pub headers: Vec<String>,
+    /// The artist under the title of the first row (in the narrow window).
+    pub artist_under: Option<String>,
     /// Whether the steps are being edited.
     pub editing: bool,
     /// The editor's rows: the kind and the tracks left after it.

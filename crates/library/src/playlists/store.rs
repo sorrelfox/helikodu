@@ -21,10 +21,85 @@ use crate::catalog::{Page, Paged, sql_track_id};
 use crate::db::unix_time::{from_millis, from_unix_seconds};
 use crate::db::{path_from_blob, path_to_blob};
 
-/// The next position among the children of `parent` (the top for `None`).
-fn next_position(c: &Connection, parent: Option<PlaylistId>) -> rusqlite::Result<i64> {
-    c.prepare_cached("SELECT coalesce(max(position), -1) + 1 FROM playlists WHERE parent_id IS ?1")?
-        .query_row([parent.map(|p| p.0)], |row| row.get(0))
+/// The next position among the children of `parent` (the top for `None`):
+/// playlists, folders and generator playlists share the numbering.
+pub(crate) fn next_position(c: &Connection, parent: Option<PlaylistId>) -> rusqlite::Result<i64> {
+    c.prepare_cached(
+        "SELECT max(coalesce((SELECT max(position) FROM playlists WHERE parent_id IS ?1), -1),
+                    coalesce((SELECT max(position) FROM generators WHERE parent_id IS ?1), -1)) + 1",
+    )?
+    .query_row([parent.map(|p| p.0)], |row| row.get(0))
+}
+
+/// A row of a folder (or of the top): a playlist or folder, or a generator
+/// playlist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Sibling {
+    Playlist(i64),
+    Generator(i64),
+}
+
+/// The rows of `parent` (the top for `None`) in the order the sidebar shows
+/// them: Favourites first, then by position, a playlist before a generator at
+/// the same position.
+pub(crate) fn siblings(
+    c: &Connection,
+    parent: Option<PlaylistId>,
+) -> rusqlite::Result<Vec<Sibling>> {
+    c.prepare_cached(
+        "SELECT 0, id, builtin, position FROM playlists WHERE parent_id IS ?1
+         UNION ALL
+         SELECT 1, id, 0, position FROM generators WHERE parent_id IS ?1
+         ORDER BY 3 DESC, 4, 1, 2",
+    )?
+    .query_map([parent.map(|p| p.0)], |row| {
+        let id = row.get(1)?;
+        Ok(if row.get::<_, i64>(0)? == 0 {
+            Sibling::Playlist(id)
+        } else {
+            Sibling::Generator(id)
+        })
+    })?
+    .collect()
+}
+
+/// Puts `rows` in `parent`, numbered from `first` in their order.
+fn number(
+    c: &Connection,
+    parent: Option<PlaylistId>,
+    rows: &[Sibling],
+    first: i64,
+) -> rusqlite::Result<()> {
+    let mut playlist =
+        c.prepare_cached("UPDATE playlists SET parent_id = ?2, position = ?3 WHERE id = ?1")?;
+    let mut generator =
+        c.prepare_cached("UPDATE generators SET parent_id = ?2, position = ?3 WHERE id = ?1")?;
+    for (position, row) in (first..).zip(rows) {
+        match row {
+            Sibling::Playlist(id) => {
+                playlist.execute(params![id, parent.map(|p| p.0), position])?
+            }
+            Sibling::Generator(id) => {
+                generator.execute(params![id, parent.map(|p| p.0), position])?
+            }
+        };
+    }
+    Ok(())
+}
+
+/// Puts `row` into `parent` (the top for `None`) at `position` among the rows
+/// there, or after them; the rows of `parent` are numbered again.
+pub(crate) fn place(
+    c: &Connection,
+    row: Sibling,
+    parent: Option<PlaylistId>,
+    position: Option<usize>,
+) -> rusqlite::Result<()> {
+    let mut order = siblings(c, parent)?;
+    order.retain(|r| *r != row);
+    let at = position.unwrap_or(order.len()).min(order.len());
+    order.insert(at, row);
+    number(c, parent, &order, 0)
 }
 
 /// A new, empty row of `kind` named `name`, after the others in `parent`.
@@ -243,18 +318,9 @@ pub(crate) fn delete(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<(
             .prepare_cached("SELECT parent_id FROM playlists WHERE id = ?1")?
             .query_row([playlist.0], |row| row.get(0))?;
         let parent = parent.map(PlaylistId);
-        let children: Vec<i64> = c
-            .prepare_cached("SELECT id FROM playlists WHERE parent_id = ?1 ORDER BY position, id")?
-            .query_map([playlist.0], |row| row.get(0))?
-            .collect::<rusqlite::Result<_>>()?;
+        let children = siblings(c, Some(playlist))?;
         let first = next_position(c, parent)?;
-        let mut set =
-            c.prepare_cached("UPDATE playlists SET parent_id = ?2, position = ?3 WHERE id = ?1")?;
-        for (position, child) in (first..).zip(children) {
-            set.execute(params![child, parent.map(|p| p.0), position])?;
-        }
-        c.prepare_cached("UPDATE generators SET parent_id = ?2 WHERE parent_id = ?1")?
-            .execute(params![playlist.0, parent.map(|p| p.0)])?;
+        number(c, parent, &children, first)?;
     }
     c.prepare_cached("DELETE FROM playlists WHERE id = ?1")?
         .execute([playlist.0])?;
@@ -343,25 +409,7 @@ pub(crate) fn move_to(
                 .map(PlaylistId);
         }
     }
-    let siblings: Vec<i64> = c
-        .prepare_cached(
-            "SELECT id FROM playlists WHERE parent_id IS ?1 AND id != ?2 ORDER BY position, id",
-        )?
-        .query_map(params![parent.map(|p| p.0), playlist.0], |row| row.get(0))?
-        .collect::<rusqlite::Result<_>>()?;
-    let at = position.unwrap_or(siblings.len()).min(siblings.len());
-    let mut order = siblings;
-    order.insert(at, playlist.0);
-    let mut set =
-        c.prepare_cached("UPDATE playlists SET parent_id = ?2, position = ?3 WHERE id = ?1")?;
-    for (index, id) in order.iter().enumerate() {
-        set.execute(params![
-            id,
-            parent.map(|p| p.0),
-            i64::try_from(index).unwrap_or(i64::MAX)
-        ])?;
-    }
-    Ok(())
+    place(c, Sibling::Playlist(playlist.0), parent, position)
 }
 
 /// The columns of a [`PlaylistSummary`], from the playlists `p`.

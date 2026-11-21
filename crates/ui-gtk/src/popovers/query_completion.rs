@@ -277,7 +277,8 @@ fn choices(word: &str, words: &Vocabulary) -> Vec<Choice> {
 
 /// The completion popover of one entry.
 pub(crate) struct QueryCompletion {
-    entry: gtk::SearchEntry,
+    /// Weak, so that an entry that holds its completion can still go.
+    entry: glib::WeakRef<gtk::Editable>,
     popover: gtk::Popover,
     list: gtk::ListBox,
     scroller: gtk::ScrolledWindow,
@@ -304,7 +305,8 @@ impl std::fmt::Debug for QueryCompletion {
 
 impl QueryCompletion {
     /// The completion of `entry`, with the labels and fields of `backend`.
-    pub(crate) fn new(entry: &gtk::SearchEntry, backend: &Backend) -> Rc<Self> {
+    pub(crate) fn new(entry: &impl IsA<gtk::Editable>, backend: &Backend) -> Rc<Self> {
+        let entry: &gtk::Editable = entry.upcast_ref();
         let popover = gtk::Popover::new();
         popover.add_css_class("hk-completion");
         popover.set_has_arrow(false);
@@ -335,7 +337,7 @@ impl QueryCompletion {
         popover.set_child(Some(&content));
         popover.set_parent(entry);
         let completion = Rc::new(Self {
-            entry: entry.clone(),
+            entry: entry.downgrade(),
             popover,
             list,
             scroller,
@@ -376,6 +378,32 @@ impl QueryCompletion {
         completion
     }
 
+    /// Gives `entry` its completion: it follows the typing, takes Tab, Up,
+    /// Down and Escape while open, and lives as long as the entry.
+    pub(crate) fn attach(entry: &impl IsA<gtk::Editable>, backend: &Backend) -> Rc<Self> {
+        let completion = Self::new(entry, backend);
+        let entry: &gtk::Editable = entry.upcast_ref();
+        let weak = Rc::downgrade(&completion);
+        entry.connect_changed(move |_| {
+            if let Some(completion) = weak.upgrade() {
+                completion.update();
+            }
+        });
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(&completion);
+        keys.connect_key_pressed(move |_, key, _, _| match weak.upgrade() {
+            Some(completion) if completion.key(key) => glib::Propagation::Stop,
+            _ => glib::Propagation::Proceed,
+        });
+        entry.add_controller(keys);
+        let keep = RefCell::new(Some(completion.clone()));
+        entry.connect_destroy(move |_| {
+            keep.borrow_mut().take();
+        });
+        completion
+    }
+
     /// Asks the library for the labels and the user's fields again; the
     /// popover follows them if it is open.
     fn load_words(&self) {
@@ -404,8 +432,11 @@ impl QueryCompletion {
 
     /// Opens, fills or closes the popover for the word at the cursor.
     pub(crate) fn update(&self) {
-        let text = self.entry.text();
-        let cursor = usize::try_from(self.entry.position()).unwrap_or(0);
+        let Some(entry) = self.entry.upgrade() else {
+            return;
+        };
+        let text = entry.text();
+        let cursor = usize::try_from(entry.position()).unwrap_or(0);
         let byte = text
             .char_indices()
             .nth(cursor)
@@ -416,12 +447,11 @@ impl QueryCompletion {
         }
         self.dismissed.replace(None);
         // The focus widget of the window; the window need not be active.
-        let typing = self.entry.is_focus()
-            || self
-                .entry
+        let typing = entry.is_focus()
+            || entry
                 .root()
                 .and_then(|r| r.focus())
-                .is_some_and(|f| f.is_ancestor(&self.entry));
+                .is_some_and(|f| f.is_ancestor(&entry));
         if typing && !self.asked.get() {
             self.load_words();
         }
@@ -448,7 +478,7 @@ impl QueryCompletion {
         self.select(0);
         // As wide as the entry: its width less the popover's padding and border.
         if let Some(content) = self.popover.child() {
-            content.set_size_request((self.entry.width() - 14).max(0), -1);
+            content.set_size_request((entry.width() - 14).max(0), -1);
         }
         if !self.popover.is_visible() {
             self.popover.popup();
@@ -483,15 +513,18 @@ impl QueryCompletion {
         let Some(choice) = self.choices.borrow().get(self.selected.get()).cloned() else {
             return;
         };
+        let Some(entry) = self.entry.upgrade() else {
+            return;
+        };
         let (start, word) = self.word.borrow().clone();
-        let text = self.entry.text().to_string();
+        let text = entry.text().to_string();
         let end = (start + word.len()).min(text.len());
         let insert = choice.insert;
         let new = format!("{}{}{}", &text[..start], insert, &text[end..]);
         let cursor = text[..start].chars().count() + insert.chars().count();
         self.close();
-        self.entry.set_text(&new);
-        self.entry.set_position(cursor as i32);
+        entry.set_text(&new);
+        entry.set_position(cursor as i32);
         self.update();
     }
 

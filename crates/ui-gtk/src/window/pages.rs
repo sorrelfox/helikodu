@@ -6,7 +6,7 @@
 //! menu target and its actions; the file actions of the main menu; and files
 //! dropped on the window.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -55,6 +55,8 @@ pub(crate) struct Pages {
     smart: OnceCell<Rc<SmartPlaylistView>>,
     generator: OnceCell<Rc<GeneratorView>>,
     similar: OnceCell<Rc<SimilarView>>,
+    /// Whether the window is narrow, for the pages built later.
+    narrow: Cell<bool>,
     pub(super) covers: Rc<CoverCache>,
     pub(super) pins: RefCell<Vec<PinRow>>,
     search: OnceCell<Rc<SearchView>>,
@@ -185,6 +187,7 @@ impl Pages {
         self.generator.get_or_init(|| {
             let view = GeneratorView::new(&self.backend, &self.covers, &self.playback);
             view.install_actions();
+            view.set_narrow(self.narrow.get());
             self.add("generator-playlist", &view.root);
             view
         })
@@ -194,9 +197,21 @@ impl Pages {
     pub(super) fn similar(&self) -> &Rc<SimilarView> {
         self.similar.get_or_init(|| {
             let view = SimilarView::new(&self.backend, &self.covers, &self.playback);
+            view.set_narrow(self.narrow.get());
             self.add("similar", &view.root);
             view
         })
+    }
+
+    /// Follows the narrow window in the pages whose tables change there.
+    pub(super) fn set_narrow(&self, narrow: bool) {
+        self.narrow.set(narrow);
+        if let Some(view) = self.generator.get() {
+            view.set_narrow(narrow);
+        }
+        if let Some(view) = self.similar.get() {
+            view.set_narrow(narrow);
+        }
     }
 
     fn search(&self) -> &Rc<SearchView> {
@@ -286,6 +301,7 @@ impl MainWindow {
             smart: OnceCell::new(),
             generator: OnceCell::new(),
             similar: OnceCell::new(),
+            narrow: Cell::new(false),
             covers: covers.clone(),
             pins: RefCell::new(Vec::new()),
             search: OnceCell::new(),
@@ -1494,6 +1510,15 @@ impl MainWindow {
             };
             pages.generator().move_step(index, to);
         }
+    }
+
+    /// Types `text` into the `nth` query entry of the open generator's steps
+    /// and returns what its completion lists (for tests).
+    #[doc(hidden)]
+    pub fn demo_generator_completion(&self, nth: usize, text: &str) -> Vec<String> {
+        self.pages()
+            .map(|p| p.generator().demo_step_completion(nth, text))
+            .unwrap_or_default()
     }
 
     /// Makes the open generator playlist again (for tests).

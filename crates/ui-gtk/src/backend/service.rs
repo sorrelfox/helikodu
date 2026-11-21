@@ -1220,7 +1220,7 @@ impl LibrarySource for ServiceLibrary {
         position: Option<usize>,
     ) -> Result<(), BackendError> {
         if generators::generator_id(key).is_some() {
-            return self.move_generator_to(key, parent);
+            return self.move_generator_to(key, parent, position);
         }
         let id = self.playlist_id(key)?;
         let parent = parent.map(|p| self.playlist_id(p)).transpose()?;

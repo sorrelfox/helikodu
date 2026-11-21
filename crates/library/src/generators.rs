@@ -39,7 +39,7 @@ use crate::catalog::roots::visibility;
 use crate::db::DbError;
 use crate::db::unix_time::{from_unix_seconds, to_unix_seconds};
 use crate::library::Library;
-use crate::playlists::PlaylistId;
+use crate::playlists::{self, PlaylistId};
 use crate::query::{QueryError, QueryRequest, SyntaxError, parse_query};
 
 /// Identifies a generator playlist.
@@ -606,10 +606,12 @@ impl Library {
         let text = steps.to_string();
         let now = to_unix_seconds(SystemTime::now());
         let id = self.database().writer()?.write(move |c| {
+            // After the playlists and generators at the top.
+            let position = playlists::next_position(c, None)?;
             c.execute(
-                "INSERT INTO generators (name, steps, on_open, created_at, modified_at)
-                 VALUES (?1, ?2, ?3, ?4, ?4)",
-                (&name, &text, i64::from(on_open), now),
+                "INSERT INTO generators (name, steps, on_open, created_at, modified_at, position)
+                 VALUES (?1, ?2, ?3, ?4, ?4, ?5)",
+                (&name, &text, i64::from(on_open), now, position),
             )?;
             Ok(c.last_insert_rowid())
         })?;
@@ -669,11 +671,23 @@ impl Library {
     }
 
     /// Puts the generator `id` in the playlist folder `parent` (at the top for
-    /// `None`).
+    /// `None`), after what is there.
     pub fn move_generator(
         &self,
         id: GeneratorId,
         parent: Option<PlaylistId>,
+    ) -> Result<(), GeneratorError> {
+        self.place_generator(id, parent, None)
+    }
+
+    /// Puts the generator `id` in the playlist folder `parent` (at the top for
+    /// `None`) at `position` among the playlists, folders and generators there,
+    /// or after them, as [`Library::move_playlist`] does for a playlist.
+    pub fn place_generator(
+        &self,
+        id: GeneratorId,
+        parent: Option<PlaylistId>,
+        position: Option<usize>,
     ) -> Result<(), GeneratorError> {
         if let Some(folder) = parent {
             let is_folder = self.database().read(move |c| {
@@ -685,16 +699,43 @@ impl Library {
                 return Err(GeneratorError::Unknown(format!("folder {}", folder.0)));
             }
         }
-        let changed = self.database().writer()?.write(move |c| {
-            c.execute(
-                "UPDATE generators SET parent_id = ?2 WHERE id = ?1",
-                (id.0, parent.map(|p| p.0)),
-            )
+        let placed = self.database().writer()?.write(move |c| {
+            let known = c
+                .prepare_cached("SELECT 1 FROM generators WHERE id = ?1")?
+                .query_row([id.0], |_| Ok(()))
+                .optional()?
+                .is_some();
+            if known {
+                playlists::place(c, playlists::Sibling::Generator(id.0), parent, position)?;
+            }
+            Ok(known)
         })?;
-        if changed == 0 {
+        if !placed {
             return Err(GeneratorError::Unknown(id.to_string()));
         }
         Ok(())
+    }
+
+    /// Where each generator stands in its folder (or at the top): its index
+    /// among the playlists, folders and generators there, in the sidebar's
+    /// order, with Favourites first.
+    pub fn generator_places(&self) -> Result<Vec<(GeneratorId, usize)>, DbError> {
+        self.database().read(|c| {
+            let parents = c
+                .prepare_cached("SELECT DISTINCT parent_id FROM generators")?
+                .query_map([], |row| row.get::<_, Option<i64>>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            let mut places = Vec::new();
+            for parent in parents {
+                let rows = playlists::siblings(c, parent.map(PlaylistId))?;
+                for (index, row) in rows.into_iter().enumerate() {
+                    if let playlists::Sibling::Generator(id) = row {
+                        places.push((GeneratorId(id), index));
+                    }
+                }
+            }
+            Ok(places)
+        })
     }
 
     /// Runs `steps` without storing anything; `seed` orders `sort random`.

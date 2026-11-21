@@ -271,6 +271,9 @@ impl MainWindow {
         if narrow.compact.replace(compact) != compact {
             self.imp().deck.set_compact(compact);
             self.set_narrow_search(compact);
+            if let Some(pages) = self.pages() {
+                pages.set_narrow(compact);
+            }
         }
         self.update_scrim();
     }

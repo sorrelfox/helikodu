@@ -18,6 +18,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Undo** after **Start Radio** puts the queue back exactly: tracks queued with **Play Next** or **Add to Queue** stay queued, a shuffled order stays as it was, and a paused or stopped queue no longer starts playing for a moment. Once the queue is changed in another way, Undo does nothing.
 - The tracks marked **Added by Helikodu** keep their mark, and a radio the track, album or artist it continues from, when Helikodu is closed and started again.
 - At another playback speed with the pitch kept, tracks joined gaplessly no longer dip in level at the join.
+- The query entries of a generator playlist's steps ("From a search" and "Where") have the completion popover of the other query entries.
+- Generator playlists keep their place among the playlists of their folder instead of being listed after them by name: a new one comes after what is there, and one dragged onto a folder goes to its end.
+- In a narrow window the tables of a generator playlist and of **Show Similar Tracks** keep only the title with the artist under it, the length and, in the first, the number; in the second, the word of **How alike** without its bar.
 - `has:lyrics` also finds tracks with a `.lrc` or `.txt` lyrics file beside them, not only lyrics in the file's tags, and the **Lyrics** fact of the track details says so too. A lyrics file added or removed later is noticed by the next scan or by the folder watcher, without the track being read again.
 
 ## [0.9.5] - 2026-11-21

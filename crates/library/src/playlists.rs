@@ -59,9 +59,9 @@ pub(crate) use smart::{
     added_times, all_smart_tracks, create_smart, set_query, smart_query, smart_tracks,
 };
 pub(crate) use store::{
-    create, create_folder, create_row, delete, duplicate, favourite_tracks, favourites,
-    insert_imported, is_favourite, move_to, playlist, playlist_tree, playlists, rename,
-    set_favourite, set_grouped, set_locked,
+    Sibling, create, create_folder, create_row, delete, duplicate, favourite_tracks, favourites,
+    insert_imported, is_favourite, move_to, next_position, place, playlist, playlist_tree,
+    playlists, rename, set_favourite, set_grouped, set_locked, siblings,
 };
 
 /// A playlist.

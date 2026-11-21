@@ -124,6 +124,23 @@ impl MusicLibrary {
         Ok(self.library.move_generator(id, parent)?)
     }
 
+    /// Puts a generator in a playlist folder (the top for `None`) at `position`
+    /// among the playlists, folders and generators there, or after them.
+    pub fn place_generator(
+        &self,
+        id: GeneratorId,
+        parent: Option<PlaylistId>,
+        position: Option<usize>,
+    ) -> Result<(), LibraryError> {
+        Ok(self.library.place_generator(id, parent, position)?)
+    }
+
+    /// Each generator's index among the rows of its folder, in the sidebar's
+    /// order.
+    pub fn generator_places(&self) -> Result<Vec<(GeneratorId, usize)>, LibraryError> {
+        Ok(self.library.generator_places()?)
+    }
+
     /// Runs steps without storing anything, with the number of tracks left after
     /// each step and the step that could not run, if one could not.
     pub fn try_generator(

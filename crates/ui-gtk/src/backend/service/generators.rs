@@ -7,8 +7,9 @@
 //! The library keeps generators in a table of their own; the window lists
 //! them among the playlists. Their keys are their numbers with
 //! [`GENERATOR_KEYS`] added, so that they never meet a playlist's key. A
-//! generator is listed in its folder after the playlists there, by name.
+//! generator keeps its place among the playlists and folders of its folder.
 
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use helikodu_model::library::TrackId;
@@ -84,15 +85,41 @@ fn library_error(error: LibraryError) -> GeneratorError {
     }
 }
 
+/// Where a row goes that is the `index`th of the folder at `folder` in `rows`
+/// (of the top for `None`): before the folder's `index`th row, or after its
+/// last; and its depth.
+fn slot(rows: &[PlaylistRow], folder: Option<usize>, index: usize) -> (usize, usize) {
+    let (start, depth) = match folder {
+        Some(folder) => (folder + 1, rows[folder].depth + 1),
+        None => (0, 0),
+    };
+    let end = rows[start..]
+        .iter()
+        .position(|r| r.depth < depth)
+        .map_or(rows.len(), |n| start + n);
+    let at = (start..end)
+        .filter(|&i| rows[i].depth == depth)
+        .nth(index)
+        .unwrap_or(end);
+    (at, depth)
+}
+
 impl ServiceLibrary {
-    /// The generator playlists as sidebar rows, put into `rows` after what is in
-    /// their folders.
+    /// The generator playlists as sidebar rows, put into `rows` at their
+    /// places among the playlists and folders of their folders.
     pub(super) fn add_generator_rows(
         &self,
         music: &MusicLibrary,
         rows: &mut Vec<PlaylistRow>,
     ) -> Result<(), BackendError> {
-        let generators = music.generators().map_err(error)?;
+        let places: HashMap<GeneratorId, usize> = music
+            .generator_places()
+            .map_err(error)?
+            .into_iter()
+            .collect();
+        let mut generators = music.generators().map_err(error)?;
+        // Each folder's first rows first, so that the later ones count them.
+        generators.sort_by_key(|g| places.get(&g.id).copied().unwrap_or(usize::MAX));
         let keys = super::lock(&self.playlists);
         for generator in generators {
             let parent = generator.parent.and_then(|folder| {
@@ -100,18 +127,9 @@ impl ServiceLibrary {
                     .find(|(_, id)| **id == folder)
                     .map(|(key, _)| *key)
             });
-            let (at, depth) = match parent.and_then(|p| rows.iter().position(|r| r.key == p)) {
-                Some(folder) => {
-                    let depth = rows[folder].depth + 1;
-                    // After the last row inside the folder.
-                    let end = rows[folder + 1..]
-                        .iter()
-                        .position(|r| r.depth < depth)
-                        .map_or(rows.len(), |n| folder + 1 + n);
-                    (end, depth)
-                }
-                None => (rows.len(), 0),
-            };
+            let folder = parent.and_then(|p| rows.iter().position(|r| r.key == p));
+            let index = places.get(&generator.id).copied().unwrap_or(usize::MAX);
+            let (at, depth) = slot(rows, folder, index);
             let key = generator_key(generator.id);
             let (items, duration) = match &generator.tracks {
                 Some(tracks) => {
@@ -323,11 +341,12 @@ impl ServiceLibrary {
         &self,
         key: PlaylistKey,
         parent: Option<PlaylistKey>,
+        position: Option<usize>,
     ) -> Result<(), BackendError> {
         let generator = self.stored_generator(key)?;
         let parent = parent.map(|p| self.playlist_id(p)).transpose()?;
         self.library()?
-            .move_generator(generator.id, parent)
+            .place_generator(generator.id, parent, position)
             .map_err(error)
     }
 
@@ -501,5 +520,37 @@ mod tests {
         let key = generator_key(GeneratorId::from_raw(7));
         assert_eq!(generator_id(key), Some(GeneratorId::from_raw(7)));
         assert_eq!(generator_id(PlaylistKey(7)), None);
+    }
+
+    fn row(key: u64, depth: usize) -> PlaylistRow {
+        PlaylistRow {
+            key: PlaylistKey(key),
+            depth,
+            ..PlaylistRow::default()
+        }
+    }
+
+    #[test]
+    fn a_generator_goes_to_its_place_in_its_folder() {
+        // Favourites, a folder holding 3 and a subfolder 4 with 5, then 6.
+        let rows = [
+            row(1, 0),
+            row(2, 0),
+            row(3, 1),
+            row(4, 1),
+            row(5, 2),
+            row(6, 0),
+        ];
+        assert_eq!(slot(&rows, None, 0), (0, 0));
+        assert_eq!(slot(&rows, None, 2), (5, 0), "before 6, after the folder");
+        assert_eq!(slot(&rows, None, 9), (6, 0));
+        assert_eq!(slot(&rows, Some(1), 0), (2, 1));
+        assert_eq!(slot(&rows, Some(1), 1), (3, 1));
+        assert_eq!(
+            slot(&rows, Some(1), 2),
+            (5, 1),
+            "after the subfolder's rows"
+        );
+        assert_eq!(slot(&rows, Some(3), 1), (5, 2));
     }
 }

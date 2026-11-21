@@ -319,13 +319,16 @@ impl SimilarView {
     fn set_columns(self: &Rc<Self>) {
         let mut alike = Column::new("alike", tr("How alike"), 176, ColumnKind::Likeness);
         alike.arrow = Some(" ↓");
+        // The narrow window keeps the title, the word and the length.
         let columns = vec![
             Column::new("number", "#".into(), 22, ColumnKind::Number).right(),
-            Column::new("title", tr("Title"), 0, ColumnKind::TitleWithCover),
+            Column::new("title", tr("Title"), 0, ColumnKind::TitleWithCover).kept_narrow(),
             Column::new("artist", tr("Artist"), 0, ColumnKind::Text),
             Column::new("album", tr("Album"), 0, ColumnKind::Text),
-            alike,
-            Column::new("length", tr("Length"), 48, ColumnKind::Text).right(),
+            alike.kept_narrow(),
+            Column::new("length", tr("Length"), 48, ColumnKind::Text)
+                .right()
+                .kept_narrow(),
         ];
         let weak = Rc::downgrade(self);
         self.table.set_columns(
@@ -773,6 +776,7 @@ impl SimilarView {
                 .iter()
                 .all(gtk::prelude::WidgetExt::is_sensitive),
             headers: self.table.header_texts(),
+            row_shape: self.table.first_row_shape(),
             settings_button: self
                 .settings_button
                 .label()
@@ -780,6 +784,11 @@ impl SimilarView {
                 .unwrap_or_default(),
             progress: self.progress.is_visible(),
         }
+    }
+
+    /// Follows the narrow window.
+    pub(crate) fn set_narrow(&self, narrow: bool) {
+        self.table.set_narrow(narrow);
     }
 
     /// Shows 50 more (for tests).
@@ -814,6 +823,9 @@ pub struct SimilarState {
     pub buttons_sensitive: bool,
     /// The table's headers.
     pub headers: Vec<String>,
+    /// The artist under the title of the first row, and whether it shows the
+    /// likeness bar.
+    pub row_shape: (Option<String>, bool),
     /// The label of the not-yet page's button.
     pub settings_button: String,
     /// Whether the not-yet page shows the analysis progress.

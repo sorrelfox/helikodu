@@ -6,7 +6,9 @@
 //! steps line and Make again, the editor with the tracks
 //! left after each step, moving and adding steps, a step that cannot run, and
 //! the page of tracks that sound alike with "Show 50 more", "Save as
-//! playlist", the context menu's "Show Similar Tracks" and the not-yet page.
+//! playlist", the context menu's "Show Similar Tracks" and the not-yet page;
+//! the completion under the steps' query entries, a generator's place among
+//! the playlists of its folder, and both tables in the narrow window.
 //!
 //! Like `views.rs`, this program has its own main function and runs only under
 //! the headless compositor script:
@@ -388,6 +390,151 @@ fn similar_tracks_not_yet(app: &gtk::Application) {
     window.close();
 }
 
+fn step_queries_complete(app: &gtk::Application) {
+    let (window, _) = window(app);
+    open_forgotten(&window);
+    window.generator_edit(true);
+    wait_for("the steps", 3, || window.generator_state().steps.len() == 7);
+    // The Where step's entry lists the fields that start with the typed word.
+    wait_for("the completion", 3, || {
+        window
+            .demo_generator_completion(0, "rating>=4 pla")
+            .iter()
+            .any(|n| n == "plays")
+    });
+    // A Where step added at the end has it too.
+    window.generator_add_step(0);
+    wait_for("the added step", 3, || {
+        window.generator_state().steps.len() == 8
+    });
+    wait_for("its completion", 3, || {
+        window
+            .demo_generator_completion(1, "rat")
+            .iter()
+            .any(|n| n == "rating")
+    });
+    window.close();
+}
+
+fn generators_take_their_place_in_folders(app: &gtk::Application) {
+    let (window, backend) = window(app);
+    open_forgotten(&window);
+    let key_of = |name: &str| {
+        backend
+            .library()
+            .playlists()
+            .unwrap()
+            .into_iter()
+            .find(|p| p.name == name)
+            .unwrap()
+    };
+    WidgetExt::activate_action(&window, "win.new-playlist-folder", Some(&0u64.to_variant()))
+        .unwrap();
+    wait_for("the folder", 3, || {
+        window.playlist_names().iter().any(|n| n == "New folder")
+    });
+    let folder = key_of("New folder").key;
+    let generator = key_of("Forgotten favourites").key;
+    let heard = key_of("Heard this week").key;
+    let moved = |key: helikodu_ui_gtk::backend::PlaylistKey| {
+        WidgetExt::activate_action(
+            &window,
+            "win.playlist-move",
+            Some(&format!("{}/{}", key.0, folder.0).to_variant()),
+        )
+        .unwrap();
+    };
+    // Dropped on a folder, the generator goes after what is there, as a
+    // playlist does, and keeps its place when another follows it.
+    moved(generator);
+    wait_for("the generator in the folder", 3, || {
+        key_of("Forgotten favourites").parent == Some(folder)
+    });
+    moved(heard);
+    wait_for("the playlist in the folder", 3, || {
+        key_of("Heard this week").parent == Some(folder)
+    });
+    let names = window.playlist_names();
+    let at = |name: &str| names.iter().position(|n| n == name).unwrap();
+    assert_eq!(at("Forgotten favourites"), at("New folder") + 1);
+    assert_eq!(at("Heard this week"), at("Forgotten favourites") + 1);
+    // Pinned in its folder, and still pinned at the top again.
+    WidgetExt::activate_action(&window, "win.playlist-pin", Some(&generator.0.to_variant()))
+        .unwrap();
+    wait_for("the pin", 3, || {
+        window
+            .pin_names()
+            .iter()
+            .any(|n| n == "Forgotten favourites")
+    });
+    WidgetExt::activate_action(
+        &window,
+        "win.playlist-move",
+        Some(&format!("{}/0", generator.0).to_variant()),
+    )
+    .unwrap();
+    wait_for("the generator at the top", 3, || {
+        key_of("Forgotten favourites").parent.is_none()
+    });
+    assert_eq!(
+        window.playlist_names().last().map(String::as_str),
+        Some("Forgotten favourites")
+    );
+    assert!(
+        window
+            .pin_names()
+            .iter()
+            .any(|n| n == "Forgotten favourites")
+    );
+    window.close();
+}
+
+fn narrow_tables_keep_their_columns(app: &gtk::Application) {
+    let backend = sample::backend(&sample::SampleOptions {
+        albums: 300,
+        playing: None,
+    });
+    install_actions(app, &backend);
+    let window = MainWindow::new(app, &backend, WindowStyle::Integrated);
+    window.set_default_size(640, 900);
+    window.present();
+    wait_for("the narrow window", 3, || window.narrow_state().2);
+    open_forgotten(&window);
+    wait_for("the narrow columns", 3, || {
+        window.generator_state().headers == ["#", "Title", "Length"]
+    });
+    wait_for("the artist under the title", 3, || {
+        window
+            .generator_state()
+            .artist_under
+            .is_some_and(|a| !a.is_empty())
+    });
+    shot(&window, "generator-narrow");
+    window.demo_show_similar(SimilarSeed::Track(TrackKey(2)));
+    wait_for("the similar tracks", 3, || {
+        window.similar_state().tracks == 50
+    });
+    wait_for("the narrow similar columns", 3, || {
+        let state = window.similar_state();
+        state.headers == ["Title", "How alike ↓", "Length"]
+            && state.row_shape.0.is_some_and(|a| !a.is_empty())
+    });
+    assert!(
+        !window.similar_state().row_shape.1,
+        "no bar in the narrow window"
+    );
+    shot(&window, "similar-narrow");
+    window.close();
+    // A wide window shows the full tables.
+    let (wide, _) = window_with(app, 300);
+    wide.demo_show_similar(SimilarSeed::Track(TrackKey(2)));
+    wait_for("the wide similar columns", 3, || {
+        let state = wide.similar_state();
+        state.headers.len() == 6 && state.row_shape == (None, true)
+    });
+    wide.close();
+}
+
 type Test = fn(&gtk::Application);
 
 const TESTS: &[(&str, Test)] = &[
@@ -413,6 +560,15 @@ const TESTS: &[(&str, Test)] = &[
         the_context_menu_shows_similar_tracks,
     ),
     ("similar_tracks_not_yet", similar_tracks_not_yet),
+    ("step_queries_complete", step_queries_complete),
+    (
+        "generators_take_their_place_in_folders",
+        generators_take_their_place_in_folders,
+    ),
+    (
+        "narrow_tables_keep_their_columns",
+        narrow_tables_keep_their_columns,
+    ),
 ];
 
 fn main() -> ExitCode {

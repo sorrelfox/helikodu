@@ -299,3 +299,77 @@ fn generators_sit_in_folders_and_pins() {
     assert!(library.remove_generator(id).unwrap());
     assert!(library.pins().unwrap().is_empty());
 }
+
+/// The names at the top (or in `folder`), playlists and generators together, in
+/// the sidebar's order.
+fn sidebar(library: &Library, folder: Option<helikodu_library::PlaylistId>) -> Vec<String> {
+    let mut names: Vec<String> = library
+        .playlist_tree()
+        .unwrap()
+        .into_iter()
+        .filter(|n| n.summary.parent == folder)
+        .map(|n| n.summary.name)
+        .collect();
+    let places = library.generator_places().unwrap();
+    let mut generators: Vec<(usize, String)> = library
+        .generators()
+        .unwrap()
+        .into_iter()
+        .filter(|g| g.parent == folder)
+        .map(|g| {
+            let place = places.iter().find(|(id, _)| *id == g.id).unwrap().1;
+            (place, g.name)
+        })
+        .collect();
+    generators.sort();
+    for (place, name) in generators {
+        names.insert(place.min(names.len()), name);
+    }
+    names
+}
+
+#[test]
+fn generators_keep_their_place_among_playlists() {
+    let (library, _, _) = filled();
+    let first = library.create_playlist("First").unwrap();
+    let steps = GeneratorSteps::default();
+    let picks = library.create_generator("Picks", &steps, true).unwrap();
+    let last = library.create_playlist("Last").unwrap();
+    let top = sidebar(&library, None);
+    let at = |name: &str, names: &[String]| names.iter().position(|n| n == name).unwrap();
+    // Made between two playlists, it is listed between them, not after them.
+    assert_eq!(at("Picks", &top), at("First", &top) + 1);
+    assert_eq!(at("Last", &top), at("Picks", &top) + 1);
+    // Moved to the first place, it still comes after Favourites.
+    library.place_generator(picks, None, Some(0)).unwrap();
+    let top = sidebar(&library, None);
+    assert_eq!(at("Picks", &top), 1);
+    assert_eq!(top[0], "Favourites");
+    // A playlist moved before it counts it.
+    library.move_playlist(last, None, Some(1)).unwrap();
+    let top = sidebar(&library, None);
+    assert_eq!(at("Last", &top), 1);
+    assert_eq!(at("Picks", &top), 2);
+    // Into a folder it goes after what is there, and can move to its start.
+    let folder = library.create_playlist_folder("Moods", None).unwrap();
+    library.move_playlist(first, Some(folder), None).unwrap();
+    library.move_generator(picks, Some(folder)).unwrap();
+    assert_eq!(sidebar(&library, Some(folder)), ["First", "Picks"]);
+    library
+        .place_generator(picks, Some(folder), Some(0))
+        .unwrap();
+    assert_eq!(sidebar(&library, Some(folder)), ["Picks", "First"]);
+    let other = library.create_generator("Other", &steps, true).unwrap();
+    library
+        .place_generator(other, Some(folder), Some(1))
+        .unwrap();
+    assert_eq!(sidebar(&library, Some(folder)), ["Picks", "Other", "First"]);
+    // Deleting the folder keeps their order, after what is at the top.
+    library.delete_playlist(folder).unwrap();
+    let top = sidebar(&library, None);
+    assert_eq!(&top[top.len() - 3..], ["Picks", "Other", "First"]);
+    assert!(matches!(
+        library.place_generator(picks, Some(last), None),
+        Err(GeneratorError::Unknown(_))
+    ));
+}

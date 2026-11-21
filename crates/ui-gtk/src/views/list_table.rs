@@ -6,8 +6,11 @@
 //! compact) with zebra stripes, a header whose buttons sort the table for the
 //! visit, the playing mark, the track context menu, play on double click or
 //! Enter, and dragging rows to the queue or a playlist.
+//!
+//! In the narrow window the table keeps only the columns marked for it: the
+//! title then has the artist under it, and the likeness only its word.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gtk::prelude::*;
@@ -50,6 +53,8 @@ pub(crate) struct Column {
     pub(crate) kind: ColumnKind,
     /// The column the list is ordered by: its header in `t1`, with this arrow.
     pub(crate) arrow: Option<&'static str>,
+    /// Kept in the narrow window.
+    pub(crate) narrow: bool,
 }
 
 impl Column {
@@ -61,6 +66,7 @@ impl Column {
             right: false,
             kind,
             arrow: None,
+            narrow: false,
         }
     }
 
@@ -68,7 +74,16 @@ impl Column {
         self.right = true;
         self
     }
+
+    /// Keeps the column in the narrow window.
+    pub(crate) fn kept_narrow(mut self) -> Self {
+        self.narrow = true;
+        self
+    }
 }
+
+/// The width of the likeness column in the narrow window: its word alone.
+const NARROW_LIKENESS: i32 = 104;
 
 /// The value of a cell.
 pub(crate) enum Value {
@@ -78,6 +93,7 @@ pub(crate) enum Value {
 }
 
 type Values = Rc<dyn Fn(u32, &TrackRow, &'static str) -> Value>;
+type Sort = Rc<dyn Fn(&'static str)>;
 
 /// A table of tracks.
 pub(crate) struct ListTable {
@@ -86,7 +102,13 @@ pub(crate) struct ListTable {
     pub(crate) store: gio::ListStore,
     pub(crate) selection: gtk::MultiSelection,
     pub(crate) scroller: gtk::ScrolledWindow,
+    /// Every column, and those shown.
+    all_columns: RefCell<Vec<Column>>,
     columns: RefCell<Vec<Column>>,
+    values: RefCell<Option<Values>>,
+    sort: RefCell<Option<Sort>>,
+    /// Whether the window is narrow.
+    narrow: Cell<bool>,
     covers: Rc<CoverCache>,
     playing: Rc<PlayingRows>,
 }
@@ -122,7 +144,11 @@ impl ListTable {
             store,
             selection,
             scroller,
+            all_columns: RefCell::new(Vec::new()),
             columns: RefCell::new(Vec::new()),
+            values: RefCell::new(None),
+            sort: RefCell::new(None),
+            narrow: Cell::new(false),
             covers: covers.clone(),
             playing: playing.clone(),
         })
@@ -134,8 +160,42 @@ impl ListTable {
         self: &Rc<Self>,
         columns: Vec<Column>,
         values: impl Fn(u32, &TrackRow, &'static str) -> Value + 'static,
-        sort: impl Fn(&'static str) + Clone + 'static,
+        sort: impl Fn(&'static str) + 'static,
     ) {
+        self.all_columns.replace(columns);
+        self.values.replace(Some(Rc::new(values)));
+        self.sort.replace(Some(Rc::new(sort)));
+        self.build();
+    }
+
+    /// Follows the narrow window: only the columns kept there, the artist
+    /// under the title, the likeness without its bar.
+    pub(crate) fn set_narrow(self: &Rc<Self>, narrow: bool) {
+        if self.narrow.replace(narrow) != narrow && self.values.borrow().is_some() {
+            self.build();
+        }
+    }
+
+    /// The header and the rows for the columns shown.
+    fn build(self: &Rc<Self>) {
+        let narrow = self.narrow.get();
+        let columns: Vec<Column> = self
+            .all_columns
+            .borrow()
+            .iter()
+            .filter(|c| !narrow || c.narrow)
+            .cloned()
+            .map(|mut c| {
+                if narrow && c.kind == ColumnKind::Likeness {
+                    c.width = NARROW_LIKENESS;
+                }
+                c
+            })
+            .collect();
+        let (Some(values), Some(sort)) = (self.values.borrow().clone(), self.sort.borrow().clone())
+        else {
+            return;
+        };
         while let Some(child) = self.header.first_child() {
             self.header.remove(&child);
         }
@@ -176,12 +236,13 @@ impl ListTable {
             }
         }
         self.columns.replace(columns);
-        self.list.set_factory(Some(&self.factory(Rc::new(values))));
+        self.list.set_factory(Some(&self.factory(values)));
     }
 
     fn factory(self: &Rc<Self>, values: Values) -> gtk::SignalListItemFactory {
         let factory = gtk::SignalListItemFactory::new();
         let columns = self.columns.borrow().clone();
+        let narrow = self.narrow.get();
         let weak = Rc::downgrade(self);
         factory.connect_setup(move |_, item| {
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
@@ -209,7 +270,20 @@ impl ListTable {
                         let l = label("", &["hk-medium"]);
                         l.set_max_width_chars(1);
                         l.set_hexpand(true);
-                        cell.append(&l);
+                        if narrow {
+                            // The artist under the title.
+                            let lines = gtk::Box::new(gtk::Orientation::Vertical, 0);
+                            lines.set_valign(gtk::Align::Center);
+                            lines.set_hexpand(true);
+                            lines.append(&l);
+                            let artist = label("", &["hk-t2", "hk-small"]);
+                            artist.set_max_width_chars(1);
+                            artist.set_hexpand(true);
+                            lines.append(&artist);
+                            cell.append(&lines);
+                        } else {
+                            cell.append(&l);
+                        }
                         cell.upcast()
                     }
                     ColumnKind::Likeness => {
@@ -224,7 +298,10 @@ impl ListTable {
                         bar.remove_offset_value(Some(gtk::LEVEL_BAR_OFFSET_LOW));
                         bar.remove_offset_value(Some(gtk::LEVEL_BAR_OFFSET_HIGH));
                         bar.remove_offset_value(Some(gtk::LEVEL_BAR_OFFSET_FULL));
-                        cell.append(&bar);
+                        // The word alone in the narrow window.
+                        if !narrow {
+                            cell.append(&bar);
+                        }
                         cell.append(&label("", &["hk-t2"]));
                         cell.upcast()
                     }
@@ -314,8 +391,23 @@ impl ListTable {
                     if let Some(cover) = widget.first_child().and_downcast::<CoverArt>() {
                         self.covers.show(&cover, row.cover, row.cover_seed, 24);
                     }
-                    if let Some(l) = widget.last_child().and_downcast::<gtk::Label>() {
-                        l.set_text(&text);
+                    match widget.last_child() {
+                        Some(lines) if lines.is::<gtk::Box>() => {
+                            if let Some(l) = lines.first_child().and_downcast::<gtk::Label>() {
+                                l.set_text(&text);
+                            }
+                            if let Some(l) = lines.last_child().and_downcast::<gtk::Label>()
+                                && let Value::Text(artist) = values(position, &row, "artist")
+                            {
+                                l.set_text(&artist);
+                            }
+                        }
+                        Some(l) => {
+                            if let Some(l) = l.downcast_ref::<gtk::Label>() {
+                                l.set_text(&text);
+                            }
+                        }
+                        None => {}
                     }
                 }
                 (ColumnKind::Likeness, Value::Likeness(share, word, name)) => {
@@ -363,6 +455,32 @@ impl ListTable {
             .iter()
             .map(|c| format!("{}{}", c.title, c.arrow.unwrap_or("")))
             .collect()
+    }
+
+    /// The artist under the title of the first row drawn, and whether that
+    /// row shows a likeness bar (for tests).
+    pub(crate) fn first_row_shape(&self) -> (Option<String>, bool) {
+        fn find(widget: &gtk::Widget, test: &dyn Fn(&gtk::Widget) -> bool) -> Option<gtk::Widget> {
+            if test(widget) {
+                return Some(widget.clone());
+            }
+            let mut child = widget.first_child();
+            while let Some(c) = child {
+                if let Some(found) = find(&c, test) {
+                    return Some(found);
+                }
+                child = c.next_sibling();
+            }
+            None
+        }
+        let Some(cell) = find(self.list.upcast_ref(), &|w| w.is::<TableCell>()) else {
+            return (None, false);
+        };
+        let artist = find(&cell, &|w| w.has_css_class("hk-small"))
+            .and_downcast::<gtk::Label>()
+            .map(|l| l.text().to_string());
+        let bar = find(&cell, &|w| w.is::<gtk::LevelBar>()).is_some();
+        (artist, bar)
     }
 
     /// Plays on activation, opens the context menu on a right click or the
