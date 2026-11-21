@@ -363,14 +363,14 @@ impl Deck {
         let stop = gtk::gio::Menu::new();
         stop.append(Some(&tr("Stop")), Some("app.stop"));
         stop.append_submenu(
-            Some(&tr("Stop after")),
+            Some(&tr("Stop After")),
             &crate::play_modes::stop_after_menu(),
         );
-        stop.append(Some(&tr("Sleep timer…")), Some("win.sleep-timer"));
+        stop.append(Some(&tr("Sleep Timer…")), Some("win.sleep-timer"));
         menu.append_section(None, &stop);
         let jump = gtk::gio::Menu::new();
         jump.append(
-            Some(&tr("Jump to the playing track")),
+            Some(&tr("Jump to the Playing Track")),
             Some("win.jump-to-playing"),
         );
         menu.append_section(None, &jump);

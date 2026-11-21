@@ -12,11 +12,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Every menu is now in title case, as the main menu was: the context menus of tracks, albums, artists, playlists and labels, the playback menus, the sort and group menus ("Add to Queue", "Edit Tags…", "Stop After").
 - On an album page, the facts of the selected track come first in the details column, above the album's.
 
 ### Fixed
 
 - The **Most played** lists of artist pages and of Home had no context menu; a right click (or the Menu key) now opens the menu of tracks.
+- The release notes of 0.9.4 shown by software centres were not translated; they are now, in all 11 languages.
 - Rules of a smart playlist edited just after it was opened could be replaced by the rules read as it opened.
 - The Labels list opened from **Labels…** closed again at once when it had only a few rows, as before the first label exists. The list of completions in the search filter could close the same way.
 

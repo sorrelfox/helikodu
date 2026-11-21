@@ -188,11 +188,11 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     );
     if !playing {
         play.append_item(&item(&tr("Play"), "win.sel-play"));
-        play.append_item(&item(&tr("Play next"), "win.sel-play-next"));
+        play.append_item(&item(&tr("Play Next"), "win.sel-play-next"));
     }
-    play.append_item(&item(&tr("Add to queue"), "win.sel-enqueue"));
+    play.append_item(&item(&tr("Add to Queue"), "win.sel-enqueue"));
     let add = gio::Menu::new();
-    let new = gio::MenuItem::new(Some(&tr("New playlist")), None);
+    let new = gio::MenuItem::new(Some(&tr("New Playlist")), None);
     new.set_action_and_target_value(Some("win.sel-add-to-playlist"), Some(&0u64.to_variant()));
     add.append_item(&new);
     let lists = gio::Menu::new();
@@ -214,7 +214,7 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         lists.append_item(&entry);
     }
     add.append_section(None, &lists);
-    play.append_submenu(Some(&tr("Add to playlist")), &add);
+    play.append_submenu(Some(&tr("Add to Playlist")), &add);
     match target {
         Target::Tracks { rows, .. } if rows.len() > 1 => {
             let label = fill(
@@ -227,8 +227,8 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     }
     let go = gio::Menu::new();
     if matches!(target, Target::Tracks { .. } | Target::Album(_)) {
-        go.append_item(&item(&tr("Go to album"), "win.sel-go-album"));
-        go.append_item(&item(&tr("Go to artist"), "win.sel-go-artist"));
+        go.append_item(&item(&tr("Go to Album"), "win.sel-go-album"));
+        go.append_item(&item(&tr("Go to Artist"), "win.sel-go-artist"));
     }
     if go.n_items() > 0 {
         menu.append_section(None, &go);
@@ -240,7 +240,7 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     };
     if let Some((action, id)) = pin {
         let pins = gio::Menu::new();
-        let entry = gio::MenuItem::new(Some(&tr("Pin to the sidebar")), None);
+        let entry = gio::MenuItem::new(Some(&tr("Pin to the Sidebar")), None);
         entry.set_action_and_target_value(Some(action), Some(&id.to_variant()));
         pins.append_item(&entry);
         pins.append_item(&item(&tr("Labels…"), "win.sel-labels"));
@@ -248,12 +248,12 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     }
     if matches!(target, Target::Tracks { .. } | Target::Album(_)) {
         let loudness = gio::Menu::new();
-        loudness.append_item(&item(&tr("Measure loudness"), "win.sel-measure-loudness"));
+        loudness.append_item(&item(&tr("Measure Loudness"), "win.sel-measure-loudness"));
         menu.append_section(None, &loudness);
     }
     if let Target::Tracks { .. } = target {
         let edit = gio::Menu::new();
-        let tags = item(&tr("Edit tags…"), "win.sel-edit-tags");
+        let tags = item(&tr("Edit Tags…"), "win.sel-edit-tags");
         tags.set_attribute_value("accel", Some(&"<Alt>Return".to_variant()));
         edit.append_item(&tags);
         let rate = gio::Menu::new();
@@ -263,19 +263,19 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
             entry.set_action_and_target_value(Some("win.sel-rate"), Some(&stars.to_variant()));
             rate.append_item(&entry);
         }
-        let none = gio::MenuItem::new(Some(&tr("Not rated")), None);
+        let none = gio::MenuItem::new(Some(&tr("Not Rated")), None);
         none.set_action_and_target_value(Some("win.sel-rate"), Some(&0i32.to_variant()));
         rate.append_item(&none);
         edit.append_submenu(Some(&tr("Rate")), &rate);
         edit.append_item(&item(&tr("Labels…"), "win.sel-labels"));
         menu.append_section(None, &edit);
         let folder = gio::Menu::new();
-        folder.append_item(&item(&tr("Open containing folder"), "win.sel-open-folder"));
+        folder.append_item(&item(&tr("Open Containing Folder"), "win.sel-open-folder"));
         if target.rows().len() == 1 {
-            folder.append_item(&item(&tr("Rename file…"), "win.sel-rename-file"));
+            folder.append_item(&item(&tr("Rename File…"), "win.sel-rename-file"));
         }
-        folder.append_item(&item(&tr("Organize files…"), "win.sel-organize"));
-        folder.append_item(&item(&tr("Verify files"), "win.sel-verify"));
+        folder.append_item(&item(&tr("Organize Files…"), "win.sel-organize"));
+        folder.append_item(&item(&tr("Verify Files"), "win.sel-verify"));
         if let Some(track) = with_copies(target) {
             let copies = gio::MenuItem::new(Some(&tr("Copies…")), None);
             copies.set_action_and_target_value(
@@ -291,11 +291,11 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
         Target::Tracks {
             origin: Origin::Playlist { .. },
             ..
-        } => Some(tr("Remove from playlist")),
+        } => Some(tr("Remove from Playlist")),
         Target::Tracks {
             origin: Origin::Queue { .. },
             ..
-        } => Some(tr("Remove from queue")),
+        } => Some(tr("Remove from Queue")),
         _ => None,
     };
     let trash = matches!(target, Target::Tracks { origin, .. } if *origin != Origin::Playing);
@@ -307,7 +307,7 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
             remove.append_item(&entry);
         }
         if trash {
-            remove.append_item(&item(&tr("Move to trash…"), "win.sel-trash"));
+            remove.append_item(&item(&tr("Move to Trash…"), "win.sel-trash"));
         }
         menu.append_section(None, &remove);
     }
@@ -367,7 +367,7 @@ pub(crate) fn popup_with(
         _ => false,
     };
     if pinned {
-        relabel(&model, &tr("Pin to the sidebar"), &tr("Unpin"));
+        relabel(&model, &tr("Pin to the Sidebar"), &tr("Unpin"));
     }
     window.set_target(Some(target));
     let popover = gtk::PopoverMenu::from_model(Some(&model));

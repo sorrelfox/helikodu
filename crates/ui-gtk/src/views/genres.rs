@@ -112,7 +112,7 @@ impl GenresView {
         let root = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         let order = gio::Menu::new();
         order.append(Some(&tr("Name")), Some("genres.order::name"));
-        order.append(Some(&tr("Number of albums")), Some("genres.order::count"));
+        order.append(Some(&tr("Number of Albums")), Some("genres.order::count"));
         let order_button = gtk::MenuButton::new();
         order_button.set_icon_name("view-sort-descending-symbolic");
         order_button.add_css_class("hk-menu");
@@ -154,10 +154,10 @@ impl GenresView {
         );
         let sorts = gio::Menu::new();
         for (target, text) in [
-            ("artist", tr("Album artist")),
+            ("artist", tr("Album Artist")),
             ("title", tr("Title")),
             ("year", tr("Year")),
-            ("added", tr("Date added")),
+            ("added", tr("Date Added")),
         ] {
             sorts.append(Some(&text), Some(&format!("genres.sort::{target}")));
         }

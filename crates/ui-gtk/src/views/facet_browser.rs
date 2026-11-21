@@ -331,7 +331,11 @@ impl FacetBrowser {
             .insert_action_group(&format!("facet{index}"), Some(&group));
         let menu = gio::Menu::new();
         for field in FacetField::ALL {
-            let item = gio::MenuItem::new(Some(&field_title(field)), None);
+            let name = match field {
+                FacetField::AlbumArtist => tr("Album Artist"),
+                _ => field_title(field),
+            };
+            let item = gio::MenuItem::new(Some(&name), None);
             item.set_action_and_target_value(
                 Some(&format!("facet{index}.field")),
                 Some(&field_id(field).to_variant()),

@@ -216,17 +216,17 @@ impl MainWindow {
         let first = gio::Menu::new();
         match kind {
             PlaylistType::Folder => {
-                let new = gio::MenuItem::new(Some(&tr("New smart playlist here")), None);
+                let new = gio::MenuItem::new(Some(&tr("New Smart Playlist Here")), None);
                 new.set_action_and_target_value(
                     Some("win.new-smart-playlist-in"),
                     Some(&id.to_variant()),
                 );
                 first.append_item(&new);
-                first.append_item(&item(&tr("New folder here"), "win.new-playlist-folder"));
+                first.append_item(&item(&tr("New Folder Here"), "win.new-playlist-folder"));
             }
             PlaylistType::Smart => {
                 first.append_item(&item(&tr("Play"), "win.playlist-play"));
-                first.append_item(&item(&tr("Edit rules"), "win.playlist-edit-rules"));
+                first.append_item(&item(&tr("Edit Rules"), "win.playlist-edit-rules"));
             }
             PlaylistType::Static => {
                 first.append_item(&item(&tr("Play"), "win.playlist-play"));
@@ -248,21 +248,21 @@ impl MainWindow {
             }
             PlaylistType::Smart => {
                 edit.append_item(&item(
-                    &tr("Save a copy as a playlist"),
+                    &tr("Save a Copy as a Playlist"),
                     "win.playlist-duplicate",
                 ));
             }
             PlaylistType::Folder => {}
         }
         if !builtin {
-            edit.append_submenu(Some(&tr("Move to folder")), &self.move_menu(key, &rows));
+            edit.append_submenu(Some(&tr("Move to Folder")), &self.move_menu(key, &rows));
         }
         let pinned = self.is_pinned(PinKey::Playlist(key));
         edit.append_item(&item(
             &if pinned {
                 tr("Unpin")
             } else {
-                tr("Pin to the sidebar")
+                tr("Pin to the Sidebar")
             },
             "win.playlist-pin",
         ));
@@ -274,9 +274,9 @@ impl MainWindow {
         if !builtin {
             last.append_item(&item(
                 &if kind == PlaylistType::Folder {
-                    tr("Delete folder…")
+                    tr("Delete Folder…")
                 } else {
-                    tr("Delete playlist…")
+                    tr("Delete Playlist…")
                 },
                 "win.playlist-delete",
             ));
@@ -291,7 +291,7 @@ impl MainWindow {
         let parent = rows.iter().find(|p| p.key == key).and_then(|p| p.parent);
         let target = |folder: u64| format!("{}/{folder}", key.0);
         if parent.is_some() {
-            let top = gio::MenuItem::new(Some(&tr("Top level")), None);
+            let top = gio::MenuItem::new(Some(&tr("Top Level")), None);
             top.set_action_and_target_value(
                 Some("win.playlist-move"),
                 Some(&target(0).to_variant()),
@@ -321,7 +321,7 @@ impl MainWindow {
             );
             menu.append_item(&entry);
         }
-        let new = gio::MenuItem::new(Some(&tr("New folder…")), None);
+        let new = gio::MenuItem::new(Some(&tr("New Folder…")), None);
         new.set_action_and_target_value(
             Some("win.playlist-move"),
             Some(&format!("{}/new", key.0).to_variant()),
@@ -420,7 +420,7 @@ impl MainWindow {
     pub(crate) fn new_menu(&self, widget: &gtk::Widget) {
         let menu = gio::Menu::new();
         menu.append(Some(&tr("Playlist")), Some("app.new-playlist"));
-        let smart = gio::MenuItem::new(Some(&tr("Smart playlist")), None);
+        let smart = gio::MenuItem::new(Some(&tr("Smart Playlist")), None);
         smart.set_action_and_target_value(
             Some("win.new-smart-playlist-in"),
             Some(&0u64.to_variant()),

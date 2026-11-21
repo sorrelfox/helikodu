@@ -62,7 +62,7 @@ impl MainWindow {
         let menu: gio::MenuModel = imp.main_menu.get().upcast();
         if let Some(view_menu) = submenu(&menu, &tr("View")) {
             view_menu.append(
-                Some(&tr("Follow the playing track")),
+                Some(&tr("Follow the Playing Track")),
                 Some("win.follow-playing"),
             );
         }

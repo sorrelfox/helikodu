@@ -1849,7 +1849,7 @@ fn tools_button(editor: &Rc<Editor>) -> gtk::MenuButton {
     editor.window.insert_action_group("tageditor", Some(&group));
     let menu = gio::Menu::new();
     for tool in Tool::ALL {
-        let item = gio::MenuItem::new(Some(&tool.title()), None);
+        let item = gio::MenuItem::new(Some(&tool.menu_title()), None);
         item.set_action_and_target_value(Some("tageditor.tool"), Some(&tool.id().to_variant()));
         menu.append_item(&item);
     }

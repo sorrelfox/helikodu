@@ -69,7 +69,7 @@ pub(crate) fn shuffle_name(mode: ShuffleMode) -> String {
         ShuffleMode::Albums => tr("Albums"),
         ShuffleMode::Folders => tr("Folders"),
         ShuffleMode::Groupings => tr("Groupings"),
-        ShuffleMode::WithinAlbum => tr("Tracks within each album"),
+        ShuffleMode::WithinAlbum => tr("Tracks Within Each Album"),
         _ => tr("Off"),
     }
 }
@@ -77,9 +77,9 @@ pub(crate) fn shuffle_name(mode: ShuffleMode) -> String {
 /// The repeat mode as the menu names it.
 pub(crate) fn repeat_name(mode: RepeatMode) -> String {
     match mode {
-        RepeatMode::One => tr("This track"),
-        RepeatMode::Album => tr("This album"),
-        RepeatMode::All => tr("The whole queue"),
+        RepeatMode::One => tr("This Track"),
+        RepeatMode::Album => tr("This Album"),
+        RepeatMode::All => tr("The Whole Queue"),
         _ => tr("Off"),
     }
 }
@@ -87,9 +87,9 @@ pub(crate) fn repeat_name(mode: RepeatMode) -> String {
 /// The stop-after choice as the menu names it.
 pub(crate) fn stop_after_name(mode: StopAfter) -> String {
     match mode {
-        StopAfter::Track => tr("This track"),
-        StopAfter::Album => tr("This album"),
-        StopAfter::Queue => tr("The queue"),
+        StopAfter::Track => tr("This Track"),
+        StopAfter::Album => tr("This Album"),
+        StopAfter::Queue => tr("The Queue"),
         _ => tr("Off"),
     }
 }
@@ -97,8 +97,8 @@ pub(crate) fn stop_after_name(mode: StopAfter) -> String {
 /// The "Play only" choice as the menu names it.
 pub(crate) fn scope_name(scope: PlayScope) -> String {
     match scope {
-        PlayScope::Artist => tr("This artist"),
-        PlayScope::Album => tr("This album"),
+        PlayScope::Artist => tr("This Artist"),
+        PlayScope::Album => tr("This Album"),
         _ => tr("Everything"),
     }
 }
@@ -225,9 +225,9 @@ pub(crate) fn scope_menu() -> gio::Menu {
 /// The Loop a section submenu.
 pub(crate) fn loop_menu() -> gio::Menu {
     let menu = gio::Menu::new();
-    menu.append(Some(&tr("Set the start here")), Some("app.loop-start"));
-    menu.append(Some(&tr("Set the end here")), Some("app.loop-end"));
-    menu.append(Some(&tr("Clear the loop")), Some("app.loop-clear"));
+    menu.append(Some(&tr("Set the Start Here")), Some("app.loop-start"));
+    menu.append(Some(&tr("Set the End Here")), Some("app.loop-end"));
+    menu.append(Some(&tr("Clear the Loop")), Some("app.loop-clear"));
     menu
 }
 
@@ -236,16 +236,16 @@ pub(crate) fn queue_menu() -> gio::Menu {
     let menu = gio::Menu::new();
     let modes = gio::Menu::new();
     modes.append(
-        Some(&tr("Remove tracks after they play")),
+        Some(&tr("Remove Tracks After They Play")),
         Some("app.consume"),
     );
     modes.append(
-        Some(&tr("Continue from the selected track")),
+        Some(&tr("Continue from the Selected Track")),
         Some("app.follow-cursor"),
     );
     menu.append_section(None, &modes);
     let edits = gio::Menu::new();
-    edits.append(Some(&tr("Save as playlist…")), Some("win.save-queue"));
+    edits.append(Some(&tr("Save as Playlist…")), Some("win.save-queue"));
     edits.append(Some(&tr("Clear")), Some("app.clear-queue"));
     menu.append_section(None, &edits);
     menu
@@ -267,15 +267,15 @@ pub(crate) fn fill_playback_menu(menu: &gio::Menu, view: &PlayerView) {
     let moves = gio::Menu::new();
     moves.append(Some(&tr("Previous")), Some("app.previous"));
     moves.append(Some(&tr("Next")), Some("app.next"));
-    moves.append(Some(&tr("Previous album")), Some("app.previous-album"));
-    moves.append(Some(&tr("Next album")), Some("app.next-album"));
-    moves.append(Some(&tr("Random album")), Some("app.random-album"));
+    moves.append(Some(&tr("Previous Album")), Some("app.previous-album"));
+    moves.append(Some(&tr("Next Album")), Some("app.next-album"));
+    moves.append(Some(&tr("Random Album")), Some("app.random-album"));
     menu.append_section(None, &moves);
 
     let seeks = gio::Menu::new();
-    seeks.append(Some(&tr("Seek back")), Some("app.seek-back"));
-    seeks.append(Some(&tr("Seek forward")), Some("app.seek-forward"));
-    seeks.append_submenu(Some(&tr("Loop a section")), &loop_menu());
+    seeks.append(Some(&tr("Seek Back")), Some("app.seek-back"));
+    seeks.append(Some(&tr("Seek Forward")), Some("app.seek-forward"));
+    seeks.append_submenu(Some(&tr("Loop a Section")), &loop_menu());
     menu.append_section(None, &seeks);
 
     let modes = gio::Menu::new();
@@ -290,26 +290,26 @@ pub(crate) fn fill_playback_menu(menu: &gio::Menu, view: &PlayerView) {
     );
     modes.append_submenu(
         Some(&fill(
-            &tr("Stop after: {}"),
+            &tr("Stop After: {}"),
             &[&stop_after_name(view.stop_after_mode)],
         )),
         &stop_after_menu(),
     );
     modes.append_submenu(
-        Some(&fill(&tr("Play only: {}"), &[&scope_name(m.scope)])),
+        Some(&fill(&tr("Play Only: {}"), &[&scope_name(m.scope)])),
         &scope_menu(),
     );
     modes.append_submenu(Some(&tr("Queue")), &queue_menu());
     menu.append_section(None, &modes);
 
     let rest = gio::Menu::new();
-    rest.append(Some(&tr("Sleep timer…")), Some("win.sleep-timer"));
+    rest.append(Some(&tr("Sleep Timer…")), Some("win.sleep-timer"));
     let output = gio::Menu::new();
     output.append(
-        Some(&tr("Choose the output device…")),
+        Some(&tr("Choose the Output Device…")),
         Some("win.output-switcher"),
     );
-    rest.append_submenu(Some(&tr("Output device")), &output);
+    rest.append_submenu(Some(&tr("Output Device")), &output);
     menu.append_section(None, &rest);
 }
 

@@ -24,11 +24,11 @@ const EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
 /// chosen in the app, "Remove photo".
 pub(crate) fn menu_section(artist: ArtistKey, own_photo: bool) -> gio::Menu {
     let section = gio::Menu::new();
-    let set = gio::MenuItem::new(Some(&tr("Set artist photo…")), None);
+    let set = gio::MenuItem::new(Some(&tr("Set Artist Photo…")), None);
     set.set_action_and_target_value(Some(SET_ACTION), Some(&artist.0.to_variant()));
     section.append_item(&set);
     if own_photo {
-        let remove = gio::MenuItem::new(Some(&tr("Remove photo")), None);
+        let remove = gio::MenuItem::new(Some(&tr("Remove Photo")), None);
         remove.set_action_and_target_value(Some(REMOVE_ACTION), Some(&artist.0.to_variant()));
         section.append_item(&remove);
     }

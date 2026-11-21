@@ -194,13 +194,13 @@ impl CategoryView {
             }
             Category::Years => {
                 order.append(
-                    Some(&tr("Newest first")),
+                    Some(&tr("Newest First")),
                     Some(&format!("{group_name}.order::name")),
                 );
             }
         }
         order.append(
-            Some(&tr("Number of albums")),
+            Some(&tr("Number of Albums")),
             Some(&format!("{group_name}.order::count")),
         );
         let order_button = gtk::MenuButton::new();
@@ -248,10 +248,10 @@ impl CategoryView {
         );
         let sorts = gio::Menu::new();
         for (target, text) in [
-            ("artist", tr("Album artist")),
+            ("artist", tr("Album Artist")),
             ("title", tr("Title")),
             ("year", tr("Year")),
-            ("added", tr("Date added")),
+            ("added", tr("Date Added")),
         ] {
             sorts.append(Some(&text), Some(&format!("{group_name}.sort::{target}")));
         }

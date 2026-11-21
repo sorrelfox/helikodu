@@ -153,7 +153,7 @@ fn label_menu(key: LabelKey) -> gio::Menu {
     menu.append_item(&rename);
     menu.append_item(&entry(&tr("Merge into…"), "labels.merge"));
     let remove = gio::Menu::new();
-    remove.append_item(&entry(&tr("Remove from everything"), "labels.delete"));
+    remove.append_item(&entry(&tr("Remove from Everything"), "labels.delete"));
     menu.append_section(None, &remove);
     menu
 }
@@ -171,7 +171,7 @@ impl LabelsView {
         let main = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         let order = gio::Menu::new();
         order.append(Some(&tr("Name")), Some("labels.order::name"));
-        order.append(Some(&tr("Number of tracks")), Some("labels.order::count"));
+        order.append(Some(&tr("Number of Tracks")), Some("labels.order::count"));
         let order_button = gtk::MenuButton::new();
         order_button.set_icon_name("view-sort-descending-symbolic");
         order_button.add_css_class("hk-menu");
@@ -548,7 +548,7 @@ impl LabelsView {
     /// The menu entry that takes the label shown from an item.
     fn remove_menu() -> gio::Menu {
         let menu = gio::Menu::new();
-        menu.append(Some(&tr("Remove the label")), Some("labels.remove-item"));
+        menu.append(Some(&tr("Remove the Label")), Some("labels.remove-item"));
         menu
     }
 

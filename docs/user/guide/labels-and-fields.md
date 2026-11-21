@@ -26,9 +26,9 @@ The labels of an album or an artist show as small tags under its title; click on
 
 - **Rename** it, also with F2. Renaming it to the name of another label offers to merge the two.
 - **Merge into** another label: everything that has it gets the other label instead, and it disappears.
-- **Remove from everything**.
+- **Remove from Everything**.
 
-Right-click an artist, album or track shown under a label and choose **Remove the label** to take the label from it alone. Each of these changes shows a notice with **Undo** as well.
+Right-click an artist, album or track shown under a label and choose **Remove the Label** to take the label from it alone. Each of these changes shows a notice with **Undo** as well.
 
 The record label of an album, from the `LABEL` tag of its files, is shown as **Record label** among the album's details; it has nothing to do with your labels.
 

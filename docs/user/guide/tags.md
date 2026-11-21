@@ -6,7 +6,7 @@ The tag editor changes the tags in your music files: titles, artists, album, tra
 
 Select one or several tracks, then:
 
-- choose **Edit tags…** in their right-click menu,
+- choose **Edit Tags…** in their right-click menu,
 - press **Alt+Return**, or choose **Edit ▸ Track Properties** in the main menu,
 - or, on an album page, click **Edit tags** under **Details** to edit all its tracks.
 

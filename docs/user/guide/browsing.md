@@ -52,7 +52,7 @@ Tags without a field of their own (such as `MOOD`, `BPM`, `GROUPING`, `LABEL` or
 
 ## Albums
 
-**Albums** shows your albums as a grid of covers. **Sort by** orders them by **Album artist**, **Title**, **Year** or **Date added**, and the quick filter shows **All** albums, only **Lossless** ones or only **Hi-res** ones. Albums whose tracks have no album tag are grouped under **Unknown album**; compilations are listed under **Various artists**.
+**Albums** shows your albums as a grid of covers. **Sort By** orders them by **Album Artist**, **Title**, **Year** or **Date Added**, and the quick filter shows **All** albums, only **Lossless** ones or only **Hi-res** ones. Albums whose tracks have no album tag are grouped under **Unknown album**; compilations are listed under **Various artists**.
 
 Covers come from pictures embedded in the files and from image files in the album folder, such as `cover.jpg`, `folder.png` or `front.webp`. Albums without a cover get a generated placeholder.
 
@@ -66,7 +66,7 @@ Drag the left border of the **Details** column to make it wider or narrower; whe
 
 ## Artists
 
-**Artists** lists the album artists on the left, under letter headings; sort them by **Name** or **Number of albums**. Choose an artist to see their page: **Play all**, **Shuffle**, and **More** (**Play next**, **Add to queue**), with two tabs:
+**Artists** lists the album artists on the left, under letter headings; sort them by **Name** or **Number of Albums**. Choose an artist to see their page: **Play all**, **Shuffle**, and **More** (**Play Next**, **Add to Queue**), with two tabs:
 
 - **Releases**: the artist's **Albums**, **EPs and singles**, the albums they appear on (**Appears on**), and their **Most played** tracks, which have the context menu of tracks.
 - **All tracks**: all their tracks in a track table, as in the Tracks view.
@@ -75,14 +75,14 @@ Drag the left border of the **Details** column to make it wider or narrower; whe
 
 An artist is shown with their photo, round, in the list, at the top of their page and in search results; without a photo, their initials. The photo is, in this order:
 
-1. a picture you chose: right-click the artist in the list or the round picture at the top of their page, or open **More**, and choose **Set artist photo…** (a JPEG, PNG or WebP image). You can also drop an image file onto the round picture. Helikodu keeps a copy in `artist-photos` beside the library database (`~/.local/share/helikodu/artist-photos`); your file is left as it is;
+1. a picture you chose: right-click the artist in the list or the round picture at the top of their page, or open **More**, and choose **Set Artist Photo…** (a JPEG, PNG or WebP image). You can also drop an image file onto the round picture. Helikodu keeps a copy in `artist-photos` beside the library database (`~/.local/share/helikodu/artist-photos`); your file is left as it is;
 2. an `artist.jpg` (or `.jpeg`, `.png`, `.webp`) in the artist's folder: the folder that holds all of their album folders. For an artist with one album folder, that folder and the one above it are looked in. A new or changed file shows the next time the artist list is loaded, for example after a scan.
 
-**Remove photo** forgets the picture you chose, and the photo from the artist's folder, or the initials, shows again. Photos are never downloaded.
+**Remove Photo** forgets the picture you chose, and the photo from the artist's folder, or the initials, shows again. Photos are never downloaded.
 
 ## Genres
 
-**Genres** lists the genres on the left, sorted by **Name** or **Number of albums**. Choose a genre to see its albums as a grid, with **Play all** and **Shuffle**. The albums can be sorted by **Album artist**, **Title**, **Year** or **Date added**.
+**Genres** lists the genres on the left, sorted by **Name** or **Number of Albums**. Choose a genre to see its albums as a grid, with **Play all** and **Shuffle**. The albums can be sorted by **Album Artist**, **Title**, **Year** or **Date Added**.
 
 ## Composers
 
@@ -102,7 +102,7 @@ While a chapter plays, the deck shows the chapter's number and title, and the se
 
 ## Tracks
 
-**Tracks** lists every track of the library in a table. The **Filter** field narrows it, and **Columns** shows or hides columns: **#**, **Title**, **Artist**, **Album**, **Year**, **Format**, **Rating**, **Plays** (hidden at first) and **Length**, and, hidden at first, **Genre**, **Added** and **Labels**: a track's own labels and those of its album and artists, in alphabetical order (the tooltip lists them all). Under **Your fields** the menu lists each of [your own fields](labels-and-fields.md) as a column too; their values appear as the rows are shown. Drag a column header to move the column, and its edge to change its width. Click the stars in the **Rating** column to rate a track.
+**Tracks** lists every track of the library in a table. The **Filter** field narrows it, and **Columns** shows or hides columns: **#**, **Title**, **Artist**, **Album**, **Year**, **Format**, **Rating**, **Plays** (hidden at first) and **Length**, and, hidden at first, **Genre**, **Added** and **Labels**: a track's own labels and those of its album and artists, in alphabetical order (the tooltip lists them all). Under **Your Fields** the menu lists each of [your own fields](labels-and-fields.md) as a column too; their values appear as the rows are shown. Drag a column header to move the column, and its edge to change its width. Click the stars in the **Rating** column to rate a track.
 
 Click a column header to sort by it: the first click sorts in ascending order, the second in descending order, and the third turns that column's sorting off. Every column can be sorted except **Labels** and the columns of computed fields, whose headers say so in their tooltip; a custom field sorts like any text column. Sorting by several columns at once works by clicking them one after another: the column clicked last decides first, and the columns clicked before it decide among equal values, up to four columns. The headers show the order with arrows and, with more than one column, numbers. The status bar at the bottom says what the table is **Sorted by**; without your own order, tracks are sorted by artist, album, disc and track number.
 
@@ -110,11 +110,11 @@ Double-click a track, or press **Enter**, to play from that track. **Ctrl+A** se
 
 ### Grouping the tracks
 
-**Group by**, beside **Columns**, puts the tracks in groups: by album artist, album, genre, year, format or label, by one of [your own fields](labels-and-fields.md) (a computed field such as `decade` too, although the table cannot be sorted by one), or by **An expression…** of the [expression language](expressions.md), typed into a small box (**Insert** adds a field) and applied with **Enter**. Each group starts with a row that shows its value and how many tracks it has; tracks without a value form the group **No value**, which comes first. The groups follow their values, and within a group the tracks keep the order the column headers show. Double-click a group row, press **Enter**, or use **Left** and **Right** to close and open it; its context menu acts on all of its tracks. The status bar says what the tracks are grouped by, and **No groups** turns grouping off.
+**Group by**, beside **Columns**, puts the tracks in groups: by album artist, album, genre, year, format or label, by one of [your own fields](labels-and-fields.md) (a computed field such as `decade` too, although the table cannot be sorted by one), or by **An Expression…** of the [expression language](expressions.md), typed into a small box (**Insert** adds a field) and applied with **Enter**. Each group starts with a row that shows its value and how many tracks it has; tracks without a value form the group **No value**, which comes first. The groups follow their values, and within a group the tracks keep the order the column headers show. Double-click a group row, press **Enter**, or use **Left** and **Right** to close and open it; its context menu acts on all of its tracks. The status bar says what the tracks are grouped by, and **No Groups** turns grouping off.
 
 ### Browsing by genre, artist and album
 
-The **Browse** button opens three linked lists above the table: **Genre**, **Album artist** and **Album**, each with the number of tracks of every value and an **All …** row at the top. Choosing a value narrows the lists to its right and the table; **Ctrl**-click and **Shift**-click choose several values. The count in the toolbar then says how many of all tracks are shown. The field of each list can be changed with the button in its head: **Genre**, **Album artist**, **Album**, **Artist**, **Composer**, **Year**, **Format** or **Label**. A list of labels counts each track under every label it has, its own and those of its album and artists. Text in the **Filter** field filters first, so the lists show only the values of the tracks it finds. **Browse** again closes the lists and shows every track.
+The **Browse** button opens three linked lists above the table: **Genre**, **Album artist** and **Album**, each with the number of tracks of every value and an **All …** row at the top. Choosing a value narrows the lists to its right and the table; **Ctrl**-click and **Shift**-click choose several values. The count in the toolbar then says how many of all tracks are shown. The field of each list can be changed with the button in its head: **Genre**, **Album Artist**, **Album**, **Artist**, **Composer**, **Year**, **Format** or **Label**. A list of labels counts each track under every label it has, its own and those of its album and artists. Text in the **Filter** field filters first, so the lists show only the values of the tracks it finds. **Browse** again closes the lists and shows every track.
 
 ## Library statistics
 
@@ -133,13 +133,13 @@ Right-click a track for its menu, or press the **Menu** key or **Shift+F10**. Wi
 | Entry | What it does |
 |---|---|
 | **Play** | Plays it now |
-| **Play next** | Puts it in the queue after the playing track |
-| **Add to queue** | Adds it to the end of the queue |
-| **Add to playlist** | Adds it to a playlist, or to a **New playlist** |
-| **Go to album**, **Go to artist** | Opens that page |
-| **Edit tags…** (**Alt+Return**) | Opens the [tag editor](tags.md) |
-| **Rate** | Gives it one to five stars, or **Not rated** |
-| **Open containing folder** | Shows the file in your file manager |
-| **Remove from playlist**, **Remove from queue** (**Delete**) | Only in a playlist or the queue |
+| **Play Next** | Puts it in the queue after the playing track |
+| **Add to Queue** | Adds it to the end of the queue |
+| **Add to Playlist** | Adds it to a playlist, or to a **New Playlist** |
+| **Go to Album**, **Go to Artist** | Opens that page |
+| **Edit Tags…** (**Alt+Return**) | Opens the [tag editor](tags.md) |
+| **Rate** | Gives it one to five stars, or **Not Rated** |
+| **Open Containing Folder** | Shows the file in your file manager |
+| **Remove from Playlist**, **Remove from Queue** (**Delete**) | Only in a playlist or the queue |
 
-An album's menu has **Play**, **Play next**, **Add to queue**, **Add to playlist**, **Go to album** and **Go to artist**; an artist's or genre's menu has the first four.
+An album's menu has **Play**, **Play Next**, **Add to Queue**, **Add to Playlist**, **Go to Album** and **Go to Artist**; an artist's or genre's menu has the first four.

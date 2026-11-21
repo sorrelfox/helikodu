@@ -107,12 +107,12 @@ fn play_mode_menus_and_deck_buttons(app: &gtk::Application) {
     for wanted in [
         "Shuffle: Off",
         "Repeat: Off",
-        "Stop after: Off",
-        "Play only: Everything",
-        "Previous album",
-        "Set the end here",
-        "Continue from the selected track",
-        "Sleep timer…",
+        "Stop After: Off",
+        "Play Only: Everything",
+        "Previous Album",
+        "Set the End Here",
+        "Continue from the Selected Track",
+        "Sleep Timer…",
     ] {
         assert!(
             has(&labels, wanted),
@@ -155,7 +155,7 @@ fn play_mode_menus_and_deck_buttons(app: &gtk::Application) {
 
     app.activate_action("stop-after-mode", Some(&"album".to_variant()));
     wait_for("stop after the album", || {
-        has(&window.playback_menu_labels(), "Stop after: This album")
+        has(&window.playback_menu_labels(), "Stop After: This Album")
     });
     // The coarse stop-after action follows too.
     assert_eq!(
@@ -482,13 +482,13 @@ fn play_mode_play_button_menu(app: &gtk::Application) {
     menu_labels(&model, &mut labels);
     for wanted in [
         "Stop",
-        "Stop after",
+        "Stop After",
         "Off",
-        "This track",
-        "This album",
-        "The queue",
-        "Sleep timer…",
-        "Jump to the playing track",
+        "This Track",
+        "This Album",
+        "The Queue",
+        "Sleep Timer…",
+        "Jump to the Playing Track",
     ] {
         assert!(
             has(&labels, wanted),
@@ -678,9 +678,9 @@ fn play_mode_screenshots(app: &gtk::Application) {
         for (label, name) in [
             ("Shuffle: {}", "shuffle"),
             ("Repeat: {}", "repeat"),
-            ("Stop after: {}", "stop-after"),
-            ("Play only: {}", "play-only"),
-            ("Loop a section", "loop"),
+            ("Stop After: {}", "stop-after"),
+            ("Play Only: {}", "play-only"),
+            ("Loop a Section", "loop"),
             ("Queue", "queue"),
         ] {
             let model = submenu_of(&playback, label).unwrap_or_else(|| panic!("no {label}"));

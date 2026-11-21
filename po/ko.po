@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-20 17:13-0500\n"
+"POT-Creation-Date: 2026-11-21 05:39-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Korean <https://github.com/sorrelfox/helikodu>\n"
@@ -34,12 +34,13 @@ msgstr "음악 플레이어"
 msgid "Play and organize your music library, offline"
 msgstr "오프라인에서 음악 라이브러리를 재생하고 정리합니다"
 
-#. Translators: search terms, separated and ended by semicolons. Do not translate or localize the semicolons.
+#. Translators: search terms, separated and ended by semicolons. Do not
+#. translate or localize the semicolons.
 #: data/io.github.sorrelfox.Helikodu.desktop:9
 msgid "music;audio;player;library;playlist;album;flac;mp3;ogg;opus;gapless;"
 msgstr ""
-"음악;오디오;플레이어;라이브러리;재생 목록;앨범;갭리"
-"스;music;audio;player;library;playlist;album;flac;mp3;ogg;opus;gapless;"
+"음악;오디오;플레이어;라이브러리;재생 "
+"목록;앨범;갭리스;music;audio;player;library;playlist;album;flac;mp3;ogg;opus;gapless;"
 
 #: data/io.github.sorrelfox.Helikodu.desktop:24
 msgid "Play or Pause"
@@ -63,9 +64,8 @@ msgid ""
 "kept on your own computer. It works entirely offline: it never connects to "
 "the internet and sends no telemetry."
 msgstr ""
-"Helikodu는 내 컴퓨터에 보관한 내 음악을 위한 오디오 플레이어이자 음악 라이브"
-"러리 관리자입니다. 완전히 오프라인으로 작동하며, 인터넷에 연결하지 않고 원격 "
-"측정 데이터도 보내지 않습니다."
+"Helikodu는 내 컴퓨터에 보관한 내 음악을 위한 오디오 플레이어이자 음악 라이브러리 관리자입니다. 완전히 오프라인으로 작동하며, "
+"인터넷에 연결하지 않고 원격 측정 데이터도 보내지 않습니다."
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:24
 msgid ""
@@ -77,9 +77,7 @@ msgstr "동영상 파일의 오디오 트랙을 포함해 사실상 모든 오�
 msgid ""
 "Gapless playback, bit-perfect output where the hardware allows it, and "
 "ReplayGain 2.0 loudness normalization"
-msgstr ""
-"갭리스 재생, 하드웨어가 허용하는 경우 비트 퍼펙트 출력, ReplayGain 2.0 라우드"
-"니스 정규화"
+msgstr "갭리스 재생, 하드웨어가 허용하는 경우 비트 퍼펙트 출력, ReplayGain 2.0 라우드니스 정규화"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:26
 msgid ""
@@ -96,52 +94,42 @@ msgstr "빠른 검색과 재생 통계를 갖춘, 대규모 컬렉션을 위한 
 msgid ""
 "Media controls, media keys and notifications on GNOME, KDE Plasma and other "
 "desktops"
-msgstr ""
-"GNOME, KDE Plasma 및 기타 데스크톱에서 미디어 컨트롤, 미디어 키, 알림 지원"
+msgstr "GNOME, KDE Plasma 및 기타 데스크톱에서 미디어 컨트롤, 미디어 키, 알림 지원"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:30
 #: crates/ui-gtk/src/dialogs/common.rs:448
 msgid ""
-"In the Flatpak, Helikodu has no network access at all and asks only for what "
-"its features need:"
-msgstr ""
-"Flatpak에서 Helikodu는 네트워크에 전혀 접근하지 않으며, 기능에 필요한 권한만 "
-"요청합니다:"
+"In the Flatpak, Helikodu has no network access at all and asks only for what"
+" its features need:"
+msgstr "Flatpak에서 Helikodu는 네트워크에 전혀 접근하지 않으며, 기능에 필요한 권한만 요청합니다:"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:35
 #: crates/ui-gtk/src/dialogs/common.rs:454
 msgid ""
 "Your Music folder, to read and change it: for the library, the tag editor, "
 "organizing files and cover files. Other folders are added in the settings"
-msgstr ""
-"음악 폴더 읽기와 변경: 라이브러리, 태그 편집기, 파일 정리, 커버 파일에 사용합"
-"니다. 다른 폴더는 설정에서 추가합니다"
+msgstr "음악 폴더 읽기와 변경: 라이브러리, 태그 편집기, 파일 정리, 커버 파일에 사용합니다. 다른 폴더는 설정에서 추가합니다"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:36
 #: crates/ui-gtk/src/dialogs/common.rs:456
 msgid ""
-"The sound system (PipeWire and PulseAudio), to play and to choose the output "
-"device"
-msgstr ""
-"사운드 시스템(PipeWire와 PulseAudio): 재생과 출력 장치 선택에 사용합니다"
+"The sound system (PipeWire and PulseAudio), to play and to choose the output"
+" device"
+msgstr "사운드 시스템(PipeWire와 PulseAudio): 재생과 출력 장치 선택에 사용합니다"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:37
 #: crates/ui-gtk/src/dialogs/common.rs:458
 msgid ""
 "Reserving a sound card, so that the sound server hands it over for "
 "exclusive, bit-perfect output"
-msgstr ""
-"사운드 카드 예약: 단독 비트 퍼펙트 출력을 위해 사운드 서버가 카드를 넘겨주도"
-"록 합니다"
+msgstr "사운드 카드 예약: 단독 비트 퍼펙트 출력을 위해 사운드 서버가 카드를 넘겨주도록 합니다"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:38
 #: crates/ui-gtk/src/dialogs/common.rs:461
 msgid ""
 "The login manager (logind), to pause playback before the computer goes to "
 "sleep or the screen locks"
-msgstr ""
-"로그인 관리자(logind): 컴퓨터가 절전 모드에 들어가거나 화면이 잠기기 전에 재"
-"생을 일시 정지합니다"
+msgstr "로그인 관리자(logind): 컴퓨터가 절전 모드에 들어가거나 화면이 잠기기 전에 재생을 일시 정지합니다"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:39
 #: crates/ui-gtk/src/dialogs/common.rs:463
@@ -213,115 +201,136 @@ msgid "Your music library in the dark style"
 msgstr "어두운 스타일로 표시한 음악 라이브러리"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:127
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:138
-msgid "Fixes for the release candidate:"
-msgstr "릴리스 후보의 수정 사항:"
+msgid "Track analysis and library features:"
+msgstr "트랙 분석 및 라이브러리 기능:"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
 msgid ""
-"The Flatpak file installs Helikodu from its own signed repository, so that "
-"it gets updates"
+"Tracks are analysed in the background: crossfades follow the music, silence "
+"can be left out or skipped, and a leveller evens out tracks without loudness"
+" values"
 msgstr ""
-"Flatpak 파일이 Helikodu 자체 서명 저장소에서 설치하므로 업데이트를 받을 수 있"
-"습니다"
+"트랙을 백그라운드에서 분석합니다. 크로스페이드가 음악에 맞춰 이루어지고, 무음은 빼거나 건너뛸 수 있으며, 음량 값이 없는 트랙은 "
+"레벨러가 고르게 맞춥니다"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
 msgid ""
-"The tray menu in KDE Plasma no longer shows wrong items after it changes"
+"Import play counts, ratings and playlists from Rhythmbox, Strawberry, "
+"Clementine, Lollypop and iTunes, and move your own data to another computer"
 msgstr ""
-"KDE Plasma의 시스템 트레이 메뉴가 바뀐 뒤에 잘못된 항목을 더 이상 표시하지 않"
-"습니다"
+"Rhythmbox, Strawberry, Clementine, Lollypop, iTunes에서 재생 횟수, 평점, 재생 목록을 가져오고"
+" 내 데이터를 다른 컴퓨터로 옮길 수 있습니다"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+msgid "Labels for tracks, albums and artists, and fields of your own"
+msgstr "트랙, 앨범, 아티스트용 레이블과 사용자 필드"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+msgid "An optional managed music folder"
+msgstr "선택 사항인 관리 음악 폴더"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+msgid ""
+"Naming patterns with functions and conditions, and the track table grouped "
+"by any field"
+msgstr "함수와 조건을 쓰는 이름 패턴, 그리고 어떤 필드로든 묶을 수 있는 트랙 표"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:134
+msgid ""
+"Music that was playing when Helikodu closed plays on when it starts again"
+msgstr "Helikodu를 닫을 때 재생 중이던 음악은 다시 시작하면 이어서 재생됩니다"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:140
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:151
+msgid "Fixes for the release candidate:"
+msgstr "릴리스 후보의 수정 사항:"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
+msgid ""
+"The Flatpak file installs Helikodu from its own signed repository, so that "
+"it gets updates"
+msgstr "Flatpak 파일이 Helikodu 자체 서명 저장소에서 설치하므로 업데이트를 받을 수 있습니다"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
+msgid ""
+"The tray menu in KDE Plasma no longer shows wrong items after it changes"
+msgstr "KDE Plasma의 시스템 트레이 메뉴가 바뀐 뒤에 잘못된 항목을 더 이상 표시하지 않습니다"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
 msgid "Every page fits a narrow window"
 msgstr "모든 페이지가 좁은 창에 맞습니다"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
 msgid "Helikodu uses less memory"
 msgstr "Helikodu가 메모리를 덜 사용합니다"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:140
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:153
 msgid "With Now Playing open, the window can be made as small as elsewhere"
-msgstr ""
-"지금 재생 중 화면을 연 상태에서도 다른 화면처럼 창을 작게 만들 수 있습니다"
+msgstr "지금 재생 중 화면을 연 상태에서도 다른 화면처럼 창을 작게 만들 수 있습니다"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:141
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
 msgid "The Favourite button shows the same heart on every desktop"
 msgstr "즐겨찾기 버튼이 모든 데스크톱에서 같은 하트를 표시합니다"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
 msgid "The ring around the cover of the playing album is drawn whole"
 msgstr "재생 중인 앨범 커버 둘레의 테두리가 잘리지 않고 그려집니다"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:149
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:162
 msgid ""
 "The release candidate for 1.0: smart playlists and a query language for "
-"search, lyrics, a play history, Home and a mini player, tag tools with undo, "
-"file organizing, converting and folder sync, a cover manager, a waveform "
+"search, lyrics, a play history, Home and a mini player, tag tools with undo,"
+" file organizing, converting and folder sync, a cover manager, a waveform "
 "seek bar, library backups, an offline user guide and better screen reader "
 "and keyboard access."
 msgstr ""
-"1.0 릴리스 후보: 스마트 재생 목록과 검색용 쿼리 언어, 가사, 재생 기록, 홈 화"
-"면과 미니 플레이어, 실행 취소가 가능한 태그 도구, 파일 정리·변환·폴더 동기"
-"화, 커버 관리자, 파형 탐색 막대, 라이브러리 백업, 오프라인 사용자 안내서, 향"
-"상된 화면 낭독기 및 키보드 접근성."
+"1.0 릴리스 후보: 스마트 재생 목록과 검색용 쿼리 언어, 가사, 재생 기록, 홈 화면과 미니 플레이어, 실행 취소가 가능한 태그 "
+"도구, 파일 정리·변환·폴더 동기화, 커버 관리자, 파형 탐색 막대, 라이브러리 백업, 오프라인 사용자 안내서, 향상된 화면 낭독기 및 "
+"키보드 접근성."
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:160
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:173
 msgid ""
-"The first beta: graphic and parametric equalizers, crossfeed, channel mixing "
-"and a limiter, crossfades and fades, loudness measurement, a signal path "
-"view, PulseAudio and JACK output, and tracker modules, game music, SID tunes "
-"and MIDI files."
+"The first beta: graphic and parametric equalizers, crossfeed, channel mixing"
+" and a limiter, crossfades and fades, loudness measurement, a signal path "
+"view, PulseAudio and JACK output, and tracker modules, game music, SID tunes"
+" and MIDI files."
 msgstr ""
-"첫 번째 베타: 그래픽 및 파라메트릭 이퀄라이저, 크로스피드, 채널 믹싱과 리미"
-"터, 크로스페이드와 페이드, 라우드니스 측정, 신호 경로 보기, PulseAudio 및 "
-"JACK 출력, 트래커 모듈·게임 음악·SID 곡·MIDI 파일 지원."
+"첫 번째 베타: 그래픽 및 파라메트릭 이퀄라이저, 크로스피드, 채널 믹싱과 리미터, 크로스페이드와 페이드, 라우드니스 측정, 신호 경로 "
+"보기, PulseAudio 및 JACK 출력, 트래커 모듈·게임 음악·SID 곡·MIDI 파일 지원."
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:170
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:183
 msgid ""
 "The first alpha: a music library with albums, artists, genres, folders, "
 "tracks, search and playlists, gapless and bit-perfect playback with "
 "ReplayGain, a tag editor, and desktop integration through MPRIS."
 msgstr ""
-"첫 번째 알파: 앨범, 아티스트, 장르, 폴더, 트랙, 검색, 재생 목록을 갖춘 음악 "
-"라이브러리, ReplayGain을 지원하는 갭리스 및 비트 퍼펙트 재생, 태그 편집기, "
-"MPRIS를 통한 데스크톱 통합."
+"첫 번째 알파: 앨범, 아티스트, 장르, 폴더, 트랙, 검색, 재생 목록을 갖춘 음악 라이브러리, ReplayGain을 지원하는 갭리스 "
+"및 비트 퍼펙트 재생, 태그 편집기, MPRIS를 통한 데스크톱 통합."
 
 #: crates/ui-gtk/resources/ui/albums.ui:10
-msgid "Sort by"
+msgid "Sort By"
 msgstr "정렬 기준"
 
 #: crates/ui-gtk/resources/ui/albums.ui:12
-#: crates/ui-gtk/resources/ui/albums.ui:104
-#: crates/ui-gtk/src/views/albums.rs:143
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:45
-#: crates/ui-gtk/src/views/artists.rs:151 crates/ui-gtk/src/views/genres.rs:157
-#: crates/ui-gtk/src/views/genres.rs:164 crates/ui-gtk/src/views/genres.rs:276
-#: crates/ui-gtk/src/tools/tag_preview.rs:158
-#: crates/ui-gtk/src/popovers/query_completion.rs:56
+#: crates/ui-gtk/src/views/genres.rs:157
 #: crates/ui-gtk/src/views/category.rs:251
-#: crates/ui-gtk/src/views/category.rs:576
-#: crates/ui-gtk/src/views/smart_rules.rs:198
-#: crates/ui-gtk/src/views/facet_browser.rs:51
-#: crates/ui-gtk/src/widgets/insert_popover/catalogue.rs:70
-#: crates/ui-gtk/src/views/tracks/grouping.rs:37
-msgid "Album artist"
+#: crates/ui-gtk/src/views/facet_browser.rs:335
+#: crates/ui-gtk/src/views/tracks/grouping.rs:200
+msgid "Album Artist"
 msgstr "앨범 아티스트"
 
 #: crates/ui-gtk/resources/ui/albums.ui:17
-#: crates/ui-gtk/resources/ui/album.ui:244 crates/ui-gtk/src/views/album.rs:788
-#: crates/ui-gtk/src/views/albums.rs:140
+#: crates/ui-gtk/resources/ui/album.ui:244
+#: crates/ui-gtk/src/views/album.rs:788 crates/ui-gtk/src/views/albums.rs:140
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:43
-#: crates/ui-gtk/src/views/folders.rs:287 crates/ui-gtk/src/views/genres.rs:158
-#: crates/ui-gtk/src/views/genres.rs:273 crates/ui-gtk/src/views/playlist.rs:72
-#: crates/ui-gtk/src/views/tracks.rs:71
-#: crates/ui-gtk/src/tools/tag_preview.rs:156
+#: crates/ui-gtk/src/views/folders.rs:287
+#: crates/ui-gtk/src/views/genres.rs:158 crates/ui-gtk/src/views/genres.rs:273
+#: crates/ui-gtk/src/views/playlist.rs:72 crates/ui-gtk/src/views/tracks.rs:71
+#: crates/ui-gtk/src/tools/tag_preview.rs:168
 #: crates/ui-gtk/src/views/history.rs:384
 #: crates/ui-gtk/src/views/category.rs:252
 #: crates/ui-gtk/src/views/category.rs:573
-#: crates/ui-gtk/src/views/smart_playlist.rs:48
-#: crates/ui-gtk/src/views/smart_playlist.rs:56
-#: crates/ui-gtk/src/views/smart_playlist.rs:1589
+#: crates/ui-gtk/src/views/smart_playlist.rs:120
 #: crates/ui-gtk/src/views/smart_rules.rs:196
 #: crates/ui-gtk/src/views/smart_rules.rs:549
 #: crates/ui-gtk/src/widgets/insert_popover/catalogue.rs:73
@@ -334,10 +343,11 @@ msgstr "제목"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:50
 #: crates/ui-gtk/src/views/genres.rs:159 crates/ui-gtk/src/views/genres.rs:274
 #: crates/ui-gtk/src/views/tracks.rs:74
-#: crates/ui-gtk/src/tools/tag_preview.rs:164
+#: crates/ui-gtk/src/tools/tag_preview.rs:176
 #: crates/ui-gtk/src/views/category.rs:179
 #: crates/ui-gtk/src/views/category.rs:253
 #: crates/ui-gtk/src/views/category.rs:574
+#: crates/ui-gtk/src/views/smart_playlist.rs:124
 #: crates/ui-gtk/src/views/smart_rules.rs:215
 #: crates/ui-gtk/src/views/facet_browser.rs:55
 #: crates/ui-gtk/src/views/tracks/grouping.rs:40
@@ -345,19 +355,17 @@ msgid "Year"
 msgstr "연도"
 
 #: crates/ui-gtk/resources/ui/albums.ui:27
-#: crates/ui-gtk/src/views/albums.rs:142 crates/ui-gtk/src/views/genres.rs:160
-#: crates/ui-gtk/src/views/genres.rs:275
+#: crates/ui-gtk/src/views/genres.rs:160
 #: crates/ui-gtk/src/views/category.rs:254
-#: crates/ui-gtk/src/views/category.rs:575
-#: crates/ui-gtk/src/views/smart_rules.rs:232
-msgid "Date added"
+msgid "Date Added"
 msgstr "추가한 날짜"
 
 #: crates/ui-gtk/resources/ui/albums.ui:44
 #: crates/ui-gtk/resources/ui/albums.ui:128
 #: crates/ui-gtk/src/window/sidebar.rs:51
-#: crates/ui-gtk/src/views/artists.rs:674 crates/ui-gtk/src/views/search.rs:593
-#: crates/ui-gtk/src/play_modes.rs:69 crates/ui-gtk/src/views/statistics.rs:615
+#: crates/ui-gtk/src/views/artists.rs:680
+#: crates/ui-gtk/src/views/search.rs:593 crates/ui-gtk/src/play_modes.rs:69
+#: crates/ui-gtk/src/views/statistics.rs:615
 #: crates/ui-gtk/src/tools/cover_manager.rs:727
 #: crates/ui-gtk/src/views/labels.rs:243
 msgid "Albums"
@@ -381,6 +389,21 @@ msgstr "무손실"
 msgid "Hi-res"
 msgstr "하이레스"
 
+#: crates/ui-gtk/resources/ui/albums.ui:104
+#: crates/ui-gtk/src/views/albums.rs:143
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:45
+#: crates/ui-gtk/src/views/artists.rs:151
+#: crates/ui-gtk/src/views/genres.rs:164 crates/ui-gtk/src/views/genres.rs:276
+#: crates/ui-gtk/src/tools/tag_preview.rs:170
+#: crates/ui-gtk/src/popovers/query_completion.rs:56
+#: crates/ui-gtk/src/views/category.rs:576
+#: crates/ui-gtk/src/views/smart_rules.rs:198
+#: crates/ui-gtk/src/views/facet_browser.rs:51
+#: crates/ui-gtk/src/widgets/insert_popover/catalogue.rs:70
+#: crates/ui-gtk/src/views/tracks/grouping.rs:37
+msgid "Album artist"
+msgstr "앨범 아티스트"
+
 #: crates/ui-gtk/resources/ui/albums.ui:105
 msgid "Sort order"
 msgstr "정렬 순서"
@@ -391,11 +414,10 @@ msgstr "정렬 순서"
 #: crates/ui-gtk/src/views/artists.rs:232
 #: crates/ui-gtk/src/views/playlist.rs:79 crates/ui-gtk/src/views/tracks.rs:73
 #: crates/ui-gtk/src/views/tracks.rs:885
-#: crates/ui-gtk/src/tools/tag_preview.rs:159
+#: crates/ui-gtk/src/tools/tag_preview.rs:171
 #: crates/ui-gtk/src/views/history.rs:251
 #: crates/ui-gtk/src/views/history.rs:386
-#: crates/ui-gtk/src/views/smart_playlist.rs:58
-#: crates/ui-gtk/src/views/smart_playlist.rs:1593
+#: crates/ui-gtk/src/views/smart_playlist.rs:122
 #: crates/ui-gtk/src/views/smart_rules.rs:199
 #: crates/ui-gtk/src/views/smart_rules.rs:555
 #: crates/ui-gtk/src/views/facet_browser.rs:52
@@ -412,7 +434,7 @@ msgstr "앨범"
 #: crates/ui-gtk/src/views/folders.rs:262
 #: crates/ui-gtk/src/views/playlist.rs:192 crates/ui-gtk/src/deck/modes.rs:225
 #: crates/ui-gtk/src/play_modes.rs:261
-#: crates/ui-gtk/src/views/smart_playlist.rs:374
+#: crates/ui-gtk/src/views/smart_playlist.rs:493
 #: crates/ui-gtk/src/window/playlists.rs:228
 #: crates/ui-gtk/src/window/playlists.rs:232
 #: crates/ui-gtk/src/mini_player.rs:181 crates/ui-gtk/src/mini_player.rs:504
@@ -423,10 +445,11 @@ msgstr "재생"
 #: crates/ui-gtk/resources/ui/album.ui:124
 #: crates/ui-gtk/resources/ui/deck.ui:120
 #: crates/ui-gtk/resources/ui/deck.ui:122
-#: crates/ui-gtk/src/views/artists.rs:173 crates/ui-gtk/src/views/genres.rs:151
+#: crates/ui-gtk/src/views/artists.rs:173
+#: crates/ui-gtk/src/views/genres.rs:151
 #: crates/ui-gtk/src/views/playlist.rs:194
 #: crates/ui-gtk/src/views/category.rs:245
-#: crates/ui-gtk/src/views/smart_playlist.rs:376
+#: crates/ui-gtk/src/views/smart_playlist.rs:495
 #: crates/ui-gtk/src/shortcuts.rs:102 crates/ui-gtk/src/deck/compact.rs:68
 #: crates/ui-gtk/src/views/labels.rs:209
 msgid "Shuffle"
@@ -437,8 +460,6 @@ msgid "Start again"
 msgstr "처음부터 다시"
 
 #: crates/ui-gtk/resources/ui/album.ui:167
-#: crates/ui-gtk/src/views/actions.rs:193
-#: crates/ui-gtk/src/views/artists.rs:184
 #: crates/ui-gtk/src/views/folders.rs:263
 msgid "Add to queue"
 msgstr "대기열에 추가"
@@ -451,75 +472,79 @@ msgstr "대기열에 추가"
 #: crates/ui-gtk/src/views/playlist.rs:211
 #: crates/ui-gtk/src/window/panel/lyrics.rs:179
 #: crates/ui-gtk/src/window/panel/lyrics.rs:180
-#: crates/ui-gtk/src/views/smart_playlist.rs:384
-#: crates/ui-gtk/src/views/smart_playlist.rs:385
+#: crates/ui-gtk/src/views/smart_playlist.rs:503
+#: crates/ui-gtk/src/views/smart_playlist.rs:504
 #: crates/ui-gtk/src/views/labels.rs:216 crates/ui-gtk/src/views/labels.rs:217
 msgid "More"
 msgstr "더 보기"
 
-#: crates/ui-gtk/resources/ui/album.ui:252 crates/ui-gtk/src/views/album.rs:792
-#: crates/ui-gtk/src/views/album.rs:956
+#: crates/ui-gtk/resources/ui/album.ui:252
+#: crates/ui-gtk/src/views/album.rs:792 crates/ui-gtk/src/views/album.rs:956
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1538
 #: crates/ui-gtk/src/views/artists.rs:233 crates/ui-gtk/src/views/tracks.rs:77
 #: crates/ui-gtk/src/tools/duplicates.rs:718
+#: crates/ui-gtk/src/views/smart_playlist.rs:127
 #: crates/ui-gtk/src/views/smart_rules.rs:226
 #: crates/ui-gtk/src/views/home.rs:367
 msgid "Plays"
 msgstr "재생 수"
 
-#: crates/ui-gtk/resources/ui/album.ui:260 crates/ui-gtk/src/views/album.rs:962
+#: crates/ui-gtk/resources/ui/album.ui:260
+#: crates/ui-gtk/src/views/album.rs:962
 #: crates/ui-gtk/src/widgets/rating_stars.rs:200
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:773
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:820
 #: crates/ui-gtk/src/views/tracks.rs:76
+#: crates/ui-gtk/src/views/smart_playlist.rs:128
 #: crates/ui-gtk/src/views/smart_rules.rs:228
 msgid "Rating"
 msgstr "별점"
 
-#: crates/ui-gtk/resources/ui/album.ui:268 crates/ui-gtk/src/views/album.rs:937
+#: crates/ui-gtk/resources/ui/album.ui:268
+#: crates/ui-gtk/src/views/album.rs:937
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1494
 #: crates/ui-gtk/src/views/artists.rs:234
 #: crates/ui-gtk/src/views/folders.rs:288
 #: crates/ui-gtk/src/views/playlist.rs:77
 #: crates/ui-gtk/src/views/playlist.rs:80 crates/ui-gtk/src/views/tracks.rs:78
 #: crates/ui-gtk/src/popovers/query_completion.rs:87
-#: crates/ui-gtk/src/views/smart_playlist.rs:61
-#: crates/ui-gtk/src/views/smart_playlist.rs:1606
+#: crates/ui-gtk/src/views/smart_playlist.rs:129
 #: crates/ui-gtk/src/views/smart_rules.rs:229
 #: crates/ui-gtk/src/views/labels.rs:284
 msgid "Length"
 msgstr "길이"
 
 #: crates/ui-gtk/resources/ui/album.ui:282
-#: crates/ui-gtk/src/window/sidebar.rs:53 crates/ui-gtk/src/views/search.rs:613
-#: crates/ui-gtk/src/views/tracks.rs:217 crates/ui-gtk/src/views/tracks.rs:274
-#: crates/ui-gtk/src/views/tracks.rs:328 crates/ui-gtk/src/window/pages.rs:447
-#: crates/ui-gtk/src/play_modes.rs:68 crates/ui-gtk/src/views/statistics.rs:603
+#: crates/ui-gtk/src/window/sidebar.rs:53
+#: crates/ui-gtk/src/views/search.rs:613 crates/ui-gtk/src/views/tracks.rs:217
+#: crates/ui-gtk/src/views/tracks.rs:274 crates/ui-gtk/src/views/tracks.rs:328
+#: crates/ui-gtk/src/window/pages.rs:447 crates/ui-gtk/src/play_modes.rs:68
+#: crates/ui-gtk/src/views/statistics.rs:603
 #: crates/ui-gtk/src/views/labels.rs:255 crates/ui-gtk/src/views/labels.rs:292
 msgid "Tracks"
 msgstr "트랙"
 
-#: crates/ui-gtk/resources/ui/album.ui:296 crates/ui-gtk/src/window.rs:487
+#: crates/ui-gtk/resources/ui/album.ui:324 crates/ui-gtk/src/window.rs:487
 #: crates/ui-gtk/src/dialogs/maintenance.rs:285
 msgid "Details"
 msgstr "세부 정보"
 
-#: crates/ui-gtk/resources/ui/album.ui:319
+#: crates/ui-gtk/resources/ui/album.ui:347
 #: crates/ui-gtk/src/views/smart_rules.rs:214
 #: crates/ui-gtk/src/tools/user_fields.rs:225
 msgid "Kind"
 msgstr "종류"
 
-#: crates/ui-gtk/resources/ui/album.ui:347
+#: crates/ui-gtk/resources/ui/album.ui:375
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1658
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1712
 msgid "Edit tags"
 msgstr "태그 편집"
 
-#: crates/ui-gtk/resources/ui/album.ui:357
+#: crates/ui-gtk/resources/ui/album.ui:385
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:146
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1431
-#: crates/ui-gtk/src/window/pages.rs:1010
+#: crates/ui-gtk/src/window/pages.rs:1013
 #: crates/ui-gtk/src/tools/converter.rs:1030
 #: crates/ui-gtk/src/dialogs/maintenance.rs:222
 msgid "Open folder"
@@ -579,7 +604,7 @@ msgid "Volume"
 msgstr "음량"
 
 #: crates/ui-gtk/resources/ui/deck.ui:232
-#: crates/ui-gtk/resources/ui/deck.ui:235 crates/ui-gtk/src/play_modes.rs:312
+#: crates/ui-gtk/resources/ui/deck.ui:235
 msgid "Output device"
 msgstr "출력 장치"
 
@@ -600,6 +625,7 @@ msgid "Add Music to the Managed Folder…"
 msgstr "관리 폴더에 음악 추가…"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:28
+#: crates/ui-gtk/src/views/actions.rs:195
 msgid "New Playlist"
 msgstr "새 재생 목록"
 
@@ -649,7 +675,7 @@ msgstr "대기열 패널"
 msgid "Menu Bar"
 msgstr "메뉴 표시줄"
 
-#: crates/ui-gtk/resources/ui/main_window.ui:71
+#: crates/ui-gtk/resources/ui/main_window.ui:71 crates/ui-gtk/src/deck.rs:373
 msgid "Jump to the Playing Track"
 msgstr "재생 중인 트랙으로 이동"
 
@@ -659,7 +685,8 @@ msgstr "재생 중인 트랙으로 이동"
 #: crates/ui-gtk/src/dialogs/track_flags.rs:29
 #: crates/ui-gtk/src/window/play_modes.rs:181
 #: crates/ui-gtk/src/window/play_modes.rs:317
-#: crates/ui-gtk/src/window/play_modes.rs:326 crates/ui-gtk/src/shortcuts.rs:36
+#: crates/ui-gtk/src/window/play_modes.rs:326
+#: crates/ui-gtk/src/shortcuts.rs:36
 msgid "Playback"
 msgstr "재생"
 
@@ -671,7 +698,8 @@ msgstr "재생/일시 정지"
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:534
 #: crates/ui-gtk/src/dialogs/settings/output.rs:341
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:609
-#: crates/ui-gtk/src/play_modes.rs:264 crates/ui-gtk/src/tools/file_tools.rs:75
+#: crates/ui-gtk/src/play_modes.rs:264
+#: crates/ui-gtk/src/tools/file_tools.rs:75
 #: crates/ui-gtk/src/tools/managed_runs.rs:529
 #: crates/ui-gtk/src/shortcuts.rs:75 crates/ui-gtk/src/tools/converter.rs:1034
 #: crates/ui-gtk/src/tools/sync_export.rs:726
@@ -679,10 +707,12 @@ msgid "Stop"
 msgstr "정지"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:94
+#: crates/ui-gtk/src/play_modes.rs:276
 msgid "Seek Back"
 msgstr "뒤로 탐색"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:98
+#: crates/ui-gtk/src/play_modes.rs:277
 msgid "Seek Forward"
 msgstr "앞으로 탐색"
 
@@ -704,7 +734,8 @@ msgid "Rescan"
 msgstr "다시 스캔"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:116
-#: crates/ui-gtk/src/window/panel.rs:347 crates/ui-gtk/src/views/history.rs:350
+#: crates/ui-gtk/src/window/panel.rs:347
+#: crates/ui-gtk/src/views/history.rs:350
 #: crates/ui-gtk/src/views/history.rs:775 crates/ui-gtk/src/views/home.rs:349
 msgid "History"
 msgstr "기록"
@@ -750,6 +781,7 @@ msgid "Tools"
 msgstr "도구"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:161
+#: crates/ui-gtk/src/views/actions.rs:277
 msgid "Organize Files…"
 msgstr "파일 정리…"
 
@@ -932,8 +964,7 @@ msgstr "즐겨찾기"
 
 #: crates/ui-gtk/src/backend/service.rs:1679
 msgid "The player has stopped. Restart Helikodu to play again."
-msgstr ""
-"플레이어가 중지되었습니다. 다시 재생하려면 Helikodu를 다시 시작하십시오."
+msgstr "플레이어가 중지되었습니다. 다시 재생하려면 Helikodu를 다시 시작하십시오."
 
 #: crates/ui-gtk/src/backend/service.rs:2020
 msgid "No sound (null output)"
@@ -965,9 +996,7 @@ msgstr "{} 파일을 재생할 수 없습니다: {}"
 #: crates/ui-gtk/src/backend/service.rs:2403
 msgid ""
 "Helikodu did not end normally last time. The queue was restored, paused."
-msgstr ""
-"지난번에 Helikodu가 정상적으로 종료되지 않았습니다. 대기열을 일시 정지 상태"
-"로 복원했습니다."
+msgstr "지난번에 Helikodu가 정상적으로 종료되지 않았습니다. 대기열을 일시 정지 상태로 복원했습니다."
 
 #: crates/ui-gtk/src/backend/service.rs:2406
 #, rust-format
@@ -994,7 +1023,7 @@ msgstr "플레이어"
 
 #: crates/ui-gtk/src/deck.rs:250 crates/ui-gtk/src/views/album_tile.rs:261
 #: crates/ui-gtk/src/window/panel.rs:171 crates/ui-gtk/src/window/panel.rs:306
-#: crates/ui-gtk/src/window.rs:827 crates/ui-gtk/src/views/artists.rs:812
+#: crates/ui-gtk/src/window.rs:827 crates/ui-gtk/src/views/artists.rs:816
 #: crates/ui-gtk/src/views/genres.rs:390
 #: crates/ui-gtk/src/views/playlist.rs:488
 #: crates/ui-gtk/src/views/playlist.rs:1080
@@ -1012,9 +1041,9 @@ msgstr "플레이어"
 #: crates/ui-gtk/src/tools/managed_cut_short.rs:103
 #: crates/ui-gtk/src/views/category.rs:492
 #: crates/ui-gtk/src/views/category.rs:518
-#: crates/ui-gtk/src/views/smart_playlist.rs:1657
-#: crates/ui-gtk/src/mini_player.rs:694 crates/ui-gtk/src/views/home.rs:652
-#: crates/ui-gtk/src/views/home.rs:740 crates/ui-gtk/src/window/desktop.rs:410
+#: crates/ui-gtk/src/views/smart_playlist.rs:1953
+#: crates/ui-gtk/src/mini_player.rs:694 crates/ui-gtk/src/views/home.rs:657
+#: crates/ui-gtk/src/views/home.rs:745 crates/ui-gtk/src/window/desktop.rs:410
 #: crates/ui-gtk/src/window/desktop.rs:416
 #: crates/ui-gtk/src/tools/converter.rs:547
 #: crates/ui-gtk/src/tools/converter.rs:590
@@ -1026,8 +1055,8 @@ msgstr "플레이어"
 #: crates/ui-gtk/src/tools/cover_manager.rs:474
 #: crates/ui-gtk/src/tools/import.rs:294 crates/ui-gtk/src/tools/import.rs:565
 #: crates/ui-gtk/src/tools/import.rs:569 crates/ui-gtk/src/tools/import.rs:750
-#: crates/ui-gtk/src/tools/replaced.rs:373 crates/ui-gtk/src/views/labels.rs:84
-#: crates/ui-gtk/src/views/labels.rs:920
+#: crates/ui-gtk/src/tools/replaced.rs:373
+#: crates/ui-gtk/src/views/labels.rs:84 crates/ui-gtk/src/views/labels.rs:920
 #, rust-format
 msgid "{} · {}"
 msgstr "{} · {}"
@@ -1038,16 +1067,12 @@ msgid "Show {} in its album"
 msgstr "앨범에서 {} 보기"
 
 #: crates/ui-gtk/src/deck.rs:366
-msgid "Stop after"
+msgid "Stop After"
 msgstr "정지 시점"
 
 #: crates/ui-gtk/src/deck.rs:369 crates/ui-gtk/src/play_modes.rs:306
-msgid "Sleep timer…"
+msgid "Sleep Timer…"
 msgstr "취침 타이머…"
-
-#: crates/ui-gtk/src/deck.rs:373 crates/ui-gtk/src/shortcuts.rs:131
-msgid "Jump to the playing track"
-msgstr "재생 중인 트랙으로 이동"
 
 #: crates/ui-gtk/src/deck.rs:438
 msgid "Show the time left"
@@ -1081,8 +1106,10 @@ msgstr "{}시간 {}분"
 msgid "{} min"
 msgstr "{}분"
 
-#. / `number`, written with a decimal point, with the locale's decimal separator.
-#. Translators: the decimal separator of numbers such as 44.1 kHz or −6.3 dB: "." or ",".
+#. / `number`, written with a decimal point, with the locale's decimal
+#. separator.
+#. Translators: the decimal separator of numbers such as 44.1 kHz or −6.3 dB:
+#. "." or ",".
 #: crates/ui-gtk/src/format.rs:74
 msgctxt "decimal separator"
 msgid "."
@@ -1108,14 +1135,16 @@ msgstr "{} kHz / {}비트"
 msgid "{} kHz"
 msgstr "{} kHz"
 
-#: crates/ui-gtk/src/format.rs:117 crates/ui-gtk/src/dialogs/tag_editor.rs:1455
+#: crates/ui-gtk/src/format.rs:117
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1455
 #: crates/ui-gtk/src/dialogs/settings/dsp.rs:115
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 #: crates/ui-gtk/src/tools/converter.rs:191
 msgid "Mono"
 msgstr "모노"
 
-#: crates/ui-gtk/src/format.rs:118 crates/ui-gtk/src/dialogs/tag_editor.rs:1456
+#: crates/ui-gtk/src/format.rs:118
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1456
 #: crates/ui-gtk/src/dialogs/settings/dsp.rs:114
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 #: crates/ui-gtk/src/tools/converter.rs:190
@@ -1133,7 +1162,8 @@ msgstr[0] "{}채널"
 msgid "Album gain {} dB"
 msgstr "앨범 게인 {} dB"
 
-#. Translators: the separator of thousands in numbers such as 1,284: "," "." or a narrow space.
+#. Translators: the separator of thousands in numbers such as 1,284: "," "."
+#. or a narrow space.
 #: crates/ui-gtk/src/format.rs:141
 msgctxt "thousands separator"
 msgid ","
@@ -1168,18 +1198,20 @@ msgstr[0] "챕터 {}개"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:61
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:74
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1714
-#: crates/ui-gtk/src/views/artists.rs:660 crates/ui-gtk/src/views/genres.rs:386
+#: crates/ui-gtk/src/views/artists.rs:666
+#: crates/ui-gtk/src/views/genres.rs:386
 #: crates/ui-gtk/src/views/playlist.rs:490
 #: crates/ui-gtk/src/views/playlist.rs:728
 #: crates/ui-gtk/src/views/playlist.rs:935
 #: crates/ui-gtk/src/views/playlist.rs:1071
 #: crates/ui-gtk/src/views/search.rs:578 crates/ui-gtk/src/views/search.rs:960
-#: crates/ui-gtk/src/views/search.rs:1266 crates/ui-gtk/src/views/tracks.rs:777
+#: crates/ui-gtk/src/views/search.rs:1266
+#: crates/ui-gtk/src/views/tracks.rs:777
 #: crates/ui-gtk/src/tools/missing_files.rs:263
 #: crates/ui-gtk/src/popovers/query_completion.rs:150
 #: crates/ui-gtk/src/views/category.rs:489
-#: crates/ui-gtk/src/views/smart_playlist.rs:1566
-#: crates/ui-gtk/src/views/smart_playlist.rs:1647
+#: crates/ui-gtk/src/views/smart_playlist.rs:1885
+#: crates/ui-gtk/src/views/smart_playlist.rs:1943
 #: crates/ui-gtk/src/tools/converter.rs:542
 #: crates/ui-gtk/src/tools/import.rs:302 crates/ui-gtk/src/tools/import.rs:559
 #: crates/ui-gtk/src/tools/import_view.rs:197
@@ -1209,9 +1241,10 @@ msgstr "낭독"
 #: crates/ui-gtk/src/views/album.rs:507
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:51
 #: crates/ui-gtk/src/views/genres.rs:132 crates/ui-gtk/src/views/tracks.rs:79
-#: crates/ui-gtk/src/tools/tag_preview.rs:165
+#: crates/ui-gtk/src/tools/tag_preview.rs:177
 #: crates/ui-gtk/src/popovers/query_completion.rs:62
 #: crates/ui-gtk/src/views/history.rs:253
+#: crates/ui-gtk/src/views/smart_playlist.rs:123
 #: crates/ui-gtk/src/views/smart_rules.rs:204
 #: crates/ui-gtk/src/views/facet_browser.rs:50
 #: crates/ui-gtk/src/widgets/insert_popover/catalogue.rs:81
@@ -1232,17 +1265,15 @@ msgstr "발매일"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1525
 #: crates/ui-gtk/src/views/tracks.rs:80 crates/ui-gtk/src/tools/copies.rs:535
 #: crates/ui-gtk/src/tools/duplicates.rs:719
-#: crates/ui-gtk/src/views/smart_playlist.rs:51
-#: crates/ui-gtk/src/views/smart_playlist.rs:60
-#: crates/ui-gtk/src/views/smart_playlist.rs:634
-#: crates/ui-gtk/src/views/smart_playlist.rs:1604
+#: crates/ui-gtk/src/views/smart_playlist.rs:126
 #: crates/ui-gtk/src/views/smart_rules.rs:246
 msgid "Added"
 msgstr "추가일"
 
 #: crates/ui-gtk/src/views/album.rs:520 crates/ui-gtk/src/views/album.rs:982
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1422
-#: crates/ui-gtk/src/views/folders.rs:289 crates/ui-gtk/src/tools/copies.rs:534
+#: crates/ui-gtk/src/views/folders.rs:289
+#: crates/ui-gtk/src/tools/copies.rs:534
 #: crates/ui-gtk/src/tools/duplicates.rs:717
 #: crates/ui-gtk/src/tools/managed_folder.rs:1207
 #: crates/ui-gtk/src/views/statistics.rs:639
@@ -1251,7 +1282,8 @@ msgid "Size"
 msgstr "크기"
 
 #: crates/ui-gtk/src/views/album.rs:532 crates/ui-gtk/src/views/album.rs:985
-#: crates/ui-gtk/src/window.rs:109 crates/ui-gtk/src/dialogs/tag_editor.rs:1418
+#: crates/ui-gtk/src/window.rs:109
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1418
 #: crates/ui-gtk/src/tools/copies.rs:532
 #: crates/ui-gtk/src/tools/duplicates.rs:715
 msgid "File"
@@ -1274,7 +1306,7 @@ msgstr "디스크 {}"
 #: crates/ui-gtk/src/views/album.rs:709
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:49
 #: crates/ui-gtk/src/views/tracks.rs:885
-#: crates/ui-gtk/src/tools/tag_preview.rs:162
+#: crates/ui-gtk/src/tools/tag_preview.rs:174
 msgid "Disc"
 msgstr "디스크"
 
@@ -1297,12 +1329,10 @@ msgstr "시작 위치"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:44
 #: crates/ui-gtk/src/views/playlist.rs:73 crates/ui-gtk/src/views/tracks.rs:72
 #: crates/ui-gtk/src/views/tracks.rs:885
-#: crates/ui-gtk/src/tools/tag_preview.rs:157
+#: crates/ui-gtk/src/tools/tag_preview.rs:169
 #: crates/ui-gtk/src/views/history.rs:252
 #: crates/ui-gtk/src/views/history.rs:385
-#: crates/ui-gtk/src/views/smart_playlist.rs:49
-#: crates/ui-gtk/src/views/smart_playlist.rs:57
-#: crates/ui-gtk/src/views/smart_playlist.rs:1591
+#: crates/ui-gtk/src/views/smart_playlist.rs:121
 #: crates/ui-gtk/src/views/smart_rules.rs:197
 #: crates/ui-gtk/src/views/smart_rules.rs:551
 #: crates/ui-gtk/src/views/facet_browser.rs:53
@@ -1312,7 +1342,7 @@ msgstr "아티스트"
 
 #: crates/ui-gtk/src/views/album.rs:923
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:52
-#: crates/ui-gtk/src/tools/tag_preview.rs:166
+#: crates/ui-gtk/src/tools/tag_preview.rs:178
 #: crates/ui-gtk/src/popovers/query_completion.rs:58
 #: crates/ui-gtk/src/views/category.rs:171
 #: crates/ui-gtk/src/views/smart_rules.rs:200
@@ -1324,7 +1354,7 @@ msgstr "작곡가"
 #. Translators: the field of the track number, "Track [3] of [12]".
 #: crates/ui-gtk/src/views/album.rs:927 crates/ui-gtk/src/views/album.rs:933
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:48
-#: crates/ui-gtk/src/tools/tag_preview.rs:283
+#: crates/ui-gtk/src/tools/tag_preview.rs:295
 msgctxt "track number"
 msgid "Track"
 msgstr "트랙"
@@ -1345,10 +1375,7 @@ msgstr "{} kbit/s"
 #: crates/ui-gtk/src/tools/copies.rs:533
 #: crates/ui-gtk/src/tools/duplicates.rs:716
 #: crates/ui-gtk/src/tools/verify_files.rs:677
-#: crates/ui-gtk/src/views/smart_playlist.rs:50
-#: crates/ui-gtk/src/views/smart_playlist.rs:59
-#: crates/ui-gtk/src/views/smart_playlist.rs:695
-#: crates/ui-gtk/src/views/smart_playlist.rs:1595
+#: crates/ui-gtk/src/views/smart_playlist.rs:125
 #: crates/ui-gtk/src/views/facet_browser.rs:56
 #: crates/ui-gtk/src/tools/converter.rs:905
 #: crates/ui-gtk/src/tools/sync_export.rs:701
@@ -1400,6 +1427,12 @@ msgstr "있음"
 msgid "Copies"
 msgstr "사본"
 
+#: crates/ui-gtk/src/views/albums.rs:142 crates/ui-gtk/src/views/genres.rs:275
+#: crates/ui-gtk/src/views/category.rs:575
+#: crates/ui-gtk/src/views/smart_rules.rs:232
+msgid "Date added"
+msgstr "추가한 날짜"
+
 #: crates/ui-gtk/src/views/albums.rs:222
 msgid "The library does not tell formats apart yet"
 msgstr "라이브러리가 아직 형식을 구분하지 못합니다"
@@ -1408,7 +1441,8 @@ msgstr "라이브러리가 아직 형식을 구분하지 못합니다"
 msgid "Add music folder"
 msgstr "음악 폴더 추가"
 
-#: crates/ui-gtk/src/views/albums.rs:608 crates/ui-gtk/src/window/pages.rs:1012
+#: crates/ui-gtk/src/views/albums.rs:608
+#: crates/ui-gtk/src/window/pages.rs:1015
 msgid "Open files"
 msgstr "파일 열기"
 
@@ -1421,8 +1455,7 @@ msgid ""
 "Add a folder with music to build your library. You can also drop files here "
 "to play them without adding them."
 msgstr ""
-"음악이 있는 폴더를 추가해 라이브러리를 만드십시오. 파일을 여기에 끌어다 놓으"
-"면 라이브러리에 추가하지 않고 재생할 수도 있습니다."
+"음악이 있는 폴더를 추가해 라이브러리를 만드십시오. 파일을 여기에 끌어다 놓으면 라이브러리에 추가하지 않고 재생할 수도 있습니다."
 
 #: crates/ui-gtk/src/views/albums.rs:622
 msgid "No albums match"
@@ -1433,7 +1466,7 @@ msgid "No album in the library passes this filter."
 msgstr "라이브러리에 이 필터를 통과하는 앨범이 없습니다."
 
 #: crates/ui-gtk/src/views/album_tile.rs:275
-#: crates/ui-gtk/src/views/artists.rs:716 crates/ui-gtk/src/views/home.rs:570
+#: crates/ui-gtk/src/views/artists.rs:722 crates/ui-gtk/src/views/home.rs:575
 #: crates/ui-gtk/src/views/labels.rs:824
 #, rust-format
 msgid "{} by {}"
@@ -1442,9 +1475,7 @@ msgstr "{1}의 {0}"
 #: crates/ui-gtk/src/views/placeholder.rs:15
 msgid ""
 "This view comes in a later version. Albums are ready to browse and play."
-msgstr ""
-"이 보기는 이후 버전에서 제공됩니다. 앨범은 지금 바로 탐색하고 재생할 수 있습"
-"니다."
+msgstr "이 보기는 이후 버전에서 제공됩니다. 앨범은 지금 바로 탐색하고 재생할 수 있습니다."
 
 #: crates/ui-gtk/src/widgets/playing_indicator.rs:76
 msgid "Playing"
@@ -1459,7 +1490,6 @@ msgstr[0] "별 5개 중 {}개"
 
 #: crates/ui-gtk/src/widgets/rating_stars.rs:196
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:816
-#: crates/ui-gtk/src/views/actions.rs:266
 msgid "Not rated"
 msgstr "별점 없음"
 
@@ -1529,13 +1559,15 @@ msgid "Home"
 msgstr "홈"
 
 #: crates/ui-gtk/src/window/sidebar.rs:52
-#: crates/ui-gtk/src/views/artists.rs:137 crates/ui-gtk/src/views/search.rs:568
+#: crates/ui-gtk/src/views/artists.rs:137
+#: crates/ui-gtk/src/views/search.rs:568
 #: crates/ui-gtk/src/views/statistics.rs:627
 #: crates/ui-gtk/src/views/labels.rs:232
 msgid "Artists"
 msgstr "아티스트"
 
-#: crates/ui-gtk/src/window/sidebar.rs:54 crates/ui-gtk/src/views/genres.rs:122
+#: crates/ui-gtk/src/window/sidebar.rs:54
+#: crates/ui-gtk/src/views/genres.rs:122
 msgid "Genres"
 msgstr "장르"
 
@@ -1561,14 +1593,14 @@ msgid "Hide the sidebar"
 msgstr "사이드바 숨기기"
 
 #: crates/ui-gtk/src/window/sidebar.rs:179
-#: crates/ui-gtk/src/views/actions.rs:195
-#: crates/ui-gtk/src/views/actions.rs:535 crates/ui-gtk/src/window/pages.rs:795
-#: crates/ui-gtk/src/shortcuts.rs:150
+#: crates/ui-gtk/src/views/actions.rs:591
+#: crates/ui-gtk/src/window/pages.rs:798 crates/ui-gtk/src/shortcuts.rs:150
 msgid "New playlist"
 msgstr "새 재생 목록"
 
 #: crates/ui-gtk/src/window/sidebar.rs:188
-#: crates/ui-gtk/src/window/pages.rs:972 crates/ui-gtk/src/tools/import.rs:1139
+#: crates/ui-gtk/src/window/pages.rs:975
+#: crates/ui-gtk/src/tools/import.rs:1139
 msgid "Playlists"
 msgstr "재생 목록"
 
@@ -1686,8 +1718,8 @@ msgstr "라이브러리가 읽기 전용이라 변경 사항이 유지되지 않
 
 #: crates/ui-gtk/src/backend/service/services.rs:1401
 msgid ""
-"The backup was put back. The library as it was before is kept in the backups "
-"folder."
+"The backup was put back. The library as it was before is kept in the backups"
+" folder."
 msgstr "백업을 복원했습니다. 복원 전의 라이브러리는 백업 폴더에 보관됩니다."
 
 #: crates/ui-gtk/src/backend/service/services.rs:1404
@@ -1731,9 +1763,8 @@ msgid ""
 "Foundation, either version 3 of the License, or (at your option) any later "
 "version."
 msgstr ""
-"Helikodu는 자유 소프트웨어입니다. 자유 소프트웨어 재단이 공표한 GNU 일반 공"
-"중 사용 허가서 버전 3 또는 (선택에 따라) 그 이후 버전의 조건에 따라 재배포하"
-"거나 수정할 수 있습니다."
+"Helikodu는 자유 소프트웨어입니다. 자유 소프트웨어 재단이 공표한 GNU 일반 공중 사용 허가서 버전 3 또는 (선택에 따라) 그 "
+"이후 버전의 조건에 따라 재배포하거나 수정할 수 있습니다."
 
 #: crates/ui-gtk/src/dialogs/about.rs:239
 msgid ""
@@ -1742,17 +1773,14 @@ msgid ""
 "for a particular purpose. See the GNU General Public License for more "
 "details."
 msgstr ""
-"이 프로그램은 유용하게 쓰이기를 바라며 배포되지만, 어떠한 보증도 하지 않습니"
-"다. 상품성이나 특정 목적에 대한 적합성의 묵시적 보증도 하지 않습니다. 자세한 "
-"내용은 GNU 일반 공중 사용 허가서를 참고하십시오."
+"이 프로그램은 유용하게 쓰이기를 바라며 배포되지만, 어떠한 보증도 하지 않습니다. 상품성이나 특정 목적에 대한 적합성의 묵시적 보증도 "
+"하지 않습니다. 자세한 내용은 GNU 일반 공중 사용 허가서를 참고하십시오."
 
 #: crates/ui-gtk/src/dialogs/about.rs:242
 msgid ""
 "The libraries Helikodu uses keep their own licences; their texts are "
 "installed with the program."
-msgstr ""
-"Helikodu가 사용하는 라이브러리는 각자의 라이선스를 따르며, 라이선스 전문은 프"
-"로그램과 함께 설치됩니다."
+msgstr "Helikodu가 사용하는 라이브러리는 각자의 라이선스를 따르며, 라이선스 전문은 프로그램과 함께 설치됩니다."
 
 #: crates/ui-gtk/src/dialogs/about.rs:262
 #: crates/ui-gtk/src/dialogs/about.rs:267
@@ -1778,17 +1806,15 @@ msgstr "지원 형식 및 디코더"
 
 #: crates/ui-gtk/src/dialogs/about.rs:368
 msgid "No telemetry, no update checks. Helikodu never goes online."
-msgstr ""
-"원격 측정도, 업데이트 확인도 없습니다. Helikodu는 절대 온라인에 연결하지 않습"
-"니다."
+msgstr "원격 측정도, 업데이트 확인도 없습니다. Helikodu는 절대 온라인에 연결하지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/about.rs:379
 msgid ""
 "© 2026 sorrelfox and Helikodu contributors. Free software under the GNU "
 "General Public License, version 3 or later. It comes with no warranty."
 msgstr ""
-"© 2026 sorrelfox 및 Helikodu 기여자. GNU 일반 공중 사용 허가서 버전 3 이상에 "
-"따른 자유 소프트웨어입니다. 어떠한 보증도 하지 않습니다."
+"© 2026 sorrelfox 및 Helikodu 기여자. GNU 일반 공중 사용 허가서 버전 3 이상에 따른 자유 소프트웨어입니다. "
+"어떠한 보증도 하지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/about.rs:389
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:321
@@ -1856,8 +1882,8 @@ msgid ""
 "Helikodu plays your files where they are. Nothing is copied, and nothing is "
 "changed until you edit tags or organize files."
 msgstr ""
-"Helikodu는 파일을 있는 자리에서 그대로 재생합니다. 아무것도 복사하지 않으며, "
-"태그를 편집하거나 파일을 정리하기 전에는 아무것도 바꾸지 않습니다."
+"Helikodu는 파일을 있는 자리에서 그대로 재생합니다. 아무것도 복사하지 않으며, 태그를 편집하거나 파일을 정리하기 전에는 아무것도 "
+"바꾸지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/first_run.rs:305
 msgid "Add another folder"
@@ -2135,7 +2161,8 @@ msgstr "이 변경 사항을 저장하지 못했습니다: {}"
 
 #: crates/ui-gtk/src/dialogs/settings.rs:229
 #: crates/ui-gtk/src/dialogs/settings.rs:231
-#: crates/ui-gtk/src/dialogs/settings.rs:241 crates/ui-gtk/src/shortcuts.rs:175
+#: crates/ui-gtk/src/dialogs/settings.rs:241
+#: crates/ui-gtk/src/shortcuts.rs:175
 msgid "Settings"
 msgstr "설정"
 
@@ -2169,9 +2196,8 @@ msgid ""
 "portable player shows no tags. Tag fields that Helikodu does not know are "
 "kept as they are."
 msgstr ""
-"ID3v2.4가 현재 버전입니다. 오래된 카 오디오나 휴대용 플레이어에서 태그가 표시"
-"되지 않으면 ID3v2.3을 선택하십시오. Helikodu가 모르는 태그 필드는 그대로 유지"
-"됩니다."
+"ID3v2.4가 현재 버전입니다. 오래된 카 오디오나 휴대용 플레이어에서 태그가 표시되지 않으면 ID3v2.3을 선택하십시오. "
+"Helikodu가 모르는 태그 필드는 그대로 유지됩니다."
 
 #. Translators: {} is a dropdown with file sizes ("1 GB").
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:67
@@ -2185,9 +2211,8 @@ msgid ""
 "power fails. A change in place is faster for huge files but has no such "
 "safety net. The tag editor tells you before it happens."
 msgstr ""
-"더 작은 파일은 검증된 사본을 거쳐 변경되므로 전원이 꺼져도 안전합니다. 제자"
-"리 변경은 아주 큰 파일에서 더 빠르지만 이런 안전장치가 없습니다. 이 방식을 쓰"
-"기 전에 태그 편집기가 알려 줍니다."
+"더 작은 파일은 검증된 사본을 거쳐 변경되므로 전원이 꺼져도 안전합니다. 제자리 변경은 아주 큰 파일에서 더 빠르지만 이런 안전장치가 "
+"없습니다. 이 방식을 쓰기 전에 태그 편집기가 알려 줍니다."
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:93
 msgid "Also write ratings to the tags of the files"
@@ -2196,9 +2221,7 @@ msgstr "별점을 파일 태그에도 기록"
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:94
 msgid ""
 "Other players can then read them. Off: ratings stay in the library only."
-msgstr ""
-"그러면 다른 플레이어도 별점을 읽을 수 있습니다. 끄면 별점은 라이브러리에만 저"
-"장됩니다."
+msgstr "그러면 다른 플레이어도 별점을 읽을 수 있습니다. 끄면 별점은 라이브러리에만 저장됩니다."
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:100
 msgid "Also write play counts to the tags of the files"
@@ -2209,8 +2232,7 @@ msgid ""
 "Written in the background a few minutes after the last play, never into the "
 "file that is playing. These writes are not on the Undo history."
 msgstr ""
-"마지막 재생 후 몇 분 뒤에 백그라운드에서 기록하며, 재생 중인 파일에는 기록하"
-"지 않습니다. 이 기록은 실행 취소 기록에 남지 않습니다."
+"마지막 재생 후 몇 분 뒤에 백그라운드에서 기록하며, 재생 중인 파일에는 기록하지 않습니다. 이 기록은 실행 취소 기록에 남지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:191
 msgid "Backups"
@@ -2268,8 +2290,7 @@ msgstr "진단 정보를 클립보드에 복사했습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:335
 msgid "Logs stay on this computer. Helikodu never sends anything anywhere."
-msgstr ""
-"로그는 이 컴퓨터에만 남습니다. Helikodu는 어디에도 아무것도 보내지 않습니다."
+msgstr "로그는 이 컴퓨터에만 남습니다. Helikodu는 어디에도 아무것도 보내지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:341
 msgid "Show tools for testing"
@@ -2289,14 +2310,13 @@ msgid ""
 "Every setting goes back to its default. This cannot be undone. The library "
 "folders, playlists, ratings and play counts are kept."
 msgstr ""
-"모든 설정이 기본값으로 돌아갑니다. 이 작업은 되돌릴 수 없습니다. 라이브러리 "
-"폴더, 재생 목록, 별점, 재생 횟수는 유지됩니다."
+"모든 설정이 기본값으로 돌아갑니다. 이 작업은 되돌릴 수 없습니다. 라이브러리 폴더, 재생 목록, 별점, 재생 횟수는 유지됩니다."
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:394
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1796
 #: crates/ui-gtk/src/dialogs/volume_confirm.rs:208
-#: crates/ui-gtk/src/views/search.rs:1192 crates/ui-gtk/src/window/pages.rs:890
-#: crates/ui-gtk/src/tools/trash.rs:118
+#: crates/ui-gtk/src/views/search.rs:1192
+#: crates/ui-gtk/src/window/pages.rs:893 crates/ui-gtk/src/tools/trash.rs:118
 #: crates/ui-gtk/src/tools/tag_tools.rs:114
 #: crates/ui-gtk/src/tools/rename.rs:59
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:131
@@ -2326,8 +2346,7 @@ msgstr "모든 설정을 기본값으로 되돌리기"
 msgid ""
 "The library, playlists, ratings and play counts are kept. Settings are "
 "stored in {}"
-msgstr ""
-"라이브러리, 재생 목록, 별점, 재생 횟수는 유지됩니다. 설정 저장 위치: {}"
+msgstr "라이브러리, 재생 목록, 별점, 재생 횟수는 유지됩니다. 설정 저장 위치: {}"
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:447
 msgid "Reset settings…"
@@ -2342,9 +2361,7 @@ msgstr "재생 전에 각 트랙을 메모리에 불러오기"
 msgid ""
 "For drives that are slow or go to sleep. Tracks over {} are read from the "
 "drive as usual."
-msgstr ""
-"느리거나 절전 모드로 들어가는 드라이브용입니다. {}보다 큰 트랙은 평소처럼 드"
-"라이브에서 읽습니다."
+msgstr "느리거나 절전 모드로 들어가는 드라이브용입니다. {}보다 큰 트랙은 평소처럼 드라이브에서 읽습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:487
 msgid "Tags in MP3 files"
@@ -2429,8 +2446,7 @@ msgid ""
 "Uses the accent colour of your desktop, or amber if the desktop has none. "
 "Helikodu adjusts it to stay readable."
 msgstr ""
-"데스크톱의 강조 색을 사용하며, 데스크톱에 강조 색이 없으면 호박색을 사용합니"
-"다. Helikodu는 읽기 쉽도록 색을 조정합니다."
+"데스크톱의 강조 색을 사용하며, 데스크톱에 강조 색이 없으면 호박색을 사용합니다. Helikodu는 읽기 쉽도록 색을 조정합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:219
 msgid "Integrated"
@@ -2446,9 +2462,7 @@ msgstr "클래식"
 
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:225
 msgid "The title bar of your desktop, with an optional menu bar."
-msgstr ""
-"데스크톱의 제목 표시줄을 사용하며, 메뉴 표시줄을 선택적으로 표시할 수 있습니"
-"다."
+msgstr "데스크톱의 제목 표시줄을 사용하며, 메뉴 표시줄을 선택적으로 표시할 수 있습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:229
 msgid "Default on GNOME and KDE Plasma"
@@ -2493,9 +2507,7 @@ msgstr "지금 다시 시작"
 msgid ""
 "After a change, the library is sorted again for the new language. This runs "
 "in the background."
-msgstr ""
-"언어를 바꾸면 새 언어에 맞게 라이브러리를 다시 정렬합니다. 이 작업은 백그라운"
-"드에서 실행됩니다."
+msgstr "언어를 바꾸면 새 언어에 맞게 라이브러리를 다시 정렬합니다. 이 작업은 백그라운드에서 실행됩니다."
 
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:418
 msgid "A new language is used when Helikodu starts again."
@@ -2553,9 +2565,7 @@ msgstr "트레이에 아이콘 표시"
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:479
 msgid ""
 "Click it to show or hide the window. Scroll over it to change the volume."
-msgstr ""
-"아이콘을 클릭하면 창을 표시하거나 숨기고, 아이콘 위에서 스크롤하면 음량을 바"
-"꿉니다."
+msgstr "아이콘을 클릭하면 창을 표시하거나 숨기고, 아이콘 위에서 스크롤하면 음량을 바꿉니다."
 
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:490
 msgid "Keeps playing in the tray"
@@ -2652,9 +2662,7 @@ msgstr "제외"
 msgid ""
 "Files and folders with these names are not scanned. Separate patterns with "
 "semicolons."
-msgstr ""
-"이 이름을 가진 파일과 폴더는 스캔하지 않습니다. 패턴은 세미콜론으로 구분하십"
-"시오."
+msgstr "이 이름을 가진 파일과 폴더는 스캔하지 않습니다. 패턴은 세미콜론으로 구분하십시오."
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:283
 msgid "Watch the folders for changes"
@@ -2666,8 +2674,7 @@ msgstr "심볼릭 링크 따라가기"
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:290
 msgid "Off: linked files and folders are skipped, so nothing is listed twice."
-msgstr ""
-"끄면 링크된 파일과 폴더를 건너뛰므로 같은 항목이 두 번 표시되지 않습니다."
+msgstr "끄면 링크된 파일과 폴더를 건너뛰므로 같은 항목이 두 번 표시되지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:301
 msgid "Hide tracks on drives that are not connected"
@@ -2692,9 +2699,7 @@ msgstr "같은 파일의 사본"
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:348
 msgid "Skipped copies get no tracks; one takes over if the main copy goes."
-msgstr ""
-"건너뛴 사본은 트랙으로 등록되지 않으며, 기본 사본이 사라지면 사본 중 하나가 "
-"대신합니다."
+msgstr "건너뛴 사본은 트랙으로 등록되지 않으며, 기본 사본이 사라지면 사본 중 하나가 대신합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:351
 msgid "Add them"
@@ -2711,13 +2716,11 @@ msgstr "동일한 사본은 트랙 하나로 표시"
 #: crates/ui-gtk/src/dialogs/settings/library.rs:366
 msgid ""
 "Lists, counts and search show only the main copy; a badge marks the track."
-msgstr ""
-"목록, 개수, 검색에는 기본 사본만 표시되며, 해당 트랙에는 배지가 붙습니다."
+msgstr "목록, 개수, 검색에는 기본 사본만 표시되며, 해당 트랙에는 배지가 붙습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:373
 msgid "Not used while copies are skipped: they have no tracks to show."
-msgstr ""
-"사본을 건너뛰는 동안에는 사용되지 않습니다. 표시할 트랙이 없기 때문입니다."
+msgstr "사본을 건너뛰는 동안에는 사용되지 않습니다. 표시할 트랙이 없기 때문입니다."
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:384
 msgid "Applying"
@@ -2844,9 +2847,7 @@ msgstr "Helikodu가 폴더 하나를 정리하도록 하기"
 msgid ""
 "It copies or moves the music you add into that folder and names the files "
 "for you. Your other folders stay as they are."
-msgstr ""
-"추가하는 음악을 그 폴더로 복사하거나 이동하고 파일 이름을 붙여 줍니다. 다른 "
-"폴더는 그대로 유지됩니다."
+msgstr "추가하는 음악을 그 폴더로 복사하거나 이동하고 파일 이름을 붙여 줍니다. 다른 폴더는 그대로 유지됩니다."
 
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:192
 #: crates/ui-gtk/src/tools/organizer.rs:173
@@ -2881,9 +2882,7 @@ msgstr "끄기"
 msgid ""
 "For music added from now on. Files already in the folder keep their names; "
 "Organize files renames them."
-msgstr ""
-"앞으로 추가하는 음악에 적용됩니다. 이미 폴더에 있는 파일은 이름이 그대로 유지"
-"되며, 파일 정리로 이름을 바꿀 수 있습니다."
+msgstr "앞으로 추가하는 음악에 적용됩니다. 이미 폴더에 있는 파일은 이름이 그대로 유지되며, 파일 정리로 이름을 바꿀 수 있습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:354
 msgid "Names"
@@ -2923,9 +2922,7 @@ msgstr "세부 정보…"
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:480
 #: crates/ui-gtk/src/tools/managed_folder.rs:710
 msgid "A run was cut short. Nothing can be added until it is settled."
-msgstr ""
-"작업이 도중에 중단되었습니다. 이를 처리하기 전에는 아무것도 추가할 수 없습니"
-"다."
+msgstr "작업이 도중에 중단되었습니다. 이를 처리하기 전에는 아무것도 추가할 수 없습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:488
 msgid "Every library file is in this folder"
@@ -2953,16 +2950,13 @@ msgstr "모든 트랙을 같은 라우드니스로 재생합니다."
 msgid ""
 "Albums play at the same loudness, and the tracks of an album keep their "
 "differences."
-msgstr ""
-"앨범을 같은 라우드니스로 재생하며, 앨범 안의 트랙 간 차이는 유지합니다."
+msgstr "앨범을 같은 라우드니스로 재생하며, 앨범 안의 트랙 간 차이는 유지합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:54
 msgid ""
 "Album loudness while an album plays in order, track loudness otherwise, for "
 "example in shuffle."
-msgstr ""
-"앨범을 순서대로 재생할 때는 앨범 라우드니스를, 그 밖의 경우(예: 무작위 재생)"
-"에는 트랙 라우드니스를 사용합니다."
+msgstr "앨범을 순서대로 재생할 때는 앨범 라우드니스를, 그 밖의 경우(예: 무작위 재생)에는 트랙 라우드니스를 사용합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:60
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:360
@@ -2998,8 +2992,7 @@ msgstr "레벨러가 켜져 있는 동안에는 사용되지 않습니다."
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:202
 msgid ""
 "Instead of a fixed preamp. The level changes gradually, by at most 12 dB."
-msgstr ""
-"고정된 프리앰프 대신 사용합니다. 레벨은 최대 12 dB까지 서서히 바뀝니다."
+msgstr "고정된 프리앰프 대신 사용합니다. 레벨은 최대 12 dB까지 서서히 바뀝니다."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:204
 msgid "Works while “Even out loudness” is on."
@@ -3032,9 +3025,7 @@ msgstr "게인 낮추기"
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:271
 msgid ""
 "The gain is reduced until the loudest peak fits. Nothing else is changed."
-msgstr ""
-"가장 큰 피크가 범위 안에 들어올 때까지 게인을 낮춥니다. 그 밖에는 아무것도 바"
-"꾸지 않습니다."
+msgstr "가장 큰 피크가 범위 안에 들어올 때까지 게인을 낮춥니다. 그 밖에는 아무것도 바꾸지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:275
 msgid "Use the limiter"
@@ -3109,16 +3100,13 @@ msgid ""
 "This track has no loudness values, so its level is evened out as it plays. "
 "Playback is not bit-perfect while this is on."
 msgstr ""
-"이 트랙에는 라우드니스 값이 없으므로 재생하는 동안 레벨을 맞춥니다. 이 기능"
-"이 켜져 있는 동안에는 비트 퍼펙트로 재생되지 않습니다."
+"이 트랙에는 라우드니스 값이 없으므로 재생하는 동안 레벨을 맞춥니다. 이 기능이 켜져 있는 동안에는 비트 퍼펙트로 재생되지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:485
 msgid ""
-"Changing the level changes the samples, so playback is not bit-perfect while "
-"this is on."
-msgstr ""
-"레벨을 바꾸면 샘플이 바뀌므로, 이 기능이 켜져 있는 동안에는 비트 퍼펙트로 재"
-"생되지 않습니다."
+"Changing the level changes the samples, so playback is not bit-perfect while"
+" this is on."
+msgstr "레벨을 바꾸면 샘플이 바뀌므로, 이 기능이 켜져 있는 동안에는 비트 퍼펙트로 재생되지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:506
 msgid "Counting the tracks…"
@@ -3155,9 +3143,7 @@ msgstr "파일 태그에도 기록"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:683
 msgid "Tags are written as ReplayGain 2.0, and as R128 in Opus files."
-msgstr ""
-"태그는 ReplayGain 2.0 형식으로 기록하며, Opus 파일에는 R128 형식으로 기록합니"
-"다."
+msgstr "태그는 ReplayGain 2.0 형식으로 기록하며, Opus 파일에는 R128 형식으로 기록합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:103
 msgid "Not in this build"
@@ -3248,7 +3234,8 @@ msgstr "100% 고정(비트 퍼펙트)"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:339
 #: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:259
-#: crates/ui-gtk/src/mini_player.rs:504 crates/ui-gtk/src/window/desktop.rs:435
+#: crates/ui-gtk/src/mini_player.rs:504
+#: crates/ui-gtk/src/window/desktop.rs:435
 msgid "Pause"
 msgstr "일시 정지"
 
@@ -3379,9 +3366,7 @@ msgstr "헤드폰을 뽑으면 일시 정지"
 msgid ""
 "Instead of going on through the loudspeakers when the system default output "
 "moves to another device."
-msgstr ""
-"시스템 기본 출력이 다른 장치로 옮겨 갈 때 스피커로 계속 재생하지 않고 일시 정"
-"지합니다."
+msgstr "시스템 기본 출력이 다른 장치로 옮겨 갈 때 스피커로 계속 재생하지 않고 일시 정지합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:57
 #, rust-format
@@ -3407,8 +3392,7 @@ msgstr[0] "{}초가 지나면 트랙을 처음부터 재생"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:107
 msgid "Previous always goes to the track before, wherever the current one is."
-msgstr ""
-"현재 트랙의 재생 위치와 관계없이 이전 버튼은 항상 이전 트랙으로 이동합니다."
+msgstr "현재 트랙의 재생 위치와 관계없이 이전 버튼은 항상 이전 트랙으로 이동합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:111
 #, rust-format
@@ -3416,8 +3400,7 @@ msgid ""
 "In the first {} second of a track, Previous goes to the track before it."
 msgid_plural ""
 "In the first {} seconds of a track, Previous goes to the track before it."
-msgstr[0] ""
-"트랙 시작 후 {}초 이내에 이전 버튼을 누르면 이전 트랙으로 이동합니다."
+msgstr[0] "트랙 시작 후 {}초 이내에 이전 버튼을 누르면 이전 트랙으로 이동합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:131
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:329
@@ -3486,9 +3469,7 @@ msgstr "빈 대기열로 시작"
 msgid ""
 "The queue, the track and the position come back. Playback continues if it "
 "was playing when Helikodu closed."
-msgstr ""
-"대기열, 트랙, 위치가 복원됩니다. Helikodu를 닫을 때 재생 중이었다면 재생을 계"
-"속합니다."
+msgstr "대기열, 트랙, 위치가 복원됩니다. Helikodu를 닫을 때 재생 중이었다면 재생을 계속합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:240
 msgid "Resume long tracks where they stopped"
@@ -3509,8 +3490,7 @@ msgstr "음악 재생 중에는 컴퓨터가 절전 모드로 전환되지 않�
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:275
 msgid "The computer can sleep again as soon as playback pauses or stops."
-msgstr ""
-"재생을 일시 정지하거나 정지하면 바로 다시 절전 모드로 전환할 수 있습니다."
+msgstr "재생을 일시 정지하거나 정지하면 바로 다시 절전 모드로 전환할 수 있습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:293
 msgid "Pause when the screen locks"
@@ -3589,16 +3569,14 @@ msgid ""
 "Used while a crossfade between tracks is on. A long fade is overlapped "
 "longer, an abrupt end briefly, and never longer than the length chosen."
 msgstr ""
-"트랙 간 크로스페이드가 켜져 있을 때 사용됩니다. 긴 페이드는 길게, 갑작스러운 "
-"끝은 짧게 겹치며, 선택한 길이보다 길게 겹치지는 않습니다."
+"트랙 간 크로스페이드가 켜져 있을 때 사용됩니다. 긴 페이드는 길게, 갑작스러운 끝은 짧게 겹치며, 선택한 길이보다 길게 겹치지는 "
+"않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:444
 msgid ""
 "Tracks that follow each other on an album always join without a crossfade. "
 "Nothing is crossfaded on a bit-perfect path."
-msgstr ""
-"한 앨범에서 이어지는 트랙은 항상 크로스페이드 없이 연결됩니다. 비트 퍼펙트 경"
-"로에서는 크로스페이드를 하지 않습니다."
+msgstr "한 앨범에서 이어지는 트랙은 항상 크로스페이드 없이 연결됩니다. 비트 퍼펙트 경로에서는 크로스페이드를 하지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:486
 msgid "Settings › Library"
@@ -3616,17 +3594,14 @@ msgid_plural ""
 "Both need a track to be analysed: {} of {} are so far ({}). Nothing is left "
 "out on a bit-perfect path."
 msgstr[0] ""
-"둘 다 트랙 분석이 필요합니다. 지금까지 {} / {}곡을 분석했습니다({}). 비트 퍼"
-"펙트 경로에서는 아무것도 빼지 않습니다."
+"둘 다 트랙 분석이 필요합니다. 지금까지 {} / {}곡을 분석했습니다({}). 비트 퍼펙트 경로에서는 아무것도 빼지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:507
 #, rust-format
 msgid ""
 "Both need a track to be analysed ({}). Nothing is left out on a bit-perfect "
 "path."
-msgstr ""
-"둘 다 트랙 분석이 필요합니다({}). 비트 퍼펙트 경로에서는 아무것도 빼지 않습니"
-"다."
+msgstr "둘 다 트랙 분석이 필요합니다({}). 비트 퍼펙트 경로에서는 아무것도 빼지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:522
 msgid "Leave out silence at the start and end of each track"
@@ -3644,9 +3619,7 @@ msgstr "트랙 안의 긴 무음 건너뛰기"
 msgid ""
 "For hidden tracks after a long pause. Silence in the first 15 seconds is "
 "never skipped."
-msgstr ""
-"긴 공백 뒤에 있는 히든 트랙을 위한 기능입니다. 처음 15초 안의 무음은 건너뛰"
-"지 않습니다."
+msgstr "긴 공백 뒤에 있는 히든 트랙을 위한 기능입니다. 처음 15초 안의 무음은 건너뛰지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:555
 msgid "Silence longer than this is skipped"
@@ -3696,8 +3669,7 @@ msgstr "설정하지 않음: 곡을 기본 길이만큼 재생한 뒤 페이드 
 msgid ""
 "Songlengths.md5 of the High Voltage SID Collection gives each tune its "
 "length."
-msgstr ""
-"High Voltage SID Collection의 Songlengths.md5가 각 곡의 길이를 알려 줍니다."
+msgstr "High Voltage SID Collection의 Songlengths.md5가 각 곡의 길이를 알려 줍니다."
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:683
 #: crates/ui-gtk/src/tools/converter.rs:929
@@ -3729,9 +3701,7 @@ msgstr "루프를 {0} 재생한 뒤 페이드 아웃: {1}"
 msgid ""
 "For tracker modules and game music that repeat a part. Tunes whose length "
 "nothing states play for {} before the fade."
-msgstr ""
-"일부 구간을 반복하는 트래커 모듈과 게임 음악에 적용됩니다. 길이 정보가 없는 "
-"곡은 페이드 전까지 {} 동안 재생합니다."
+msgstr "일부 구간을 반복하는 트래커 모듈과 게임 음악에 적용됩니다. 길이 정보가 없는 곡은 페이드 전까지 {} 동안 재생합니다."
 
 #: crates/ui-gtk/src/dialogs/shortcuts.rs:42
 msgid "Ctrl"
@@ -3776,7 +3746,7 @@ msgid "Find an action or its keys"
 msgstr "동작이나 키 찾기"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:53
-#: crates/ui-gtk/src/tools/tag_preview.rs:167
+#: crates/ui-gtk/src/tools/tag_preview.rs:179
 msgid "Comment"
 msgstr "주석"
 
@@ -3910,8 +3880,8 @@ msgid "Save as a file…"
 msgstr "파일로 저장…"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1104
-#: crates/ui-gtk/src/views/smart_playlist.rs:1206
-#: crates/ui-gtk/src/views/smart_playlist.rs:1207
+#: crates/ui-gtk/src/views/smart_playlist.rs:1524
+#: crates/ui-gtk/src/views/smart_playlist.rs:1525
 #: crates/ui-gtk/src/tools/sync_export.rs:528
 #: crates/ui-gtk/src/tools/cover_manager.rs:742
 #: crates/ui-gtk/src/tools/import_moved.rs:41
@@ -3956,8 +3926,7 @@ msgstr "앨범 폴더에 cover.jpg로"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1233
 msgid "One picture for the whole folder. Other players look for it there."
-msgstr ""
-"폴더 전체에 그림 하나를 씁니다. 다른 플레이어도 그 위치에서 커버를 찾습니다."
+msgstr "폴더 전체에 그림 하나를 씁니다. 다른 플레이어도 그 위치에서 커버를 찾습니다."
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1279
 msgid "Save the cover as a file"
@@ -3971,14 +3940,12 @@ msgstr "커버를 저장할 수 없습니다: {}"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1306
 msgid ""
 "Lyrics belong to one file. Open the tag editor for one track to change them."
-msgstr ""
-"가사는 파일 하나에 속합니다. 가사를 바꾸려면 트랙 하나만 선택해 태그 편집기"
-"를 여십시오."
+msgstr "가사는 파일 하나에 속합니다. 가사를 바꾸려면 트랙 하나만 선택해 태그 편집기를 여십시오."
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1329
 msgid ""
-"Lines that start with a time, such as [01:23.45], are shown in step with the "
-"music."
+"Lines that start with a time, such as [01:23.45], are shown in step with the"
+" music."
 msgstr "[01:23.45]처럼 시간으로 시작하는 줄은 음악에 맞춰 표시됩니다."
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1408
@@ -3988,7 +3955,8 @@ msgid_plural "{} pictures"
 msgstr[0] "그림 {}개"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1420
-#: crates/ui-gtk/src/views/artists.rs:132 crates/ui-gtk/src/views/genres.rs:114
+#: crates/ui-gtk/src/views/artists.rs:132
+#: crates/ui-gtk/src/views/genres.rs:114
 #: crates/ui-gtk/src/views/search.rs:1119
 #: crates/ui-gtk/src/views/category.rs:191
 #: crates/ui-gtk/src/tools/user_fields.rs:213
@@ -4064,7 +4032,7 @@ msgid "In the library"
 msgstr "라이브러리 정보"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1530
-#: crates/ui-gtk/src/views/home.rs:151 crates/ui-gtk/src/views/home.rs:762
+#: crates/ui-gtk/src/views/home.rs:151 crates/ui-gtk/src/views/home.rs:767
 msgid "Never"
 msgstr "재생한 적 없음"
 
@@ -4122,8 +4090,7 @@ msgstr "파일 정보"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1791
 msgid "Written to a copy, verified, then swapped in. Undo with Ctrl Z."
-msgstr ""
-"사본에 기록하고 검증한 뒤 교체합니다. Ctrl Z로 실행 취소할 수 있습니다."
+msgstr "사본에 기록하고 검증한 뒤 교체합니다. Ctrl Z로 실행 취소할 수 있습니다."
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1829
 #: crates/ui-gtk/src/tools/tag_tools.rs:77
@@ -4166,8 +4133,8 @@ msgid ""
 "{} will receive the sound at a fixed 100 %. The volume control in Helikodu "
 "will no longer lower it, so turn your amplifier or headphones down first."
 msgstr ""
-"{} 장치에 소리가 100%로 고정되어 전달됩니다. Helikodu의 음량 조절로는 더 이"
-"상 소리를 줄일 수 없으므로, 먼저 앰프나 헤드폰의 음량을 낮추십시오."
+"{} 장치에 소리가 100%로 고정되어 전달됩니다. Helikodu의 음량 조절로는 더 이상 소리를 줄일 수 없으므로, 먼저 앰프나 "
+"헤드폰의 음량을 낮추십시오."
 
 #: crates/ui-gtk/src/dialogs/volume_confirm.rs:186
 msgid "Now"
@@ -4288,11 +4255,16 @@ msgstr "오디오 출력 설정"
 
 #: crates/ui-gtk/src/views/actions.rs:191
 #: crates/ui-gtk/src/views/artists.rs:183
-msgid "Play next"
+msgid "Play Next"
 msgstr "다음에 재생"
 
+#: crates/ui-gtk/src/views/actions.rs:193
+#: crates/ui-gtk/src/views/artists.rs:184
+msgid "Add to Queue"
+msgstr "대기열에 추가"
+
 #: crates/ui-gtk/src/views/actions.rs:217
-msgid "Add to playlist"
+msgid "Add to Playlist"
 msgstr "재생 목록에 추가"
 
 #: crates/ui-gtk/src/views/actions.rs:221
@@ -4302,51 +4274,51 @@ msgid_plural "{} tracks selected"
 msgstr[0] "{}곡 선택됨"
 
 #: crates/ui-gtk/src/views/actions.rs:230
-msgid "Go to album"
+msgid "Go to Album"
 msgstr "앨범으로 이동"
 
 #: crates/ui-gtk/src/views/actions.rs:231
-msgid "Go to artist"
+msgid "Go to Artist"
 msgstr "아티스트로 이동"
 
 #: crates/ui-gtk/src/views/actions.rs:243
 #: crates/ui-gtk/src/views/actions.rs:370
 #: crates/ui-gtk/src/window/playlists.rs:265
-msgid "Pin to the sidebar"
+msgid "Pin to the Sidebar"
 msgstr "사이드바에 고정"
 
 #: crates/ui-gtk/src/views/actions.rs:246
-#: crates/ui-gtk/src/views/actions.rs:270 crates/ui-gtk/src/views/labels.rs:324
+#: crates/ui-gtk/src/views/actions.rs:270
+#: crates/ui-gtk/src/views/labels.rs:324
 msgid "Labels…"
 msgstr "레이블…"
 
 #: crates/ui-gtk/src/views/actions.rs:251
-msgid "Measure loudness"
+msgid "Measure Loudness"
 msgstr "라우드니스 측정"
 
 #: crates/ui-gtk/src/views/actions.rs:256
-msgid "Edit tags…"
+msgid "Edit Tags…"
 msgstr "태그 편집…"
+
+#: crates/ui-gtk/src/views/actions.rs:266
+msgid "Not Rated"
+msgstr "별점 없음"
 
 #: crates/ui-gtk/src/views/actions.rs:269
 msgid "Rate"
 msgstr "별점 매기기"
 
 #: crates/ui-gtk/src/views/actions.rs:273
-msgid "Open containing folder"
+msgid "Open Containing Folder"
 msgstr "포함하는 폴더 열기"
 
 #: crates/ui-gtk/src/views/actions.rs:275
-msgid "Rename file…"
+msgid "Rename File…"
 msgstr "파일 이름 바꾸기…"
 
-#: crates/ui-gtk/src/views/actions.rs:277
-msgid "Organize files…"
-msgstr "파일 정리…"
-
 #: crates/ui-gtk/src/views/actions.rs:278
-#: crates/ui-gtk/src/tools/verify_files.rs:624
-msgid "Verify files"
+msgid "Verify Files"
 msgstr "파일 검증"
 
 #: crates/ui-gtk/src/views/actions.rs:280
@@ -4354,15 +4326,15 @@ msgid "Copies…"
 msgstr "사본…"
 
 #: crates/ui-gtk/src/views/actions.rs:294
-msgid "Remove from playlist"
+msgid "Remove from Playlist"
 msgstr "재생 목록에서 제거"
 
 #: crates/ui-gtk/src/views/actions.rs:298
-msgid "Remove from queue"
+msgid "Remove from Queue"
 msgstr "대기열에서 제거"
 
 #: crates/ui-gtk/src/views/actions.rs:310
-msgid "Move to trash…"
+msgid "Move to Trash…"
 msgstr "휴지통으로 이동…"
 
 #: crates/ui-gtk/src/views/actions.rs:370
@@ -4371,58 +4343,59 @@ msgstr "휴지통으로 이동…"
 msgid "Unpin"
 msgstr "고정 해제"
 
-#: crates/ui-gtk/src/views/actions.rs:425
+#: crates/ui-gtk/src/views/actions.rs:481
 msgid "These tracks have no files to move to the trash."
 msgstr "이 트랙에는 휴지통으로 이동할 파일이 없습니다."
 
-#: crates/ui-gtk/src/views/actions.rs:492
+#: crates/ui-gtk/src/views/actions.rs:548
 msgid "Selection"
 msgstr "선택 항목"
 
-#: crates/ui-gtk/src/views/actions.rs:505
+#: crates/ui-gtk/src/views/actions.rs:561
 #, rust-format
 msgid "{} track plays next"
 msgid_plural "{} tracks play next"
 msgstr[0] "{}곡을 다음에 재생합니다"
 
-#: crates/ui-gtk/src/views/actions.rs:508
+#: crates/ui-gtk/src/views/actions.rs:564
 #, rust-format
 msgid "{} track added to the queue"
 msgid_plural "{} tracks added to the queue"
 msgstr[0] "대기열에 {}곡을 추가했습니다"
 
-#: crates/ui-gtk/src/views/actions.rs:558
+#: crates/ui-gtk/src/views/actions.rs:614
 #, rust-format
 msgid "{} track added to {}"
 msgid_plural "{} tracks added to {}"
 msgstr[0] "{}곡을 {}에 추가했습니다"
 
-#: crates/ui-gtk/src/views/actions.rs:599
+#: crates/ui-gtk/src/views/actions.rs:655
 #, rust-format
 msgid "{} track removed from the playlist"
 msgid_plural "{} tracks removed from the playlist"
 msgstr[0] "재생 목록에서 {}곡을 제거했습니다"
 
-#: crates/ui-gtk/src/views/actions.rs:650
+#: crates/ui-gtk/src/views/actions.rs:706
 msgid "This track has no file to show."
 msgstr "이 트랙에는 표시할 파일이 없습니다."
 
-#: crates/ui-gtk/src/views/actions.rs:667
+#: crates/ui-gtk/src/views/actions.rs:723
 #, rust-format
 msgid "The folder cannot be shown: {}"
 msgstr "폴더를 표시할 수 없습니다: {}"
 
-#: crates/ui-gtk/src/views/actions.rs:722
+#: crates/ui-gtk/src/views/actions.rs:778
 msgid "This artist has no page of their own."
 msgstr "이 아티스트에는 별도 페이지가 없습니다."
 
-#: crates/ui-gtk/src/views/actions.rs:781
+#: crates/ui-gtk/src/views/actions.rs:837
 msgid "This track has no file to rename."
 msgstr "이 트랙에는 이름을 바꿀 파일이 없습니다."
 
-#: crates/ui-gtk/src/views/artists.rs:133 crates/ui-gtk/src/views/genres.rs:115
+#: crates/ui-gtk/src/views/artists.rs:133
+#: crates/ui-gtk/src/views/genres.rs:115
 #: crates/ui-gtk/src/views/category.rs:203
-msgid "Number of albums"
+msgid "Number of Albums"
 msgstr "앨범 수"
 
 #: crates/ui-gtk/src/views/artists.rs:135
@@ -4430,7 +4403,8 @@ msgstr "앨범 수"
 msgid "Sort the artists"
 msgstr "아티스트 정렬"
 
-#: crates/ui-gtk/src/views/artists.rs:171 crates/ui-gtk/src/views/genres.rs:146
+#: crates/ui-gtk/src/views/artists.rs:171
+#: crates/ui-gtk/src/views/genres.rs:146
 #: crates/ui-gtk/src/views/category.rs:240
 #: crates/ui-gtk/src/views/labels.rs:204
 msgid "Play all"
@@ -4446,7 +4420,7 @@ msgstr "모든 트랙"
 
 #: crates/ui-gtk/src/views/artists.rs:231
 #: crates/ui-gtk/src/views/artists.rs:259 crates/ui-gtk/src/views/home.rs:361
-#: crates/ui-gtk/src/views/home.rs:367 crates/ui-gtk/src/views/home.rs:631
+#: crates/ui-gtk/src/views/home.rs:367 crates/ui-gtk/src/views/home.rs:636
 msgid "Most played"
 msgstr "가장 많이 재생한 트랙"
 
@@ -4458,15 +4432,16 @@ msgstr "선택한 아티스트 없음"
 msgid "Choose an artist to see their releases."
 msgstr "아티스트를 선택하면 음반을 볼 수 있습니다."
 
-#: crates/ui-gtk/src/views/artists.rs:575 crates/ui-gtk/src/views/genres.rs:350
+#: crates/ui-gtk/src/views/artists.rs:581
+#: crates/ui-gtk/src/views/genres.rs:350
 #: crates/ui-gtk/src/views/category.rs:443
 #, rust-format
 msgid "{}, {} album"
 msgid_plural "{}, {} albums"
 msgstr[0] "{}, 앨범 {}개"
 
-#: crates/ui-gtk/src/views/artists.rs:645 crates/ui-gtk/src/views/genres.rs:382
-#: crates/ui-gtk/src/views/search.rs:574
+#: crates/ui-gtk/src/views/artists.rs:651
+#: crates/ui-gtk/src/views/genres.rs:382 crates/ui-gtk/src/views/search.rs:574
 #: crates/ui-gtk/src/views/category.rs:485
 #: crates/ui-gtk/src/tools/cover_manager.rs:198
 #: crates/ui-gtk/src/tools/import_view.rs:289
@@ -4476,31 +4451,31 @@ msgid "{} album"
 msgid_plural "{} albums"
 msgstr[0] "앨범 {}개"
 
-#: crates/ui-gtk/src/views/artists.rs:652
+#: crates/ui-gtk/src/views/artists.rs:658
 #, rust-format
 msgid "{} EP or single"
 msgid_plural "{} EPs and singles"
 msgstr[0] "EP 및 싱글 {}개"
 
-#: crates/ui-gtk/src/views/artists.rs:675
+#: crates/ui-gtk/src/views/artists.rs:681
 msgid "EPs and singles"
 msgstr "EP 및 싱글"
 
-#: crates/ui-gtk/src/views/artists.rs:676
+#: crates/ui-gtk/src/views/artists.rs:682
 msgid "Appears on"
 msgstr "참여 음반"
 
-#: crates/ui-gtk/src/views/artists.rs:997
+#: crates/ui-gtk/src/views/artists.rs:1001
 #, rust-format
 msgid "Cannot set the artist photo: {}"
 msgstr "아티스트 사진을 설정할 수 없습니다: {}"
 
 #: crates/ui-gtk/src/views/artist_photo.rs:27
-msgid "Set artist photo…"
+msgid "Set Artist Photo…"
 msgstr "아티스트 사진 설정…"
 
 #: crates/ui-gtk/src/views/artist_photo.rs:31
-msgid "Remove photo"
+msgid "Remove Photo"
 msgstr "사진 제거"
 
 #: crates/ui-gtk/src/views/artist_photo.rs:48
@@ -4604,9 +4579,7 @@ msgstr "라이브러리에 있음 · 연결되지 않음"
 msgid ""
 "Not in the library · plays from here are not counted, and ratings are not "
 "kept"
-msgstr ""
-"라이브러리에 없음 · 여기서 재생한 횟수는 집계되지 않고 별점도 저장되지 않습니"
-"다"
+msgstr "라이브러리에 없음 · 여기서 재생한 횟수는 집계되지 않고 별점도 저장되지 않습니다"
 
 #: crates/ui-gtk/src/views/folders.rs:698
 #, rust-format
@@ -4665,7 +4638,6 @@ msgstr "내보내기"
 #: crates/ui-gtk/src/views/playlist.rs:203
 #: crates/ui-gtk/src/views/playlist.rs:205
 #: crates/ui-gtk/src/views/playlist.rs:967
-#: crates/ui-gtk/src/views/playlist.rs:1163
 msgid "Lock against changes"
 msgstr "변경 잠금"
 
@@ -4673,8 +4645,8 @@ msgstr "변경 잠금"
 msgid "Playlist entries"
 msgstr "재생 목록 항목"
 
-#: crates/ui-gtk/src/views/playlist.rs:391 crates/ui-gtk/src/tools/copies.rs:69
-#: crates/ui-gtk/src/tools/copies.rs:78
+#: crates/ui-gtk/src/views/playlist.rs:391
+#: crates/ui-gtk/src/tools/copies.rs:69 crates/ui-gtk/src/tools/copies.rs:78
 #: crates/ui-gtk/src/tools/duplicates.rs:100
 #: crates/ui-gtk/src/tools/managed_folder.rs:175
 msgid "The file is missing"
@@ -4687,11 +4659,11 @@ msgid "Missing"
 msgstr "누락됨"
 
 #: crates/ui-gtk/src/views/playlist.rs:602
-msgid "Save as a playlist file…"
+msgid "Save as a Playlist File…"
 msgstr "재생 목록 파일로 저장…"
 
 #: crates/ui-gtk/src/views/playlist.rs:604
-msgid "Copy the files to a folder…"
+msgid "Copy the Files to a Folder…"
 msgstr "파일을 폴더로 복사…"
 
 #: crates/ui-gtk/src/views/playlist.rs:774
@@ -4710,7 +4682,7 @@ msgstr "잠금 해제"
 
 #: crates/ui-gtk/src/views/playlist.rs:1076
 #: crates/ui-gtk/src/views/tracks.rs:906
-#: crates/ui-gtk/src/views/smart_playlist.rs:1652
+#: crates/ui-gtk/src/views/smart_playlist.rs:1948
 #, rust-format
 msgid "{} selected"
 msgid_plural "{} selected"
@@ -4738,29 +4710,34 @@ msgid "Ctrl Z undoes the last change"
 msgstr "Ctrl Z로 마지막 변경을 실행 취소합니다"
 
 #: crates/ui-gtk/src/views/playlist.rs:1161
-msgid "Group by album"
+msgid "Group by Album"
 msgstr "앨범별로 묶기"
 
+#: crates/ui-gtk/src/views/playlist.rs:1163
+msgid "Lock Against Changes"
+msgstr "변경 잠금"
+
 #: crates/ui-gtk/src/views/playlist.rs:1173
-msgid "Shuffle the order…"
+msgid "Shuffle the Order…"
 msgstr "순서 섞기…"
 
 #: crates/ui-gtk/src/views/playlist.rs:1187
-msgid "Remove duplicates"
+msgid "Remove Duplicates"
 msgstr "중복 항목 제거"
 
 #: crates/ui-gtk/src/views/playlist.rs:1190
-msgid "Remove missing tracks"
+msgid "Remove Missing Tracks"
 msgstr "누락된 트랙 제거"
 
 #: crates/ui-gtk/src/views/playlist.rs:1305
-#: crates/ui-gtk/src/window/pages.rs:837
+#: crates/ui-gtk/src/window/pages.rs:840
 msgid "Playlist name"
 msgstr "재생 목록 이름"
 
 #: crates/ui-gtk/src/views/playlist.rs:1307
 #: crates/ui-gtk/src/views/search.rs:1127
-#: crates/ui-gtk/src/tools/organizer.rs:75 crates/ui-gtk/src/tools/rename.rs:61
+#: crates/ui-gtk/src/tools/organizer.rs:75
+#: crates/ui-gtk/src/tools/rename.rs:61
 #: crates/ui-gtk/src/window/playlists.rs:751
 msgid "Rename"
 msgstr "이름 바꾸기"
@@ -4791,11 +4768,9 @@ msgstr "검색 결과"
 
 #: crates/ui-gtk/src/views/search.rs:216
 msgid ""
-"Nothing in your library matches. Check the spelling, or try fewer or shorter "
-"words."
-msgstr ""
-"라이브러리에서 일치하는 항목이 없습니다. 철자를 확인하거나, 더 적거나 짧은 단"
-"어로 검색해 보십시오."
+"Nothing in your library matches. Check the spelling, or try fewer or shorter"
+" words."
+msgstr "라이브러리에서 일치하는 항목이 없습니다. 철자를 확인하거나, 더 적거나 짧은 단어로 검색해 보십시오."
 
 #: crates/ui-gtk/src/views/search.rs:224
 msgid ""
@@ -4901,8 +4876,8 @@ msgstr "“{}” 저장한 검색을 삭제하시겠습니까?"
 msgid "The tracks it finds stay in the library."
 msgstr "이 검색으로 찾은 트랙은 라이브러리에 그대로 남습니다."
 
-#: crates/ui-gtk/src/views/search.rs:1192 crates/ui-gtk/src/window/pages.rs:890
-#: crates/ui-gtk/src/tools.rs:206
+#: crates/ui-gtk/src/views/search.rs:1192
+#: crates/ui-gtk/src/window/pages.rs:893 crates/ui-gtk/src/tools.rs:206
 msgid "Delete"
 msgstr "삭제"
 
@@ -4915,7 +4890,8 @@ msgstr "탐색"
 msgid "Browse by genre, artist and album"
 msgstr "장르, 아티스트, 앨범별로 탐색"
 
-#: crates/ui-gtk/src/views/tracks.rs:236 crates/ui-gtk/src/views/history.rs:366
+#: crates/ui-gtk/src/views/tracks.rs:236
+#: crates/ui-gtk/src/views/history.rs:366
 msgid "Filter"
 msgstr "필터"
 
@@ -4924,19 +4900,19 @@ msgid "Filter the tracks"
 msgstr "트랙 필터"
 
 #: crates/ui-gtk/src/views/tracks.rs:246
+#: crates/ui-gtk/src/views/smart_playlist.rs:537
 #: crates/ui-gtk/src/views/tracks/extra.rs:323
 msgid "Columns"
 msgstr "열"
 
 #: crates/ui-gtk/src/views/tracks.rs:249
+#: crates/ui-gtk/src/views/smart_playlist.rs:541
 msgid "Show or hide columns"
 msgstr "열 표시 또는 숨기기"
 
 #: crates/ui-gtk/src/views/tracks.rs:531
-#: crates/ui-gtk/src/tools/user_fields.rs:196
-#: crates/ui-gtk/src/widgets/insert_popover.rs:238
-#: crates/ui-gtk/src/views/tracks/grouping.rs:218
-msgid "Your fields"
+#: crates/ui-gtk/src/views/tracks/grouping.rs:222
+msgid "Your Fields"
 msgstr "내 필드"
 
 #: crates/ui-gtk/src/views/tracks.rs:890
@@ -4948,66 +4924,64 @@ msgstr "정렬 기준: {}"
 msgid "Search the library"
 msgstr "라이브러리 검색"
 
-#: crates/ui-gtk/src/window/pages.rs:878
+#: crates/ui-gtk/src/window/pages.rs:881
 #, rust-format
 msgid "Delete the folder “{}”?"
 msgstr "“{}” 폴더를 삭제하시겠습니까?"
 
-#: crates/ui-gtk/src/window/pages.rs:879
+#: crates/ui-gtk/src/window/pages.rs:882
 msgid "The playlists in it move up a level."
 msgstr "폴더 안의 재생 목록은 한 단계 위로 이동합니다."
 
-#: crates/ui-gtk/src/window/pages.rs:883
+#: crates/ui-gtk/src/window/pages.rs:886
 #, rust-format
 msgid "Delete the playlist “{}”?"
 msgstr "“{}” 재생 목록을 삭제하시겠습니까?"
 
-#: crates/ui-gtk/src/window/pages.rs:884
+#: crates/ui-gtk/src/window/pages.rs:887
 msgid "Its tracks stay in the library. This cannot be undone."
-msgstr ""
-"재생 목록의 트랙은 라이브러리에 그대로 남습니다. 이 작업은 되돌릴 수 없습니"
-"다."
+msgstr "재생 목록의 트랙은 라이브러리에 그대로 남습니다. 이 작업은 되돌릴 수 없습니다."
 
-#: crates/ui-gtk/src/window/pages.rs:927
+#: crates/ui-gtk/src/window/pages.rs:930
 msgid "M3U8 playlists"
 msgstr "M3U8 재생 목록"
 
-#: crates/ui-gtk/src/window/pages.rs:928
+#: crates/ui-gtk/src/window/pages.rs:931
 msgid "M3U playlists"
 msgstr "M3U 재생 목록"
 
-#: crates/ui-gtk/src/window/pages.rs:929
+#: crates/ui-gtk/src/window/pages.rs:932
 msgid "PLS playlists"
 msgstr "PLS 재생 목록"
 
-#: crates/ui-gtk/src/window/pages.rs:930
+#: crates/ui-gtk/src/window/pages.rs:933
 msgid "XSPF playlists"
 msgstr "XSPF 재생 목록"
 
-#: crates/ui-gtk/src/window/pages.rs:938
+#: crates/ui-gtk/src/window/pages.rs:941
 msgid "Export playlist"
 msgstr "재생 목록 내보내기"
 
-#: crates/ui-gtk/src/window/pages.rs:958
+#: crates/ui-gtk/src/window/pages.rs:961
 #, rust-format
 msgid "{} track exported"
 msgid_plural "{} tracks exported"
 msgstr[0] "{}곡을 내보냈습니다"
 
-#: crates/ui-gtk/src/window/pages.rs:979
+#: crates/ui-gtk/src/window/pages.rs:982
 msgid "Import playlist"
 msgstr "재생 목록 가져오기"
 
-#: crates/ui-gtk/src/window/pages.rs:999
+#: crates/ui-gtk/src/window/pages.rs:1002
 #, rust-format
 msgid "Imported “{}”"
 msgstr "“{}” 재생 목록을 가져왔습니다"
 
-#: crates/ui-gtk/src/window/pages.rs:1053
+#: crates/ui-gtk/src/window/pages.rs:1056
 msgid "There is nothing to play there."
 msgstr "재생할 항목이 없습니다."
 
-#: crates/ui-gtk/src/window/pages.rs:1087
+#: crates/ui-gtk/src/window/pages.rs:1090
 msgid "The selected track has no copies."
 msgstr "선택한 트랙에 사본이 없습니다."
 
@@ -5183,7 +5157,8 @@ msgstr "라이브러리로 돌아가기(F11)"
 #: crates/ui-gtk/src/views/now_playing.rs:231
 #: crates/ui-gtk/src/tools/managed_runs.rs:304
 #: crates/ui-gtk/src/tools/cover_manager.rs:672
-#: crates/ui-gtk/src/tools/import.rs:672 crates/ui-gtk/src/tools/import.rs:1470
+#: crates/ui-gtk/src/tools/import.rs:672
+#: crates/ui-gtk/src/tools/import.rs:1470
 #: crates/ui-gtk/src/tools/import_view.rs:132
 #: crates/ui-gtk/src/tools/import_view.rs:141
 msgid "Show"
@@ -5340,8 +5315,7 @@ msgid ""
 "Helikodu looks for a .lrc or .txt file with the name of the track in its "
 "folder, and for lyrics in its tags."
 msgstr ""
-"Helikodu는 트랙이 있는 폴더에서 트랙과 이름이 같은 .lrc 또는 .txt 파일을 찾"
-"고, 태그에 들어 있는 가사도 찾습니다."
+"Helikodu는 트랙이 있는 폴더에서 트랙과 이름이 같은 .lrc 또는 .txt 파일을 찾고, 태그에 들어 있는 가사도 찾습니다."
 
 #: crates/ui-gtk/src/window/panel/lyrics.rs:157
 msgid "Offset"
@@ -5356,7 +5330,7 @@ msgid "Show the lines sooner"
 msgstr "가사를 더 일찍 표시"
 
 #: crates/ui-gtk/src/deck/modes.rs:133 crates/ui-gtk/src/deck/modes.rs:134
-#: crates/ui-gtk/src/play_modes.rs:230 crates/ui-gtk/src/shortcuts.rs:120
+#: crates/ui-gtk/src/shortcuts.rs:120
 msgid "Clear the loop"
 msgstr "구간 반복 해제"
 
@@ -5528,7 +5502,8 @@ msgstr "{} Hz"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:214
 #: crates/ui-gtk/src/tools/import.rs:466 crates/ui-gtk/src/tools/import.rs:506
-#: crates/ui-gtk/src/tools/import.rs:629 crates/ui-gtk/src/tools/import.rs:1013
+#: crates/ui-gtk/src/tools/import.rs:629
+#: crates/ui-gtk/src/tools/import.rs:1013
 #: crates/ui-gtk/src/tools/import.rs:1215
 msgid "Import"
 msgstr "가져오기"
@@ -5551,10 +5526,9 @@ msgid_plural "{} of {} filters"
 msgstr[0] "필터 {}개 / 최대 {}개"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:254
-msgid "No filters yet. Add one, or import a ParametricEQ.txt file from AutoEQ."
-msgstr ""
-"아직 필터가 없습니다. 필터를 추가하거나 AutoEQ의 ParametricEQ.txt 파일을 가져"
-"오십시오."
+msgid ""
+"No filters yet. Add one, or import a ParametricEQ.txt file from AutoEQ."
+msgstr "아직 필터가 없습니다. 필터를 추가하거나 AutoEQ의 ParametricEQ.txt 파일을 가져오십시오."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:289
 #, rust-format
@@ -5613,8 +5587,7 @@ msgstr[0] "{}; {}줄은 건너뛰거나 변경했습니다"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:592
 msgid "This file has no parametric equalizer filters that Helikodu can read."
-msgstr ""
-"이 파일에는 Helikodu가 읽을 수 있는 파라메트릭 이퀄라이저 필터가 없습니다."
+msgstr "이 파일에는 Helikodu가 읽을 수 있는 파라메트릭 이퀄라이저 필터가 없습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:611
 msgid "Export equalizer"
@@ -5681,9 +5654,7 @@ msgstr "필터 추가"
 msgid ""
 "Drag a handle, or select it and press the up and down arrow keys. A double-"
 "click returns it to 0 dB."
-msgstr ""
-"핸들을 끌거나, 핸들을 선택하고 위아래 화살표 키를 누르십시오. 두 번 클릭하면 "
-"0 dB로 돌아갑니다."
+msgstr "핸들을 끌거나, 핸들을 선택하고 위아래 화살표 키를 누르십시오. 두 번 클릭하면 0 dB로 돌아갑니다."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:791
 msgid "Reset to flat"
@@ -5822,12 +5793,11 @@ msgstr "{} Hz · {} dB"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:166
 msgid ""
-"For headphones. A little of each channel is mixed into the other, as happens "
-"with loudspeakers in a room. The sound moves from inside the head towards "
+"For headphones. A little of each channel is mixed into the other, as happens"
+" with loudspeakers in a room. The sound moves from inside the head towards "
 "the front."
 msgstr ""
-"헤드폰용입니다. 방에서 스피커로 들을 때처럼 각 채널의 소리를 다른 채널에 조금"
-"씩 섞습니다. 소리가 머릿속에서 앞쪽으로 옮겨 갑니다."
+"헤드폰용입니다. 방에서 스피커로 들을 때처럼 각 채널의 소리를 다른 채널에 조금씩 섞습니다. 소리가 머릿속에서 앞쪽으로 옮겨 갑니다."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:181
 msgid "Default"
@@ -5876,8 +5846,7 @@ msgstr "사용자 지정 값"
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:231
 msgid ""
 "Works on stereo tracks. Mono and surround tracks pass through unchanged."
-msgstr ""
-"스테레오 트랙에 적용됩니다. 모노 및 서라운드 트랙은 변경 없이 통과합니다."
+msgstr "스테레오 트랙에 적용됩니다. 모노 및 서라운드 트랙은 변경 없이 통과합니다."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:321
 msgid ""
@@ -5885,8 +5854,8 @@ msgid ""
 "every track. The surround setting applies to files with more channels than "
 "the device has."
 msgstr ""
-"채널이 장치에 전달되는 방식을 바꿉니다. 모노, 좌우 바꾸기, 밸런스는 모든 트랙"
-"에 적용됩니다. 서라운드 설정은 장치보다 채널이 많은 파일에 적용됩니다."
+"채널이 장치에 전달되는 방식을 바꿉니다. 모노, 좌우 바꾸기, 밸런스는 모든 트랙에 적용됩니다. 서라운드 설정은 장치보다 채널이 많은 "
+"파일에 적용됩니다."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 msgid "Swap left and right"
@@ -5913,8 +5882,7 @@ msgstr "LFE 채널을 믹스에 추가"
 msgid ""
 "Surround is mixed down after ITU-R BS.775. Off: the subwoofer channel is "
 "left out."
-msgstr ""
-"서라운드는 ITU-R BS.775에 따라 다운믹스됩니다. 끄면 서브우퍼 채널이 빠집니다."
+msgstr "서라운드는 ITU-R BS.775에 따라 다운믹스됩니다. 끄면 서브우퍼 채널이 빠집니다."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:400
 msgid "Surround files"
@@ -5926,8 +5894,8 @@ msgid ""
 "limiter turns the level down for a moment. The rest of the time it leaves "
 "the sound alone."
 msgstr ""
-"클리핑을 막는 안전장치입니다. 피크가 풀 스케일을 넘으려 하면 리미터가 잠시 레"
-"벨을 낮춥니다. 그 밖의 시간에는 소리를 건드리지 않습니다."
+"클리핑을 막는 안전장치입니다. 피크가 풀 스케일을 넘으려 하면 리미터가 잠시 레벨을 낮춥니다. 그 밖의 시간에는 소리를 건드리지 "
+"않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:464
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:490
@@ -5957,11 +5925,9 @@ msgstr "작동 상태"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:515
 msgid ""
-"The automatic preamp of the equalizer already prevents most clipping, so the "
-"limiter rarely has to act."
-msgstr ""
-"이퀄라이저의 자동 프리앰프가 이미 대부분의 클리핑을 막으므로, 리미터가 작동"
-"할 일은 거의 없습니다."
+"The automatic preamp of the equalizer already prevents most clipping, so the"
+" limiter rarely has to act."
+msgstr "이퀄라이저의 자동 프리앰프가 이미 대부분의 클리핑을 막으므로, 리미터가 작동할 일은 거의 없습니다."
 
 #: crates/ui-gtk/src/dialogs/track_flags.rs:30
 msgid "Leave out when shuffling"
@@ -5980,28 +5946,28 @@ msgid "Groupings"
 msgstr "그룹"
 
 #: crates/ui-gtk/src/play_modes.rs:72
-msgid "Tracks within each album"
+msgid "Tracks Within Each Album"
 msgstr "각 앨범 안의 트랙"
 
 #: crates/ui-gtk/src/play_modes.rs:80 crates/ui-gtk/src/play_modes.rs:90
-msgid "This track"
+msgid "This Track"
 msgstr "이 트랙"
 
 #: crates/ui-gtk/src/play_modes.rs:81 crates/ui-gtk/src/play_modes.rs:91
 #: crates/ui-gtk/src/play_modes.rs:101
-msgid "This album"
+msgid "This Album"
 msgstr "이 앨범"
 
 #: crates/ui-gtk/src/play_modes.rs:82
-msgid "The whole queue"
+msgid "The Whole Queue"
 msgstr "대기열 전체"
 
 #: crates/ui-gtk/src/play_modes.rs:92
-msgid "The queue"
+msgid "The Queue"
 msgstr "대기열 끝"
 
 #: crates/ui-gtk/src/play_modes.rs:100
-msgid "This artist"
+msgid "This Artist"
 msgstr "이 아티스트"
 
 #: crates/ui-gtk/src/play_modes.rs:102
@@ -6061,47 +6027,43 @@ msgid "stops at the end of the queue"
 msgstr "대기열 끝에서 정지"
 
 #: crates/ui-gtk/src/play_modes.rs:228
-msgid "Set the start here"
+msgid "Set the Start Here"
 msgstr "여기를 시작점으로 설정"
 
 #: crates/ui-gtk/src/play_modes.rs:229
-msgid "Set the end here"
+msgid "Set the End Here"
 msgstr "여기를 끝점으로 설정"
 
+#: crates/ui-gtk/src/play_modes.rs:230
+msgid "Clear the Loop"
+msgstr "구간 반복 해제"
+
 #: crates/ui-gtk/src/play_modes.rs:239
-msgid "Remove tracks after they play"
+msgid "Remove Tracks After They Play"
 msgstr "재생이 끝난 트랙 제거"
 
 #: crates/ui-gtk/src/play_modes.rs:243
-msgid "Continue from the selected track"
+msgid "Continue from the Selected Track"
 msgstr "선택한 트랙부터 계속"
 
 #: crates/ui-gtk/src/play_modes.rs:248
-msgid "Save as playlist…"
+msgid "Save as Playlist…"
 msgstr "재생 목록으로 저장…"
 
-#: crates/ui-gtk/src/play_modes.rs:270 crates/ui-gtk/src/shortcuts.rs:123
-msgid "Previous album"
+#: crates/ui-gtk/src/play_modes.rs:270
+msgid "Previous Album"
 msgstr "이전 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:271 crates/ui-gtk/src/shortcuts.rs:124
-msgid "Next album"
+#: crates/ui-gtk/src/play_modes.rs:271
+msgid "Next Album"
 msgstr "다음 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:272 crates/ui-gtk/src/shortcuts.rs:125
-msgid "Random album"
+#: crates/ui-gtk/src/play_modes.rs:272
+msgid "Random Album"
 msgstr "무작위 앨범"
 
-#: crates/ui-gtk/src/play_modes.rs:276 crates/ui-gtk/src/shortcuts.rs:92
-msgid "Seek back"
-msgstr "뒤로 탐색"
-
-#: crates/ui-gtk/src/play_modes.rs:277 crates/ui-gtk/src/shortcuts.rs:86
-msgid "Seek forward"
-msgstr "앞으로 탐색"
-
 #: crates/ui-gtk/src/play_modes.rs:278
-msgid "Loop a section"
+msgid "Loop a Section"
 msgstr "구간 반복"
 
 #: crates/ui-gtk/src/play_modes.rs:284
@@ -6116,17 +6078,21 @@ msgstr "반복: {}"
 
 #: crates/ui-gtk/src/play_modes.rs:293
 #, rust-format
-msgid "Stop after: {}"
+msgid "Stop After: {}"
 msgstr "정지 시점: {}"
 
 #: crates/ui-gtk/src/play_modes.rs:299
 #, rust-format
-msgid "Play only: {}"
+msgid "Play Only: {}"
 msgstr "재생 범위: {}"
 
 #: crates/ui-gtk/src/play_modes.rs:309
-msgid "Choose the output device…"
+msgid "Choose the Output Device…"
 msgstr "출력 장치 선택…"
+
+#: crates/ui-gtk/src/play_modes.rs:312
+msgid "Output Device"
+msgstr "출력 장치"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:41
 msgid "1 hour"
@@ -6194,9 +6160,7 @@ msgstr "그때 재생 중인 트랙이 끝나면 재생을 일시 정지합니�
 msgid ""
 "The sound fades over the last 30 seconds, then playback pauses. On a bit-"
 "perfect path it pauses without a fade."
-msgstr ""
-"마지막 30초 동안 소리가 서서히 줄어든 뒤 재생이 일시 정지됩니다. 비트 퍼펙트 "
-"경로에서는 페이드 없이 일시 정지합니다."
+msgstr "마지막 30초 동안 소리가 서서히 줄어든 뒤 재생이 일시 정지됩니다. 비트 퍼펙트 경로에서는 페이드 없이 일시 정지합니다."
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:353
 #, rust-format
@@ -6218,7 +6182,7 @@ msgid "Band"
 msgstr "밴드"
 
 #: crates/ui-gtk/src/window/play_modes.rs:65
-msgid "Follow the playing track"
+msgid "Follow the Playing Track"
 msgstr "재생 중인 트랙 따라가기"
 
 #: crates/ui-gtk/src/tools/copies.rs:67
@@ -6429,19 +6393,15 @@ msgstr "필터와 일치하는 그룹이 없습니다."
 
 #: crates/ui-gtk/src/tools/duplicates.rs:238
 msgid ""
-"One file reached by two paths takes its space once: nothing here is moved to "
-"the trash."
-msgstr ""
-"두 경로로 접근하는 같은 파일은 공간을 한 번만 차지하므로, 여기서는 아무것도 "
-"휴지통으로 이동하지 않습니다."
+"One file reached by two paths takes its space once: nothing here is moved to"
+" the trash."
+msgstr "두 경로로 접근하는 같은 파일은 공간을 한 번만 차지하므로, 여기서는 아무것도 휴지통으로 이동하지 않습니다."
 
 #: crates/ui-gtk/src/tools/duplicates.rs:242
 msgid ""
 "Nothing is marked. Choose which file to keep and press Mark, or tick files "
 "yourself."
-msgstr ""
-"표시한 항목이 없습니다. 유지할 파일을 고른 뒤 표시를 누르거나, 직접 파일을 체"
-"크하십시오."
+msgstr "표시한 항목이 없습니다. 유지할 파일을 고른 뒤 표시를 누르거나, 직접 파일을 체크하십시오."
 
 #: crates/ui-gtk/src/tools/duplicates.rs:249
 #, rust-format
@@ -6456,8 +6416,7 @@ msgstr "중복 항목을 찾는 중…"
 #: crates/ui-gtk/src/tools/duplicates.rs:309
 #, rust-format
 msgid "Compared {} in {} s. Nothing is removed until you say so."
-msgstr ""
-"{}를 {}초 만에 비교했습니다. 직접 요청하기 전에는 아무것도 제거하지 않습니다."
+msgstr "{}를 {}초 만에 비교했습니다. 직접 요청하기 전에는 아무것도 제거하지 않습니다."
 
 #: crates/ui-gtk/src/tools/duplicates.rs:452
 #: crates/ui-gtk/src/tools/duplicates.rs:733
@@ -6527,9 +6486,8 @@ msgid ""
 "when the Trash is emptied. Each file is checked again just before it moves, "
 "and one that changed stays where it is."
 msgstr ""
-"파일은 데스크톱 휴지통으로 이동하며, 휴지통에서 복원할 수 있습니다. 휴지통을 "
-"비우면 {}의 공간이 확보됩니다. 각 파일은 이동 직전에 다시 확인하며, 변경된 파"
-"일은 그대로 둡니다."
+"파일은 데스크톱 휴지통으로 이동하며, 휴지통에서 복원할 수 있습니다. 휴지통을 비우면 {}의 공간이 확보됩니다. 각 파일은 이동 직전에 "
+"다시 확인하며, 변경된 파일은 그대로 둡니다."
 
 #: crates/ui-gtk/src/tools/trash.rs:109
 msgid "Files to move"
@@ -6553,7 +6511,8 @@ msgstr "그대로 둠: 파일이 변경되었거나 더 이상 기본 사본과 
 
 #: crates/ui-gtk/src/tools/trash.rs:163
 msgid ""
-"Left in place: it is the same file as another path in the library, not a copy"
+"Left in place: it is the same file as another path in the library, not a "
+"copy"
 msgstr "그대로 둠: 사본이 아니라 라이브러리의 다른 경로와 같은 파일입니다"
 
 #: crates/ui-gtk/src/tools/trash.rs:165
@@ -6605,9 +6564,7 @@ msgstr[0] "태그 편집기의 파일 {}개"
 msgid ""
 "Nothing is written until you choose Fill. The change can be undone with "
 "Ctrl+Z."
-msgstr ""
-"채우기를 선택하기 전에는 아무것도 기록하지 않습니다. 변경 사항은 Ctrl+Z로 실"
-"행 취소할 수 있습니다."
+msgstr "채우기를 선택하기 전에는 아무것도 기록하지 않습니다. 변경 사항은 Ctrl+Z로 실행 취소할 수 있습니다."
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:208
 #, rust-format
@@ -6632,11 +6589,9 @@ msgstr "필드 삽입"
 #: crates/ui-gtk/src/tools/tag_tools.rs:319
 #, rust-format
 msgid ""
-"The pattern is compared with the file name without its extension. Use {skip} "
-"for a part you do not need."
-msgstr ""
-"패턴은 확장자를 뺀 파일 이름과 비교합니다. 필요 없는 부분에는 {skip}을 사용하"
-"십시오."
+"The pattern is compared with the file name without its extension. Use {skip}"
+" for a part you do not need."
+msgstr "패턴은 확장자를 뺀 파일 이름과 비교합니다. 필요 없는 부분에는 {skip}을 사용하십시오."
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:324
 msgid "Fill"
@@ -6727,9 +6682,7 @@ msgstr "텍스트의 실제 인코딩"
 msgid ""
 "Old taggers stored text in the code page of their system. Only values that "
 "change are listed."
-msgstr ""
-"오래된 태그 편집 프로그램은 시스템의 코드 페이지로 텍스트를 저장했습니다. 값"
-"이 바뀌는 항목만 표시합니다."
+msgstr "오래된 태그 편집 프로그램은 시스템의 코드 페이지로 텍스트를 저장했습니다. 값이 바뀌는 항목만 표시합니다."
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:519
 msgid "Forms"
@@ -6752,126 +6705,150 @@ msgid "Only where the sort tag is empty."
 msgstr "정렬 태그가 비어 있을 때만 적용됩니다."
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:73
-msgid "Fill tags from file names"
+msgid "Fill Tags from File Names"
 msgstr "파일 이름으로 태그 채우기"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:74
-msgid "Number the tracks"
+msgid "Number the Tracks"
 msgstr "트랙 번호 매기기"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:75
-msgid "Change capital letters"
+msgid "Change Capital Letters"
 msgstr "대소문자 바꾸기"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:76
-msgid "Find and replace"
+msgid "Find and Replace"
 msgstr "찾아 바꾸기"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:77
-msgid "Repair garbled text"
+msgid "Repair Garbled Text"
 msgstr "깨진 텍스트 복구"
 
 #: crates/ui-gtk/src/tools/tag_preview.rs:78
+msgid "Create Sort Names"
+msgstr "정렬용 이름 만들기"
+
+#: crates/ui-gtk/src/tools/tag_preview.rs:85
+msgid "Fill tags from file names"
+msgstr "파일 이름으로 태그 채우기"
+
+#: crates/ui-gtk/src/tools/tag_preview.rs:86
+msgid "Number the tracks"
+msgstr "트랙 번호 매기기"
+
+#: crates/ui-gtk/src/tools/tag_preview.rs:87
+msgid "Change capital letters"
+msgstr "대소문자 바꾸기"
+
+#: crates/ui-gtk/src/tools/tag_preview.rs:88
+msgid "Find and replace"
+msgstr "찾아 바꾸기"
+
+#: crates/ui-gtk/src/tools/tag_preview.rs:89
+msgid "Repair garbled text"
+msgstr "깨진 텍스트 복구"
+
+#: crates/ui-gtk/src/tools/tag_preview.rs:90
 msgid "Create sort names"
 msgstr "정렬용 이름 만들기"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:102
+#: crates/ui-gtk/src/tools/tag_preview.rs:114
 #, rust-format
 msgid "Fill {} file"
 msgid_plural "Fill {} files"
 msgstr[0] "파일 {}개 채우기"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:103
+#: crates/ui-gtk/src/tools/tag_preview.rs:115
 #, rust-format
 msgid "Number {} file"
 msgid_plural "Number {} files"
 msgstr[0] "파일 {}개에 번호 매기기"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:104
+#: crates/ui-gtk/src/tools/tag_preview.rs:116
 #, rust-format
 msgid "Change {} file"
 msgid_plural "Change {} files"
 msgstr[0] "파일 {}개 변경"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:105
+#: crates/ui-gtk/src/tools/tag_preview.rs:117
 #, rust-format
 msgid "Replace in {} file"
 msgid_plural "Replace in {} files"
 msgstr[0] "파일 {}개에서 바꾸기"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:106
+#: crates/ui-gtk/src/tools/tag_preview.rs:118
 #, rust-format
 msgid "Repair {} file"
 msgid_plural "Repair {} files"
 msgstr[0] "파일 {}개 복구"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:160
+#: crates/ui-gtk/src/tools/tag_preview.rs:172
 #: crates/ui-gtk/src/popovers/query_completion.rs:75
 #: crates/ui-gtk/src/views/smart_rules.rs:217
 msgid "Track number"
 msgstr "트랙 번호"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:161
+#: crates/ui-gtk/src/tools/tag_preview.rs:173
 msgid "Total"
 msgstr "전체 트랙 수"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:163
+#: crates/ui-gtk/src/tools/tag_preview.rs:175
 msgid "Discs"
 msgstr "전체 디스크 수"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:169
+#: crates/ui-gtk/src/tools/tag_preview.rs:181
 msgid "Artist sort name"
 msgstr "아티스트 정렬용 이름"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:170
+#: crates/ui-gtk/src/tools/tag_preview.rs:182
 msgid "Album artist sort name"
 msgstr "앨범 아티스트 정렬용 이름"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:171
+#: crates/ui-gtk/src/tools/tag_preview.rs:183
 msgid "Composer sort name"
 msgstr "작곡가 정렬용 이름"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:308
+#: crates/ui-gtk/src/tools/tag_preview.rs:320
 #, rust-format
 msgid "{} file changes · the old values are in grey"
 msgid_plural "{} files change · the old values are in grey"
 msgstr[0] "파일 {}개 변경 · 이전 값은 회색으로 표시"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:344
+#: crates/ui-gtk/src/tools/tag_preview.rs:356
 msgid "Does not fit the pattern"
 msgstr "패턴과 맞지 않음"
 
 #. Translators: {0} is the number of file names that fit, which
 #. chooses the form, {1} the number of all files.
-#: crates/ui-gtk/src/tools/tag_preview.rs:385
+#: crates/ui-gtk/src/tools/tag_preview.rs:397
 #, rust-format
 msgid ""
-"{} of {} file names fits the pattern · values in grey are already in the tags"
+"{} of {} file names fits the pattern · values in grey are already in the "
+"tags"
 msgid_plural ""
 "{} of {} file names fit the pattern · values in grey are already in the tags"
-msgstr[0] ""
-"파일 이름 {1}개 중 {0}개가 패턴과 맞음 · 회색 값은 이미 태그에 있는 값"
+msgstr[0] "파일 이름 {1}개 중 {0}개가 패턴과 맞음 · 회색 값은 이미 태그에 있는 값"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:510
+#: crates/ui-gtk/src/tools/tag_preview.rs:522
 msgid "Type the text to find."
 msgstr "찾을 텍스트를 입력하십시오."
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:523
-#: crates/ui-gtk/src/tools/tag_preview.rs:524
+#: crates/ui-gtk/src/tools/tag_preview.rs:535
+#: crates/ui-gtk/src/tools/tag_preview.rs:536
 msgid "This is not a regular expression the search can use."
 msgstr "검색에 사용할 수 있는 정규 표현식이 아닙니다."
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:550
-#: crates/ui-gtk/src/views/smart_playlist.rs:1245
+#: crates/ui-gtk/src/tools/tag_preview.rs:562
+#: crates/ui-gtk/src/views/smart_playlist.rs:1563
 msgid "Field"
 msgstr "필드"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:550
-#: crates/ui-gtk/src/views/smart_playlist.rs:1284
+#: crates/ui-gtk/src/tools/tag_preview.rs:562
+#: crates/ui-gtk/src/views/smart_playlist.rs:1602
 msgid "Value"
 msgstr "값"
 
-#: crates/ui-gtk/src/tools/tag_preview.rs:596
+#: crates/ui-gtk/src/tools/tag_preview.rs:608
 msgid "No garbled text was found in these files."
 msgstr "이 파일에서 깨진 텍스트를 찾지 못했습니다."
 
@@ -7081,8 +7058,7 @@ msgstr "CUE 시트 때문에 유지"
 msgid ""
 "A file with that name is already there, or another file here gets the same "
 "name"
-msgstr ""
-"같은 이름의 파일이 이미 있거나, 여기 있는 다른 파일이 같은 이름을 받게 됩니다"
+msgstr "같은 이름의 파일이 이미 있거나, 여기 있는 다른 파일이 같은 이름을 받게 됩니다"
 
 #: crates/ui-gtk/src/tools/organizer.rs:90
 msgid "The file is missing, so it cannot move"
@@ -7121,9 +7097,7 @@ msgstr "이 패턴으로 정리한 파일은 그대로 남습니다."
 msgid ""
 "Text in square brackets is left out when a field inside it is empty. The "
 "file extension is kept."
-msgstr ""
-"대괄호 안의 텍스트는 그 안의 필드가 비어 있으면 생략됩니다. 파일 확장자는 유"
-"지됩니다."
+msgstr "대괄호 안의 텍스트는 그 안의 필드가 비어 있으면 생략됩니다. 파일 확장자는 유지됩니다."
 
 #: crates/ui-gtk/src/tools/organizer.rs:480
 msgid "The preview waits for a pattern that can be read."
@@ -7217,11 +7191,9 @@ msgstr "패턴"
 
 #: crates/ui-gtk/src/tools/organizer.rs:977
 msgid ""
-"Every move is written down first, so a run can be undone later, even after a "
-"restart."
-msgstr ""
-"모든 이동을 먼저 기록해 두므로, 다시 시작한 뒤에도 실행한 작업을 되돌릴 수 있"
-"습니다."
+"Every move is written down first, so a run can be undone later, even after a"
+" restart."
+msgstr "모든 이동을 먼저 기록해 두므로, 다시 시작한 뒤에도 실행한 작업을 되돌릴 수 있습니다."
 
 #: crates/ui-gtk/src/tools/organizer.rs:984
 msgid "Now, and after the move"
@@ -7463,17 +7435,13 @@ msgstr "필요 · 여유 공간 {}"
 #: crates/ui-gtk/src/tools/managed_folder.rs:601
 #, rust-format
 msgid "These files need {}. The drive of the managed folder has {} free."
-msgstr ""
-"이 파일들에 필요한 공간은 {}입니다. 관리 폴더가 있는 드라이브의 여유 공간은 "
-"{}입니다."
+msgstr "이 파일들에 필요한 공간은 {}입니다. 관리 폴더가 있는 드라이브의 여유 공간은 {}입니다."
 
 #: crates/ui-gtk/src/tools/managed_folder.rs:605
 msgid ""
-"Choose fewer files, or free some space. The run cannot start until the files "
-"fit."
-msgstr ""
-"파일을 더 적게 선택하거나 공간을 확보하십시오. 파일이 들어갈 공간이 생기기 전"
-"에는 작업을 시작할 수 없습니다."
+"Choose fewer files, or free some space. The run cannot start until the files"
+" fit."
+msgstr "파일을 더 적게 선택하거나 공간을 확보하십시오. 파일이 들어갈 공간이 생기기 전에는 작업을 시작할 수 없습니다."
 
 #: crates/ui-gtk/src/tools/managed_folder.rs:643
 msgid "Looking at the files…"
@@ -7604,17 +7572,13 @@ msgstr "지금까지 배치됨"
 #: crates/ui-gtk/src/tools/managed_folder.rs:1477
 msgid ""
 "Nothing changes until you start. Your choices here are for this run only."
-msgstr ""
-"시작하기 전에는 아무것도 바뀌지 않습니다. 여기에서 선택한 내용은 이번 작업에"
-"만 적용됩니다."
+msgstr "시작하기 전에는 아무것도 바뀌지 않습니다. 여기에서 선택한 내용은 이번 작업에만 적용됩니다."
 
 #: crates/ui-gtk/src/tools/managed_folder.rs:1480
 msgid ""
 "Tracks stay the same tracks: ratings, play counts, labels and playlists "
 "follow the files."
-msgstr ""
-"트랙은 같은 트랙으로 유지됩니다. 별점, 재생 횟수, 레이블, 재생 목록이 파일을 "
-"따라갑니다."
+msgstr "트랙은 같은 트랙으로 유지됩니다. 별점, 재생 횟수, 레이블, 재생 목록이 파일을 따라갑니다."
 
 #: crates/ui-gtk/src/tools/managed_runs.rs:183
 msgid "Gathering the library was cut short"
@@ -7715,9 +7679,7 @@ msgstr "계속"
 #, rust-format
 msgid "{} is not connected. Its {} track is hidden, not missing."
 msgid_plural "{} is not connected. Its {} tracks are hidden, not missing."
-msgstr[0] ""
-"{} 드라이브가 연결되어 있지 않습니다. 이 드라이브의 {}곡은 누락된 것이 아니"
-"라 숨겨진 상태입니다."
+msgstr[0] "{} 드라이브가 연결되어 있지 않습니다. 이 드라이브의 {}곡은 누락된 것이 아니라 숨겨진 상태입니다."
 
 #: crates/ui-gtk/src/tools/missing_files.rs:159
 msgid "Tracks on a drive that is not connected are hidden, not missing."
@@ -7886,8 +7848,7 @@ msgstr[0] "누락된 트랙 {}곡에 같은 녹음의 새 파일이 있습니다
 msgid ""
 "The same recording means the same title and artist and a length within 2 "
 "seconds."
-msgstr ""
-"같은 녹음이란 제목과 아티스트가 같고 길이 차이가 2초 이내인 것을 말합니다."
+msgstr "같은 녹음이란 제목과 아티스트가 같고 길이 차이가 2초 이내인 것을 말합니다."
 
 #: crates/ui-gtk/src/tools/missing_files.rs:947
 msgid "Look in a folder"
@@ -7926,17 +7887,14 @@ msgid ""
 msgid_plural ""
 "{} frames could not be decoded, around {}. A click or a short gap is likely "
 "there."
-msgstr[0] ""
-"{1} 부근에서 프레임 {0}개를 디코딩할 수 없습니다. 그 지점에서 딸깍 소리나 짧"
-"은 끊김이 있을 수 있습니다."
+msgstr[0] "{1} 부근에서 프레임 {0}개를 디코딩할 수 없습니다. 그 지점에서 딸깍 소리나 짧은 끊김이 있을 수 있습니다."
 
 #: crates/ui-gtk/src/tools/verify_files.rs:125
 #, rust-format
 msgid "{} frame could not be decoded. A click or a short gap is likely there."
 msgid_plural ""
 "{} frames could not be decoded. A click or a short gap is likely there."
-msgstr[0] ""
-"프레임 {}개를 디코딩할 수 없습니다. 딸깍 소리나 짧은 끊김이 있을 수 있습니다."
+msgstr[0] "프레임 {}개를 디코딩할 수 없습니다. 딸깍 소리나 짧은 끊김이 있을 수 있습니다."
 
 #: crates/ui-gtk/src/tools/verify_files.rs:134
 #, rust-format
@@ -7946,10 +7904,9 @@ msgstr "파일이 {} 지점에서 중간에 끊깁니다. 나머지는 재생할
 #: crates/ui-gtk/src/tools/verify_files.rs:142
 #, rust-format
 msgid ""
-"Ends {} s before the length written in the file. The end of the track may be "
-"missing."
-msgstr ""
-"파일에 기록된 길이보다 {}초 일찍 끝납니다. 트랙의 끝부분이 없을 수 있습니다."
+"Ends {} s before the length written in the file. The end of the track may be"
+" missing."
+msgstr "파일에 기록된 길이보다 {}초 일찍 끝납니다. 트랙의 끝부분이 없을 수 있습니다."
 
 #: crates/ui-gtk/src/tools/verify_files.rs:152
 #, rust-format
@@ -7960,9 +7917,7 @@ msgstr "헤더의 길이는 {}이지만 실제 오디오 길이는 {}입니다."
 msgid ""
 "The audio does not match the checksum stored in the file: some bytes have "
 "changed."
-msgstr ""
-"오디오가 파일에 저장된 체크섬과 일치하지 않습니다. 일부 바이트가 변경되었습니"
-"다."
+msgstr "오디오가 파일에 저장된 체크섬과 일치하지 않습니다. 일부 바이트가 변경되었습니다."
 
 #: crates/ui-gtk/src/tools/verify_files.rs:159
 msgid "The file does not decode cleanly."
@@ -7995,8 +7950,7 @@ msgstr "검증"
 
 #: crates/ui-gtk/src/tools/verify_files.rs:402
 msgid "Choose what to check and press Verify. A check changes nothing."
-msgstr ""
-"검사할 대상을 선택하고 검증을 누르십시오. 검사는 아무것도 바꾸지 않습니다."
+msgstr "검사할 대상을 선택하고 검증을 누르십시오. 검사는 아무것도 바꾸지 않습니다."
 
 #. Translators: the summary of a check of files; {0}, {1} and
 #. {2} are the three sentences that follow ("12 are
@@ -8058,6 +8012,10 @@ msgid "Show in folder"
 msgstr "폴더에서 보기"
 
 #: crates/ui-gtk/src/tools/verify_files.rs:624
+msgid "Verify files"
+msgstr "파일 검증"
+
+#: crates/ui-gtk/src/tools/verify_files.rs:624
 #: crates/ui-gtk/src/tools/converter.rs:996
 msgid "Result"
 msgstr "결과"
@@ -8114,9 +8072,7 @@ msgstr "파일 이름을 바꿨습니다"
 msgid ""
 "The file was not renamed: a file with that name is already there, or it "
 "could not be moved."
-msgstr ""
-"파일 이름을 바꾸지 못했습니다. 같은 이름의 파일이 이미 있거나 파일을 이동할 "
-"수 없습니다."
+msgstr "파일 이름을 바꾸지 못했습니다. 같은 이름의 파일이 이미 있거나 파일을 이동할 수 없습니다."
 
 #: crates/ui-gtk/src/tools/rename.rs:126
 #, rust-format
@@ -8488,12 +8444,14 @@ msgstr "총 {}"
 msgid "Yesterday"
 msgstr "어제"
 
-#. Translators: a day in the play history, as strftime: "Saturday 15 November".
+#. Translators: a day in the play history, as strftime: "Saturday 15
+#. November".
 #: crates/ui-gtk/src/views/history.rs:224
 msgid "%A %e %B"
 msgstr "%-m월 %-d일 %A"
 
-#. Translators: a day of an earlier year, as strftime: "Saturday 15 November 2025".
+#. Translators: a day of an earlier year, as strftime: "Saturday 15 November
+#. 2025".
 #: crates/ui-gtk/src/views/history.rs:227
 msgid "%A %e %B %Y"
 msgstr "%Y년 %-m월 %-d일 %A"
@@ -8537,7 +8495,8 @@ msgid "Nothing played"
 msgstr "재생한 항목 없음"
 
 #: crates/ui-gtk/src/views/history.rs:422
-msgid "Tracks you listen to are listed here by day, with where they came from."
+msgid ""
+"Tracks you listen to are listed here by day, with where they came from."
 msgstr "들은 트랙이 재생한 곳과 함께 날짜별로 여기에 표시됩니다."
 
 #: crates/ui-gtk/src/views/history.rs:578
@@ -8637,8 +8596,7 @@ msgid "Choose a year to see its albums."
 msgstr "연도를 선택하면 앨범을 볼 수 있습니다."
 
 #: crates/ui-gtk/src/views/category.rs:197
-#: crates/ui-gtk/src/views/smart_rules.rs:541
-msgid "Newest first"
+msgid "Newest First"
 msgstr "최신순"
 
 #: crates/ui-gtk/src/views/category.rs:211
@@ -8685,66 +8643,64 @@ msgstr "{}, 들음"
 msgid "{}. {}"
 msgstr "{}. {}"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:304
+#: crates/ui-gtk/src/views/smart_playlist.rs:423
 msgid "Tracks of the smart playlist"
 msgstr "스마트 재생 목록의 트랙"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:336
+#: crates/ui-gtk/src/views/smart_playlist.rs:455
 msgid "Live"
 msgstr "실시간"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:337
+#: crates/ui-gtk/src/views/smart_playlist.rs:456
 msgid "The tracks follow the library as it changes"
 msgstr "라이브러리가 바뀌면 트랙도 따라 바뀝니다"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:367
-#: crates/ui-gtk/src/window/playlists.rs:423
+#: crates/ui-gtk/src/views/smart_playlist.rs:486
 #: crates/ui-gtk/src/tools/import_view.rs:421
 msgid "Smart playlist"
 msgstr "스마트 재생 목록"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:380
-#: crates/ui-gtk/src/views/smart_playlist.rs:995
-#: crates/ui-gtk/src/window/playlists.rs:229
+#: crates/ui-gtk/src/views/smart_playlist.rs:499
+#: crates/ui-gtk/src/views/smart_playlist.rs:1310
 msgid "Edit rules"
 msgstr "규칙 편집"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:437
-#: crates/ui-gtk/src/views/smart_playlist.rs:1105
+#: crates/ui-gtk/src/views/smart_playlist.rs:563
+#: crates/ui-gtk/src/views/smart_playlist.rs:1423
 msgid "all"
 msgstr "모두"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:437
-#: crates/ui-gtk/src/views/smart_playlist.rs:1105
+#: crates/ui-gtk/src/views/smart_playlist.rs:563
+#: crates/ui-gtk/src/views/smart_playlist.rs:1423
 msgid "any"
 msgstr "하나 이상"
 
 #. Translators: the name a screen reader gives the "all"/"any"
 #. dropdown of "Match {} of these rules".
-#: crates/ui-gtk/src/views/smart_playlist.rs:441
+#: crates/ui-gtk/src/views/smart_playlist.rs:567
 msgid "Which rules must match"
 msgstr "충족해야 할 규칙"
 
 #. Translators: the first line of the smart playlist editor; {} is a
 #. dropdown with "all" or "any".
-#: crates/ui-gtk/src/views/smart_playlist.rs:445
+#: crates/ui-gtk/src/views/smart_playlist.rs:571
 #, rust-format
 msgid "Match {} of these rules"
 msgstr "다음 규칙을 {} 충족"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:464
+#: crates/ui-gtk/src/views/smart_playlist.rs:590
 msgid "Limit"
 msgstr "제한"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:467
+#: crates/ui-gtk/src/views/smart_playlist.rs:593
 msgid "Limit unit"
 msgstr "제한 단위"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:469
+#: crates/ui-gtk/src/views/smart_playlist.rs:595
 msgid "As written in the text"
 msgstr "텍스트에 쓴 순서대로"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:473
+#: crates/ui-gtk/src/views/smart_playlist.rs:599
 #: crates/ui-gtk/src/tools/cover_manager.rs:708
 msgid "Order"
 msgstr "순서"
@@ -8754,99 +8710,98 @@ msgstr "순서"
 #. start of the line; {0} is a box for a number, {1} the unit (tracks,
 #. minutes, hours, MB, GB), {2} the order (Random, Date added, newest
 #. first, …). Reorder them with {0}, {1} and {2} as needed.
-#: crates/ui-gtk/src/views/smart_playlist.rs:484
+#: crates/ui-gtk/src/views/smart_playlist.rs:610
 #, rust-format
 msgid "Limit to {} {} sorted by {}"
 msgstr "제한: {0} {1}, 정렬 기준: {2}"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:498
+#: crates/ui-gtk/src/views/smart_playlist.rs:624
 msgid "The same rules as query text"
 msgstr "쿼리 텍스트로 나타낸 같은 규칙"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:501
-#: crates/ui-gtk/src/views/smart_playlist.rs:1435
+#: crates/ui-gtk/src/views/smart_playlist.rs:627
+#: crates/ui-gtk/src/views/smart_playlist.rs:1754
 msgid "Edit as text"
 msgstr "텍스트로 편집"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:516
+#: crates/ui-gtk/src/views/smart_playlist.rs:642
 msgid "Query text"
 msgstr "쿼리 텍스트"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:993
+#: crates/ui-gtk/src/views/smart_playlist.rs:1308
 msgid "Done editing"
 msgstr "편집 완료"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1090
+#: crates/ui-gtk/src/views/smart_playlist.rs:1408
 msgid "These rules can only be edited as text."
 msgstr "이 규칙은 텍스트로만 편집할 수 있습니다."
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1107
+#: crates/ui-gtk/src/views/smart_playlist.rs:1425
 msgid "Match in group"
 msgstr "그룹 내 충족 조건"
 
 #. Translators: the first line of a group of rules in the
 #. smart playlist editor; {} is a dropdown with "all" or
 #. "any".
-#: crates/ui-gtk/src/views/smart_playlist.rs:1124
+#: crates/ui-gtk/src/views/smart_playlist.rs:1442
 #, rust-format
 msgid "{} of these"
 msgstr "다음을 {} 충족"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1143
+#: crates/ui-gtk/src/views/smart_playlist.rs:1461
 msgid "Add rule to group"
 msgstr "그룹에 규칙 추가"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1163
+#: crates/ui-gtk/src/views/smart_playlist.rs:1481
 msgid "Add rule"
 msgstr "규칙 추가"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1175
+#: crates/ui-gtk/src/views/smart_playlist.rs:1493
 msgid "Add group"
 msgstr "그룹 추가"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1267
+#: crates/ui-gtk/src/views/smart_playlist.rs:1585
 msgid "Condition"
 msgstr "조건"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1433
+#: crates/ui-gtk/src/views/smart_playlist.rs:1752
 msgid "Show as rules"
 msgstr "규칙으로 표시"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1452
+#: crates/ui-gtk/src/views/smart_playlist.rs:1771
 #, rust-format
 msgid "These rules cannot run: {}"
 msgstr "이 규칙을 실행할 수 없습니다: {}"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1464
+#: crates/ui-gtk/src/views/smart_playlist.rs:1783
 #: crates/ui-gtk/src/window/playlists.rs:640
 #, rust-format
 msgid "The text cannot be read: {}"
 msgstr "텍스트를 읽을 수 없습니다: {}"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1494
+#: crates/ui-gtk/src/views/smart_playlist.rs:1813
 msgid "Every track of the library"
 msgstr "라이브러리의 모든 트랙"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1516
+#: crates/ui-gtk/src/views/smart_playlist.rs:1835
 #, rust-format
 msgid "{} track matches"
 msgid_plural "{} tracks match"
 msgstr[0] "{}곡 일치"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1520
+#: crates/ui-gtk/src/views/smart_playlist.rs:1839
 #, rust-format
 msgid "of {}"
 msgstr "(전체 {}곡 중)"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1570
+#: crates/ui-gtk/src/views/smart_playlist.rs:1889
 msgid "updates as the library changes"
 msgstr "라이브러리가 바뀌면 업데이트됨"
 
-#: crates/ui-gtk/src/views/smart_playlist.rs:1659
-msgid "The rules set the order. To reorder by hand, save a copy as a playlist."
-msgstr ""
-"순서는 규칙이 정합니다. 직접 순서를 바꾸려면 사본을 재생 목록으로 저장하십시"
-"오."
+#: crates/ui-gtk/src/views/smart_playlist.rs:1955
+msgid ""
+"The rules set the order. To reorder by hand, save a copy as a playlist."
+msgstr "순서는 규칙이 정합니다. 직접 순서를 바꾸려면 사본을 재생 목록으로 저장하십시오."
 
 #. Translators: the conditions of a smart playlist's rule, in the
 #. dropdown between the field and the value: "Title [contains] …".
@@ -9159,6 +9114,10 @@ msgstr "앨범 순서"
 msgid "Date added, newest first"
 msgstr "추가한 날짜, 최신순"
 
+#: crates/ui-gtk/src/views/smart_rules.rs:541
+msgid "Newest first"
+msgstr "최신순"
+
 #: crates/ui-gtk/src/views/smart_rules.rs:545
 msgid "Date added, oldest first"
 msgstr "추가한 날짜, 오래된 순"
@@ -9298,23 +9257,27 @@ msgid "Folder name"
 msgstr "폴더 이름"
 
 #: crates/ui-gtk/src/window/playlists.rs:219
-msgid "New smart playlist here"
+msgid "New Smart Playlist Here"
 msgstr "여기에 새 스마트 재생 목록"
 
 #: crates/ui-gtk/src/window/playlists.rs:225
-msgid "New folder here"
+msgid "New Folder Here"
 msgstr "여기에 새 폴더"
+
+#: crates/ui-gtk/src/window/playlists.rs:229
+msgid "Edit Rules"
+msgstr "규칙 편집"
 
 #: crates/ui-gtk/src/window/playlists.rs:247
 msgid "Duplicate"
 msgstr "복제"
 
 #: crates/ui-gtk/src/window/playlists.rs:251
-msgid "Save a copy as a playlist"
+msgid "Save a Copy as a Playlist"
 msgstr "사본을 재생 목록으로 저장"
 
 #: crates/ui-gtk/src/window/playlists.rs:258
-msgid "Move to folder"
+msgid "Move to Folder"
 msgstr "폴더로 이동"
 
 #: crates/ui-gtk/src/window/playlists.rs:272
@@ -9323,19 +9286,19 @@ msgid "Export…"
 msgstr "내보내기…"
 
 #: crates/ui-gtk/src/window/playlists.rs:277
-msgid "Delete folder…"
+msgid "Delete Folder…"
 msgstr "폴더 삭제…"
 
 #: crates/ui-gtk/src/window/playlists.rs:279
-msgid "Delete playlist…"
+msgid "Delete Playlist…"
 msgstr "재생 목록 삭제…"
 
 #: crates/ui-gtk/src/window/playlists.rs:294
-msgid "Top level"
+msgid "Top Level"
 msgstr "최상위"
 
 #: crates/ui-gtk/src/window/playlists.rs:324
-msgid "New folder…"
+msgid "New Folder…"
 msgstr "새 폴더…"
 
 #. Translators: a short message after pinning or
@@ -9370,6 +9333,10 @@ msgstr "고정 해제됨"
 msgctxt "playlist"
 msgid "Unpinned"
 msgstr "고정 해제됨"
+
+#: crates/ui-gtk/src/window/playlists.rs:423
+msgid "Smart Playlist"
+msgstr "스마트 재생 목록"
 
 #. Translators: a playlist was moved into a folder; {}
 #. is the folder's name.
@@ -9472,6 +9439,14 @@ msgstr "다음 트랙"
 msgid "Previous track"
 msgstr "이전 트랙"
 
+#: crates/ui-gtk/src/shortcuts.rs:86
+msgid "Seek forward"
+msgstr "앞으로 탐색"
+
+#: crates/ui-gtk/src/shortcuts.rs:92
+msgid "Seek back"
+msgstr "뒤로 탐색"
+
 #: crates/ui-gtk/src/shortcuts.rs:95
 msgid "Volume up"
 msgstr "음량 높이기"
@@ -9492,9 +9467,25 @@ msgstr "구간 반복 시작점 설정"
 msgid "Set the end of a loop"
 msgstr "구간 반복 끝점 설정"
 
+#: crates/ui-gtk/src/shortcuts.rs:123
+msgid "Previous album"
+msgstr "이전 앨범"
+
+#: crates/ui-gtk/src/shortcuts.rs:124
+msgid "Next album"
+msgstr "다음 앨범"
+
+#: crates/ui-gtk/src/shortcuts.rs:125
+msgid "Random album"
+msgstr "무작위 앨범"
+
 #: crates/ui-gtk/src/shortcuts.rs:127 crates/ui-gtk/src/window/narrow.rs:368
 msgid "Search"
 msgstr "검색"
+
+#: crates/ui-gtk/src/shortcuts.rs:131
+msgid "Jump to the playing track"
+msgstr "재생 중인 트랙으로 이동"
 
 #: crates/ui-gtk/src/shortcuts.rs:137
 msgid "Track properties"
@@ -9565,9 +9556,7 @@ msgstr "Helikodu 표시"
 #: crates/ui-gtk/src/window/desktop.rs:374
 msgid ""
 "Helikodu keeps playing in the tray. Quit from the tray menu or with Ctrl+Q."
-msgstr ""
-"Helikodu가 트레이에서 계속 재생합니다. 트레이 메뉴나 Ctrl+Q로 끝낼 수 있습니"
-"다."
+msgstr "Helikodu가 트레이에서 계속 재생합니다. 트레이 메뉴나 Ctrl+Q로 끝낼 수 있습니다."
 
 #: crates/ui-gtk/src/window/desktop.rs:449
 msgid "Hide the window"
@@ -9613,8 +9602,7 @@ msgstr "다른 프로그램에서"
 msgid ""
 "These work while another window is in front. The desktop chooses the keys "
 "and shows them here."
-msgstr ""
-"다른 창이 앞에 있어도 작동합니다. 키는 데스크톱이 정하며 여기에 표시됩니다."
+msgstr "다른 창이 앞에 있어도 작동합니다. 키는 데스크톱이 정하며 여기에 표시됩니다."
 
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:466
 msgid "Set up in the desktop…"
@@ -9678,8 +9666,7 @@ msgid ""
 "Finds the silence and the loudness of each track once, for crossfades, "
 "silence and the leveller. Nothing is written to the files."
 msgstr ""
-"각 트랙의 무음과 라우드니스를 한 번 찾아 크로스페이드, 무음 처리, 레벨러에 사"
-"용합니다. 파일에는 아무것도 기록하지 않습니다."
+"각 트랙의 무음과 라우드니스를 한 번 찾아 크로스페이드, 무음 처리, 레벨러에 사용합니다. 파일에는 아무것도 기록하지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/settings/search.rs:163
 #, rust-format
@@ -10000,7 +9987,8 @@ msgstr "필드가 }로 닫히지 않았습니다."
 msgid "{} names no field."
 msgstr "{}에는 필드 이름이 없습니다."
 
-#: crates/ui-gtk/src/tools.rs:61 crates/ui-gtk/src/backend/sample/fields.rs:130
+#: crates/ui-gtk/src/tools.rs:61
+#: crates/ui-gtk/src/backend/sample/fields.rs:130
 #, rust-format
 msgid "There is no field called {}."
 msgstr "{} 필드가 없습니다."
@@ -10354,9 +10342,9 @@ msgid "An album, an artist or a search"
 msgstr "앨범, 아티스트 또는 검색"
 
 #: crates/ui-gtk/src/tools/sync_export.rs:296
-msgid "Type a search: album:, artist: and the other fields of the search work."
-msgstr ""
-"검색어를 입력하십시오. album:, artist: 등 검색 필드를 사용할 수 있습니다."
+msgid ""
+"Type a search: album:, artist: and the other fields of the search work."
+msgstr "검색어를 입력하십시오. album:, artist: 등 검색 필드를 사용할 수 있습니다."
 
 #: crates/ui-gtk/src/tools/sync_export.rs:346
 msgid "Looking at the destination…"
@@ -10366,9 +10354,7 @@ msgstr "대상을 확인하는 중…"
 msgid ""
 "Nothing changes in the library. Files on the destination that Helikodu did "
 "not put there are left alone."
-msgstr ""
-"라이브러리는 바뀌지 않습니다. 대상에 있는 파일 중 Helikodu가 넣지 않은 파일"
-"은 그대로 둡니다."
+msgstr "라이브러리는 바뀌지 않습니다. 대상에 있는 파일 중 Helikodu가 넣지 않은 파일은 그대로 둡니다."
 
 #. Translators: after a sync: {0} is the number of
 #. files written, {1} their size ("1.2 GB").
@@ -10384,7 +10370,8 @@ msgstr "대상이 연결되어 있지 않습니다. 동기화하려면 연결하
 
 #: crates/ui-gtk/src/tools/sync_export.rs:456
 #, rust-format
-msgid "{} file Helikodu did not put there stands in the way and is left alone."
+msgid ""
+"{} file Helikodu did not put there stands in the way and is left alone."
 msgid_plural ""
 "{} files Helikodu did not put there stand in the way and are left alone."
 msgstr[0] "Helikodu가 넣지 않은 파일 {}개가 같은 위치에 있어 그대로 둡니다."
@@ -10620,8 +10607,7 @@ msgstr "커버 관리자"
 msgid ""
 "Helikodu never downloads covers. It uses pictures that are already on this "
 "computer."
-msgstr ""
-"Helikodu는 커버를 내려받지 않습니다. 이미 이 컴퓨터에 있는 그림을 사용합니다."
+msgstr "Helikodu는 커버를 내려받지 않습니다. 이미 이 컴퓨터에 있는 그림을 사용합니다."
 
 #: crates/ui-gtk/src/tools/cover_manager.rs:699
 msgid "Filter by album or artist"
@@ -10647,9 +10633,7 @@ msgstr "폴더의 그림"
 msgid ""
 "Remove the cover inside the files of the chosen albums; pictures in the "
 "folders stay"
-msgstr ""
-"선택한 앨범의 파일 안에 있는 커버를 제거합니다. 폴더에 있는 그림은 그대로 남"
-"습니다"
+msgstr "선택한 앨범의 파일 안에 있는 커버를 제거합니다. 폴더에 있는 그림은 그대로 남습니다"
 
 #: crates/ui-gtk/src/backend/service/export.rs:73
 msgid "Another conversion or sync is running. Stop it first."
@@ -10689,9 +10673,8 @@ msgid ""
 "ratings and play counts changed since then are lost. The library as it is "
 "now is kept in the backups folder. Helikodu starts again to do it."
 msgstr ""
-"라이브러리가 백업을 만든 시점의 상태로 돌아갑니다. 그 이후에 변경된 재생 목"
-"록, 별점, 재생 횟수는 사라집니다. 현재 라이브러리는 백업 폴더에 보관됩니다. "
-"복원하려면 Helikodu를 다시 시작합니다."
+"라이브러리가 백업을 만든 시점의 상태로 돌아갑니다. 그 이후에 변경된 재생 목록, 별점, 재생 횟수는 사라집니다. 현재 라이브러리는 백업"
+" 폴더에 보관됩니다. 복원하려면 Helikodu를 다시 시작합니다."
 
 #: crates/ui-gtk/src/dialogs/maintenance.rs:153
 msgid "Backup"
@@ -10710,8 +10693,7 @@ msgid ""
 "A report was saved on this computer. Nothing was sent anywhere. To report "
 "the problem, copy the report and add it to a bug report."
 msgstr ""
-"보고서를 이 컴퓨터에 저장했습니다. 아무 데도 전송하지 않았습니다. 문제를 알리"
-"려면 보고서를 복사해 버그 보고에 첨부하십시오."
+"보고서를 이 컴퓨터에 저장했습니다. 아무 데도 전송하지 않았습니다. 문제를 알리려면 보고서를 복사해 버그 보고에 첨부하십시오."
 
 #: crates/ui-gtk/src/dialogs/maintenance.rs:220
 msgid "Report"
@@ -10723,10 +10705,9 @@ msgstr "보고서를 클립보드에 복사했습니다."
 
 #: crates/ui-gtk/src/dialogs/maintenance.rs:283
 msgid ""
-"Helikodu stopped unexpectedly last time. A report was saved on this computer."
-msgstr ""
-"지난번에 Helikodu가 예기치 않게 종료되었습니다. 보고서를 이 컴퓨터에 저장했습"
-"니다."
+"Helikodu stopped unexpectedly last time. A report was saved on this "
+"computer."
+msgstr "지난번에 Helikodu가 예기치 않게 종료되었습니다. 보고서를 이 컴퓨터에 저장했습니다."
 
 #: crates/ui-gtk/src/dialogs/maintenance.rs:316
 #, rust-format
@@ -10799,9 +10780,7 @@ msgstr "{} 앨범 페이지로 이동"
 msgid ""
 "The user guide is not installed. It comes with the application's "
 "installation."
-msgstr ""
-"사용자 안내서가 설치되어 있지 않습니다. 사용자 안내서는 프로그램을 설치할 때 "
-"함께 설치됩니다."
+msgstr "사용자 안내서가 설치되어 있지 않습니다. 사용자 안내서는 프로그램을 설치할 때 함께 설치됩니다."
 
 #: crates/ui-gtk/src/dialogs/user_guide.rs:65
 #: crates/ui-gtk/src/dialogs/user_guide.rs:94
@@ -10843,7 +10822,8 @@ msgstr "Helikodu 데이터"
 msgid "Another player"
 msgstr "다른 플레이어"
 
-#: crates/ui-gtk/src/tools/import.rs:241 crates/ui-gtk/src/tools/import.rs:1029
+#: crates/ui-gtk/src/tools/import.rs:241
+#: crates/ui-gtk/src/tools/import.rs:1029
 msgid "A Helikodu data file"
 msgstr "Helikodu 데이터 파일"
 
@@ -10890,7 +10870,8 @@ msgstr "{} 라이브러리"
 msgid "Choose a Helikodu data file"
 msgstr "Helikodu 데이터 파일 선택"
 
-#: crates/ui-gtk/src/tools/import.rs:369 crates/ui-gtk/src/tools/import.rs:1429
+#: crates/ui-gtk/src/tools/import.rs:369
+#: crates/ui-gtk/src/tools/import.rs:1429
 msgid "Helikodu data file"
 msgstr "Helikodu 데이터 파일"
 
@@ -10905,9 +10886,7 @@ msgstr "{} 읽는 중…"
 
 #: crates/ui-gtk/src/tools/import.rs:517
 msgid "This file was saved by a newer Helikodu. Update Helikodu to read it."
-msgstr ""
-"이 파일은 더 새로운 Helikodu에서 저장되었습니다. 읽으려면 Helikodu를 업데이트"
-"하십시오."
+msgstr "이 파일은 더 새로운 Helikodu에서 저장되었습니다. 읽으려면 Helikodu를 업데이트하십시오."
 
 #: crates/ui-gtk/src/tools/import.rs:522
 msgid "This file cannot be read as a Helikodu data file."
@@ -10950,7 +10929,8 @@ msgid "The {} entry was not found by its path."
 msgid_plural "None of the {} entries were found by their path."
 msgstr[0] "항목 {}개를 경로로 찾지 못했습니다."
 
-#: crates/ui-gtk/src/tools/import.rs:596 crates/ui-gtk/src/tools/import.rs:1124
+#: crates/ui-gtk/src/tools/import.rs:596
+#: crates/ui-gtk/src/tools/import.rs:1124
 msgid "What changes"
 msgstr "바뀌는 내용"
 
@@ -10968,29 +10948,23 @@ msgstr[0] "{}곡에 대해 가져오기"
 
 #: crates/ui-gtk/src/tools/import.rs:635
 msgid "Nothing to import: everything in this file is in your library already."
-msgstr ""
-"가져올 것이 없습니다. 이 파일의 모든 내용이 이미 라이브러리에 있습니다."
+msgstr "가져올 것이 없습니다. 이 파일의 모든 내용이 이미 라이브러리에 있습니다."
 
 #: crates/ui-gtk/src/tools/import.rs:637
 msgid "Nothing to import: this file was imported before and has no new plays."
-msgstr ""
-"가져올 것이 없습니다. 이 파일은 이전에 가져왔으며 새 재생 기록이 없습니다."
+msgstr "가져올 것이 없습니다. 이 파일은 이전에 가져왔으며 새 재생 기록이 없습니다."
 
 #: crates/ui-gtk/src/tools/import.rs:640
 msgid ""
 "Counts take the higher of the two values, so importing this file twice "
 "changes nothing."
-msgstr ""
-"횟수는 두 값 중 큰 값을 사용하므로, 이 파일을 두 번 가져와도 바뀌는 것은 없습"
-"니다."
+msgstr "횟수는 두 값 중 큰 값을 사용하므로, 이 파일을 두 번 가져와도 바뀌는 것은 없습니다."
 
 #: crates/ui-gtk/src/tools/import.rs:642
 msgid ""
 "Plays are added to yours. Importing this file again later adds only the "
 "plays made since."
-msgstr ""
-"재생 횟수는 기존 횟수에 더해집니다. 나중에 이 파일을 다시 가져오면 그 이후의 "
-"재생만 더해집니다."
+msgstr "재생 횟수는 기존 횟수에 더해집니다. 나중에 이 파일을 다시 가져오면 그 이후의 재생만 더해집니다."
 
 #: crates/ui-gtk/src/tools/import.rs:661
 msgid "Nothing"
@@ -11048,9 +11022,7 @@ msgid ""
 msgid_plural ""
 "The plays, skips, history and places in playlists of {} missing tracks were "
 "moved to their new files."
-msgstr[0] ""
-"누락된 트랙 {}곡의 재생 횟수, 건너뛴 횟수, 기록, 재생 목록 내 위치를 새 파일"
-"로 옮겼습니다."
+msgstr[0] "누락된 트랙 {}곡의 재생 횟수, 건너뛴 횟수, 기록, 재생 목록 내 위치를 새 파일로 옮겼습니다."
 
 #: crates/ui-gtk/src/tools/import.rs:789
 #, rust-format
@@ -11067,17 +11039,13 @@ msgstr "{}에 실행 취소됨"
 msgid ""
 "Undo moves the plays, history and places in playlists back to the missing "
 "tracks."
-msgstr ""
-"실행 취소하면 재생 횟수, 기록, 재생 목록 내 위치가 누락된 트랙으로 돌아갑니"
-"다."
+msgstr "실행 취소하면 재생 횟수, 기록, 재생 목록 내 위치가 누락된 트랙으로 돌아갑니다."
 
 #: crates/ui-gtk/src/tools/import.rs:809
 msgid ""
 "Undo takes back what this import added. Plays made since stay, and its "
 "playlists are deleted."
-msgstr ""
-"실행 취소하면 이 가져오기로 추가된 것을 되돌립니다. 그 이후의 재생은 유지되"
-"며, 가져온 재생 목록은 삭제됩니다."
+msgstr "실행 취소하면 이 가져오기로 추가된 것을 되돌립니다. 그 이후의 재생은 유지되며, 가져온 재생 목록은 삭제됩니다."
 
 #: crates/ui-gtk/src/tools/import.rs:933
 #, rust-format
@@ -11124,8 +11092,7 @@ msgid ""
 "If the music was in another folder there, tell Helikodu where it is now. "
 "Until then entries are matched by their tags only."
 msgstr ""
-"그곳에서 음악이 다른 폴더에 있었다면 지금 어디에 있는지 Helikodu에 알려 주십"
-"시오. 그 전까지는 태그로만 항목을 맞춥니다."
+"그곳에서 음악이 다른 폴더에 있었다면 지금 어디에 있는지 Helikodu에 알려 주십시오. 그 전까지는 태그로만 항목을 맞춥니다."
 
 #: crates/ui-gtk/src/tools/import.rs:1096
 msgid "Add a folder that moved…"
@@ -11174,9 +11141,7 @@ msgstr "현재"
 msgid ""
 "Everything under the old folder is looked for under the new one. Windows "
 "paths match without regard to capitals."
-msgstr ""
-"이전 폴더 아래의 모든 항목을 새 폴더 아래에서 찾습니다. Windows 경로는 대소문"
-"자를 구분하지 않고 비교합니다."
+msgstr "이전 폴더 아래의 모든 항목을 새 폴더 아래에서 찾습니다. Windows 경로는 대소문자를 구분하지 않고 비교합니다."
 
 #: crates/ui-gtk/src/tools/import_moved.rs:148
 msgid "Where the music is now"
@@ -11465,8 +11430,8 @@ msgid ""
 "Plays, skips, history and places in playlists move to the new file, and the "
 "counts add up. The new file keeps its own rating if it has one."
 msgstr ""
-"재생 횟수, 건너뛴 횟수, 기록, 재생 목록 내 위치가 새 파일로 옮겨지고 횟수는 "
-"합산됩니다. 새 파일에 별점이 있으면 그 별점을 유지합니다."
+"재생 횟수, 건너뛴 횟수, 기록, 재생 목록 내 위치가 새 파일로 옮겨지고 횟수는 합산됩니다. 새 파일에 별점이 있으면 그 별점을 "
+"유지합니다."
 
 #: crates/ui-gtk/src/tools/replaced.rs:588
 msgid "Carry"
@@ -11497,6 +11462,11 @@ msgstr "{} 필드가 {}을(를) 사용하므로 제거할 수 없습니다."
 msgid "For example {}"
 msgstr "예: {}"
 
+#: crates/ui-gtk/src/tools/user_fields.rs:196
+#: crates/ui-gtk/src/widgets/insert_popover.rs:238
+msgid "Your fields"
+msgstr "내 필드"
+
 #: crates/ui-gtk/src/tools/user_fields.rs:197
 msgid "Fields are kept in the library, not in the files."
 msgstr "필드는 파일이 아니라 라이브러리에 저장됩니다."
@@ -11515,7 +11485,7 @@ msgid "Kind of field"
 msgstr "필드 종류"
 
 #: crates/ui-gtk/src/tools/user_fields.rs:259
-#: crates/ui-gtk/src/views/tracks/grouping.rs:571
+#: crates/ui-gtk/src/views/tracks/grouping.rs:575
 msgid "Expression"
 msgstr "식"
 
@@ -11577,22 +11547,21 @@ msgstr "필드는 라이브러리에 저장되며 즉시 적용됩니다."
 #: crates/ui-gtk/src/tools/user_fields.rs:800
 #, rust-format
 msgid ""
-"Write {} in names, or {} in searches. A search works the field out for every "
-"track first, which takes longer on a very large library."
+"Write {} in names, or {} in searches. A search works the field out for every"
+" track first, which takes longer on a very large library."
 msgstr ""
-"이름에는 {}, 검색에는 {}(으)로 씁니다. 검색은 먼저 모든 트랙에 대해 필드를 계"
-"산하므로, 아주 큰 라이브러리에서는 시간이 더 걸립니다."
+"이름에는 {}, 검색에는 {}(으)로 씁니다. 검색은 먼저 모든 트랙에 대해 필드를 계산하므로, 아주 큰 라이브러리에서는 시간이 더 "
+"걸립니다."
 
 #: crates/ui-gtk/src/tools/user_fields.rs:812
 #, rust-format
 msgid ""
-"As in Vorbis comments, for example MOOD. {} in MP3 and {} in MP4 are read as "
-"the same tag. The tag editor writes this tag like any other field. Write {} "
-"in names, or {} in searches."
+"As in Vorbis comments, for example MOOD. {} in MP3 and {} in MP4 are read as"
+" the same tag. The tag editor writes this tag like any other field. Write {}"
+" in names, or {} in searches."
 msgstr ""
-"Vorbis 주석과 같은 방식이며, 예를 들어 MOOD입니다. MP3의 {}와(과) MP4의 {}는 "
-"같은 태그로 읽습니다. 태그 편집기는 이 태그를 다른 필드처럼 기록합니다. 이름"
-"에는 {}, 검색에는 {}(으)로 씁니다."
+"Vorbis 주석과 같은 방식이며, 예를 들어 MOOD입니다. MP3의 {}와(과) MP4의 {}는 같은 태그로 읽습니다. 태그 편집기는"
+" 이 태그를 다른 필드처럼 기록합니다. 이름에는 {}, 검색에는 {}(으)로 씁니다."
 
 #: crates/ui-gtk/src/tools/user_fields.rs:927
 msgid "Save the new field?"
@@ -11622,10 +11591,9 @@ msgstr "{} 필드를 제거하시겠습니까?"
 
 #: crates/ui-gtk/src/tools/user_fields.rs:1006
 msgid ""
-"Searches, smart playlists and naming patterns that name it no longer find it."
-msgstr ""
-"이 필드를 사용하는 검색, 스마트 재생 목록, 이름 패턴에서는 더 이상 이 필드를 "
-"찾을 수 없습니다."
+"Searches, smart playlists and naming patterns that name it no longer find "
+"it."
+msgstr "이 필드를 사용하는 검색, 스마트 재생 목록, 이름 패턴에서는 더 이상 이 필드를 찾을 수 없습니다."
 
 #: crates/ui-gtk/src/tools/user_fields.rs:1061
 #: crates/ui-gtk/src/tools/user_fields.rs:1075
@@ -11636,9 +11604,7 @@ msgstr "값 없음"
 msgid ""
 "A name has the letters a to z and _, starts with a letter, and is not a "
 "field, a function or a word of searches."
-msgstr ""
-"이름은 a부터 z까지의 문자와 _로 이루어지고 문자로 시작해야 하며, 필드, 함수, "
-"검색어와 같을 수 없습니다."
+msgstr "이름은 a부터 z까지의 문자와 _로 이루어지고 문자로 시작해야 하며, 필드, 함수, 검색어와 같을 수 없습니다."
 
 #: crates/ui-gtk/src/tools/user_fields/draft.rs:233
 #, rust-format
@@ -11688,8 +11654,7 @@ msgstr "이름에 “{}”을(를) 넣을 수 없습니다."
 #: crates/ui-gtk/src/tools/user_fields/draft.rs:312
 #, rust-format
 msgid "{} is no tag name: it may hold letters, digits, _ and - only."
-msgstr ""
-"{}은(는) 태그 이름으로 쓸 수 없습니다. 문자, 숫자, _, -만 쓸 수 있습니다."
+msgstr "{}은(는) 태그 이름으로 쓸 수 없습니다. 문자, 숫자, _, -만 쓸 수 있습니다."
 
 #: crates/ui-gtk/src/tools/user_fields/draft.rs:315
 msgid "The field needs a tag."
@@ -11962,16 +11927,14 @@ msgid ""
 "Not analysed yet. Helikodu analyses tracks in the background; until then a "
 "crossfade uses its fixed length and no silence is left out of this track."
 msgstr ""
-"아직 분석되지 않았습니다. Helikodu는 백그라운드에서 트랙을 분석하며, 그 전까"
-"지 크로스페이드는 고정 길이를 사용하고 이 트랙의 무음은 빼지 않습니다."
+"아직 분석되지 않았습니다. Helikodu는 백그라운드에서 트랙을 분석하며, 그 전까지 크로스페이드는 고정 길이를 사용하고 이 트랙의 "
+"무음은 빼지 않습니다."
 
 #: crates/ui-gtk/src/dialogs/analysis_band.rs:227
 msgid ""
-"This file could not be read for analysis. Helikodu tries again when the file "
-"changes."
-msgstr ""
-"분석을 위해 이 파일을 읽을 수 없습니다. 파일이 바뀌면 Helikodu가 다시 시도합"
-"니다."
+"This file could not be read for analysis. Helikodu tries again when the file"
+" changes."
+msgstr "분석을 위해 이 파일을 읽을 수 없습니다. 파일이 바뀌면 Helikodu가 다시 시도합니다."
 
 #: crates/ui-gtk/src/views/tracks/grouping.rs:50
 msgid "Grouped by album artist"
@@ -12007,24 +11970,24 @@ msgid "Group the tracks by a field"
 msgstr "필드로 트랙 묶기"
 
 #: crates/ui-gtk/src/views/tracks/grouping.rs:155
-#: crates/ui-gtk/src/views/tracks/grouping.rs:230
+#: crates/ui-gtk/src/views/tracks/grouping.rs:234
 msgid "Group"
 msgstr "그룹"
 
 #: crates/ui-gtk/src/views/tracks/grouping.rs:163
-#: crates/ui-gtk/src/views/tracks/grouping.rs:235
+#: crates/ui-gtk/src/views/tracks/grouping.rs:239
 msgid "Group by"
 msgstr "묶는 기준"
 
 #: crates/ui-gtk/src/views/tracks/grouping.rs:193
-msgid "No groups"
+msgid "No Groups"
 msgstr "그룹 없음"
 
-#: crates/ui-gtk/src/views/tracks/grouping.rs:221
-msgid "An expression…"
+#: crates/ui-gtk/src/views/tracks/grouping.rs:225
+msgid "An Expression…"
 msgstr "식…"
 
-#: crates/ui-gtk/src/views/tracks/grouping.rs:579
+#: crates/ui-gtk/src/views/tracks/grouping.rs:583
 msgid "Press Enter to group the tracks by what the expression gives."
 msgstr "Enter를 누르면 식의 결과로 트랙을 묶습니다."
 
@@ -12053,11 +12016,11 @@ msgid "Merge into…"
 msgstr "병합할 대상…"
 
 #: crates/ui-gtk/src/views/labels.rs:156
-msgid "Remove from everything"
+msgid "Remove from Everything"
 msgstr "모든 항목에서 제거"
 
 #: crates/ui-gtk/src/views/labels.rs:174
-msgid "Number of tracks"
+msgid "Number of Tracks"
 msgstr "트랙 수"
 
 #: crates/ui-gtk/src/views/labels.rs:179 crates/ui-gtk/src/views/labels.rs:180
@@ -12074,17 +12037,16 @@ msgid ""
 "give to tracks, albums and artists. Labels are kept in the library, not in "
 "the files."
 msgstr ""
-"레이블은 “늦은 밤”이나 “정리할 것”처럼 직접 정하는 단어로, 트랙, 앨범, 아티스"
-"트에 지정할 수 있습니다. 레이블은 파일이 아니라 라이브러리에 저장됩니다."
+"레이블은 “늦은 밤”이나 “정리할 것”처럼 직접 정하는 단어로, 트랙, 앨범, 아티스트에 지정할 수 있습니다. 레이블은 파일이 아니라 "
+"라이브러리에 저장됩니다."
 
 #: crates/ui-gtk/src/views/labels.rs:328
 #, rust-format
 msgid "To give one, choose {} in the menu of a track, an album or an artist."
-msgstr ""
-"레이블을 지정하려면 트랙, 앨범, 아티스트의 메뉴에서 {}을(를) 선택하십시오."
+msgstr "레이블을 지정하려면 트랙, 앨범, 아티스트의 메뉴에서 {}을(를) 선택하십시오."
 
 #: crates/ui-gtk/src/views/labels.rs:551
-msgid "Remove the label"
+msgid "Remove the Label"
 msgstr "레이블 제거"
 
 #: crates/ui-gtk/src/views/labels.rs:655
@@ -12138,27 +12100,27 @@ msgstr "Enter"
 msgid "Show all labels"
 msgstr "모든 레이블 보기"
 
-#: crates/ui-gtk/src/popovers/labels.rs:613
+#: crates/ui-gtk/src/popovers/labels.rs:620
 msgid "from the album"
 msgstr "앨범에서"
 
-#: crates/ui-gtk/src/popovers/labels.rs:614
+#: crates/ui-gtk/src/popovers/labels.rs:621
 msgid "from the artist"
 msgstr "아티스트에서"
 
-#: crates/ui-gtk/src/popovers/labels.rs:624
+#: crates/ui-gtk/src/popovers/labels.rs:631
 msgid "given to all"
 msgstr "모두에 지정됨"
 
-#: crates/ui-gtk/src/popovers/labels.rs:625
+#: crates/ui-gtk/src/popovers/labels.rs:632
 msgid "given to some"
 msgstr "일부에 지정됨"
 
-#: crates/ui-gtk/src/popovers/labels.rs:626
+#: crates/ui-gtk/src/popovers/labels.rs:633
 msgid "not given"
 msgstr "지정 안 됨"
 
-#: crates/ui-gtk/src/popovers/labels.rs:630
+#: crates/ui-gtk/src/popovers/labels.rs:637
 #, rust-format
 msgid "{}, {} track, {}"
 msgid_plural "{}, {} tracks, {}"
@@ -12173,8 +12135,7 @@ msgstr "“{}”을(를) 다른 레이블로 병합"
 #, rust-format
 msgid ""
 "Everything that has “{}” gets the label you choose, and “{}” disappears."
-msgstr ""
-"“{}”이(가) 있는 모든 항목에 선택한 레이블이 지정되고, “{}”은(는) 사라집니다."
+msgstr "“{}”이(가) 있는 모든 항목에 선택한 레이블이 지정되고, “{}”은(는) 사라집니다."
 
 #: crates/ui-gtk/src/dialogs/label_merge.rs:70
 #: crates/ui-gtk/src/dialogs/label_merge.rs:86
@@ -12270,6 +12231,170 @@ msgstr "그런 아티스트가 없습니다."
 msgid "A label cannot be merged into itself."
 msgstr "레이블을 자기 자신으로 병합할 수 없습니다."
 
+#~ msgid "Sort by"
+#~ msgstr "정렬 기준"
+
+#~ msgid "Stop after"
+#~ msgstr "정지 시점"
+
+#~ msgid "Sleep timer…"
+#~ msgstr "취침 타이머…"
+
+#~ msgid "Play next"
+#~ msgstr "다음에 재생"
+
+#~ msgid "Add to playlist"
+#~ msgstr "재생 목록에 추가"
+
+#~ msgid "Go to album"
+#~ msgstr "앨범으로 이동"
+
+#~ msgid "Go to artist"
+#~ msgstr "아티스트로 이동"
+
+#~ msgid "Pin to the sidebar"
+#~ msgstr "사이드바에 고정"
+
+#~ msgid "Measure loudness"
+#~ msgstr "라우드니스 측정"
+
+#~ msgid "Edit tags…"
+#~ msgstr "태그 편집…"
+
+#~ msgid "Open containing folder"
+#~ msgstr "포함하는 폴더 열기"
+
+#~ msgid "Rename file…"
+#~ msgstr "파일 이름 바꾸기…"
+
+#~ msgid "Organize files…"
+#~ msgstr "파일 정리…"
+
+#~ msgid "Remove from playlist"
+#~ msgstr "재생 목록에서 제거"
+
+#~ msgid "Remove from queue"
+#~ msgstr "대기열에서 제거"
+
+#~ msgid "Move to trash…"
+#~ msgstr "휴지통으로 이동…"
+
+#~ msgid "Number of albums"
+#~ msgstr "앨범 수"
+
+#~ msgid "Set artist photo…"
+#~ msgstr "아티스트 사진 설정…"
+
+#~ msgid "Remove photo"
+#~ msgstr "사진 제거"
+
+#~ msgid "Save as a playlist file…"
+#~ msgstr "재생 목록 파일로 저장…"
+
+#~ msgid "Copy the files to a folder…"
+#~ msgstr "파일을 폴더로 복사…"
+
+#~ msgid "Group by album"
+#~ msgstr "앨범별로 묶기"
+
+#~ msgid "Shuffle the order…"
+#~ msgstr "순서 섞기…"
+
+#~ msgid "Remove duplicates"
+#~ msgstr "중복 항목 제거"
+
+#~ msgid "Remove missing tracks"
+#~ msgstr "누락된 트랙 제거"
+
+#~ msgid "Tracks within each album"
+#~ msgstr "각 앨범 안의 트랙"
+
+#~ msgid "This track"
+#~ msgstr "이 트랙"
+
+#~ msgid "This album"
+#~ msgstr "이 앨범"
+
+#~ msgid "The whole queue"
+#~ msgstr "대기열 전체"
+
+#~ msgid "The queue"
+#~ msgstr "대기열 끝"
+
+#~ msgid "This artist"
+#~ msgstr "이 아티스트"
+
+#~ msgid "Set the start here"
+#~ msgstr "여기를 시작점으로 설정"
+
+#~ msgid "Set the end here"
+#~ msgstr "여기를 끝점으로 설정"
+
+#~ msgid "Remove tracks after they play"
+#~ msgstr "재생이 끝난 트랙 제거"
+
+#~ msgid "Continue from the selected track"
+#~ msgstr "선택한 트랙부터 계속"
+
+#~ msgid "Save as playlist…"
+#~ msgstr "재생 목록으로 저장…"
+
+#~ msgid "Loop a section"
+#~ msgstr "구간 반복"
+
+#, rust-format
+#~ msgid "Stop after: {}"
+#~ msgstr "정지 시점: {}"
+
+#, rust-format
+#~ msgid "Play only: {}"
+#~ msgstr "재생 범위: {}"
+
+#~ msgid "Choose the output device…"
+#~ msgstr "출력 장치 선택…"
+
+#~ msgid "Follow the playing track"
+#~ msgstr "재생 중인 트랙 따라가기"
+
+#~ msgid "New smart playlist here"
+#~ msgstr "여기에 새 스마트 재생 목록"
+
+#~ msgid "New folder here"
+#~ msgstr "여기에 새 폴더"
+
+#~ msgid "Save a copy as a playlist"
+#~ msgstr "사본을 재생 목록으로 저장"
+
+#~ msgid "Move to folder"
+#~ msgstr "폴더로 이동"
+
+#~ msgid "Delete folder…"
+#~ msgstr "폴더 삭제…"
+
+#~ msgid "Delete playlist…"
+#~ msgstr "재생 목록 삭제…"
+
+#~ msgid "Top level"
+#~ msgstr "최상위"
+
+#~ msgid "New folder…"
+#~ msgstr "새 폴더…"
+
+#~ msgid "No groups"
+#~ msgstr "그룹 없음"
+
+#~ msgid "An expression…"
+#~ msgstr "식…"
+
+#~ msgid "Remove from everything"
+#~ msgstr "모든 항목에서 제거"
+
+#~ msgid "Number of tracks"
+#~ msgstr "트랙 수"
+
+#~ msgid "Remove the label"
+#~ msgstr "레이블 제거"
+
 #~ msgid "Ratings"
 #~ msgstr "별점"
 
@@ -12316,10 +12441,8 @@ msgstr "레이블을 자기 자신으로 병합할 수 없습니다."
 
 #, rust-format
 #~ msgid ""
-#~ "{} of {} file names fit the pattern · values in grey are already in the "
-#~ "tags"
-#~ msgstr ""
-#~ "파일 이름 {1}개 중 {0}개가 패턴과 맞음 · 회색 값은 이미 태그에 있는 값"
+#~ "{} of {} file names fit the pattern · values in grey are already in the tags"
+#~ msgstr "파일 이름 {1}개 중 {0}개가 패턴과 맞음 · 회색 값은 이미 태그에 있는 값"
 
 #, rust-format
 #~ msgid "{} of {} files kept their tags. {}: {}"

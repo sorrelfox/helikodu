@@ -67,6 +67,18 @@ impl Tool {
         Tool::SortNames,
     ];
 
+    /// The tool's name in a menu, in title case.
+    pub(crate) fn menu_title(self) -> String {
+        match self {
+            Tool::FromNames => tr("Fill Tags from File Names"),
+            Tool::Number => tr("Number the Tracks"),
+            Tool::Case => tr("Change Capital Letters"),
+            Tool::Replace => tr("Find and Replace"),
+            Tool::Repair => tr("Repair Garbled Text"),
+            Tool::SortNames => tr("Create Sort Names"),
+        }
+    }
+
     /// The tool's name in the left pane and the header.
     pub(crate) fn title(self) -> String {
         match self {

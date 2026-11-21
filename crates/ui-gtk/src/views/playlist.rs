@@ -599,9 +599,9 @@ impl PlaylistView {
         }
         export.insert_action_group("export", Some(&exports));
         let menu = gio::Menu::new();
-        menu.append(Some(&tr("Save as a playlist file…")), Some("export.file"));
+        menu.append(Some(&tr("Save as a Playlist File…")), Some("export.file"));
         menu.append(
-            Some(&tr("Copy the files to a folder…")),
+            Some(&tr("Copy the Files to a Folder…")),
             Some("export.folder"),
         );
         let popover = gtk::PopoverMenu::from_model(Some(&menu));
@@ -1158,9 +1158,9 @@ impl PlaylistView {
         self.root.insert_action_group("playlist-menu", Some(&group));
         let menu = gio::Menu::new();
         let checks = gio::Menu::new();
-        checks.append(Some(&tr("Group by album")), Some("playlist-menu.group"));
+        checks.append(Some(&tr("Group by Album")), Some("playlist-menu.group"));
         checks.append(
-            Some(&tr("Lock against changes")),
+            Some(&tr("Lock Against Changes")),
             Some("playlist-menu.lock"),
         );
         menu.append_section(None, &checks);
@@ -1170,7 +1170,7 @@ impl PlaylistView {
             entry.set_attribute_value("custom", Some(&custom.to_variant()));
             tidy.append_item(&entry);
         }
-        tidy.append_item(&item(&tr("Shuffle the order…"), "win.playlist-shuffle"));
+        tidy.append_item(&item(&tr("Shuffle the Order…"), "win.playlist-shuffle"));
         menu.append_section(None, &tidy);
         // Rename, duplicate, move, pin, export and delete as on the sidebar.
         let shared = window.playlist_menu_model(key);
@@ -1184,10 +1184,10 @@ impl PlaylistView {
         popover.add_css_class("hk-playlist-menu");
         let locked = self.locked();
         for (custom, text, action) in [
-            ("dedupe", tr("Remove duplicates"), "win.playlist-dedupe"),
+            ("dedupe", tr("Remove Duplicates"), "win.playlist-dedupe"),
             (
                 "missing",
-                tr("Remove missing tracks"),
+                tr("Remove Missing Tracks"),
                 "win.playlist-remove-missing",
             ),
         ] {

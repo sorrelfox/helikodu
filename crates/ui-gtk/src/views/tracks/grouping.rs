@@ -190,13 +190,17 @@ impl Grouping {
         let menu = &self.menu;
         menu.remove_all();
         let first = gio::Menu::new();
-        let item = gio::MenuItem::new(Some(&tr("No groups")), None);
+        let item = gio::MenuItem::new(Some(&tr("No Groups")), None);
         item.set_action_and_target_value(Some("grouping.by"), Some(&"".to_variant()));
         first.append_item(&item);
         menu.append_section(None, &first);
         let fixed = gio::Menu::new();
         for by in TrackGrouping::BUILT_IN {
-            let item = gio::MenuItem::new(Some(&choice_name(&by)), None);
+            let name = match by {
+                TrackGrouping::AlbumArtist => tr("Album Artist"),
+                _ => choice_name(&by),
+            };
+            let item = gio::MenuItem::new(Some(&name), None);
             item.set_action_and_target_value(
                 Some("grouping.by"),
                 Some(&target(Some(&by)).to_variant()),
@@ -215,10 +219,10 @@ impl Grouping {
                 );
                 own.append_item(&item);
             }
-            menu.append_section(Some(&tr("Your fields")), &own);
+            menu.append_section(Some(&tr("Your Fields")), &own);
         }
         let last = gio::Menu::new();
-        last.append(Some(&tr("An expression…")), Some("grouping.expression"));
+        last.append(Some(&tr("An Expression…")), Some("grouping.expression"));
         menu.append_section(None, &last);
     }
 

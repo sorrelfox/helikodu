@@ -130,7 +130,7 @@ impl ArtistsView {
         filter.add_css_class("hk-menu");
         let order = gio::Menu::new();
         order.append(Some(&tr("Name")), Some("artists.order::name"));
-        order.append(Some(&tr("Number of albums")), Some("artists.order::count"));
+        order.append(Some(&tr("Number of Albums")), Some("artists.order::count"));
         crate::widgets::menu_names::set_menu_later(&filter, &order);
         filter.set_tooltip_text(Some(&tr("Sort the artists")));
         filter.update_property(&[gtk::accessible::Property::Label(&tr("Sort the artists"))]);
@@ -180,8 +180,8 @@ impl ArtistsView {
         more.set_tooltip_text(Some(&tr("More")));
         more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
         let more_menu = gio::Menu::new();
-        more_menu.append(Some(&tr("Play next")), Some("artists.play-next"));
-        more_menu.append(Some(&tr("Add to queue")), Some("artists.enqueue"));
+        more_menu.append(Some(&tr("Play Next")), Some("artists.play-next"));
+        more_menu.append(Some(&tr("Add to Queue")), Some("artists.enqueue"));
         let photo_menu = gio::Menu::new();
         more_menu.append_section(None, &photo_menu);
         crate::widgets::menu_names::set_menu_later(&more, &more_menu);

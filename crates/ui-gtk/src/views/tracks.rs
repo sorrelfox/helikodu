@@ -528,7 +528,7 @@ impl TracksView {
             );
         }
         menu.append_section(None, &main);
-        menu.append_section(Some(&tr("Your fields")), &self.fields_section);
+        menu.append_section(Some(&tr("Your Fields")), &self.fields_section);
         self.root.insert_action_group("columns", Some(group));
         menu
     }

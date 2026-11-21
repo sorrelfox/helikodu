@@ -46,7 +46,7 @@ The figures show how many tracks will be copied and converted, how many are ther
 
 Copies go one way, from the library to the destination. Helikodu removes only files it put there itself: it keeps a list of them in `.helikodu-sync.json` at the top of the destination. Files that someone else put there are left alone, also when one has the name a copy would get.
 
-A playlist's **Export** button offers **Copy the files to a folder…**, which opens this window with the playlist ticked.
+A playlist's **Export** button offers **Copy the Files to a Folder…**, which opens this window with the playlist ticked.
 
 ## Cover manager
 

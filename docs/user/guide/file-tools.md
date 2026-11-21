@@ -4,7 +4,7 @@ Three tools in the **Tools** and **Library** menus work on the files of your lib
 
 ## Organize files
 
-**Tools ▸ Organize Files…** moves and renames your files by a naming pattern. Opened from the context menu of selected tracks (**Organize files…**), it works on those tracks only.
+**Tools ▸ Organize Files…** moves and renames your files by a naming pattern. Opened from the context menu of selected tracks (**Organize Files…**), it works on those tracks only.
 
 - **Patterns** at the left are saved patterns; edits to the pattern are kept with the chosen one. **New pattern** adds one. Right-click a pattern (or press the Menu key) to **Rename** or **Delete** it.
 - A pattern names fields in braces (see [Naming patterns](#naming-patterns) below). **Insert** beside the pattern finds a field, one of your own fields or a function and puts it at the cursor (see [Expressions](expressions.md#the-insert-button)). The file's extension is always kept.
@@ -50,7 +50,7 @@ A managed folder is a folder of your library that Helikodu keeps in order for yo
 
 ## Renaming one file and moving files to the trash
 
-The context menu of a track has **Rename file…**, which renames the file in its folder (also undoable from the notice), and **Move to trash…**, which moves the files of the selected tracks to the desktop Trash after a confirmation. From the Trash you can restore them with your file manager.
+The context menu of a track has **Rename File…**, which renames the file in its folder (also undoable from the notice), and **Move to Trash…**, which moves the files of the selected tracks to the desktop Trash after a confirmation. From the Trash you can restore them with your file manager.
 
 ## Missing files
 
@@ -62,4 +62,4 @@ When a missing track's recording is in the library again as another file (the sa
 
 ## Verify files
 
-**Tools ▸ Verify Files…** decodes files from start to end and lists those that do not decode cleanly, with a sentence on what was found: parts that could not be decoded (and where), a file that stops early, a length that differs from the one the file states, or — for FLAC — audio that does not match the checksum stored in the file. **Check** chooses the whole library, one library folder, the selected tracks (when opened with **Verify files** from the context menu) or a folder of your choice; **Verify** starts. The tool changes nothing. **Copy as text** and **Save report…** keep the list. The check stops when you close the window.
+**Tools ▸ Verify Files…** decodes files from start to end and lists those that do not decode cleanly, with a sentence on what was found: parts that could not be decoded (and where), a file that stops early, a length that differs from the one the file states, or — for FLAC — audio that does not match the checksum stored in the file. **Check** chooses the whole library, one library folder, the selected tracks (when opened with **Verify Files** from the context menu) or a folder of your choice; **Verify** starts. The tool changes nothing. **Copy as text** and **Save report…** keep the list. The check stops when you close the window.

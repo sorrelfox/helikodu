@@ -42,20 +42,20 @@ Tracks that follow each other on one album are never trimmed, so pregaps and hid
 
 Tracker modules, game music files and Commodore 64 SID tunes play like any other track; a file with several songs becomes one track per song. Looping tunes play their loop twice and then fade out (**Looping tunes** in the **Playback** settings). MIDI files need a SoundFont: choose one under **MIDI files**, or Helikodu uses one installed on the system, if there is one. For SID tunes, **Song lengths** can point to the `Songlengths.md5` file of the High Voltage SID Collection, so each tune plays for its real length.
 
-Right-click the play button (or press and hold it) for its menu: **Stop**, **Stop after this track** and **Jump to the playing track**. **Stop after this track** stops at the end of the current track, once.
+Right-click the play button (or press and hold it) for its menu: **Stop**, **Stop After** (**This Track**, **This Album** or **The Queue**), **Sleep Timer…** and **Jump to the Playing Track**. **Stop After** ▸ **This Track** stops at the end of the current track, once.
 
 ## Play modes
 
 The **Playback** menu (in the main menu) has the transport and every play mode:
 
-- **Previous album**, **Next album** and **Random album** jump between albums in the queue.
-- **Shuffle**: **Tracks**, **Albums** (the albums in a random order, each played in order), **Folders**, **Groupings** (by the `GROUPING` tag) or **Tracks within each album**. "Previous" retraces the order in which tracks actually played.
-- **Repeat**: **This track**, **This album** or **The whole queue**.
-- **Stop after**: **This track**, **This album** or **The queue**.
-- **Play only**: **This artist** or **This album** keeps playback within the artist or album of the playing track.
-- **Queue**: **Remove tracks after they play**, and **Continue from the selected track**, which makes the next track follow the entry you selected in a list.
-- **Loop a section**: **Set the start here** and **Set the end here** mark an A-B loop at the playing position; the section then repeats without a gap until you choose **Clear the loop**, here or with the cross on the loop's chip on the deck.
-- **Sleep timer…** pauses playback after a number of minutes, fading out, or at the end of the track that is playing then. A chip on the deck shows the time left; click it to add ten minutes or turn the timer off.
+- **Previous Album**, **Next Album** and **Random Album** jump between albums in the queue.
+- **Shuffle**: **Tracks**, **Albums** (the albums in a random order, each played in order), **Folders**, **Groupings** (by the `GROUPING` tag) or **Tracks Within Each Album**. "Previous" retraces the order in which tracks actually played.
+- **Repeat**: **This Track**, **This Album** or **The Whole Queue**.
+- **Stop After**: **This Track**, **This Album** or **The Queue**.
+- **Play Only**: **This Artist** or **This Album** keeps playback within the artist or album of the playing track.
+- **Queue**: **Remove Tracks After They Play**, and **Continue from the Selected Track**, which makes the next track follow the entry you selected in a list.
+- **Loop a Section**: **Set the Start Here** and **Set the End Here** mark an A-B loop at the playing position; the section then repeats without a gap until you choose **Clear the Loop**, here or with the cross on the loop's chip on the deck.
+- **Sleep Timer…** pauses playback after a number of minutes, fading out, or at the end of the track that is playing then. A chip on the deck shows the time left; click it to add ten minutes or turn the timer off.
 
 The deck shows the active modes, the loop's marks on the seek bar, and chips for the loop and the timer.
 
@@ -63,17 +63,17 @@ Each track in your library can also have its own settings, under **Playback** in
 
 ## The queue
 
-The panel on the right shows the **Queue**: what played before (**History**), what is playing (**Now playing**) and what comes next (**Next in queue**). Playing an album replaces the queue with that album. (Under **Playing an album** in the **Playback** settings you can choose **Adds to the end of the queue** instead. **Play next** and **Add to queue** always keep the queue.)
+The panel on the right shows the **Queue**: what played before (**History**), what is playing (**Now playing**) and what comes next (**Next in queue**). Playing an album replaces the queue with that album. (Under **Playing an album** in the **Playback** settings you can choose **Adds to the end of the queue** instead. **Play Next** and **Add to Queue** always keep the queue.)
 
 - Click an entry to play it.
-- Right-click an entry for its menu. **Remove from queue**, or **Delete**, removes the selected entries.
+- Right-click an entry for its menu. **Remove from Queue**, or **Delete**, removes the selected entries.
 - Drag tracks from a list onto the panel to add them to the queue.
 - **Save as playlist** saves the queue as a playlist.
 - **Clear** removes everything but the playing track.
 
 With shuffle on, "Previous" retraces the tracks in the order they actually played; turning shuffle off returns to the album order.
 
-**Ctrl+J** jumps to the playing track. With **Follow the playing track** in the View menu, the queue panel scrolls to each new track; Helikodu remembers this setting.
+**Ctrl+J** jumps to the playing track. With **Follow the Playing Track** in the View menu, the queue panel scrolls to each new track; Helikodu remembers this setting.
 
 ## When Helikodu starts again
 
