@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 06:15-0500\n"
+"POT-Creation-Date: 2026-11-21 08:09-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Spanish <https://github.com/sorrelfox/helikodu>\n"
@@ -18,7 +18,7 @@ msgstr ""
 
 #: data/io.github.sorrelfox.Helikodu.desktop:5
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:11
-#: crates/ui-gtk/src/application.rs:184 crates/ui-gtk/src/mini_player.rs:112
+#: crates/ui-gtk/src/application.rs:186 crates/ui-gtk/src/mini_player.rs:112
 #: crates/ui-gtk/src/window/desktop.rs:330
 #: crates/ui-gtk/src/window/desktop.rs:372
 #: crates/ui-gtk/src/window/desktop.rs:421
@@ -380,6 +380,10 @@ msgstr "Artista del álbum"
 #: crates/ui-gtk/src/views/smart_rules.rs:549
 #: crates/ui-gtk/src/widgets/insert_popover/catalogue.rs:73
 #: crates/ui-gtk/src/views/labels.rs:265
+#: crates/ui-gtk/src/views/generator.rs:456
+#: crates/ui-gtk/src/views/generator.rs:498
+#: crates/ui-gtk/src/views/generator_steps.rs:101
+#: crates/ui-gtk/src/views/similar.rs:324
 msgid "Title"
 msgstr "Título"
 
@@ -396,6 +400,7 @@ msgstr "Título"
 #: crates/ui-gtk/src/views/smart_rules.rs:215
 #: crates/ui-gtk/src/views/facet_browser.rs:55
 #: crates/ui-gtk/src/views/tracks/grouping.rs:40
+#: crates/ui-gtk/src/views/generator_steps.rs:100
 msgid "Year"
 msgstr "Año"
 
@@ -469,27 +474,34 @@ msgstr "Criterio de ordenación"
 #: crates/ui-gtk/src/tools/cover_manager.rs:713
 #: crates/ui-gtk/src/views/tracks/grouping.rs:38
 #: crates/ui-gtk/src/views/labels.rs:265
+#: crates/ui-gtk/src/views/generator.rs:458
+#: crates/ui-gtk/src/views/generator.rs:500
+#: crates/ui-gtk/src/views/generator_steps.rs:103
+#: crates/ui-gtk/src/views/similar.rs:326
 msgid "Album"
 msgstr "Álbum"
 
 #: crates/ui-gtk/resources/ui/album.ui:104
 #: crates/ui-gtk/resources/ui/deck.ui:147
 #: crates/ui-gtk/resources/ui/deck.ui:149
-#: crates/ui-gtk/src/views/actions.rs:190
+#: crates/ui-gtk/src/views/actions.rs:265
 #: crates/ui-gtk/src/views/folders.rs:262
 #: crates/ui-gtk/src/views/playlist.rs:192 crates/ui-gtk/src/deck/modes.rs:225
-#: crates/ui-gtk/src/play_modes.rs:268
+#: crates/ui-gtk/src/play_modes.rs:287
 #: crates/ui-gtk/src/views/smart_playlist.rs:493
 #: crates/ui-gtk/src/window/playlists.rs:228
 #: crates/ui-gtk/src/window/playlists.rs:232
 #: crates/ui-gtk/src/mini_player.rs:181 crates/ui-gtk/src/mini_player.rs:504
 #: crates/ui-gtk/src/window/desktop.rs:435
+#: crates/ui-gtk/src/views/generator.rs:179
+#: crates/ui-gtk/src/views/similar.rs:177
 msgid "Play"
 msgstr "Reproducir"
 
 #: crates/ui-gtk/resources/ui/album.ui:124
 #: crates/ui-gtk/resources/ui/deck.ui:120
 #: crates/ui-gtk/resources/ui/deck.ui:122
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:333
 #: crates/ui-gtk/src/views/artists.rs:173
 #: crates/ui-gtk/src/views/genres.rs:151
 #: crates/ui-gtk/src/views/playlist.rs:194
@@ -497,6 +509,7 @@ msgstr "Reproducir"
 #: crates/ui-gtk/src/views/smart_playlist.rs:495
 #: crates/ui-gtk/src/shortcuts.rs:102 crates/ui-gtk/src/deck/compact.rs:68
 #: crates/ui-gtk/src/views/labels.rs:209
+#: crates/ui-gtk/src/views/generator.rs:181
 msgid "Shuffle"
 msgstr "Aleatorio"
 
@@ -506,6 +519,7 @@ msgstr "Empezar de nuevo"
 
 #: crates/ui-gtk/resources/ui/album.ui:167
 #: crates/ui-gtk/src/views/folders.rs:263
+#: crates/ui-gtk/src/views/similar.rs:178
 msgid "Add to queue"
 msgstr "Añadir a la cola"
 
@@ -520,6 +534,8 @@ msgstr "Añadir a la cola"
 #: crates/ui-gtk/src/views/smart_playlist.rs:503
 #: crates/ui-gtk/src/views/smart_playlist.rs:504
 #: crates/ui-gtk/src/views/labels.rs:216 crates/ui-gtk/src/views/labels.rs:217
+#: crates/ui-gtk/src/views/generator.rs:190
+#: crates/ui-gtk/src/views/generator.rs:191
 msgid "More"
 msgstr "Más"
 
@@ -531,6 +547,7 @@ msgstr "Más"
 #: crates/ui-gtk/src/views/smart_playlist.rs:127
 #: crates/ui-gtk/src/views/smart_rules.rs:226
 #: crates/ui-gtk/src/views/home.rs:367
+#: crates/ui-gtk/src/views/generator_steps.rs:96
 msgid "Plays"
 msgstr "Reproducciones"
 
@@ -542,6 +559,7 @@ msgstr "Reproducciones"
 #: crates/ui-gtk/src/views/tracks.rs:76
 #: crates/ui-gtk/src/views/smart_playlist.rs:128
 #: crates/ui-gtk/src/views/smart_rules.rs:228
+#: crates/ui-gtk/src/views/generator_steps.rs:95
 msgid "Rating"
 msgstr "Puntuación"
 
@@ -552,10 +570,14 @@ msgstr "Puntuación"
 #: crates/ui-gtk/src/views/folders.rs:288
 #: crates/ui-gtk/src/views/playlist.rs:77
 #: crates/ui-gtk/src/views/playlist.rs:80 crates/ui-gtk/src/views/tracks.rs:78
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:485
 #: crates/ui-gtk/src/popovers/query_completion.rs:87
 #: crates/ui-gtk/src/views/smart_playlist.rs:129
 #: crates/ui-gtk/src/views/smart_rules.rs:229
 #: crates/ui-gtk/src/views/labels.rs:284
+#: crates/ui-gtk/src/views/generator.rs:472
+#: crates/ui-gtk/src/views/generator_steps.rs:104
+#: crates/ui-gtk/src/views/similar.rs:328
 msgid "Length"
 msgstr "Duración"
 
@@ -563,13 +585,13 @@ msgstr "Duración"
 #: crates/ui-gtk/src/window/sidebar.rs:53
 #: crates/ui-gtk/src/views/search.rs:613 crates/ui-gtk/src/views/tracks.rs:217
 #: crates/ui-gtk/src/views/tracks.rs:274 crates/ui-gtk/src/views/tracks.rs:328
-#: crates/ui-gtk/src/window/pages.rs:447 crates/ui-gtk/src/play_modes.rs:70
+#: crates/ui-gtk/src/window/pages.rs:472 crates/ui-gtk/src/play_modes.rs:70
 #: crates/ui-gtk/src/views/statistics.rs:603
 #: crates/ui-gtk/src/views/labels.rs:255 crates/ui-gtk/src/views/labels.rs:292
 msgid "Tracks"
 msgstr "Pistas"
 
-#: crates/ui-gtk/resources/ui/album.ui:324 crates/ui-gtk/src/window.rs:487
+#: crates/ui-gtk/resources/ui/album.ui:324 crates/ui-gtk/src/window.rs:489
 #: crates/ui-gtk/src/dialogs/maintenance.rs:285
 msgid "Details"
 msgstr "Detalles"
@@ -581,25 +603,25 @@ msgid "Kind"
 msgstr "Tipo"
 
 #: crates/ui-gtk/resources/ui/album.ui:375
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1658
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1712
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1672
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1726
 msgid "Edit tags"
 msgstr "Editar etiquetas"
 
 #: crates/ui-gtk/resources/ui/album.ui:385
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:146
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1431
-#: crates/ui-gtk/src/window/pages.rs:1013
+#: crates/ui-gtk/src/window/pages.rs:1101
 #: crates/ui-gtk/src/tools/converter.rs:1030
 #: crates/ui-gtk/src/dialogs/maintenance.rs:222
 msgid "Open folder"
 msgstr "Abrir carpeta"
 
-#: crates/ui-gtk/resources/ui/deck.ui:38 crates/ui-gtk/src/deck.rs:440
+#: crates/ui-gtk/resources/ui/deck.ui:38 crates/ui-gtk/src/deck.rs:450
 msgid "Show the total length"
 msgstr "Mostrar la duración total"
 
-#: crates/ui-gtk/resources/ui/deck.ui:77 crates/ui-gtk/src/deck.rs:274
+#: crates/ui-gtk/resources/ui/deck.ui:77 crates/ui-gtk/src/deck.rs:280
 #: crates/ui-gtk/src/views/now_playing.rs:564
 #: crates/ui-gtk/src/window/panel/lyrics.rs:242
 #: crates/ui-gtk/src/mini_player.rs:143 crates/ui-gtk/src/mini_player.rs:520
@@ -607,7 +629,7 @@ msgstr "Mostrar la duración total"
 msgid "Nothing playing"
 msgstr "No se reproduce nada"
 
-#: crates/ui-gtk/resources/ui/deck.ui:89 crates/ui-gtk/src/deck.rs:276
+#: crates/ui-gtk/resources/ui/deck.ui:89 crates/ui-gtk/src/deck.rs:282
 msgid "Pick an album, or drop files on the window"
 msgstr "Elija un álbum o suelte archivos en la ventana"
 
@@ -620,14 +642,14 @@ msgstr "Añadir a Favoritos"
 #: crates/ui-gtk/resources/ui/deck.ui:132
 #: crates/ui-gtk/resources/ui/deck.ui:134
 #: crates/ui-gtk/resources/ui/main_window.ui:86
-#: crates/ui-gtk/src/play_modes.rs:275 crates/ui-gtk/src/window/desktop.rs:439
+#: crates/ui-gtk/src/play_modes.rs:294 crates/ui-gtk/src/window/desktop.rs:439
 msgid "Previous"
 msgstr "Anterior"
 
 #: crates/ui-gtk/resources/ui/deck.ui:178
 #: crates/ui-gtk/resources/ui/deck.ui:180
-#: crates/ui-gtk/resources/ui/main_window.ui:90 crates/ui-gtk/src/deck.rs:599
-#: crates/ui-gtk/src/window.rs:831 crates/ui-gtk/src/play_modes.rs:276
+#: crates/ui-gtk/resources/ui/main_window.ui:90 crates/ui-gtk/src/deck.rs:615
+#: crates/ui-gtk/src/window.rs:835 crates/ui-gtk/src/play_modes.rs:295
 #: crates/ui-gtk/src/window/desktop.rs:438
 msgid "Next"
 msgstr "Siguiente"
@@ -639,8 +661,8 @@ msgid "Repeat"
 msgstr "Repetir"
 
 #: crates/ui-gtk/resources/ui/deck.ui:224
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:241
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:271
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:320
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:351
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:45
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:90
 #: crates/ui-gtk/src/deck/compact.rs:95 crates/ui-gtk/src/deck/compact.rs:96
@@ -670,7 +692,7 @@ msgid "Add Music to the Managed Folder…"
 msgstr "Añadir música a la carpeta gestionada…"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:28
-#: crates/ui-gtk/src/views/actions.rs:195
+#: crates/ui-gtk/src/views/actions.rs:270
 msgid "New Playlist"
 msgstr "Nueva lista de reproducción"
 
@@ -683,7 +705,8 @@ msgid "Edit"
 msgstr "Editar"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:40
-#: crates/ui-gtk/src/window/pages.rs:660 crates/ui-gtk/src/shortcuts.rs:161
+#: crates/ui-gtk/src/views/actions.rs:217
+#: crates/ui-gtk/src/window/pages.rs:713 crates/ui-gtk/src/shortcuts.rs:161
 #: crates/ui-gtk/src/tools/import.rs:940
 #: crates/ui-gtk/src/tools/replaced.rs:251
 msgid "Undo"
@@ -720,17 +743,17 @@ msgstr "Panel de la cola"
 msgid "Menu Bar"
 msgstr "Barra de menú"
 
-#: crates/ui-gtk/resources/ui/main_window.ui:71 crates/ui-gtk/src/deck.rs:373
+#: crates/ui-gtk/resources/ui/main_window.ui:71 crates/ui-gtk/src/deck.rs:383
 msgid "Jump to the Playing Track"
 msgstr "Ir a la pista en reproducción"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:76
-#: crates/ui-gtk/src/dialogs/settings.rs:92
-#: crates/ui-gtk/src/window/panel/signal_path.rs:105
+#: crates/ui-gtk/src/dialogs/settings.rs:93
+#: crates/ui-gtk/src/window/panel/signal_path.rs:108
 #: crates/ui-gtk/src/dialogs/track_flags.rs:29
-#: crates/ui-gtk/src/window/play_modes.rs:181
-#: crates/ui-gtk/src/window/play_modes.rs:317
-#: crates/ui-gtk/src/window/play_modes.rs:326
+#: crates/ui-gtk/src/window/play_modes.rs:257
+#: crates/ui-gtk/src/window/play_modes.rs:393
+#: crates/ui-gtk/src/window/play_modes.rs:402
 #: crates/ui-gtk/src/shortcuts.rs:36
 msgid "Playback"
 msgstr "Reproducción"
@@ -739,11 +762,11 @@ msgstr "Reproducción"
 msgid "Play/Pause"
 msgstr "Reproducir/Pausar"
 
-#: crates/ui-gtk/resources/ui/main_window.ui:82 crates/ui-gtk/src/deck.rs:364
+#: crates/ui-gtk/resources/ui/main_window.ui:82 crates/ui-gtk/src/deck.rs:370
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:534
 #: crates/ui-gtk/src/dialogs/settings/output.rs:341
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:609
-#: crates/ui-gtk/src/play_modes.rs:271
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:624
+#: crates/ui-gtk/src/play_modes.rs:290
 #: crates/ui-gtk/src/tools/file_tools.rs:75
 #: crates/ui-gtk/src/tools/managed_runs.rs:529
 #: crates/ui-gtk/src/shortcuts.rs:75 crates/ui-gtk/src/tools/converter.rs:1034
@@ -752,12 +775,12 @@ msgid "Stop"
 msgstr "Detener"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:94
-#: crates/ui-gtk/src/play_modes.rs:285
+#: crates/ui-gtk/src/play_modes.rs:304
 msgid "Seek Back"
 msgstr "Retroceder"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:98
-#: crates/ui-gtk/src/play_modes.rs:286
+#: crates/ui-gtk/src/play_modes.rs:305
 msgid "Seek Forward"
 msgstr "Avanzar"
 
@@ -766,10 +789,10 @@ msgid "Stop After This Track"
 msgstr "Detener después de esta pista"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:107
-#: crates/ui-gtk/src/window/sidebar.rs:123
-#: crates/ui-gtk/src/window/sidebar.rs:146
-#: crates/ui-gtk/src/window/sidebar.rs:186
-#: crates/ui-gtk/src/dialogs/settings.rs:91
+#: crates/ui-gtk/src/window/sidebar.rs:124
+#: crates/ui-gtk/src/window/sidebar.rs:147
+#: crates/ui-gtk/src/window/sidebar.rs:187
+#: crates/ui-gtk/src/dialogs/settings.rs:92
 #: crates/ui-gtk/src/views/now_playing.rs:218
 msgid "Library"
 msgstr "Biblioteca"
@@ -779,7 +802,7 @@ msgid "Rescan"
 msgstr "Volver a escanear"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:116
-#: crates/ui-gtk/src/window/panel.rs:347
+#: crates/ui-gtk/src/window/panel.rs:425
 #: crates/ui-gtk/src/views/history.rs:350
 #: crates/ui-gtk/src/views/history.rs:775 crates/ui-gtk/src/views/home.rs:349
 msgid "History"
@@ -826,7 +849,7 @@ msgid "Tools"
 msgstr "Herramientas"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:161
-#: crates/ui-gtk/src/views/actions.rs:277
+#: crates/ui-gtk/src/views/actions.rs:384
 msgid "Organize Files…"
 msgstr "Organizar archivos…"
 
@@ -920,14 +943,14 @@ msgstr "Panel"
 #: crates/ui-gtk/resources/ui/panel.ui:156
 #: crates/ui-gtk/src/views/now_playing.rs:234
 #: crates/ui-gtk/src/views/now_playing.rs:317
-#: crates/ui-gtk/src/play_modes.rs:311 crates/ui-gtk/src/views/history.rs:258
+#: crates/ui-gtk/src/play_modes.rs:330 crates/ui-gtk/src/views/history.rs:258
 #: crates/ui-gtk/src/mini_player.rs:212 crates/ui-gtk/src/mini_player.rs:230
 msgid "Queue"
 msgstr "Cola"
 
 #: crates/ui-gtk/resources/ui/panel.ui:33 crates/ui-gtk/src/views/album.rs:973
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1315
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1758
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1772
 #: crates/ui-gtk/src/views/now_playing.rs:232
 #: crates/ui-gtk/src/widgets/lyric_lines.rs:72
 #: crates/ui-gtk/src/tools/managed_folder.rs:149
@@ -936,7 +959,7 @@ msgid "Lyrics"
 msgstr "Letra"
 
 #: crates/ui-gtk/resources/ui/panel.ui:39
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:479
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:620
 #: crates/ui-gtk/src/views/now_playing.rs:343
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:120
 msgid "Signal path"
@@ -953,14 +976,16 @@ msgstr "La cola está vacía. Reproduzca un álbum para llenarla."
 
 #: crates/ui-gtk/resources/ui/panel.ui:202
 #: crates/ui-gtk/src/views/history.rs:372
+#: crates/ui-gtk/src/views/similar.rs:180
 msgid "Save as playlist"
 msgstr "Guardar como lista de reproducción"
 
 #: crates/ui-gtk/resources/ui/panel.ui:213
 #: crates/ui-gtk/src/dialogs/settings/library.rs:605
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:686
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:701
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1333
-#: crates/ui-gtk/src/play_modes.rs:256
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:459
+#: crates/ui-gtk/src/play_modes.rs:275
 msgid "Clear"
 msgstr "Limpiar"
 
@@ -968,60 +993,62 @@ msgstr "Limpiar"
 msgid "Remove everything but the playing track"
 msgstr "Quitar todo excepto la pista en reproducción"
 
-#: crates/ui-gtk/src/backend/service.rs:393
-#: crates/ui-gtk/src/backend/service.rs:1060
+#: crates/ui-gtk/src/backend/service.rs:412
+#: crates/ui-gtk/src/backend/service.rs:1088
 #: crates/ui-gtk/src/backend/service/browse.rs:139
 msgid "Unknown title"
 msgstr "Título desconocido"
 
-#: crates/ui-gtk/src/backend/service.rs:506
+#: crates/ui-gtk/src/backend/service.rs:525
+#: crates/ui-gtk/src/backend/service/generators.rs:143
+#: crates/ui-gtk/src/backend/service/generators.rs:147
 msgid "The playlist is gone."
 msgstr "La lista de reproducción ya no existe."
 
-#: crates/ui-gtk/src/backend/service.rs:521
-#: crates/ui-gtk/src/backend/service.rs:982
+#: crates/ui-gtk/src/backend/service.rs:543
+#: crates/ui-gtk/src/backend/service.rs:1004
 msgid "There is no library."
 msgstr "No hay ninguna biblioteca."
 
-#: crates/ui-gtk/src/backend/service.rs:535
+#: crates/ui-gtk/src/backend/service.rs:557
 #: crates/ui-gtk/src/backend/service/insights.rs:114
 msgid "Unknown album"
 msgstr "Álbum desconocido"
 
-#: crates/ui-gtk/src/backend/service.rs:539
+#: crates/ui-gtk/src/backend/service.rs:561
 #: crates/ui-gtk/src/backend/service/insights.rs:115
 msgid "Various artists"
 msgstr "Varios artistas"
 
-#: crates/ui-gtk/src/backend/service.rs:998
+#: crates/ui-gtk/src/backend/service.rs:1020
 #: crates/ui-gtk/src/backend/service/services.rs:541
-#: crates/ui-gtk/src/backend/service/services.rs:877
+#: crates/ui-gtk/src/backend/service/services.rs:883
 msgid "The library has stopped."
 msgstr "La biblioteca se ha detenido."
 
-#: crates/ui-gtk/src/backend/service.rs:1016
+#: crates/ui-gtk/src/backend/service.rs:1038
 #: crates/ui-gtk/src/backend/service/mpris.rs:63
-#: crates/ui-gtk/src/backend/sample/playlists.rs:160
+#: crates/ui-gtk/src/backend/sample/playlists.rs:168
 #: crates/ui-gtk/src/tools/import_view.rs:441
 #: crates/ui-gtk/src/tools/import_view.rs:469
 msgid "Favourites"
 msgstr "Favoritos"
 
-#: crates/ui-gtk/src/backend/service.rs:1679
+#: crates/ui-gtk/src/backend/service.rs:1812
 msgid "The player has stopped. Restart Helikodu to play again."
 msgstr ""
 "El reproductor se ha detenido. Reinicie Helikodu para volver a reproducir."
 
-#: crates/ui-gtk/src/backend/service.rs:2032
+#: crates/ui-gtk/src/backend/service.rs:2187
 msgid "No sound (null output)"
 msgstr "Sin sonido (salida nula)"
 
-#: crates/ui-gtk/src/backend/service.rs:2033
+#: crates/ui-gtk/src/backend/service.rs:2188
 #: crates/ui-gtk/src/popovers/output_switcher.rs:37
 msgid "WAV file"
 msgstr "Archivo WAV"
 
-#: crates/ui-gtk/src/backend/service.rs:2035
+#: crates/ui-gtk/src/backend/service.rs:2190
 #: crates/ui-gtk/src/dialogs/first_run.rs:231
 #: crates/ui-gtk/src/dialogs/settings/output.rs:127
 #: crates/ui-gtk/src/dialogs/settings/output.rs:158
@@ -1029,49 +1056,50 @@ msgstr "Archivo WAV"
 msgid "System default"
 msgstr "Predeterminado del sistema"
 
-#: crates/ui-gtk/src/backend/service.rs:2037
+#: crates/ui-gtk/src/backend/service.rs:2192
 #, rust-format
 msgid "Default device ({})"
 msgstr "Dispositivo predeterminado ({})"
 
-#: crates/ui-gtk/src/backend/service.rs:2405
+#: crates/ui-gtk/src/backend/service.rs:2565
 #, rust-format
 msgid "Cannot play {}: {}"
 msgstr "No se puede reproducir {}: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2415
+#: crates/ui-gtk/src/backend/service.rs:2575
 msgid ""
 "Helikodu did not end normally last time. The queue was restored, paused."
 msgstr ""
 "Helikodu no se cerró correctamente la última vez. Se ha restaurado la cola, "
 "en pausa."
 
-#: crates/ui-gtk/src/backend/service.rs:2418
+#: crates/ui-gtk/src/backend/service.rs:2578
 #, rust-format
 msgid "Cannot play this: {}"
 msgstr "No se puede reproducir esto: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2421
+#: crates/ui-gtk/src/backend/service.rs:2581
 #, rust-format
 msgid "The queue could not be saved: {}"
 msgstr "No se pudo guardar la cola: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2424
+#: crates/ui-gtk/src/backend/service.rs:2584
 #, rust-format
 msgid "The playback settings of the track could not be saved: {}"
 msgstr "No se pudo guardar la configuración de reproducción de la pista: {}"
 
-#: crates/ui-gtk/src/backend/service.rs:2647
+#: crates/ui-gtk/src/backend/service.rs:2808
 msgid "Playing music"
 msgstr "Reproduciendo música"
 
-#: crates/ui-gtk/src/deck.rs:132
+#: crates/ui-gtk/src/deck.rs:137
 msgid "Player"
 msgstr "Reproductor"
 
-#: crates/ui-gtk/src/deck.rs:250 crates/ui-gtk/src/views/album_tile.rs:261
-#: crates/ui-gtk/src/window/panel.rs:171 crates/ui-gtk/src/window/panel.rs:306
-#: crates/ui-gtk/src/window.rs:827 crates/ui-gtk/src/views/artists.rs:816
+#: crates/ui-gtk/src/deck.rs:256 crates/ui-gtk/src/views/album_tile.rs:261
+#: crates/ui-gtk/src/window/panel.rs:178 crates/ui-gtk/src/window/panel.rs:374
+#: crates/ui-gtk/src/window/panel/queue_end.rs:135
+#: crates/ui-gtk/src/window.rs:831 crates/ui-gtk/src/views/artists.rs:816
 #: crates/ui-gtk/src/views/genres.rs:390
 #: crates/ui-gtk/src/views/playlist.rs:488
 #: crates/ui-gtk/src/views/playlist.rs:1080
@@ -1109,33 +1137,37 @@ msgstr "Reproductor"
 msgid "{} · {}"
 msgstr "{} · {}"
 
-#: crates/ui-gtk/src/deck.rs:258
+#: crates/ui-gtk/src/deck.rs:264
 #, rust-format
 msgid "Show {} in its album"
 msgstr "Mostrar {} en su álbum"
 
-#: crates/ui-gtk/src/deck.rs:366
+#: crates/ui-gtk/src/deck.rs:372
 msgid "Stop After"
 msgstr "Detener después de"
 
-#: crates/ui-gtk/src/deck.rs:369 crates/ui-gtk/src/play_modes.rs:315
+#: crates/ui-gtk/src/deck.rs:375 crates/ui-gtk/src/play_modes.rs:334
 msgid "Sleep Timer…"
 msgstr "Temporizador de apagado…"
 
-#: crates/ui-gtk/src/deck.rs:438
+#: crates/ui-gtk/src/deck.rs:378 crates/ui-gtk/src/play_modes.rs:337
+msgid "Speed…"
+msgstr "Velocidad…"
+
+#: crates/ui-gtk/src/deck.rs:448
 msgid "Show the time left"
 msgstr "Mostrar el tiempo restante"
 
-#: crates/ui-gtk/src/deck.rs:532
+#: crates/ui-gtk/src/deck.rs:545
 #, rust-format
 msgid "Output: {}, {}"
 msgstr "Salida: {}, {}"
 
-#: crates/ui-gtk/src/deck.rs:578 crates/ui-gtk/src/window/panel/lyrics.rs:104
+#: crates/ui-gtk/src/deck.rs:594 crates/ui-gtk/src/window/panel/lyrics.rs:104
 msgid "Show Now Playing"
 msgstr "Mostrar «Reproduciendo ahora»"
 
-#: crates/ui-gtk/src/deck.rs:626
+#: crates/ui-gtk/src/deck.rs:642
 #, rust-format
 msgid "Next: {}"
 msgstr "Siguiente: {}"
@@ -1169,13 +1201,16 @@ msgid "{} kHz / {}-bit"
 msgstr "{} kHz / {} bits"
 
 #. / A rate as `96 kHz`.
-#: crates/ui-gtk/src/format.rs:113 crates/ui-gtk/src/window/panel.rs:324
+#. / A rate as `44.1 kHz`.
+#: crates/ui-gtk/src/format.rs:113 crates/ui-gtk/src/window/panel.rs:392
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1472
 #: crates/ui-gtk/src/popovers/output_switcher.rs:78
 #: crates/ui-gtk/src/popovers/output_switcher.rs:139
 #: crates/ui-gtk/src/popovers/output_switcher.rs:357
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:59
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:62
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:53
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:24
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:33
 #: crates/ui-gtk/src/widgets/eq_graph.rs:77
 #: crates/ui-gtk/src/views/smart_rules.rs:386
 #: crates/ui-gtk/src/tools/converter.rs:182
@@ -1185,16 +1220,18 @@ msgstr "{} kHz"
 
 #: crates/ui-gtk/src/format.rs:117
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1455
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:115
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:202
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:263
 #: crates/ui-gtk/src/tools/converter.rs:191
 msgid "Mono"
 msgstr "Mono"
 
 #: crates/ui-gtk/src/format.rs:118
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1456
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:114
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:201
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:264
 #: crates/ui-gtk/src/tools/converter.rs:190
 msgid "Stereo"
 msgstr "Estéreo"
@@ -1247,7 +1284,7 @@ msgstr[1] "{} capítulos"
 #: crates/ui-gtk/src/views/album_tile.rs:256
 #: crates/ui-gtk/src/dialogs/settings/library.rs:61
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:74
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1714
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1728
 #: crates/ui-gtk/src/views/artists.rs:666
 #: crates/ui-gtk/src/views/genres.rs:386
 #: crates/ui-gtk/src/views/playlist.rs:490
@@ -1270,6 +1307,10 @@ msgstr[1] "{} capítulos"
 #: crates/ui-gtk/src/views/tracks/grouping.rs:115
 #: crates/ui-gtk/src/views/labels.rs:72 crates/ui-gtk/src/views/labels.rs:772
 #: crates/ui-gtk/src/window/labels.rs:48
+#: crates/ui-gtk/src/views/generator.rs:133
+#: crates/ui-gtk/src/views/generator.rs:1028
+#: crates/ui-gtk/src/views/generator_steps.rs:225
+#: crates/ui-gtk/src/views/list_table.rs:411
 #, rust-format
 msgid "{} track"
 msgid_plural "{} tracks"
@@ -1335,6 +1376,7 @@ msgstr "Tamaño"
 #: crates/ui-gtk/src/views/album.rs:532 crates/ui-gtk/src/views/album.rs:985
 #: crates/ui-gtk/src/window.rs:109
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1418
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:483
 #: crates/ui-gtk/src/tools/copies.rs:532
 #: crates/ui-gtk/src/tools/duplicates.rs:715
 msgid "File"
@@ -1343,7 +1385,7 @@ msgstr "Archivo"
 #: crates/ui-gtk/src/views/album.rs:534
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1421
 #: crates/ui-gtk/src/views/smart_rules.rs:212
-#: crates/ui-gtk/src/window/playlists.rs:429
+#: crates/ui-gtk/src/window/playlists.rs:464
 #: crates/ui-gtk/src/tools/sync_export.rs:744
 #: crates/ui-gtk/src/tools/cover_manager.rs:714
 msgid "Folder"
@@ -1388,6 +1430,11 @@ msgstr "Empieza en"
 #: crates/ui-gtk/src/views/smart_rules.rs:551
 #: crates/ui-gtk/src/views/facet_browser.rs:53
 #: crates/ui-gtk/src/views/labels.rs:265
+#: crates/ui-gtk/src/views/generator.rs:457
+#: crates/ui-gtk/src/views/generator.rs:499
+#: crates/ui-gtk/src/views/generator_steps.rs:102
+#: crates/ui-gtk/src/views/similar.rs:325
+#: crates/ui-gtk/src/views/similar.rs:474
 msgid "Artist"
 msgstr "Artista"
 
@@ -1415,7 +1462,7 @@ msgstr "Pista"
 msgid "Disc {}, track {}"
 msgstr "Disco {}, pista {}"
 
-#: crates/ui-gtk/src/views/album.rs:941 crates/ui-gtk/src/window/panel.rs:329
+#: crates/ui-gtk/src/views/album.rs:941 crates/ui-gtk/src/window/panel.rs:397
 #, rust-format
 msgid "{} kbit/s"
 msgstr "{} kbit/s"
@@ -1437,6 +1484,7 @@ msgstr "Formato"
 #: crates/ui-gtk/src/views/album.rs:949
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:420
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:494
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:515
 msgid "Gain"
 msgstr "Ganancia"
 
@@ -1449,6 +1497,9 @@ msgstr "Ganancia"
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:278
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:529
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:531
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:35
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:163
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:164
 #: crates/ui-gtk/src/widgets/eq_graph.rs:410
 #, rust-format
 msgid "{} dB"
@@ -1458,10 +1509,12 @@ msgstr "{} dB"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1527
 #: crates/ui-gtk/src/views/smart_rules.rs:234
 #: crates/ui-gtk/src/views/home.rs:368
+#: crates/ui-gtk/src/views/generator_steps.rs:98
 msgid "Last played"
 msgstr "Última reproducción"
 
 #: crates/ui-gtk/src/views/album.rs:964
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:64
 #: crates/ui-gtk/src/views/smart_rules.rs:382
 #, rust-format
 msgid "{} star"
@@ -1482,6 +1535,7 @@ msgstr "Copias"
 #: crates/ui-gtk/src/views/albums.rs:142 crates/ui-gtk/src/views/genres.rs:275
 #: crates/ui-gtk/src/views/category.rs:575
 #: crates/ui-gtk/src/views/smart_rules.rs:232
+#: crates/ui-gtk/src/views/generator_steps.rs:99
 msgid "Date added"
 msgstr "Fecha de adición"
 
@@ -1494,7 +1548,7 @@ msgid "Add music folder"
 msgstr "Añadir carpeta de música"
 
 #: crates/ui-gtk/src/views/albums.rs:608
-#: crates/ui-gtk/src/window/pages.rs:1015
+#: crates/ui-gtk/src/window/pages.rs:1103
 msgid "Open files"
 msgstr "Abrir archivos"
 
@@ -1567,46 +1621,222 @@ msgstr "{} de {}"
 msgid "Drag to change the width"
 msgstr "Arrastre para cambiar el ancho"
 
-#: crates/ui-gtk/src/window/panel.rs:327
+#: crates/ui-gtk/src/window/panel.rs:187 crates/ui-gtk/src/window/panel.rs:463
+#: crates/ui-gtk/src/window/panel/queue_end.rs:45
+msgid "Added by Helikodu"
+msgstr "Añadida por Helikodu"
+
+#: crates/ui-gtk/src/window/panel.rs:330
+msgid "Settings…"
+msgstr "Configuración…"
+
+#: crates/ui-gtk/src/window/panel.rs:395
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1480
 #: crates/ui-gtk/src/popovers/output_switcher.rs:104
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:67
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:70
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:57
 #: crates/ui-gtk/src/tools/converter.rs:153
 #, rust-format
 msgid "{}-bit"
 msgstr "{} bits"
 
-#: crates/ui-gtk/src/window/panel.rs:354
+#: crates/ui-gtk/src/window/panel.rs:433
 msgid "Now playing"
 msgstr "Reproduciendo ahora"
 
-#: crates/ui-gtk/src/window/panel.rs:365 crates/ui-gtk/src/mini_player.rs:587
+#: crates/ui-gtk/src/window/panel.rs:447 crates/ui-gtk/src/mini_player.rs:587
 msgid "Next in queue"
 msgstr "Siguiente en la cola"
 
-#: crates/ui-gtk/src/window/panel.rs:372 crates/ui-gtk/src/mini_player.rs:594
+#: crates/ui-gtk/src/window/panel.rs:454 crates/ui-gtk/src/mini_player.rs:594
 #, rust-format
 msgid "Continuing from {}"
 msgstr "Continuando desde {}"
 
-#: crates/ui-gtk/src/window/panel.rs:373 crates/ui-gtk/src/mini_player.rs:595
+#: crates/ui-gtk/src/window/panel.rs:455 crates/ui-gtk/src/mini_player.rs:595
 msgid "Continuing"
 msgstr "Continuando"
 
-#: crates/ui-gtk/src/window/panel.rs:383 crates/ui-gtk/src/mini_player.rs:607
+#: crates/ui-gtk/src/window/panel.rs:496 crates/ui-gtk/src/mini_player.rs:607
 #, rust-format
 msgid "{} upcoming · {}"
 msgid_plural "{} upcoming · {}"
 msgstr[0] "{} pendiente · {}"
 msgstr[1] "{} pendientes · {}"
 
-#: crates/ui-gtk/src/window.rs:483
+#: crates/ui-gtk/src/window/panel/queue_end.rs:105
+msgid "No more related tracks: every one was played or queued lately."
+msgstr ""
+"No hay más pistas relacionadas: todas se han reproducido o puesto en cola "
+"hace poco."
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:110
+#, rust-format
+msgid "No related track matches the filter, {}."
+msgstr "Ninguna pista relacionada coincide con el filtro, {}."
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:115
+#: crates/ui-gtk/src/window/panel/queue_end.rs:165
+msgid "Nothing more to add"
+msgstr "No queda nada que añadir"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:122
+#, rust-format
+msgid "{} at a time, {}"
+msgid_plural "{} at a time, {}"
+msgstr[0] "{} a la vez, {}"
+msgstr[1] "{} a la vez, {}"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:130
+#, rust-format
+msgid "Then: tracks related to “{}”"
+msgstr "Después: pistas relacionadas con «{}»"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:142
+msgid "Then: tracks related to the last track"
+msgstr "Después: pistas relacionadas con la última pista"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:153
+msgid ""
+"No track of the library can be added. The music stops after the last track."
+msgstr ""
+"No se puede añadir ninguna pista de la biblioteca. La música se detiene tras"
+" la última pista."
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:159
+#, rust-format
+msgid ""
+"No track matches the Auto-DJ filter, {}. The music stops after the last "
+"track."
+msgstr ""
+"Ninguna pista coincide con el filtro del Auto-DJ, {}. La música se detiene "
+"tras la última pista."
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:172
+msgid "Auto-DJ is on. Press Play and it fills the queue."
+msgstr "El Auto-DJ está activado. Pulse Reproducir y llenará la cola."
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:179
+msgid "From the whole library"
+msgstr "De toda la biblioteca"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:182
+#, rust-format
+msgid "Only tracks that match {}"
+msgstr "Solo pistas que coincidan con {}"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:189
+#, rust-format
+msgid "Auto-DJ keeps {} track ahead"
+msgid_plural "Auto-DJ keeps {} tracks ahead"
+msgstr[0] "El Auto-DJ mantiene {} pista por delante"
+msgstr[1] "El Auto-DJ mantiene {} pistas por delante"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:208
+msgid "Nothing more to add: no track matches the Auto-DJ filter"
+msgstr ""
+"No queda nada que añadir: ninguna pista coincide con el filtro del Auto-DJ"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:211
+msgid "Nothing more to add: no related track matches the filter"
+msgstr ""
+"No queda nada que añadir: ninguna pista relacionada coincide con el filtro"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:213
+msgid "Nothing more to add: no more related tracks"
+msgstr "No queda nada que añadir: no hay más pistas relacionadas"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:214
+msgid "Nothing more to add: no track of the library can be added"
+msgstr ""
+"No queda nada que añadir: no se puede añadir ninguna pista de la biblioteca"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:267
+#: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:255
+msgid "Change…"
+msgstr "Cambiar…"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:268
+#: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:264
+#: crates/ui-gtk/src/popovers/sleep_timer.rs:178
+msgid "Turn off"
+msgstr "Desactivar"
+
+#: crates/ui-gtk/src/window/panel/queue_end.rs:269
+msgid "Sets Repeat to Off"
+msgstr "Pone Repetir en Desactivado"
+
+#: crates/ui-gtk/src/related.rs:75
+msgid "A mix"
+msgstr "Una mezcla"
+
+#: crates/ui-gtk/src/related.rs:76
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:621
+msgid "Same artist"
+msgstr "Mismo artista"
+
+#: crates/ui-gtk/src/related.rs:77
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:627
+msgid "Same genre"
+msgstr "Mismo género"
+
+#: crates/ui-gtk/src/related.rs:78
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:635
+msgid "Sounds alike"
+msgstr "Suena parecido"
+
+#: crates/ui-gtk/src/related.rs:79
+msgid "Your own weights"
+msgstr "Sus propias ponderaciones"
+
+#: crates/ui-gtk/src/related.rs:86
+msgid "Artist and genre count most; years, labels and play counts a little."
+msgstr ""
+"El artista y el género cuentan más; los años, las etiquetas y los números de"
+" reproducciones, un poco."
+
+#: crates/ui-gtk/src/related.rs:87
+msgid "The same artist counts most, then the same album artist."
+msgstr "El mismo artista cuenta más; después, el mismo artista del álbum."
+
+#: crates/ui-gtk/src/related.rs:88
+msgid "The same genre counts most; years close together a little."
+msgstr "El mismo género cuenta más; los años cercanos, un poco."
+
+#: crates/ui-gtk/src/related.rs:89
+msgid "How the tracks sound counts most; the same genre a little."
+msgstr "Cómo suenan las pistas cuenta más; el mismo género, un poco."
+
+#: crates/ui-gtk/src/related.rs:90
+msgid "Set below how much each likeness counts, from 0 to 10."
+msgstr "Indique abajo cuánto cuenta cada parecido, de 0 a 10."
+
+#: crates/ui-gtk/src/related.rs:97
+msgid "by artist and genre"
+msgstr "por artista y género"
+
+#: crates/ui-gtk/src/related.rs:98
+msgid "by artist"
+msgstr "por artista"
+
+#: crates/ui-gtk/src/related.rs:99
+msgid "by genre"
+msgstr "por género"
+
+#: crates/ui-gtk/src/related.rs:100
+msgid "by how they sound"
+msgstr "por cómo suenan"
+
+#: crates/ui-gtk/src/related.rs:101
+msgid "by your own weights"
+msgstr "según sus propias ponderaciones"
+
+#: crates/ui-gtk/src/window.rs:485
 #, rust-format
 msgid "{} was disconnected. Playback is paused."
 msgstr "{} se ha desconectado. Se ha pausado la reproducción."
 
-#: crates/ui-gtk/src/window.rs:803
+#: crates/ui-gtk/src/window.rs:807
 #, rust-format
 msgid "The library cannot be read: {}"
 msgstr "No se puede leer la biblioteca: {}"
@@ -1645,23 +1875,23 @@ msgstr "Años"
 msgid "Folders"
 msgstr "Carpetas"
 
-#: crates/ui-gtk/src/window/sidebar.rs:134
+#: crates/ui-gtk/src/window/sidebar.rs:135
 msgid "Hide the sidebar"
 msgstr "Ocultar la barra lateral"
 
-#: crates/ui-gtk/src/window/sidebar.rs:179
-#: crates/ui-gtk/src/views/actions.rs:591
-#: crates/ui-gtk/src/window/pages.rs:798 crates/ui-gtk/src/shortcuts.rs:158
+#: crates/ui-gtk/src/window/sidebar.rs:180
+#: crates/ui-gtk/src/views/actions.rs:764
+#: crates/ui-gtk/src/window/pages.rs:861 crates/ui-gtk/src/shortcuts.rs:158
 msgid "New playlist"
 msgstr "Nueva lista de reproducción"
 
-#: crates/ui-gtk/src/window/sidebar.rs:188
-#: crates/ui-gtk/src/window/pages.rs:975
+#: crates/ui-gtk/src/window/sidebar.rs:189
+#: crates/ui-gtk/src/window/pages.rs:1063
 #: crates/ui-gtk/src/tools/import.rs:1139
 msgid "Playlists"
 msgstr "Listas de reproducción"
 
-#: crates/ui-gtk/src/window/sidebar.rs:191
+#: crates/ui-gtk/src/window/sidebar.rs:192
 msgid "Pinned"
 msgstr "Fijados"
 
@@ -1713,20 +1943,20 @@ msgstr "No se puede leer la copia principal para compararla."
 #. / The error of a file operation without a library.
 #: crates/ui-gtk/src/backend/service/services.rs:529
 #: crates/ui-gtk/src/backend/service/services.rs:555
-#: crates/ui-gtk/src/backend/service/services.rs:665
-#: crates/ui-gtk/src/backend/service/services.rs:751
-#: crates/ui-gtk/src/backend/service/services.rs:965
-#: crates/ui-gtk/src/backend/service/services.rs:1246
-#: crates/ui-gtk/src/backend/service/services.rs:1276
-#: crates/ui-gtk/src/backend/service/services.rs:1304
-#: crates/ui-gtk/src/backend/service/services.rs:1358
-#: crates/ui-gtk/src/backend/service/services.rs:1366
-#: crates/ui-gtk/src/backend/service/services.rs:1373
-#: crates/ui-gtk/src/backend/services.rs:862
+#: crates/ui-gtk/src/backend/service/services.rs:671
+#: crates/ui-gtk/src/backend/service/services.rs:757
+#: crates/ui-gtk/src/backend/service/services.rs:971
+#: crates/ui-gtk/src/backend/service/services.rs:1252
+#: crates/ui-gtk/src/backend/service/services.rs:1282
+#: crates/ui-gtk/src/backend/service/services.rs:1310
+#: crates/ui-gtk/src/backend/service/services.rs:1411
+#: crates/ui-gtk/src/backend/service/services.rs:1419
+#: crates/ui-gtk/src/backend/service/services.rs:1426
+#: crates/ui-gtk/src/backend/services.rs:891
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:164
 #: crates/ui-gtk/src/backend/service/export.rs:57
-#: crates/ui-gtk/src/backend/sample/services.rs:1001
-#: crates/ui-gtk/src/backend/sample/services.rs:1006
+#: crates/ui-gtk/src/backend/sample/services.rs:1058
+#: crates/ui-gtk/src/backend/sample/services.rs:1063
 #: crates/ui-gtk/src/backend/interchange.rs:196
 #: crates/ui-gtk/src/backend/service/interchange.rs:63
 #: crates/ui-gtk/src/backend/fields.rs:46
@@ -1734,21 +1964,21 @@ msgstr "No se puede leer la copia principal para compararla."
 msgid "Helikodu runs without a library."
 msgstr "Helikodu funciona sin biblioteca."
 
-#: crates/ui-gtk/src/backend/service/services.rs:712
+#: crates/ui-gtk/src/backend/service/services.rs:718
 msgid "This track is part of a larger file, whose tags it shares."
 msgstr ""
 "Esta pista forma parte de un archivo más grande, cuyas etiquetas comparte."
 
-#: crates/ui-gtk/src/backend/service/services.rs:716
+#: crates/ui-gtk/src/backend/service/services.rs:722
 #, rust-format
 msgid "The file cannot be read: {}"
 msgstr "No se puede leer el archivo: {}"
 
-#: crates/ui-gtk/src/backend/service/services.rs:784
+#: crates/ui-gtk/src/backend/service/services.rs:790
 msgid "Open the track in the tag editor first."
 msgstr "Abra primero la pista en el editor de etiquetas."
 
-#: crates/ui-gtk/src/backend/service/services.rs:1252
+#: crates/ui-gtk/src/backend/service/services.rs:1258
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:92
 #: crates/ui-gtk/src/tools/organizer.rs:154
 #: crates/ui-gtk/src/views/category.rs:78
@@ -1760,23 +1990,23 @@ msgstr "Abra primero la pista en el editor de etiquetas."
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: crates/ui-gtk/src/backend/service/services.rs:1361
+#: crates/ui-gtk/src/backend/service/services.rs:1414
 #, rust-format
 msgid "The backup could not be made: {}"
 msgstr "No se pudo hacer la copia de seguridad: {}"
 
-#: crates/ui-gtk/src/backend/service/services.rs:1376
+#: crates/ui-gtk/src/backend/service/services.rs:1429
 #, rust-format
 msgid "This backup cannot be put back: {}"
 msgstr "No se puede restaurar esta copia de seguridad: {}"
 
-#: crates/ui-gtk/src/backend/service/services.rs:1397
+#: crates/ui-gtk/src/backend/service/services.rs:1450
 #, rust-format
 msgid "The library can only be read, so changes are not kept: {}"
 msgstr ""
 "La biblioteca es de solo lectura, así que no se conservan los cambios: {}"
 
-#: crates/ui-gtk/src/backend/service/services.rs:1401
+#: crates/ui-gtk/src/backend/service/services.rs:1454
 msgid ""
 "The backup was put back. The library as it was before is kept in the backups"
 " folder."
@@ -1784,14 +2014,14 @@ msgstr ""
 "Se ha restaurado la copia de seguridad. La biblioteca tal como estaba antes "
 "se conserva en la carpeta de copias de seguridad."
 
-#: crates/ui-gtk/src/backend/service/services.rs:1404
+#: crates/ui-gtk/src/backend/service/services.rs:1457
 #, rust-format
 msgid "The backup could not be put back, so the library is as it was: {}"
 msgstr ""
 "No se pudo restaurar la copia de seguridad, así que la biblioteca sigue como"
 " estaba: {}"
 
-#: crates/ui-gtk/src/backend/service/services.rs:1408
+#: crates/ui-gtk/src/backend/service/services.rs:1461
 #, rust-format
 msgid ""
 "The library database was damaged and was replaced with the backup from {}."
@@ -1799,13 +2029,13 @@ msgstr ""
 "La base de datos de la biblioteca estaba dañada y se ha sustituido por la "
 "copia de seguridad del {}."
 
-#: crates/ui-gtk/src/backend/service/services.rs:1412
+#: crates/ui-gtk/src/backend/service/services.rs:1465
 #, rust-format
 msgid "The library could not be opened, so Helikodu runs without it: {}"
 msgstr ""
 "No se pudo abrir la biblioteca, así que Helikodu funciona sin ella: {}"
 
-#: crates/ui-gtk/src/backend/service/services.rs:1469
+#: crates/ui-gtk/src/backend/service/services.rs:1522
 msgid "The file was changed since."
 msgstr "El archivo ha cambiado desde entonces."
 
@@ -1894,7 +2124,7 @@ msgstr ""
 
 #: crates/ui-gtk/src/dialogs/about.rs:389
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:321
-#: crates/ui-gtk/src/window/panel/signal_path.rs:128
+#: crates/ui-gtk/src/window/panel/signal_path.rs:132
 msgid "Copy diagnostics"
 msgstr "Copiar el diagnóstico"
 
@@ -1905,9 +2135,10 @@ msgstr "Copiado"
 
 #: crates/ui-gtk/src/dialogs/about.rs:430
 #: crates/ui-gtk/src/dialogs/common.rs:85
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1723
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1737
 #: crates/ui-gtk/src/mini_player.rs:161
 #: crates/ui-gtk/src/dialogs/maintenance.rs:224
+#: crates/ui-gtk/src/views/similar.rs:48
 msgid "Close"
 msgstr "Cerrar"
 
@@ -2205,66 +2436,66 @@ msgstr "{} familias disponibles · {} no disponibles en este equipo"
 msgid "Copy as text"
 msgstr "Copiar como texto"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:93
+#: crates/ui-gtk/src/dialogs/settings.rs:94
 msgid "Audio output"
 msgstr "Salida de audio"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:94
+#: crates/ui-gtk/src/dialogs/settings.rs:95
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1514
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:223
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:263
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:298
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:344
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:91
 msgid "Loudness"
 msgstr "Sonoridad"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:95
+#: crates/ui-gtk/src/dialogs/settings.rs:96
 msgid "DSP and EQ"
 msgstr "DSP y EQ"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:96
+#: crates/ui-gtk/src/dialogs/settings.rs:97
 msgid "Appearance"
 msgstr "Apariencia"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:97
+#: crates/ui-gtk/src/dialogs/settings.rs:98
 msgid "Shortcuts"
 msgstr "Atajos"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:98
+#: crates/ui-gtk/src/dialogs/settings.rs:99
 msgid "Advanced"
 msgstr "Avanzado"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:138
+#: crates/ui-gtk/src/dialogs/settings.rs:139
 #: crates/ui-gtk/src/dialogs/decoder_files.rs:104
 #, rust-format
 msgid "This change was not saved: {}"
 msgstr "No se guardó este cambio: {}"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:229
-#: crates/ui-gtk/src/dialogs/settings.rs:231
-#: crates/ui-gtk/src/dialogs/settings.rs:241
+#: crates/ui-gtk/src/dialogs/settings.rs:252
+#: crates/ui-gtk/src/dialogs/settings.rs:254
+#: crates/ui-gtk/src/dialogs/settings.rs:264
 #: crates/ui-gtk/src/shortcuts.rs:183
 msgid "Settings"
 msgstr "Configuración"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:247
-#: crates/ui-gtk/src/dialogs/settings.rs:248
+#: crates/ui-gtk/src/dialogs/settings.rs:270
+#: crates/ui-gtk/src/dialogs/settings.rs:271
 msgid "Search settings"
 msgstr "Buscar en la configuración"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:257
+#: crates/ui-gtk/src/dialogs/settings.rs:280
 msgid "Settings pages"
 msgstr "Páginas de la configuración"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:279
+#: crates/ui-gtk/src/dialogs/settings.rs:302
 msgid "Changes apply immediately"
 msgstr "Los cambios se aplican de inmediato"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:288
+#: crates/ui-gtk/src/dialogs/settings.rs:311
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:436
 msgid "Problem"
 msgstr "Problema"
 
-#: crates/ui-gtk/src/dialogs/settings.rs:503
+#: crates/ui-gtk/src/dialogs/settings.rs:526
 #: crates/ui-gtk/src/views/search.rs:563
 #, rust-format
 msgid "Results for “{}”"
@@ -2406,10 +2637,10 @@ msgstr ""
 "reproducción, las puntuaciones y los números de reproducciones."
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:394
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1796
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:208
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1811
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:209
 #: crates/ui-gtk/src/views/search.rs:1192
-#: crates/ui-gtk/src/window/pages.rs:893 crates/ui-gtk/src/tools/trash.rs:118
+#: crates/ui-gtk/src/window/pages.rs:981 crates/ui-gtk/src/tools/trash.rs:118
 #: crates/ui-gtk/src/tools/tag_tools.rs:114
 #: crates/ui-gtk/src/tools/rename.rs:59
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:131
@@ -2763,6 +2994,7 @@ msgstr "Aún no hay carpetas"
 
 #: crates/ui-gtk/src/dialogs/settings/library.rs:240
 #: crates/ui-gtk/src/dialogs/settings/library.rs:644
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:307
 msgid "Skip"
 msgstr "Omitir"
 
@@ -2997,15 +3229,6 @@ msgstr "Al desactivarla, cada archivo se queda donde está."
 msgid "This folder was added to the library's folders."
 msgstr "Esta carpeta se añadió a las carpetas de la biblioteca."
 
-#: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:255
-msgid "Change…"
-msgstr "Cambiar…"
-
-#: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:264
-#: crates/ui-gtk/src/popovers/sleep_timer.rs:178
-msgid "Turn off"
-msgstr "Desactivar"
-
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:309
 msgid ""
 "For music added from now on. Files already in the folder keep their names; "
@@ -3096,10 +3319,10 @@ msgstr ""
 " pista en los demás casos, por ejemplo en modo aleatorio."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:60
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:360
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:74
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:375
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:91
 #: crates/ui-gtk/src/play_modes.rs:75 crates/ui-gtk/src/play_modes.rs:87
-#: crates/ui-gtk/src/play_modes.rs:97
+#: crates/ui-gtk/src/play_modes.rs:116
 msgid "Off"
 msgstr "Desactivado"
 
@@ -3222,19 +3445,19 @@ msgstr "Ruta de la señal en este momento"
 #. / The diagnostics line of a path, for the clipboard.
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:453
 #: crates/ui-gtk/src/popovers/output_switcher.rs:500
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:297
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:333
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:378
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:422
 msgid "Nothing is playing."
 msgstr "No se está reproduciendo nada."
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:466
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:211
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:286
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:69
 msgid "shared"
 msgstr "compartido"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:467
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:212
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:287
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:70
 msgid "exclusive"
 msgstr "exclusivo"
@@ -3311,7 +3534,7 @@ msgstr "sigue al escritorio"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:239
 #: crates/ui-gtk/src/popovers/output_switcher.rs:276
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:289
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:370
 #: crates/ui-gtk/src/tools/sync_export.rs:152
 msgid "Not connected"
 msgstr "Sin conectar"
@@ -3390,7 +3613,7 @@ msgid "Fixed at 100 % (bit-perfect)"
 msgstr "Fijo al 100 % (bit-perfect)"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:339
-#: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:266
+#: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:285
 #: crates/ui-gtk/src/mini_player.rs:504
 #: crates/ui-gtk/src/window/desktop.rs:435
 msgid "Pause"
@@ -3402,6 +3625,7 @@ msgstr "Continuar en el dispositivo predeterminado"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:379
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1469
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:482
 #: crates/ui-gtk/src/views/smart_rules.rs:220
 #: crates/ui-gtk/src/tools/converter.rs:907
 msgid "Sample rate"
@@ -3461,17 +3685,20 @@ msgstr "Si el dispositivo desaparece"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:539
 #: crates/ui-gtk/src/dialogs/settings/output.rs:551
-#: crates/ui-gtk/src/window/panel/signal_path.rs:106
+#: crates/ui-gtk/src/window/panel/signal_path.rs:110
 msgid "Buffer"
 msgstr "Búfer"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:543
 #: crates/ui-gtk/src/dialogs/settings/output.rs:556
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:361
-#: crates/ui-gtk/src/window/panel/signal_path.rs:61
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:376
+#: crates/ui-gtk/src/window/panel/signal_path.rs:64
+#: crates/ui-gtk/src/window/panel/signal_path.rs:211
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:444
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:468
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:472
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:50
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:318
 #, rust-format
 msgid "{} ms"
 msgstr "{} ms"
@@ -3503,8 +3730,8 @@ msgid "Backend"
 msgstr "Sistema de sonido"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:659
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:248
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:273
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:327
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:353
 msgid "Device"
 msgstr "Dispositivo"
 
@@ -3531,38 +3758,39 @@ msgstr ""
 "En lugar de seguir por los altavoces cuando la salida predeterminada del "
 "sistema pasa a otro dispositivo."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:57
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:58
 #, rust-format
 msgid "{} second"
 msgid_plural "{} seconds"
 msgstr[0] "{} segundo"
 msgstr[1] "{} segundos"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:64
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:65
+#: crates/ui-gtk/src/views/generator_steps.rs:229
 #, rust-format
 msgid "{} minute"
 msgid_plural "{} minutes"
 msgstr[0] "{} minuto"
 msgstr[1] "{} minutos"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:79
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:80
 msgid "Always go to the previous track"
 msgstr "Ir siempre a la pista anterior"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:83
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:84
 #, rust-format
 msgid "Restart the track after {} second"
 msgid_plural "Restart the track after {} seconds"
 msgstr[0] "Reiniciar la pista después de {} segundo"
 msgstr[1] "Reiniciar la pista después de {} segundos"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:107
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:108
 msgid "Previous always goes to the track before, wherever the current one is."
 msgstr ""
 "«Anterior» siempre va a la pista previa, sea cual sea la posición en la "
 "actual."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:111
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:112
 #, rust-format
 msgid ""
 "In the first {} second of a track, Previous goes to the track before it."
@@ -3573,32 +3801,32 @@ msgstr[0] ""
 msgstr[1] ""
 "Si la pista lleva menos de {} segundos, «Anterior» va a la pista previa."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:131
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:329
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:132
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:330
 msgid "Seek step"
 msgstr "Salto de avance y retroceso"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:134
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:135
 msgid "and"
 msgstr "y"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:147
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:148
 msgid "a quarter of the track"
 msgstr "un cuarto de la pista"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:148
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:149
 msgid "half the track"
 msgstr "la mitad de la pista"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:149
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:150
 msgid "three quarters of the track"
 msgstr "tres cuartos de la pista"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:150
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:151
 msgid "the whole track"
 msgstr "la pista entera"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:151
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:152
 #, rust-format
 msgid "{} % of the track"
 msgstr "el {} % de la pista"
@@ -3606,38 +3834,38 @@ msgstr "el {} % de la pista"
 #. Translators: when a play counts. {0} is a dropdown with a share of
 #. the track ("half the track"), {1} one with a time ("4 minutes");
 #. reorder them with {0} and {1} as needed.
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:169
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:170
 #, rust-format
 msgid "after {} or {} whichever comes first"
 msgstr "después de {} o {}, lo que ocurra primero"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:175
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:176
 msgid ""
 "Only time actually heard is counted. Seeking forward does not add to it."
 msgstr "Solo cuenta el tiempo realmente escuchado. Avanzar no lo aumenta."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:184
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:185
 msgid "Replaces the queue"
 msgstr "Sustituye la cola"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:184
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:185
 msgid "Adds to the end of the queue"
 msgstr "Añade al final de la cola"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:201
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:202
 msgid "“Play next” and “Add to queue” always keep the queue."
 msgstr ""
 "«Reproducir a continuación» y «Añadir a la cola» siempre conservan la cola."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:211
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:212
 msgid "Restore the last session"
 msgstr "Restaurar la última sesión"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:212
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:213
 msgid "Start with an empty queue"
 msgstr "Empezar con la cola vacía"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:232
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:233
 msgid ""
 "The queue, the track and the position come back. Playback continues if it "
 "was playing when Helikodu closed."
@@ -3645,104 +3873,114 @@ msgstr ""
 "La cola, la pista y la posición se restauran. La reproducción continúa si "
 "estaba sonando al cerrar Helikodu."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:240
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:241
 msgid "Resume long tracks where they stopped"
 msgstr "Reanudar las pistas largas donde se quedaron"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:242
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:243
 msgid "Applies to audiobooks and to tracks longer than the time on the right."
 msgstr ""
 "Se aplica a los audiolibros y a las pistas más largas que el tiempo de la "
 "derecha."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:253
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:338
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:254
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:353
 msgid "Long tracks"
 msgstr "Pistas largas"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:273
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:274
 msgid "Keep the computer awake while music plays"
 msgstr "Mantener el equipo activo mientras suena música"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:275
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:276
 msgid "The computer can sleep again as soon as playback pauses or stops."
 msgstr ""
 "El equipo puede volver a suspenderse en cuanto la reproducción se pausa o se"
 " detiene."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:293
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:294
 msgid "Pause when the screen locks"
 msgstr "Pausar al bloquear la pantalla"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:299
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:300
 msgid "Pause before the computer goes to sleep"
 msgstr "Pausar antes de que el equipo se suspenda"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:328
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:329
 msgid "Previous button"
 msgstr "Botón Anterior"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:330
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:331
 msgid "Count a play"
 msgstr "Contar una reproducción"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:331
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:332
 msgid "Playing an album"
 msgstr "Al reproducir un álbum"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:333
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:335
+#: crates/ui-gtk/src/shortcuts.rs:133
+msgid "Intro scan"
+msgstr "Escucha de introducciones"
+
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:341
+msgid "When the queue ends"
+msgstr "Cuando termine la cola"
+
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:348
 msgid "Crossfade"
 msgstr "Fundido encadenado"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:334
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:349
 msgid "Fades"
 msgstr "Fundidos"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:335
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:350
 msgid "Silence"
 msgstr "Silencio"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:337
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:352
 msgid "When Helikodu starts"
 msgstr "Al iniciar Helikodu"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:340
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:355
 msgid "Power"
 msgstr "Energía"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:343
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:358
 msgid "MIDI files"
 msgstr "Archivos MIDI"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:348
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:363
 msgid "SID tunes"
 msgstr "Melodías SID"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:352
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:367
 msgid "Looping tunes"
 msgstr "Melodías en bucle"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:362
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:364
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:377
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:379
 #: crates/ui-gtk/src/window/panel/lyrics.rs:52
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:259
 #: crates/ui-gtk/src/tools/verify_files.rs:355
 #, rust-format
 msgid "{} s"
 msgstr "{} s"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:375
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:390
 msgid "between tracks"
 msgstr "entre pistas"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:396
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:411
 msgid "when you skip"
 msgstr "al saltar de pista"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:422
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:437
 msgid "Start the crossfade where the track fades out"
 msgstr "Empezar el fundido encadenado donde la pista se desvanece"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:424
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:439
 msgid ""
 "Used while a crossfade between tracks is on. A long fade is overlapped "
 "longer, an abrupt end briefly, and never longer than the length chosen."
@@ -3751,7 +3989,7 @@ msgstr ""
 "largo se superpone más tiempo, un final abrupto poco tiempo, y nunca más que"
 " la duración elegida."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:444
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:459
 msgid ""
 "Tracks that follow each other on an album always join without a crossfade. "
 "Nothing is crossfaded on a bit-perfect path."
@@ -3759,14 +3997,14 @@ msgstr ""
 "Las pistas consecutivas de un álbum siempre se unen sin fundido encadenado. "
 "En una ruta bit-perfect no se aplica ningún fundido encadenado."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:486
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:501
 msgid "Settings › Library"
 msgstr "Configuración › Biblioteca"
 
 #. Translators: {0} is the number of tracks analysed, {1} the
 #. number of all tracks, which chooses the form, {2} a link to
 #. the settings page.
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:494
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:509
 #, rust-format
 msgid ""
 "Both need a track to be analysed: {} of {} is so far ({}). Nothing is left "
@@ -3781,7 +4019,7 @@ msgstr[1] ""
 "Ambas cosas necesitan que la pista esté analizada: hasta ahora lo están {} "
 "de {} ({}). En una ruta bit-perfect no se omite nada."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:507
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:522
 #, rust-format
 msgid ""
 "Both need a track to be analysed ({}). Nothing is left out on a bit-perfect "
@@ -3790,19 +4028,19 @@ msgstr ""
 "Ambas cosas necesitan que la pista esté analizada ({}). En una ruta bit-"
 "perfect no se omite nada."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:522
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:537
 msgid "Leave out silence at the start and end of each track"
 msgstr "Omitir el silencio al principio y al final de cada pista"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:524
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:539
 msgid "Tracks that follow each other on an album still join without a gap."
 msgstr "Las pistas consecutivas de un álbum siguen uniéndose sin pausa."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:534
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:549
 msgid "Skip long silence inside a track"
 msgstr "Saltar los silencios largos dentro de una pista"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:536
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:551
 msgid ""
 "For hidden tracks after a long pause. Silence in the first 15 seconds is "
 "never skipped."
@@ -3810,56 +4048,56 @@ msgstr ""
 "Para pistas ocultas tras una pausa larga. El silencio de los primeros 15 "
 "segundos nunca se salta."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:555
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:570
 msgid "Silence longer than this is skipped"
 msgstr "Se salta el silencio de más de esta duración"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:557
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:572
 msgid "longer than"
 msgstr "de más de"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:604
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:619
 msgid "Pause and resume"
 msgstr "Pausar y reanudar"
 
 #. Translators: the heading of the fade used when seeking within a track.
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:614
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:629
 msgctxt "fade"
 msgid "Seek"
 msgstr "Saltar a una posición"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:620
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:635
 msgid "Skip to another track"
 msgstr "Saltar a otra pista"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:659
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:674
 msgid "SoundFont"
 msgstr "SoundFont"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:660
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:675
 msgid ""
 "None chosen: a SoundFont installed on the system is used, if there is one."
 msgstr ""
 "Ninguno elegido: se usa un SoundFont instalado en el sistema, si lo hay."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:661
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:676
 msgid ""
 "MIDI files are played with the instruments of a SoundFont (.sf2 or .sf3)."
 msgstr ""
 "Los archivos MIDI se reproducen con los instrumentos de un SoundFont (.sf2 o"
 " .sf3)."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:664
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:679
 msgid "Song lengths"
 msgstr "Duraciones de las canciones"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:665
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:680
 msgid "Not set: tunes play for the default length, then fade out."
 msgstr ""
 "Sin definir: las melodías suenan durante la duración predeterminada y luego "
 "se desvanecen."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:666
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:681
 msgid ""
 "Songlengths.md5 of the High Voltage SID Collection gives each tune its "
 "length."
@@ -3867,18 +4105,21 @@ msgstr ""
 "El archivo Songlengths.md5 de la High Voltage SID Collection da a cada "
 "melodía su duración."
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:683
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:698
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:198
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:339
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:450
 #: crates/ui-gtk/src/tools/converter.rs:929
 #: crates/ui-gtk/src/tools/import_moved.rs:89
 msgid "Choose…"
 msgstr "Elegir…"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:688
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:703
 #, rust-format
 msgid "Clear {}"
 msgstr "Limpiar {}"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:744
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:759
 #, rust-format
 msgid "once"
 msgid_plural "{} times"
@@ -3888,12 +4129,12 @@ msgstr[1] "{} veces"
 #. Translators: how a looping tune ends. {0} is a dropdown with how
 #. often ("once", "2 times"), {1} one with a time ("5 s"); reorder
 #. them with {0} and {1} as needed.
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:763
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:778
 #, rust-format
 msgid "play the loop {} then fade out over {}"
 msgstr "reproducir el bucle {} y después un fundido de salida de {}"
 
-#: crates/ui-gtk/src/dialogs/settings/playback.rs:772
+#: crates/ui-gtk/src/dialogs/settings/playback.rs:787
 #, rust-format
 msgid ""
 "For tracker modules and game music that repeat a part. Tunes whose length "
@@ -3902,6 +4143,236 @@ msgstr ""
 "Para módulos tracker y música de videojuegos que repiten una parte. Las "
 "melodías cuya duración no se indica en ninguna parte suenan durante {} antes"
 " del fundido."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:61
+msgid "No limit"
+msgstr "Sin límite"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:62
+msgid "½ star"
+msgstr "½ estrella"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:67
+#, rust-format
+msgid "{}½ stars"
+msgstr "{}½ estrellas"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:74
+msgid "Higher rated tracks"
+msgstr "Pistas mejor puntuadas"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:75
+msgid "Tracks not played for a while"
+msgstr "Pistas que no se reproducen desde hace tiempo"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:76
+msgid "Tracks played less often"
+msgstr "Pistas reproducidas con menos frecuencia"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:203
+msgid "A search query, for example genre:Christmas"
+msgstr "Una consulta de búsqueda, por ejemplo genre:Christmas"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:292
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:802
+msgid "Favour"
+msgstr "Favorecer"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:308
+msgid "tracks rated below"
+msgstr "pistas con puntuación inferior a"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:321
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:815
+msgid "Skip tracks rated below"
+msgstr "Omitir pistas con puntuación inferior a"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:328
+msgid "tracks that match"
+msgstr "pistas que coincidan con"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:335
+msgid "Skip tracks that match this search query"
+msgstr "Omitir las pistas que coincidan con esta consulta de búsqueda"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:341
+msgid ""
+"Every track still plays once in each round; the favoured ones come earlier. "
+"Tracks without a rating are never skipped for their rating."
+msgstr ""
+"Cada pista se sigue reproduciendo una vez en cada ronda; las favorecidas "
+"llegan antes. Las pistas sin puntuación nunca se omiten por su puntuación."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:360
+msgid "Seconds of each track that intro scan plays"
+msgstr "Segundos de cada pista que reproduce la escucha de introducciones"
+
+#. Translators: intro scan. {} is a dropdown with a time ("10 seconds").
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:365
+#, rust-format
+msgid "play the first {} of each track"
+msgstr "reproducir los primeros {} de cada pista"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:371
+msgid "Used while Queue › Intro Scan is ticked in the Playback menu."
+msgstr ""
+"Se usa mientras Cola › Escucha de introducciones esté marcada en el menú "
+"Reproducción."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:425
+msgid "Don’t repeat the last"
+msgstr "No repetir las últimas"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:430
+msgid "Recently played tracks that are not added again"
+msgstr "Pistas reproducidas recientemente que no se vuelven a añadir"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:432
+#: crates/ui-gtk/src/views/generator.rs:1494
+msgid "tracks"
+msgstr "pistas"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:447
+msgid ""
+"How the two Repeat modes that keep the music going choose their tracks. The "
+"mode itself is chosen in the Repeat menu."
+msgstr ""
+"Cómo eligen sus pistas los dos modos de repetición que mantienen la música "
+"sonando. El modo en sí se elige en el menú Repetir."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:456
+msgid "Continue with related tracks"
+msgstr "Continuar con pistas relacionadas"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:457
+msgid "When the queue runs out, tracks like the last ones are added to it."
+msgstr "Cuando la cola se acaba, se le añaden pistas parecidas a las últimas."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:461
+msgid "The last track"
+msgstr "La última pista"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:461
+msgid "Its album"
+msgstr "Su álbum"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:461
+msgid "Its artist"
+msgstr "Su artista"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:464
+msgid "What the added tracks are related to"
+msgstr "Con qué se relacionan las pistas añadidas"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:477
+msgid "Related to"
+msgstr "Relacionadas con"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:504
+msgid "Set at least one likeness above 0."
+msgstr "Ponga al menos un parecido por encima de 0."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:512
+#: crates/ui-gtk/src/views/similar.rs:320
+msgid "How alike"
+msgstr "Grado de parecido"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:556
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:563
+msgid "Tracks added at a time"
+msgstr "Pistas añadidas cada vez"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:574
+msgid "Only add tracks that match this search query"
+msgstr "Añadir solo pistas que coincidan con esta consulta de búsqueda"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:579
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:826
+msgid "Only tracks that match"
+msgstr "Solo pistas que coincidan con"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:623
+msgid "Same album artist"
+msgstr "Mismo artista del álbum"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:628
+msgid "Years close together"
+msgstr "Años cercanos"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:629
+msgid "Shared labels"
+msgstr "Etiquetas compartidas"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:631
+msgid "Similar play counts and ratings"
+msgstr "Números de reproducciones y puntuaciones parecidos"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:660
+msgid "within"
+msgstr "a menos de"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:665
+msgid "Years either side that count as close"
+msgstr "Años antes y después que cuentan como cercanos"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:668
+msgid "years"
+msgstr "años"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:680
+#, rust-format
+msgid "{}, 0 to 10"
+msgstr "{}, de 0 a 10"
+
+#. Translators: {0} is the number of tracks analysed, {1} the
+#. number of all tracks, which chooses the form.
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:741
+#, rust-format
+msgid ""
+"Sounds alike uses the track analysis, so it works for tracks that are "
+"analysed: {} of {} so far. At 0 a likeness is not used."
+msgid_plural ""
+"Sounds alike uses the track analysis, so it works for tracks that are "
+"analysed: {} of {} so far. At 0 a likeness is not used."
+msgstr[0] ""
+"Suena parecido usa el análisis de pistas, así que funciona con las pistas "
+"analizadas: {} de {} hasta ahora. En 0, un parecido no se usa."
+msgstr[1] ""
+"Suena parecido usa el análisis de pistas, así que funciona con las pistas "
+"analizadas: {} de {} hasta ahora. En 0, un parecido no se usa."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:751
+msgid ""
+"Sounds alike uses the track analysis, so it works for tracks that are "
+"analysed. At 0 a likeness is not used."
+msgstr ""
+"Suena parecido usa el análisis de pistas, así que funciona con las pistas "
+"analizadas. En 0, un parecido no se usa."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:761
+#: crates/ui-gtk/src/play_modes.rs:86
+msgid "Auto-DJ"
+msgstr "Auto-DJ"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:763
+msgid ""
+"Keeps tracks from the library queued after the playing one, so the music "
+"never stops."
+msgstr ""
+"Mantiene en cola pistas de la biblioteca después de la que suena, para que "
+"la música no se detenga nunca."
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:778
+msgid "Tracks kept queued ahead"
+msgstr "Pistas que se mantienen en cola por delante"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:785
+msgid "Tracks kept ahead"
+msgstr "Pistas por delante"
+
+#: crates/ui-gtk/src/dialogs/settings/smart_play.rs:821
+msgid "Only queue tracks that match this search query"
+msgstr "Poner en cola solo pistas que coincidan con esta consulta de búsqueda"
 
 #: crates/ui-gtk/src/dialogs/shortcuts.rs:42
 msgid "Ctrl"
@@ -3912,6 +4383,7 @@ msgid "Alt"
 msgstr "Alt"
 
 #: crates/ui-gtk/src/dialogs/shortcuts.rs:44
+#: crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs:72
 msgid "Shift"
 msgstr "Mayús"
 
@@ -4087,6 +4559,7 @@ msgid "Save as a file…"
 msgstr "Guardar como archivo…"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1104
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:368
 #: crates/ui-gtk/src/views/smart_playlist.rs:1524
 #: crates/ui-gtk/src/views/smart_playlist.rs:1525
 #: crates/ui-gtk/src/tools/sync_export.rs:528
@@ -4094,6 +4567,8 @@ msgstr "Guardar como archivo…"
 #: crates/ui-gtk/src/tools/import_moved.rs:41
 #: crates/ui-gtk/src/tools/user_fields.rs:326
 #: crates/ui-gtk/src/tools/user_fields.rs:1008
+#: crates/ui-gtk/src/views/generator.rs:1201
+#: crates/ui-gtk/src/views/generator.rs:1202
 msgid "Remove"
 msgstr "Quitar"
 
@@ -4181,7 +4656,7 @@ msgid "Changed"
 msgstr "Modificado"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1428
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1756
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1770
 msgid "Tags"
 msgstr "Etiquetas"
 
@@ -4202,6 +4677,7 @@ msgstr "Profundidad de bits"
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1484
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:325
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:344
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:486
 #: crates/ui-gtk/src/views/smart_rules.rs:222
 #: crates/ui-gtk/src/tools/converter.rs:908
 msgid "Channels"
@@ -4245,19 +4721,21 @@ msgstr "En la biblioteca"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1530
 #: crates/ui-gtk/src/views/home.rs:151 crates/ui-gtk/src/views/home.rs:767
+#: crates/ui-gtk/src/views/generator_steps.rs:298
 msgid "Never"
 msgstr "Nunca"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1543
 #: crates/ui-gtk/src/views/smart_rules.rs:227
+#: crates/ui-gtk/src/views/generator_steps.rs:97
 msgid "Skips"
 msgstr "Saltos"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1564
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1573
 msgid "Editing"
 msgstr "Editando"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1571
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1580
 #: crates/ui-gtk/src/tools/tag_tools.rs:107
 #: crates/ui-gtk/src/views/history.rs:259
 #: crates/ui-gtk/src/tools/sync_export.rs:646
@@ -4265,84 +4743,84 @@ msgstr "Editando"
 msgid "Files"
 msgstr "Archivos"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1605
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1614
 #: crates/ui-gtk/src/popovers/output_switcher.rs:516
 #: crates/ui-gtk/src/views/search.rs:692 crates/ui-gtk/src/views/search.rs:733
 #: crates/ui-gtk/src/views/search.rs:1262
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:580
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:690
 #: crates/ui-gtk/src/deck/modes.rs:228
 #, rust-format
 msgid "{}, {}"
 msgstr "{}, {}"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1607
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1616
 #: crates/ui-gtk/src/views/table.rs:370
 #, rust-format
 msgid "{}. {}, {}"
 msgstr "{}. {}, {}"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1639
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1648
 msgid "Several albums"
 msgstr "Varios álbumes"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1661
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1675
 #, rust-format
 msgid "Save {} file"
 msgid_plural "Save {} files"
 msgstr[0] "Guardar {} archivo"
 msgstr[1] "Guardar {} archivos"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1757
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1771
 #: crates/ui-gtk/src/tools/managed_folder.rs:146
 msgid "Cover"
 msgstr "Carátula"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1759
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1773
 msgid "File info"
 msgstr "Información del archivo"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1791
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1806
 msgid "Written to a copy, verified, then swapped in. Undo with Ctrl Z."
 msgstr ""
 "Se escribe en una copia, se verifica y luego se sustituye. Se puede deshacer"
 " con Ctrl Z."
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1829
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1869
 #: crates/ui-gtk/src/tools/tag_tools.rs:77
 msgid "Tag tools"
 msgstr "Herramientas de etiquetas"
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1880
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1930
 msgid "These tracks are no longer in the library."
 msgstr "Estas pistas ya no están en la biblioteca."
 
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1881
+#: crates/ui-gtk/src/dialogs/tag_editor.rs:1931
 #, rust-format
 msgid "The tags cannot be read: {}"
 msgstr "No se pueden leer las etiquetas: {}"
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:87
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:88
 msgid "system volume"
 msgstr "volumen del sistema"
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:88
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:89
 msgid "software volume"
 msgstr "volumen por software"
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:89
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:90
 msgid "hardware volume"
 msgstr "volumen por hardware"
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:90
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:91
 msgid "fixed output"
 msgstr "salida fija"
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:124
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:150
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:125
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:151
 msgid "Play at full output level?"
 msgstr "¿Reproducir al nivel de salida máximo?"
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:160
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:161
 #, rust-format
 msgid ""
 "{} will receive the sound at a fixed 100 %. The volume control in Helikodu "
@@ -4352,15 +4830,15 @@ msgstr ""
 "no lo bajará, así que baje antes el volumen del amplificador o de los "
 "auriculares."
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:186
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:187
 msgid "Now"
 msgstr "Ahora"
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:194
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:195
 msgid "After"
 msgstr "Después"
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:204
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:205
 msgid ""
 "Paused until you answer.\n"
 "Asked once for each device."
@@ -4368,7 +4846,7 @@ msgstr ""
 "En pausa hasta que responda.\n"
 "Se pregunta una vez por dispositivo."
 
-#: crates/ui-gtk/src/dialogs/volume_confirm.rs:211
+#: crates/ui-gtk/src/dialogs/volume_confirm.rs:212
 msgid "Play at full output"
 msgstr "Reproducir al nivel máximo"
 
@@ -4390,7 +4868,7 @@ msgid "float"
 msgstr "coma flotante"
 
 #: crates/ui-gtk/src/popovers/output_switcher.rs:115
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:145
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:174
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:51
 #, rust-format
 msgid "{} / {}"
@@ -4403,7 +4881,7 @@ msgid "Exclusive"
 msgstr "Exclusivo"
 
 #: crates/ui-gtk/src/popovers/output_switcher.rs:130
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:574
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:684
 msgid "not reported"
 msgstr "no indicado"
 
@@ -4470,147 +4948,183 @@ msgstr "Salida"
 msgid "Audio output settings"
 msgstr "Configuración de la salida de audio"
 
-#: crates/ui-gtk/src/views/actions.rs:191
+#: crates/ui-gtk/src/views/actions.rs:209
+#, rust-format
+msgid "Radio started from “{}”"
+msgstr "Radio iniciada a partir de «{}»"
+
+#: crates/ui-gtk/src/views/actions.rs:266
 #: crates/ui-gtk/src/views/artists.rs:183
 msgid "Play Next"
 msgstr "Reproducir a continuación"
 
-#: crates/ui-gtk/src/views/actions.rs:193
+#: crates/ui-gtk/src/views/actions.rs:268
 #: crates/ui-gtk/src/views/artists.rs:184
 msgid "Add to Queue"
 msgstr "Añadir a la cola"
 
-#: crates/ui-gtk/src/views/actions.rs:217
+#: crates/ui-gtk/src/views/actions.rs:292
 msgid "Add to Playlist"
 msgstr "Añadir a una lista de reproducción"
 
-#: crates/ui-gtk/src/views/actions.rs:221
+#: crates/ui-gtk/src/views/actions.rs:297
+msgid "Start Radio"
+msgstr "Iniciar radio"
+
+#: crates/ui-gtk/src/views/actions.rs:302
 #, rust-format
 msgid "{} track selected"
 msgid_plural "{} tracks selected"
 msgstr[0] "{} pista seleccionada"
 msgstr[1] "{} pistas seleccionadas"
 
-#: crates/ui-gtk/src/views/actions.rs:230
+#: crates/ui-gtk/src/views/actions.rs:311
 msgid "Go to Album"
 msgstr "Ir al álbum"
 
-#: crates/ui-gtk/src/views/actions.rs:231
+#: crates/ui-gtk/src/views/actions.rs:312
 msgid "Go to Artist"
 msgstr "Ir al artista"
 
-#: crates/ui-gtk/src/views/actions.rs:243
-#: crates/ui-gtk/src/views/actions.rs:370
-#: crates/ui-gtk/src/window/playlists.rs:265
+#: crates/ui-gtk/src/views/actions.rs:318
+#: crates/ui-gtk/src/window/pages.rs:1567
+msgid "Show Similar Tracks"
+msgstr "Mostrar pistas que suenan parecido"
+
+#: crates/ui-gtk/src/views/actions.rs:330
+#: crates/ui-gtk/src/views/actions.rs:539
+#: crates/ui-gtk/src/window/playlists.rs:268
 msgid "Pin to the Sidebar"
 msgstr "Fijar en la barra lateral"
 
-#: crates/ui-gtk/src/views/actions.rs:246
-#: crates/ui-gtk/src/views/actions.rs:270
+#: crates/ui-gtk/src/views/actions.rs:333
+#: crates/ui-gtk/src/views/actions.rs:357
 #: crates/ui-gtk/src/views/labels.rs:324
 msgid "Labels…"
 msgstr "Etiquetas…"
 
-#: crates/ui-gtk/src/views/actions.rs:251
+#: crates/ui-gtk/src/views/actions.rs:338
 msgid "Measure Loudness"
 msgstr "Medir la sonoridad"
 
-#: crates/ui-gtk/src/views/actions.rs:256
+#: crates/ui-gtk/src/views/actions.rs:343
 msgid "Edit Tags…"
 msgstr "Editar etiquetas…"
 
-#: crates/ui-gtk/src/views/actions.rs:266
+#: crates/ui-gtk/src/views/actions.rs:353
 msgid "Not Rated"
 msgstr "Sin puntuar"
 
-#: crates/ui-gtk/src/views/actions.rs:269
+#: crates/ui-gtk/src/views/actions.rs:356
 msgid "Rate"
 msgstr "Puntuar"
 
-#: crates/ui-gtk/src/views/actions.rs:273
+#: crates/ui-gtk/src/views/actions.rs:364
+msgid "Equalizer for These Tracks…"
+msgstr "Ecualizador para estas pistas…"
+
+#: crates/ui-gtk/src/views/actions.rs:366
+msgid "Equalizer for This Track…"
+msgstr "Ecualizador para esta pista…"
+
+#: crates/ui-gtk/src/views/actions.rs:372
+msgid "No Equalizer for These Tracks"
+msgstr "Sin ecualizador para estas pistas"
+
+#: crates/ui-gtk/src/views/actions.rs:374
+msgid "No Equalizer for This Track"
+msgstr "Sin ecualizador para esta pista"
+
+#: crates/ui-gtk/src/views/actions.rs:380
 msgid "Open Containing Folder"
 msgstr "Abrir la carpeta contenedora"
 
-#: crates/ui-gtk/src/views/actions.rs:275
+#: crates/ui-gtk/src/views/actions.rs:382
 msgid "Rename File…"
 msgstr "Renombrar archivo…"
 
-#: crates/ui-gtk/src/views/actions.rs:278
+#: crates/ui-gtk/src/views/actions.rs:385
 msgid "Verify Files"
 msgstr "Verificar archivos"
 
-#: crates/ui-gtk/src/views/actions.rs:280
+#: crates/ui-gtk/src/views/actions.rs:387
 msgid "Copies…"
 msgstr "Copias…"
 
-#: crates/ui-gtk/src/views/actions.rs:294
+#: crates/ui-gtk/src/views/actions.rs:401
 msgid "Remove from Playlist"
 msgstr "Quitar de la lista de reproducción"
 
-#: crates/ui-gtk/src/views/actions.rs:298
+#: crates/ui-gtk/src/views/actions.rs:405
 msgid "Remove from Queue"
 msgstr "Quitar de la cola"
 
-#: crates/ui-gtk/src/views/actions.rs:310
+#: crates/ui-gtk/src/views/actions.rs:417
 msgid "Move to Trash…"
 msgstr "Mover a la papelera…"
 
-#: crates/ui-gtk/src/views/actions.rs:370
-#: crates/ui-gtk/src/window/playlists.rs:263
-#: crates/ui-gtk/src/window/playlists.rs:344
+#: crates/ui-gtk/src/views/actions.rs:500
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:258
+#, rust-format
+msgid "The equalizer of the track could not be saved: {}"
+msgstr "No se pudo guardar el ecualizador de la pista: {}"
+
+#: crates/ui-gtk/src/views/actions.rs:539
+#: crates/ui-gtk/src/window/playlists.rs:266
+#: crates/ui-gtk/src/window/playlists.rs:353
 msgid "Unpin"
 msgstr "Quitar de la barra lateral"
 
-#: crates/ui-gtk/src/views/actions.rs:481
+#: crates/ui-gtk/src/views/actions.rs:654
 msgid "These tracks have no files to move to the trash."
 msgstr "Estas pistas no tienen archivos que mover a la papelera."
 
-#: crates/ui-gtk/src/views/actions.rs:548
+#: crates/ui-gtk/src/views/actions.rs:721
 msgid "Selection"
 msgstr "Selección"
 
-#: crates/ui-gtk/src/views/actions.rs:561
+#: crates/ui-gtk/src/views/actions.rs:734
 #, rust-format
 msgid "{} track plays next"
 msgid_plural "{} tracks play next"
 msgstr[0] "{} pista se reproducirá a continuación"
 msgstr[1] "{} pistas se reproducirán a continuación"
 
-#: crates/ui-gtk/src/views/actions.rs:564
+#: crates/ui-gtk/src/views/actions.rs:737
 #, rust-format
 msgid "{} track added to the queue"
 msgid_plural "{} tracks added to the queue"
 msgstr[0] "{} pista añadida a la cola"
 msgstr[1] "{} pistas añadidas a la cola"
 
-#: crates/ui-gtk/src/views/actions.rs:614
+#: crates/ui-gtk/src/views/actions.rs:787
 #, rust-format
 msgid "{} track added to {}"
 msgid_plural "{} tracks added to {}"
 msgstr[0] "{} pista añadida a {}"
 msgstr[1] "{} pistas añadidas a {}"
 
-#: crates/ui-gtk/src/views/actions.rs:655
+#: crates/ui-gtk/src/views/actions.rs:828
 #, rust-format
 msgid "{} track removed from the playlist"
 msgid_plural "{} tracks removed from the playlist"
 msgstr[0] "{} pista quitada de la lista de reproducción"
 msgstr[1] "{} pistas quitadas de la lista de reproducción"
 
-#: crates/ui-gtk/src/views/actions.rs:706
+#: crates/ui-gtk/src/views/actions.rs:879
 msgid "This track has no file to show."
 msgstr "Esta pista no tiene ningún archivo que mostrar."
 
-#: crates/ui-gtk/src/views/actions.rs:723
+#: crates/ui-gtk/src/views/actions.rs:896
 #, rust-format
 msgid "The folder cannot be shown: {}"
 msgstr "No se puede mostrar la carpeta: {}"
 
-#: crates/ui-gtk/src/views/actions.rs:778
+#: crates/ui-gtk/src/views/actions.rs:951
 msgid "This artist has no page of their own."
 msgstr "Este artista no tiene página propia."
 
-#: crates/ui-gtk/src/views/actions.rs:837
+#: crates/ui-gtk/src/views/actions.rs:1015
 msgid "This track has no file to rename."
 msgstr "Esta pista no tiene ningún archivo que renombrar."
 
@@ -4854,9 +5368,10 @@ msgstr "editada el {}"
 
 #: crates/ui-gtk/src/views/playlist.rs:185
 #: crates/ui-gtk/src/views/history.rs:254
-#: crates/ui-gtk/src/window/playlists.rs:422
+#: crates/ui-gtk/src/window/playlists.rs:444
 #: crates/ui-gtk/src/tools/sync_export.rs:547
 #: crates/ui-gtk/src/tools/import_view.rs:420
+#: crates/ui-gtk/src/views/generator.rs:1278
 msgid "Playlist"
 msgstr "Lista de reproducción"
 
@@ -4914,6 +5429,7 @@ msgstr "Desbloquear"
 #: crates/ui-gtk/src/views/playlist.rs:1076
 #: crates/ui-gtk/src/views/tracks.rs:906
 #: crates/ui-gtk/src/views/smart_playlist.rs:1948
+#: crates/ui-gtk/src/views/generator.rs:705
 #, rust-format
 msgid "{} selected"
 msgid_plural "{} selected"
@@ -4928,13 +5444,13 @@ msgstr[0] "Falta {} archivo"
 msgstr[1] "Faltan {} archivos"
 
 #: crates/ui-gtk/src/views/playlist.rs:1097
-#: crates/ui-gtk/src/window/playlists.rs:499
+#: crates/ui-gtk/src/window/playlists.rs:594
 #: crates/ui-gtk/src/views/tracks/grouping.rs:51
 msgid "Grouped by album"
 msgstr "Agrupada por álbum"
 
 #: crates/ui-gtk/src/views/playlist.rs:1100
-#: crates/ui-gtk/src/window/playlists.rs:497
+#: crates/ui-gtk/src/window/playlists.rs:592
 msgid "Locked against changes"
 msgstr "Bloqueada para evitar cambios"
 
@@ -4963,7 +5479,7 @@ msgid "Remove Missing Tracks"
 msgstr "Quitar las pistas ausentes"
 
 #: crates/ui-gtk/src/views/playlist.rs:1305
-#: crates/ui-gtk/src/window/pages.rs:840
+#: crates/ui-gtk/src/window/pages.rs:912
 msgid "Playlist name"
 msgstr "Nombre de la lista de reproducción"
 
@@ -4971,7 +5487,7 @@ msgstr "Nombre de la lista de reproducción"
 #: crates/ui-gtk/src/views/search.rs:1127
 #: crates/ui-gtk/src/tools/organizer.rs:75
 #: crates/ui-gtk/src/tools/rename.rs:61
-#: crates/ui-gtk/src/window/playlists.rs:751
+#: crates/ui-gtk/src/window/playlists.rs:850
 msgid "Rename"
 msgstr "Renombrar"
 
@@ -5075,13 +5591,13 @@ msgid "for example {}"
 msgstr "por ejemplo {}"
 
 #: crates/ui-gtk/src/views/search.rs:1087
-#: crates/ui-gtk/src/window/playlists.rs:341
+#: crates/ui-gtk/src/window/playlists.rs:350
 msgid "Open"
 msgstr "Abrir"
 
 #: crates/ui-gtk/src/views/search.rs:1089
-#: crates/ui-gtk/src/window/playlists.rs:237
-#: crates/ui-gtk/src/window/playlists.rs:239 crates/ui-gtk/src/tools.rs:132
+#: crates/ui-gtk/src/window/playlists.rs:240
+#: crates/ui-gtk/src/window/playlists.rs:242 crates/ui-gtk/src/tools.rs:132
 #: crates/ui-gtk/src/views/labels.rs:151
 msgid "Rename…"
 msgstr "Renombrar…"
@@ -5096,6 +5612,8 @@ msgstr "Nombre de la búsqueda"
 
 #: crates/ui-gtk/src/views/search.rs:1129
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:655
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:789
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:886
 #: crates/ui-gtk/src/tools/verify_files.rs:491
 #: crates/ui-gtk/src/tools/cover_manager.rs:748
 #: crates/ui-gtk/src/tools/user_fields.rs:329
@@ -5114,7 +5632,7 @@ msgid "The tracks it finds stay in the library."
 msgstr "Las pistas que encuentra se quedan en la biblioteca."
 
 #: crates/ui-gtk/src/views/search.rs:1192
-#: crates/ui-gtk/src/window/pages.rs:893 crates/ui-gtk/src/tools.rs:206
+#: crates/ui-gtk/src/window/pages.rs:981 crates/ui-gtk/src/tools.rs:206
 msgid "Delete"
 msgstr "Eliminar"
 
@@ -5157,204 +5675,233 @@ msgstr "Sus campos"
 msgid "Sorted by {}"
 msgstr "Ordenado por {}"
 
-#: crates/ui-gtk/src/window/pages.rs:304
+#: crates/ui-gtk/src/window/pages.rs:329
 msgid "Search the library"
 msgstr "Buscar en la biblioteca"
 
-#: crates/ui-gtk/src/window/pages.rs:881
+#: crates/ui-gtk/src/window/pages.rs:969
 #, rust-format
 msgid "Delete the folder “{}”?"
 msgstr "¿Eliminar la carpeta «{}»?"
 
-#: crates/ui-gtk/src/window/pages.rs:882
+#: crates/ui-gtk/src/window/pages.rs:970
 msgid "The playlists in it move up a level."
 msgstr "Sus listas de reproducción suben un nivel."
 
-#: crates/ui-gtk/src/window/pages.rs:886
+#: crates/ui-gtk/src/window/pages.rs:974
 #, rust-format
 msgid "Delete the playlist “{}”?"
 msgstr "¿Eliminar la lista de reproducción «{}»?"
 
-#: crates/ui-gtk/src/window/pages.rs:887
+#: crates/ui-gtk/src/window/pages.rs:975
 msgid "Its tracks stay in the library. This cannot be undone."
 msgstr "Sus pistas se quedan en la biblioteca. Esto no se puede deshacer."
 
-#: crates/ui-gtk/src/window/pages.rs:930
+#: crates/ui-gtk/src/window/pages.rs:1018
 msgid "M3U8 playlists"
 msgstr "Listas de reproducción M3U8"
 
-#: crates/ui-gtk/src/window/pages.rs:931
+#: crates/ui-gtk/src/window/pages.rs:1019
 msgid "M3U playlists"
 msgstr "Listas de reproducción M3U"
 
-#: crates/ui-gtk/src/window/pages.rs:932
+#: crates/ui-gtk/src/window/pages.rs:1020
 msgid "PLS playlists"
 msgstr "Listas de reproducción PLS"
 
-#: crates/ui-gtk/src/window/pages.rs:933
+#: crates/ui-gtk/src/window/pages.rs:1021
 msgid "XSPF playlists"
 msgstr "Listas de reproducción XSPF"
 
-#: crates/ui-gtk/src/window/pages.rs:941
+#: crates/ui-gtk/src/window/pages.rs:1029
 msgid "Export playlist"
 msgstr "Exportar lista de reproducción"
 
-#: crates/ui-gtk/src/window/pages.rs:961
+#: crates/ui-gtk/src/window/pages.rs:1049
 #, rust-format
 msgid "{} track exported"
 msgid_plural "{} tracks exported"
 msgstr[0] "{} pista exportada"
 msgstr[1] "{} pistas exportadas"
 
-#: crates/ui-gtk/src/window/pages.rs:982
+#: crates/ui-gtk/src/window/pages.rs:1070
 msgid "Import playlist"
 msgstr "Importar lista de reproducción"
 
-#: crates/ui-gtk/src/window/pages.rs:1002
+#: crates/ui-gtk/src/window/pages.rs:1090
 #, rust-format
 msgid "Imported “{}”"
 msgstr "Se ha importado «{}»"
 
-#: crates/ui-gtk/src/window/pages.rs:1056
+#: crates/ui-gtk/src/window/pages.rs:1144
 msgid "There is nothing to play there."
 msgstr "Ahí no hay nada que reproducir."
 
-#: crates/ui-gtk/src/window/pages.rs:1090
+#: crates/ui-gtk/src/window/pages.rs:1178
 msgid "The selected track has no copies."
 msgstr "La pista seleccionada no tiene copias."
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:65
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:68
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:55
 #, rust-format
 msgid "{}-bit float"
 msgstr "{} bits en coma flotante"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:75
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:127
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:83
+#, rust-format
+msgid "Left out: {} file cannot be read"
+msgid_plural "Left out: {} files cannot be read"
+msgstr[0] "Omitido: {} archivo no se puede leer"
+msgstr[1] "Omitidos: {} archivos no se pueden leer"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:92
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:171
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:174
 msgid "Bypassed"
 msgstr "Omitido"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:76
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:93
 msgid "Not needed"
 msgstr "No necesario"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:80
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:97
 msgid "Outside the player"
 msgstr "Fuera del reproductor"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:100
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:117
 msgid "Leveller (no loudness values)"
 msgstr "Nivelador (sin valores de sonoridad)"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:152
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:122
+#, rust-format
+msgid "{} · {} ms"
+msgstr "{} · {} ms"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:181
 #, rust-format
 msgid "{}, device at {}"
 msgstr "{}, el dispositivo a {}"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:196
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:211
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:92
+msgid "Pitch"
+msgstr "Tono"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:212
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:93
+msgid "Equalizer"
+msgstr "Ecualizador"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:213
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:94
+msgid "Convolution"
+msgstr "Convolución"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:214
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:95
+msgid "Crossfeed"
+msgstr "Crossfeed"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:215
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:96
+msgid "Channel mix"
+msgstr "Mezcla de canales"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:216
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:97
+msgid "Compressor"
+msgstr "Compresor"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:217
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:98
+msgid "Limiter"
+msgstr "Limitador"
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:271
 #, rust-format
 msgid "{} · lossy codec"
 msgstr "{} · códec con pérdidas"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:204
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:279
 #, rust-format
 msgid "{} · untouched"
 msgstr "{} · intacto"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:220
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:261
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:295
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:342
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:42
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:75
+#: crates/ui-gtk/src/views/generator.rs:1236
 msgid "Source"
 msgstr "Origen"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:228
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:266
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:303
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:347
 msgid "Resampler"
 msgstr "Remuestreador"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:232
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:267
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:64
-msgid "Equalizer"
-msgstr "Ecualizador"
-
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:233
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:268
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:65
-msgid "Crossfeed"
-msgstr "Crossfeed"
-
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:235
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:269
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:66
-msgid "Channel mix"
-msgstr "Mezcla de canales"
-
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:239
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:270
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:67
-msgid "Limiter"
-msgstr "Limitador"
-
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:245
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:272
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:324
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:352
 msgid "Output format"
 msgstr "Formato de salida"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:282
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:363
 msgid "Idle"
 msgstr "Inactivo"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:284
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:365
 #, rust-format
 msgid "Bit-perfect, {}-bit"
 msgstr "Bit-perfect, {} bits"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:285
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:366
 msgid "Bit-perfect"
 msgstr "Bit-perfect"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:287
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:368
 msgid "DSP active"
 msgstr "DSP activo"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:288
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:369
 msgid "Converted"
 msgstr "Convertido"
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:300
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:381
 msgid "The samples reach the device unchanged."
 msgstr "Las muestras llegan sin cambios al dispositivo."
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:305
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:386
 #, rust-format
 msgid "{} stage is active."
 msgid_plural "{} stages are active."
 msgstr[0] "{} etapa está activa."
 msgstr[1] "{} etapas están activas."
 
-#. The engine's processing stages work on 32-bit float samples.
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:309
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:393
+#, rust-format
+msgid "{} Processing runs in 32-bit float and adds {} ms."
+msgstr "{} El procesado se hace en coma flotante de 32 bits y añade {} ms."
+
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:397
 #, rust-format
 msgid "{} Processing runs in 32-bit float."
 msgstr "{} El procesado se hace en coma flotante de 32 bits."
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:311
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:400
 msgid "The sound server may change the samples."
 msgstr "El servidor de sonido puede cambiar las muestras."
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:318
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:407
 #, rust-format
 msgid "{} The sound server converts the rate."
 msgstr "{} El servidor de sonido convierte la frecuencia."
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:322
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:411
 #, rust-format
 msgid "{} The device gets fewer bits than the source has."
 msgstr "{} El dispositivo recibe menos bits de los que tiene el origen."
 
-#: crates/ui-gtk/src/widgets/signal_path_list.rs:578
+#: crates/ui-gtk/src/widgets/signal_path_list.rs:688
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:178
 #: crates/ui-gtk/src/tools/trash.rs:247
 #: crates/ui-gtk/src/tools/file_tools.rs:234
@@ -5364,30 +5911,34 @@ msgstr "{} El dispositivo recibe menos bits de los que tiene el origen."
 msgid "{}: {}"
 msgstr "{}: {}"
 
-#: crates/ui-gtk/src/window/panel/signal_path.rs:67
+#: crates/ui-gtk/src/window/panel/signal_path.rs:70
 #, rust-format
 msgid "{} of {} ms"
 msgstr "{} de {} ms"
 
-#: crates/ui-gtk/src/window/panel/signal_path.rs:107
+#: crates/ui-gtk/src/window/panel/signal_path.rs:109
+msgid "Delay added by processing"
+msgstr "Retardo añadido por el procesado"
+
+#: crates/ui-gtk/src/window/panel/signal_path.rs:111
 msgid "Underruns"
 msgstr "Vaciados de búfer"
 
-#: crates/ui-gtk/src/window/panel/signal_path.rs:108
+#: crates/ui-gtk/src/window/panel/signal_path.rs:112
 msgid "Silence inserted"
 msgstr "Silencio insertado"
 
-#: crates/ui-gtk/src/window/panel/signal_path.rs:123
+#: crates/ui-gtk/src/window/panel/signal_path.rs:127
 msgid "Audio settings"
 msgstr "Configuración de audio"
 
-#: crates/ui-gtk/src/window/panel/signal_path.rs:132
+#: crates/ui-gtk/src/window/panel/signal_path.rs:136
 msgid "Copy the signal path and the playback counters, for a bug report"
 msgstr ""
 "Copiar la ruta de la señal y los contadores de reproducción, para un informe"
 " de error"
 
-#: crates/ui-gtk/src/window/panel/signal_path.rs:235
+#: crates/ui-gtk/src/window/panel/signal_path.rs:246
 msgid "The signal path was copied."
 msgstr "Se ha copiado la ruta de la señal."
 
@@ -5583,20 +6134,25 @@ msgstr "Quitar el bucle"
 msgid "Sleep timer"
 msgstr "Temporizador de apagado"
 
-#: crates/ui-gtk/src/deck/modes.rs:286
+#: crates/ui-gtk/src/deck/modes.rs:282
 #, rust-format
 msgid "A {} – B {}"
 msgstr "A {} – B {}"
 
-#: crates/ui-gtk/src/deck/modes.rs:291
+#: crates/ui-gtk/src/deck/modes.rs:287
 #, rust-format
 msgid "Loop: {}"
 msgstr "Bucle: {}"
 
-#: crates/ui-gtk/src/deck/modes.rs:381
+#: crates/ui-gtk/src/deck/modes.rs:377
 #, rust-format
 msgid "Sleep timer: {} left"
 msgstr "Temporizador de apagado: quedan {}"
+
+#: crates/ui-gtk/src/deck/speed.rs:65
+#, rust-format
+msgid "{} · not applied"
+msgstr "{} · sin aplicar"
 
 #: crates/ui-gtk/src/dialogs/decoder_files.rs:31
 msgid "Choose SoundFont"
@@ -5758,11 +6314,13 @@ msgstr "Importar"
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:216
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:523
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:723
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:301
 msgid "Import AutoEQ file"
 msgstr "Importar archivo de AutoEQ"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:221
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:187
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:284
 msgid "Custom"
 msgstr "Personalizado"
 
@@ -5815,10 +6373,12 @@ msgid "Type"
 msgstr "Tipo"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:517
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:295
 msgid "Equalizer settings (ParametricEQ.txt)"
 msgstr "Ajustes del ecualizador (ParametricEQ.txt)"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:539
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:326
 #, rust-format
 msgid "Cannot read the file: {}"
 msgstr "No se puede leer el archivo: {}"
@@ -5838,6 +6398,7 @@ msgstr[0] "{}; {} línea se omitió o se cambió"
 msgstr[1] "{}; {} líneas se omitieron o se cambiaron"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:592
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:323
 msgid "This file has no parametric equalizer filters that Helikodu can read."
 msgstr ""
 "Este archivo no tiene filtros de ecualizador paramétrico que Helikodu pueda "
@@ -5869,8 +6430,8 @@ msgstr "Preajuste «{}» guardado"
 #. The preset row.
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:713
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:718
-msgid "Preset"
-msgstr "Preajuste"
+msgid "Equalizer preset"
+msgstr "Preajuste del ecualizador"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:734
 msgid "Save preset"
@@ -5916,107 +6477,157 @@ msgstr ""
 msgid "Reset to flat"
 msgstr "Restablecer a plano"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:98
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:161
+#, rust-format
+msgid "{} file cannot be read"
+msgid_plural "{} files cannot be read"
+msgstr[0] "{} archivo no se puede leer"
+msgstr[1] "{} archivos no se pueden leer"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:177
+#, rust-format
+msgid "Track: {}"
+msgstr "Pista: {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:183
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:45
 #, rust-format
 msgid "{} filter"
 msgid_plural "{} filters"
 msgstr[0] "{} filtro"
 msgstr[1] "{} filtros"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:100
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:185
 msgid "10 bands"
 msgstr "10 bandas"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:101
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:186
 msgid "31 bands"
 msgstr "31 bandas"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:107
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:194
 #, rust-format
 msgid "{} Hz / {} dB"
 msgstr "{} Hz / {} dB"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:116
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:203
 msgid "Swapped"
 msgstr "Canales intercambiados"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:119
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:206
 #, rust-format
 msgid "{}, balance {}"
 msgstr "{}, balance {}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:124
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:212
 #, rust-format
 msgid "Lookahead {} ms"
 msgstr "Anticipación {} ms"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:137
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:225
+#, rust-format
+msgid "pitch {}"
+msgstr "tono {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:228
 #, rust-format
 msgid "EQ {}"
 msgstr "EQ {}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:138
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:230
+msgid "convolution"
+msgstr "convolución"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:231
 msgid "crossfeed"
 msgstr "crossfeed"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:139
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:232
 msgid "channel mixer"
 msgstr "mezclador de canales"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:140
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:234
+msgid "compressor"
+msgstr "compresor"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:236
+#, rust-format
+msgid "compressor {}"
+msgstr "compresor {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:240
 msgid "limiter"
 msgstr "limitador"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:301
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:330
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:76
+msgid "Own settings"
+msgstr "Ajustes propios"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:520
+#, rust-format
+msgid "This track plays with its own equalizer, “{}”"
+msgstr "Esta pista se reproduce con su propio ecualizador, «{}»"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:546
 msgid "BIT-PERFECT"
 msgstr "BIT-PERFECT"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:305
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:551
 #, rust-format
 msgid "Every stage is off → {}"
 msgstr "Todas las etapas están desactivadas → {}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:306
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:552
 msgid "Every stage is off. The samples pass unchanged."
 msgstr "Todas las etapas están desactivadas. Las muestras pasan sin cambios."
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:310
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:557
 msgid "DSP ACTIVE · 32-BIT FLOAT"
 msgstr "DSP ACTIVO · COMA FLOTANTE DE 32 BITS"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:314
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:573
+#, rust-format
+msgid "Adds {} ms"
+msgstr "Añade {} ms"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:575
 msgid "TPDF dither"
 msgstr "Dither TPDF"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:362
-#, rust-format
-msgid "Edit {}"
-msgstr "Editar {}"
-
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:375
-#, rust-format
-msgid "{} on"
-msgstr "Activar {}"
-
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:398
-msgid "Dither"
-msgstr "Dither"
-
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:401
-msgid "Auto"
-msgstr "Auto"
-
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:405
-msgid "Dither: automatic, TPDF"
-msgstr "Dither: automático, TPDF"
-
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:466
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:671
 msgid "Processing right now"
 msgstr "Procesado en este momento"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:495
-msgid "Processing stages"
-msgstr "Etapas de procesado"
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:699
+msgid "Track settings…"
+msgstr "Configuración de la pista…"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:702
+msgid ""
+"The settings below are the main equalizer. They are heard again when another"
+" track plays."
+msgstr ""
+"Los ajustes de abajo son el ecualizador principal. Vuelve a oírse cuando "
+"suena otra pista."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:716
+msgid "Use the equalizers of single tracks"
+msgstr "Usar los ecualizadores de pistas individuales"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:718
+msgid ""
+"A track that has its own equalizer plays with that one in place of this one."
+msgstr ""
+"Una pista que tiene su propio ecualizador se reproduce con ese en lugar de "
+"con este."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:782
+#, rust-format
+msgid "{} track has one."
+msgid_plural "{} tracks have one."
+msgstr[0] "{} pista tiene uno."
+msgstr[1] "{} pistas tienen uno."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:25
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:363
@@ -6164,6 +6775,7 @@ msgstr ""
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:464
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:490
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:343
 msgid "Lookahead"
 msgstr "Anticipación"
 
@@ -6173,10 +6785,12 @@ msgstr "Cuanto más larga, más suave. El sonido se retrasa ese mismo tiempo."
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:496
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:502
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:357
 msgid "Gain reduction now"
 msgstr "Reducción de ganancia actual"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:508
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:373
 msgid "Largest in this track"
 msgstr "Máxima en esta pista"
 
@@ -6185,6 +6799,7 @@ msgid "Times limited"
 msgstr "Veces que ha actuado"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:513
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:376
 msgid "Activity"
 msgstr "Actividad"
 
@@ -6195,6 +6810,558 @@ msgid ""
 msgstr ""
 "El preamplificador automático del ecualizador ya evita la mayor parte de la "
 "saturación, así que el limitador rara vez tiene que actuar."
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:44
+#, rust-format
+msgid "Parametric · {}"
+msgstr "Paramétrico · {}"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:48
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:49
+#, rust-format
+msgid "Graphic, {} bands"
+msgstr "Gráfico, {} bandas"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:52
+#, rust-format
+msgid "{} · preamp {}"
+msgstr "{} · preamplificador {}"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:61
+msgid "No equalizer"
+msgstr "Sin ecualizador"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:75
+#, rust-format
+msgid "Copy of {}"
+msgstr "Copia de {}"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:171
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:395
+#: crates/ui-gtk/src/dialogs/analysis_band.rs:77
+msgid "None"
+msgstr "Ninguno"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:177
+#, rust-format
+msgid "Equalizer for this track: {}"
+msgstr "Ecualizador para esta pista: {}"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:200
+msgid "Equalizers of single tracks are turned off in Settings › DSP and EQ."
+msgstr ""
+"Los ecualizadores de pistas individuales están desactivados en Configuración"
+" › DSP y EQ."
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:202
+msgid "From the next time the track starts"
+msgstr "A partir de la próxima vez que empiece la pista"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:205
+msgid ""
+"Plays without any equalizer, the main one included. Kept in the library, not"
+" in the file."
+msgstr ""
+"Se reproduce sin ningún ecualizador, ni siquiera el principal. Se guarda en "
+"la biblioteca, no en el archivo."
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:208
+msgid "Not applied while playback is bit-perfect."
+msgstr "No se aplica mientras la reproducción es bit-perfect."
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:211
+msgid ""
+"Replaces the main equalizer while this track plays. Kept in the library, not"
+" in the file."
+msgstr ""
+"Sustituye al ecualizador principal mientras suena esta pista. Se guarda en "
+"la biblioteca, no en el archivo."
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:214
+msgid "The main equalizer applies."
+msgstr "Se aplica el ecualizador principal."
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:341
+msgid "Use the Current Equalizer"
+msgstr "Usar el ecualizador actual"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:353
+msgid "Use a Preset"
+msgstr "Usar un preajuste"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:354
+msgid "Import AutoEQ File…"
+msgstr "Importar archivo de AutoEQ…"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:360
+#, rust-format
+msgid "Use for All {} Track"
+msgid_plural "Use for All {} Tracks"
+msgstr[0] "Usar para {} pista"
+msgstr[1] "Usar para las {} pistas"
+
+#: crates/ui-gtk/src/dialogs/track_equalizer.rs:386
+msgid "Equalizer for this track"
+msgstr "Ecualizador para esta pista"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:137
+#, rust-format
+msgid "{} on"
+msgstr "Activar {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:169
+msgid "Dither"
+msgstr "Dither"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:172
+msgid "Auto"
+msgstr "Auto"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:176
+msgid "Dither: automatic, TPDF, always last"
+msgstr "Dither: automático, TPDF, siempre al final"
+
+#. / "Compressor, stage 6 of 7, off".
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:221
+msgid "on"
+msgstr "activada"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:221
+msgid "off"
+msgstr "desactivada"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:223
+#, rust-format
+msgid "{}, stage {} of {}, {}"
+msgstr "{}, etapa {} de {}, {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:241
+msgid "Chain"
+msgstr "Cadena"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:245
+msgid "The sound passes the stages in this order. Drag a stage to move it."
+msgstr ""
+"El sonido pasa por las etapas en este orden. Arrastre una etapa para "
+"moverla."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:255
+msgid "Default order"
+msgstr "Orden predeterminado"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:264
+msgid "Processing chain"
+msgstr "Cadena de procesado"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:407
+#, rust-format
+msgid "{}, stage {} of {}"
+msgstr "{}, etapa {} de {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:651
+msgid "Move Earlier"
+msgstr "Mover antes"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:655
+msgid "Move Later"
+msgstr "Mover después"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:656
+msgid "Turn Off"
+msgstr "Desactivar"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:656
+msgid "Turn On"
+msgstr "Activar"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:660
+msgid "Default Order"
+msgstr "Orden predeterminado"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:697
+#, rust-format
+msgid "Track equalizer: {}"
+msgstr "Ecualizador de la pista: {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:741
+msgid "Every stage off"
+msgstr "Todas las etapas desactivadas"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:753
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:764
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:771
+msgid "Saved chains"
+msgstr "Cadenas guardadas"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:773
+msgid "No saved chains yet."
+msgstr "Aún no hay cadenas guardadas."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:783
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:785
+msgid "Name for the chain as it is now"
+msgstr "Nombre para la cadena tal como está ahora"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:795
+msgid ""
+"A chain keeps the order of the stages and which are on. Each stage keeps its"
+" own values."
+msgstr ""
+"Una cadena guarda el orden de las etapas y cuáles están activadas. Cada "
+"etapa conserva sus propios valores."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:886
+msgid "Replace"
+msgstr "Reemplazar"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:958
+#, rust-format
+msgid "Delete the chain {}"
+msgstr "Eliminar la cadena {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:968
+#, rust-format
+msgid "{}, the chain as it is now"
+msgstr "{}, la cadena tal como está ahora"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:1000
+#, rust-format
+msgid "Deleted the chain “{}”"
+msgstr "Cadena «{}» eliminada"
+
+#. / A ratio: `4 : 1`, `2.5 : 1`.
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:40
+#, rust-format
+msgid "{} : 1"
+msgstr "{} : 1"
+
+#. The preset.
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:57
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:284
+msgid "Night"
+msgstr "Noche"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:58
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:284
+msgid "Gentle"
+msgstr "Suave"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:60
+#, rust-format
+msgid "{} at {}"
+msgstr "{} a {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:92
+msgid "Threshold"
+msgstr "Umbral"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:93
+msgid "Ratio"
+msgstr "Relación"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:94
+msgid "Attack"
+msgstr "Ataque"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:95
+msgid "Release"
+msgstr "Liberación"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:96
+msgid "Knee"
+msgstr "Codo"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:97
+msgid "Makeup gain"
+msgstr "Ganancia de compensación"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:195
+msgid ""
+"Evens the level out strongly. Its values are shown below; choose Custom to "
+"set your own."
+msgstr ""
+"Iguala el nivel con fuerza. Sus valores se muestran abajo; elija "
+"Personalizado para indicar los suyos."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:197
+msgid "Evens the level out a little."
+msgstr "Iguala un poco el nivel."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:207
+#, rust-format
+msgid ""
+"Night adds up to {} dB of makeup gain. A sudden loud sound can go over full "
+"scale for a few milliseconds; the limiter catches that."
+msgstr ""
+"Noche añade hasta {} dB de ganancia de compensación. Un sonido fuerte "
+"repentino puede superar la escala completa durante unos milisegundos; el "
+"limitador lo detiene."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:210
+#, rust-format
+msgid ""
+"Gentle adds up to {} dB of makeup gain. A sudden loud sound can go over full"
+" scale for a few milliseconds; the limiter catches that."
+msgstr ""
+"Suave añade hasta {} dB de ganancia de compensación. Un sonido fuerte "
+"repentino puede superar la escala completa durante unos milisegundos; el "
+"limitador lo detiene."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:213
+#, rust-format
+msgid ""
+"Your values add up to {} dB of makeup gain. A sudden loud sound can go over "
+"full scale for a few milliseconds; the limiter catches that."
+msgstr ""
+"Sus valores añaden hasta {} dB de ganancia de compensación. Un sonido fuerte"
+" repentino puede superar la escala completa durante unos milisegundos; el "
+"limitador lo detiene."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:248
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:313
+#: crates/ui-gtk/src/dialogs/analysis_band.rs:66
+#: crates/ui-gtk/src/dialogs/analysis_band.rs:74
+#, rust-format
+msgid "{} to {}"
+msgstr "{} a {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:280
+msgid ""
+"Brings loud passages down and lifts quiet ones, so that music stays "
+"comfortable at a low volume. Night is for listening late, when the volume is"
+" low."
+msgstr ""
+"Baja los pasajes fuertes y sube los suaves, para que la música resulte "
+"cómoda a bajo volumen. Noche es para escuchar a altas horas, con el volumen "
+"bajo."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:285
+msgid "Compressor preset"
+msgstr "Preajuste del compresor"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:291
+msgid "Preset"
+msgstr "Preajuste"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:303
+msgid "Values"
+msgstr "Valores"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:333
+msgid "Lookahead in milliseconds"
+msgstr "Anticipación en milisegundos"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:338
+msgid ""
+"Used by every preset. Longer is gentler; the sound is delayed by the same "
+"time."
+msgstr ""
+"La usan todos los preajustes. Más larga es más suave; el sonido se retrasa "
+"el mismo tiempo."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:347
+msgid "Turn the limiter on"
+msgstr "Activar el limitador"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:349
+msgid "The limiter is off"
+msgstr "El limitador está desactivado"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:365
+msgid "Gain reduction meter, 0 to 24 decibels"
+msgstr "Medidor de reducción de ganancia, de 0 a 24 decibelios"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:31
+msgid "No file"
+msgstr "Ningún archivo"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:40
+#, rust-format
+msgid "{} rates"
+msgstr "{} frecuencias"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:47
+msgid "is missing"
+msgstr "no se encuentra"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:48
+msgid "cannot be read: it is not a WAV file"
+msgstr "no se puede leer: no es un archivo WAV"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:49
+msgid "is longer than 20 seconds"
+msgstr "dura más de 20 segundos"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:50
+msgid "cannot be read"
+msgstr "no se puede leer"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:135
+msgid "No folder"
+msgstr "Ninguna carpeta"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:204
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:343
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:363
+#, rust-format
+msgid "Choose a file for {}"
+msgstr "Elegir un archivo para {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:224
+#, rust-format
+msgid "Use the file of the folder for {} again"
+msgstr "Volver a usar el archivo de la carpeta para {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:228
+#, rust-format
+msgid "Remove the file for {}"
+msgstr "Quitar el archivo para {}"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:269
+msgid "From the folder"
+msgstr "De la carpeta"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:271
+msgid "Chosen by hand"
+msgstr "Elegido a mano"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:274
+#, rust-format
+msgid "{} · in use now"
+msgstr "{} · en uso ahora"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:298
+#, rust-format
+msgid "Uses the {} file, resampled"
+msgstr "Usa el archivo de {}, remuestreado"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:301
+msgid "In use now"
+msgstr "En uso ahora"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:335
+msgid "In use now. Convolution is left out until this is fixed."
+msgstr "En uso ahora. La convolución se omite hasta que se corrija esto."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:364
+msgid "Choose an impulse response"
+msgstr "Elegir una respuesta al impulso"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:370
+msgid "WAV files"
+msgstr "Archivos WAV"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:408
+#, rust-format
+msgid "{} %"
+msgstr "{} %"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:435
+msgid ""
+"Applies an impulse response to everything that plays, for example a room "
+"correction measured with a program such as REW. The files are WAV files, one"
+" for each sample rate."
+msgstr ""
+"Aplica una respuesta al impulso a todo lo que se reproduce, por ejemplo una "
+"corrección de sala medida con un programa como REW. Los archivos son "
+"archivos WAV, uno para cada frecuencia de muestreo."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:453
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:566
+msgid "Choose a folder of impulse responses"
+msgstr "Elegir una carpeta de respuestas al impulso"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:456
+#: crates/ui-gtk/src/tools/import.rs:256
+msgid "Choose a file…"
+msgstr "Elegir un archivo…"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:464
+msgid ""
+"Choose a folder of impulse responses, or a file for a single sample rate."
+msgstr ""
+"Elija una carpeta de respuestas al impulso o un archivo para una sola "
+"frecuencia de muestreo."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:487
+msgid "Where from"
+msgstr "Procedencia"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:493
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:500
+msgid "Impulse responses"
+msgstr "Respuestas al impulso"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:497
+msgid ""
+"A file chosen by hand comes before the folder. Any other sample rate uses "
+"the file with the nearest rate, resampled."
+msgstr ""
+"Un archivo elegido a mano tiene prioridad sobre la carpeta. Cualquier otra "
+"frecuencia de muestreo usa el archivo de la frecuencia más cercana, "
+"remuestreado."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:505
+msgid "Normalize"
+msgstr "Normalizar"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:507
+msgid ""
+"The loudest frequency is brought to 0 dB, so the response boosts nothing."
+msgstr ""
+"La frecuencia más fuerte se lleva a 0 dB, de modo que la respuesta no realza"
+" nada."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:525
+msgid "Share of the processed sound"
+msgstr "Proporción del sonido procesado"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:531
+msgid "Mix"
+msgstr "Mezcla"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:533
+msgid "Convolution adds about 11 ms of delay at any sample rate."
+msgstr ""
+"La convolución añade unos 11 ms de retardo con cualquier frecuencia de "
+"muestreo."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs:28
+#: crates/ui-gtk/src/popovers/speed.rs:75
+#, rust-format
+msgid "{} semitone"
+msgid_plural "{} semitones"
+msgstr[0] "{} semitono"
+msgstr[1] "{} semitonos"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs:36
+msgid ""
+"Moves the pitch up or down without changing the speed, for singing or "
+"playing along in another key."
+msgstr ""
+"Sube o baja el tono sin cambiar la velocidad, para cantar o tocar encima en "
+"otra tonalidad."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs:52
+#: crates/ui-gtk/src/popovers/speed.rs:236
+msgid "Pitch shift"
+msgstr "Transposición"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs:62
+msgid "In whole semitones; 12 are an octave. At 0 the stage does nothing."
+msgstr "En semitonos enteros; 12 son una octava. En 0, la etapa no hace nada."
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs:66
+msgid "Reset to 0"
+msgstr "Restablecer a 0"
+
+#: crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs:74
+msgid ""
+"Pitch shift adds about 33 ms of delay. It sounds best within a few "
+"semitones."
+msgstr ""
+"La transposición añade unos 33 ms de retardo. Suena mejor dentro de unos "
+"pocos semitonos."
 
 #: crates/ui-gtk/src/dialogs/track_flags.rs:30
 msgid "Leave out when shuffling"
@@ -6216,12 +7383,12 @@ msgstr "Agrupaciones"
 msgid "Tracks Within Each Album"
 msgstr "Pistas dentro de cada álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:82 crates/ui-gtk/src/play_modes.rs:94
+#: crates/ui-gtk/src/play_modes.rs:82 crates/ui-gtk/src/play_modes.rs:113
 msgid "This Track"
 msgstr "Esta pista"
 
-#: crates/ui-gtk/src/play_modes.rs:83 crates/ui-gtk/src/play_modes.rs:95
-#: crates/ui-gtk/src/play_modes.rs:105
+#: crates/ui-gtk/src/play_modes.rs:83 crates/ui-gtk/src/play_modes.rs:114
+#: crates/ui-gtk/src/play_modes.rs:124
 msgid "This Album"
 msgstr "Este álbum"
 
@@ -6233,159 +7400,159 @@ msgstr "Toda la cola"
 msgid "Continue with Related Tracks"
 msgstr "Continuar con pistas relacionadas"
 
-#: crates/ui-gtk/src/play_modes.rs:86
-msgid "Auto-DJ"
-msgstr "Auto-DJ"
+#: crates/ui-gtk/src/play_modes.rs:95
+msgid "Related Tracks"
+msgstr "Pistas relacionadas"
 
-#: crates/ui-gtk/src/play_modes.rs:96
+#: crates/ui-gtk/src/play_modes.rs:115
 msgid "The Queue"
 msgstr "La cola"
 
-#: crates/ui-gtk/src/play_modes.rs:104
+#: crates/ui-gtk/src/play_modes.rs:123
 msgid "This Artist"
 msgstr "Este artista"
 
-#: crates/ui-gtk/src/play_modes.rs:106
+#: crates/ui-gtk/src/play_modes.rs:125
 msgid "Everything"
 msgstr "Todo"
 
-#: crates/ui-gtk/src/play_modes.rs:113
+#: crates/ui-gtk/src/play_modes.rs:132
 msgid "Shuffle: tracks"
 msgstr "Aleatorio: pistas"
 
-#: crates/ui-gtk/src/play_modes.rs:114
+#: crates/ui-gtk/src/play_modes.rs:133
 msgid "Shuffle: albums"
 msgstr "Aleatorio: álbumes"
 
-#: crates/ui-gtk/src/play_modes.rs:115
+#: crates/ui-gtk/src/play_modes.rs:134
 msgid "Shuffle: folders"
 msgstr "Aleatorio: carpetas"
 
-#: crates/ui-gtk/src/play_modes.rs:116
+#: crates/ui-gtk/src/play_modes.rs:135
 msgid "Shuffle: groupings"
 msgstr "Aleatorio: agrupaciones"
 
-#: crates/ui-gtk/src/play_modes.rs:117
+#: crates/ui-gtk/src/play_modes.rs:136
 msgid "Shuffle: tracks within each album"
 msgstr "Aleatorio: pistas dentro de cada álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:118
+#: crates/ui-gtk/src/play_modes.rs:137
 msgid "Shuffle: off"
 msgstr "Aleatorio: desactivado"
 
-#: crates/ui-gtk/src/play_modes.rs:125
+#: crates/ui-gtk/src/play_modes.rs:144
 msgid "Repeat: this track"
 msgstr "Repetir: esta pista"
 
-#: crates/ui-gtk/src/play_modes.rs:126
+#: crates/ui-gtk/src/play_modes.rs:145
 msgid "Repeat: this album"
 msgstr "Repetir: este álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:127
+#: crates/ui-gtk/src/play_modes.rs:146
 msgid "Repeat: the whole queue"
 msgstr "Repetir: toda la cola"
 
-#: crates/ui-gtk/src/play_modes.rs:128
+#: crates/ui-gtk/src/play_modes.rs:147
 msgid "Repeat: continue with related tracks"
 msgstr "Repetir: continuar con pistas relacionadas"
 
-#: crates/ui-gtk/src/play_modes.rs:129
+#: crates/ui-gtk/src/play_modes.rs:148
 msgid "Repeat: Auto-DJ"
 msgstr "Repetir: Auto-DJ"
 
-#: crates/ui-gtk/src/play_modes.rs:130
+#: crates/ui-gtk/src/play_modes.rs:149
 msgid "Repeat: off"
 msgstr "Repetir: desactivado"
 
-#: crates/ui-gtk/src/play_modes.rs:137
+#: crates/ui-gtk/src/play_modes.rs:156
 msgid "stops after this track"
 msgstr "se detiene después de esta pista"
 
-#: crates/ui-gtk/src/play_modes.rs:138
+#: crates/ui-gtk/src/play_modes.rs:157
 msgid "stops after this album"
 msgstr "se detiene después de este álbum"
 
-#: crates/ui-gtk/src/play_modes.rs:139
+#: crates/ui-gtk/src/play_modes.rs:158
 msgid "stops at the end of the queue"
 msgstr "se detiene al final de la cola"
 
-#: crates/ui-gtk/src/play_modes.rs:234
+#: crates/ui-gtk/src/play_modes.rs:253
 msgid "Set the Start Here"
 msgstr "Marcar el inicio aquí"
 
-#: crates/ui-gtk/src/play_modes.rs:235
+#: crates/ui-gtk/src/play_modes.rs:254
 msgid "Set the End Here"
 msgstr "Marcar el final aquí"
 
-#: crates/ui-gtk/src/play_modes.rs:236
+#: crates/ui-gtk/src/play_modes.rs:255
 msgid "Clear the Loop"
 msgstr "Quitar el bucle"
 
-#: crates/ui-gtk/src/play_modes.rs:245
+#: crates/ui-gtk/src/play_modes.rs:264
 msgid "Remove Tracks After They Play"
 msgstr "Quitar las pistas después de reproducirlas"
 
-#: crates/ui-gtk/src/play_modes.rs:249
+#: crates/ui-gtk/src/play_modes.rs:268
 msgid "Continue from the Selected Track"
 msgstr "Continuar desde la pista seleccionada"
 
-#: crates/ui-gtk/src/play_modes.rs:252
+#: crates/ui-gtk/src/play_modes.rs:271
 msgid "Intro Scan"
 msgstr "Escucha de introducciones"
 
-#: crates/ui-gtk/src/play_modes.rs:255
+#: crates/ui-gtk/src/play_modes.rs:274
 msgid "Save as Playlist…"
 msgstr "Guardar como lista de reproducción…"
 
-#: crates/ui-gtk/src/play_modes.rs:277
+#: crates/ui-gtk/src/play_modes.rs:296
 msgid "Previous Album"
 msgstr "Álbum anterior"
 
-#: crates/ui-gtk/src/play_modes.rs:278
+#: crates/ui-gtk/src/play_modes.rs:297
 msgid "Next Album"
 msgstr "Álbum siguiente"
 
-#: crates/ui-gtk/src/play_modes.rs:279
+#: crates/ui-gtk/src/play_modes.rs:298
 msgid "Random Album"
 msgstr "Álbum al azar"
 
-#: crates/ui-gtk/src/play_modes.rs:280
+#: crates/ui-gtk/src/play_modes.rs:299
 msgid "Radio Random"
 msgstr "Radio aleatoria"
 
-#: crates/ui-gtk/src/play_modes.rs:281
+#: crates/ui-gtk/src/play_modes.rs:300
 msgid "Revert to the Skipped Track"
 msgstr "Volver a la pista saltada"
 
-#: crates/ui-gtk/src/play_modes.rs:287
+#: crates/ui-gtk/src/play_modes.rs:306
 msgid "Loop a Section"
 msgstr "Repetir un fragmento en bucle"
 
-#: crates/ui-gtk/src/play_modes.rs:293
+#: crates/ui-gtk/src/play_modes.rs:312
 #, rust-format
 msgid "Shuffle: {}"
 msgstr "Aleatorio: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:297
+#: crates/ui-gtk/src/play_modes.rs:316
 #, rust-format
 msgid "Repeat: {}"
 msgstr "Repetir: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:302
+#: crates/ui-gtk/src/play_modes.rs:321
 #, rust-format
 msgid "Stop After: {}"
 msgstr "Detener después de: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:308
+#: crates/ui-gtk/src/play_modes.rs:327
 #, rust-format
 msgid "Play Only: {}"
 msgstr "Reproducir solo: {}"
 
-#: crates/ui-gtk/src/play_modes.rs:318
+#: crates/ui-gtk/src/play_modes.rs:341
 msgid "Choose the Output Device…"
 msgstr "Elegir el dispositivo de salida…"
 
-#: crates/ui-gtk/src/play_modes.rs:321
+#: crates/ui-gtk/src/play_modes.rs:344
 msgid "Output Device"
 msgstr "Dispositivo de salida"
 
@@ -6413,6 +7580,7 @@ msgid "Minutes until playback stops"
 msgstr "Minutos hasta que se detenga la reproducción"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:131
+#: crates/ui-gtk/src/views/generator.rs:1494
 msgid "minutes"
 msgstr "minutos"
 
@@ -6466,6 +7634,104 @@ msgstr ""
 msgid "Stops at {}"
 msgstr "Se detiene a las {}"
 
+#: crates/ui-gtk/src/popovers/speed.rs:46
+#, rust-format
+msgid "{} times"
+msgstr "{} veces"
+
+#: crates/ui-gtk/src/popovers/speed.rs:55
+#, rust-format
+msgid "Speed: {}, not applied while playback is bit-perfect"
+msgstr "Velocidad: {}, no se aplica mientras la reproducción es bit-perfect"
+
+#: crates/ui-gtk/src/popovers/speed.rs:59
+#, rust-format
+msgid "Speed: {}, the pitch stays"
+msgstr "Velocidad: {}, el tono se mantiene"
+
+#: crates/ui-gtk/src/popovers/speed.rs:61
+#, rust-format
+msgid "Speed: {}, the pitch follows the speed"
+msgstr "Velocidad: {}, el tono sigue la velocidad"
+
+#: crates/ui-gtk/src/popovers/speed.rs:174
+msgid "Speed"
+msgstr "Velocidad"
+
+#: crates/ui-gtk/src/popovers/speed.rs:190
+msgid ""
+"Not applied now. Playback is bit-perfect, so tracks play at their normal "
+"speed."
+msgstr ""
+"No se aplica ahora. La reproducción es bit-perfect, así que las pistas "
+"suenan a su velocidad normal."
+
+#: crates/ui-gtk/src/popovers/speed.rs:201
+msgid "Playback speed"
+msgstr "Velocidad de reproducción"
+
+#: crates/ui-gtk/src/popovers/speed.rs:208
+msgid "Speed, quick choices"
+msgstr "Velocidad, opciones rápidas"
+
+#: crates/ui-gtk/src/popovers/speed.rs:221
+msgid "The pitch"
+msgstr "El tono"
+
+#: crates/ui-gtk/src/popovers/speed.rs:222
+msgid "Stays"
+msgstr "Se mantiene"
+
+#: crates/ui-gtk/src/popovers/speed.rs:222
+msgid "Follows the speed"
+msgstr "Sigue la velocidad"
+
+#: crates/ui-gtk/src/popovers/speed.rs:227
+msgid "What the pitch does when the speed changes"
+msgstr "Qué hace el tono cuando cambia la velocidad"
+
+#: crates/ui-gtk/src/popovers/speed.rs:249
+msgid "Pitch shift in semitones"
+msgstr "Transposición en semitonos"
+
+#: crates/ui-gtk/src/popovers/speed.rs:262
+msgid "Start with this speed next time"
+msgstr "Empezar con esta velocidad la próxima vez"
+
+#. Translators: the listening time until the playing track ends at
+#. the speed chosen; {} is the time ("2:34"), shown larger.
+#: crates/ui-gtk/src/popovers/speed.rs:293
+#, rust-format
+msgid "Ends in {}"
+msgstr "Termina en {}"
+
+#: crates/ui-gtk/src/popovers/speed.rs:298
+msgid "Back to normal"
+msgstr "Volver a lo normal"
+
+#: crates/ui-gtk/src/popovers/speed.rs:461
+msgid ""
+"The music is faster but sounds as high as before. “Follows the speed” is "
+"like a tape: faster is higher."
+msgstr ""
+"La música es más rápida pero suena igual de aguda que antes. «Sigue la "
+"velocidad» es como una cinta: más rápido es más agudo."
+
+#: crates/ui-gtk/src/popovers/speed.rs:464
+msgid ""
+"Like a tape: faster is higher, slower is lower. “Stays” keeps the pitch."
+msgstr ""
+"Como una cinta: más rápido es más agudo, más lento es más grave. «Se "
+"mantiene» conserva el tono."
+
+#: crates/ui-gtk/src/popovers/speed.rs:470
+msgid "On: Helikodu starts with this speed."
+msgstr "Activado: Helikodu se inicia con esta velocidad."
+
+#: crates/ui-gtk/src/popovers/speed.rs:472
+msgid "Off: the speed is normal again when Helikodu closes."
+msgstr "Desactivado: la velocidad vuelve a ser normal al cerrar Helikodu."
+
 #: crates/ui-gtk/src/widgets/eq_graph.rs:390
 #, rust-format
 msgid "Band {}"
@@ -6483,6 +7749,11 @@ msgstr "Banda"
 #: crates/ui-gtk/src/window/play_modes.rs:65
 msgid "Follow the Playing Track"
 msgstr "Seguir la pista en reproducción"
+
+#: crates/ui-gtk/src/window/play_modes.rs:223
+#, rust-format
+msgid "Back to “{}” at {}"
+msgstr "Volver a «{}» en {}"
 
 #: crates/ui-gtk/src/tools/copies.rs:67
 #: crates/ui-gtk/src/tools/duplicates.rs:102
@@ -7889,6 +9160,7 @@ msgstr "Copiando…"
 #: crates/ui-gtk/src/tools/managed_folder.rs:1085
 #: crates/ui-gtk/src/tools/converter.rs:994
 #: crates/ui-gtk/src/tools/import.rs:1013
+#: crates/ui-gtk/src/views/generator.rs:1223
 msgid "From"
 msgstr "Origen"
 
@@ -8516,13 +9788,13 @@ msgid_plural "{} identical copies"
 msgstr[0] "{} copia idéntica"
 msgstr[1] "{} copias idénticas"
 
-#: crates/ui-gtk/src/backend.rs:873 crates/ui-gtk/src/backend.rs:880
-#: crates/ui-gtk/src/backend.rs:887
+#: crates/ui-gtk/src/backend.rs:881 crates/ui-gtk/src/backend.rs:888
+#: crates/ui-gtk/src/backend.rs:895
 msgid "Searches cannot be saved here."
 msgstr "Aquí no se pueden guardar búsquedas."
 
 #. / The error of a backend that cannot do something.
-#: crates/ui-gtk/src/backend.rs:1142
+#: crates/ui-gtk/src/backend.rs:1205
 msgid "This is not available here."
 msgstr "Esto no está disponible aquí."
 
@@ -9129,6 +10401,8 @@ msgid "Match {} of these rules"
 msgstr "Cumplir {} de estas reglas"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:590
+#: crates/ui-gtk/src/views/generator.rs:1490
+#: crates/ui-gtk/src/views/generator_steps.rs:46
 msgid "Limit"
 msgstr "Límite"
 
@@ -9169,6 +10443,7 @@ msgid "Query text"
 msgstr "Texto de la consulta"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:1308
+#: crates/ui-gtk/src/views/generator.rs:868
 msgid "Done editing"
 msgstr "Terminar de editar"
 
@@ -9214,7 +10489,7 @@ msgid "These rules cannot run: {}"
 msgstr "Estas reglas no se pueden ejecutar: {}"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:1783
-#: crates/ui-gtk/src/window/playlists.rs:640
+#: crates/ui-gtk/src/window/playlists.rs:739
 #, rust-format
 msgid "The text cannot be read: {}"
 msgstr "No se puede interpretar el texto: {}"
@@ -9562,6 +10837,8 @@ msgid "Date added, newest first"
 msgstr "Fecha de adición, más recientes primero"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:541
+#: crates/ui-gtk/src/views/generator_steps.rs:117
+#: crates/ui-gtk/src/views/generator_steps.rs:140
 msgid "Newest first"
 msgstr "Más recientes primero"
 
@@ -9570,6 +10847,8 @@ msgid "Date added, oldest first"
 msgstr "Fecha de adición, más antiguas primero"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:546
+#: crates/ui-gtk/src/views/generator_steps.rs:117
+#: crates/ui-gtk/src/views/generator_steps.rs:141
 msgid "Oldest first"
 msgstr "Más antiguas primero"
 
@@ -9607,11 +10886,13 @@ msgid "Rating, highest first"
 msgstr "Puntuación, más altas primero"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:568
+#: crates/ui-gtk/src/views/generator_steps.rs:130
 msgid "Highest rated first"
 msgstr "Mejor puntuadas primero"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:572
 #: crates/ui-gtk/src/views/smart_rules.rs:573
+#: crates/ui-gtk/src/views/generator_steps.rs:132
 msgid "Most played first"
 msgstr "Más reproducidas primero"
 
@@ -9624,10 +10905,12 @@ msgid "Recently played first"
 msgstr "Reproducidas recientemente primero"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:582
+#: crates/ui-gtk/src/views/generator_steps.rs:105
 msgid "Random"
 msgstr "Orden aleatorio"
 
 #: crates/ui-gtk/src/views/smart_rules.rs:583
+#: crates/ui-gtk/src/views/generator_steps.rs:150
 msgid "In random order"
 msgstr "En orden aleatorio"
 
@@ -9698,7 +10981,7 @@ msgid "New smart playlist"
 msgstr "Nueva lista de reproducción inteligente"
 
 #: crates/ui-gtk/src/window/playlists.rs:158
-#: crates/ui-gtk/src/window/playlists.rs:686
+#: crates/ui-gtk/src/window/playlists.rs:785
 msgid "New folder"
 msgstr "Nueva carpeta"
 
@@ -9718,116 +11001,126 @@ msgstr "Nueva carpeta aquí"
 msgid "Edit Rules"
 msgstr "Editar reglas"
 
-#: crates/ui-gtk/src/window/playlists.rs:247
+#: crates/ui-gtk/src/window/playlists.rs:250
 msgid "Duplicate"
 msgstr "Duplicar"
 
-#: crates/ui-gtk/src/window/playlists.rs:251
+#: crates/ui-gtk/src/window/playlists.rs:254
+#: crates/ui-gtk/src/window/playlists.rs:274
 msgid "Save a Copy as a Playlist"
 msgstr "Guardar una copia como lista de reproducción"
 
-#: crates/ui-gtk/src/window/playlists.rs:258
+#: crates/ui-gtk/src/window/playlists.rs:261
 msgid "Move to Folder"
 msgstr "Mover a una carpeta"
 
-#: crates/ui-gtk/src/window/playlists.rs:272
+#: crates/ui-gtk/src/window/playlists.rs:281
 #: crates/ui-gtk/src/dialogs/settings/your_data.rs:35
 msgid "Export…"
 msgstr "Exportar…"
 
-#: crates/ui-gtk/src/window/playlists.rs:277
+#: crates/ui-gtk/src/window/playlists.rs:286
 msgid "Delete Folder…"
 msgstr "Eliminar carpeta…"
 
-#: crates/ui-gtk/src/window/playlists.rs:279
+#: crates/ui-gtk/src/window/playlists.rs:288
 msgid "Delete Playlist…"
 msgstr "Eliminar lista de reproducción…"
 
-#: crates/ui-gtk/src/window/playlists.rs:294
+#: crates/ui-gtk/src/window/playlists.rs:303
 msgid "Top Level"
 msgstr "Nivel superior"
 
-#: crates/ui-gtk/src/window/playlists.rs:324
+#: crates/ui-gtk/src/window/playlists.rs:333
 msgid "New Folder…"
 msgstr "Nueva carpeta…"
 
 #. Translators: a short message after pinning or
 #. unpinning an album, an artist or a playlist (the
 #. context says which).
-#: crates/ui-gtk/src/window/playlists.rs:377
+#: crates/ui-gtk/src/window/playlists.rs:386
 msgctxt "album"
 msgid "Pinned to the sidebar"
 msgstr "Fijado en la barra lateral"
 
-#: crates/ui-gtk/src/window/playlists.rs:378
+#: crates/ui-gtk/src/window/playlists.rs:387
 msgctxt "artist"
 msgid "Pinned to the sidebar"
 msgstr "Fijado en la barra lateral"
 
-#: crates/ui-gtk/src/window/playlists.rs:379
+#: crates/ui-gtk/src/window/playlists.rs:388
 msgctxt "playlist"
 msgid "Pinned to the sidebar"
 msgstr "Fijada en la barra lateral"
 
-#: crates/ui-gtk/src/window/playlists.rs:380
+#: crates/ui-gtk/src/window/playlists.rs:389
 msgctxt "album"
 msgid "Unpinned"
 msgstr "Quitado de la barra lateral"
 
-#: crates/ui-gtk/src/window/playlists.rs:381
+#: crates/ui-gtk/src/window/playlists.rs:390
 msgctxt "artist"
 msgid "Unpinned"
 msgstr "Quitado de la barra lateral"
 
-#: crates/ui-gtk/src/window/playlists.rs:382
+#: crates/ui-gtk/src/window/playlists.rs:391
 msgctxt "playlist"
 msgid "Unpinned"
 msgstr "Quitada de la barra lateral"
 
-#: crates/ui-gtk/src/window/playlists.rs:423
+#: crates/ui-gtk/src/window/playlists.rs:450
 msgid "Smart Playlist"
 msgstr "Lista de reproducción inteligente"
 
+#: crates/ui-gtk/src/window/playlists.rs:456
+msgid "Generator Playlist"
+msgstr "Lista de reproducción generada"
+
+#: crates/ui-gtk/src/window/playlists.rs:480
+msgid "New generator playlist"
+msgstr "Nueva lista de reproducción generada"
+
+#: crates/ui-gtk/src/window/playlists.rs:504
+#: crates/ui-gtk/src/window/playlists.rs:659
+#, rust-format
+msgid "{} (copy)"
+msgstr "{} (copia)"
+
 #. Translators: a playlist was moved into a folder; {}
 #. is the folder's name.
-#: crates/ui-gtk/src/window/playlists.rs:457
+#: crates/ui-gtk/src/window/playlists.rs:552
 #, rust-format
 msgid "Moved to {}"
 msgstr "Movida a {}"
 
 #. Translators: a playlist was moved out of its folders.
-#: crates/ui-gtk/src/window/playlists.rs:459
+#: crates/ui-gtk/src/window/playlists.rs:554
 msgid "Moved to the top level"
 msgstr "Movida al nivel superior"
 
-#: crates/ui-gtk/src/window/playlists.rs:498
+#: crates/ui-gtk/src/window/playlists.rs:593
 msgid "Unlocked"
 msgstr "Desbloqueada"
 
-#: crates/ui-gtk/src/window/playlists.rs:500
+#: crates/ui-gtk/src/window/playlists.rs:595
 msgid "Not grouped"
 msgstr "Sin agrupar"
 
-#: crates/ui-gtk/src/window/playlists.rs:564
-#, rust-format
-msgid "{} (copy)"
-msgstr "{} (copia)"
-
-#: crates/ui-gtk/src/window/playlists.rs:597
+#: crates/ui-gtk/src/window/playlists.rs:692
 #, rust-format
 msgid "{} duplicate removed"
 msgid_plural "{} duplicates removed"
 msgstr[0] "{} duplicado quitado"
 msgstr[1] "{} duplicados quitados"
 
-#: crates/ui-gtk/src/window/playlists.rs:609
+#: crates/ui-gtk/src/window/playlists.rs:704
 #, rust-format
 msgid "{} missing track removed"
 msgid_plural "{} missing tracks removed"
 msgstr[0] "{} pista ausente quitada"
 msgstr[1] "{} pistas ausentes quitadas"
 
-#: crates/ui-gtk/src/window/playlists.rs:619
+#: crates/ui-gtk/src/window/playlists.rs:714
 msgid "The order is shuffled"
 msgstr "Se ha mezclado el orden"
 
@@ -9938,10 +11231,6 @@ msgstr "Radio aleatoria"
 #: crates/ui-gtk/src/shortcuts.rs:130
 msgid "Revert to the skipped track"
 msgstr "Volver a la pista saltada"
-
-#: crates/ui-gtk/src/shortcuts.rs:133
-msgid "Intro scan"
-msgstr "Escucha de introducciones"
 
 #: crates/ui-gtk/src/shortcuts.rs:135 crates/ui-gtk/src/window/narrow.rs:368
 msgid "Search"
@@ -10087,6 +11376,7 @@ msgstr "Restablecer todo…"
 #. Translators: {0} is the number of tracks analysed, {1} the
 #. number of all tracks, which chooses the form.
 #: crates/ui-gtk/src/dialogs/settings/track_analysis.rs:35
+#: crates/ui-gtk/src/views/similar.rs:630
 #, rust-format
 msgid "{} of {} track analysed"
 msgid_plural "{} of {} tracks analysed"
@@ -10124,6 +11414,7 @@ msgid "Working in the background."
 msgstr "Trabajando en segundo plano."
 
 #: crates/ui-gtk/src/dialogs/settings/track_analysis.rs:105
+#: crates/ui-gtk/src/views/similar.rs:258
 msgid "Tracks analysed"
 msgstr "Pistas analizadas"
 
@@ -10134,10 +11425,15 @@ msgstr "Analizar las pistas en segundo plano"
 #: crates/ui-gtk/src/dialogs/settings/track_analysis.rs:142
 msgid ""
 "Finds the silence and the loudness of each track once, for crossfades, "
-"silence and the leveller. Nothing is written to the files."
+"silence and the leveller, and notes how the track sounds, so that Helikodu "
+"can find tracks that sound alike. Tracks analysed by an earlier version are "
+"analysed once more. Nothing is written to the files."
 msgstr ""
 "Busca una vez el silencio y la sonoridad de cada pista, para los fundidos "
-"encadenados, el silencio y el nivelador. No se escribe nada en los archivos."
+"encadenados, el silencio y el nivelador, y anota cómo suena la pista, para "
+"que Helikodu pueda encontrar pistas que suenan parecido. Las pistas "
+"analizadas por una versión anterior se analizan una vez más. No se escribe "
+"nada en los archivos."
 
 #: crates/ui-gtk/src/dialogs/settings/search.rs:163
 #, rust-format
@@ -10962,7 +12258,7 @@ msgstr "Volver a comprobar"
 msgid "Sync now"
 msgstr "Sincronizar ahora"
 
-#: crates/ui-gtk/src/tools/sync_export.rs:904
+#: crates/ui-gtk/src/tools/sync_export.rs:906
 #: crates/ui-gtk/src/tools/replaced.rs:377
 #, rust-format
 msgid "{} playlist"
@@ -11150,6 +12446,7 @@ msgid "Another conversion or sync is running. Stop it first."
 msgstr "Ya hay otra conversión o sincronización en curso. Deténgala primero."
 
 #: crates/ui-gtk/src/backend/service/export.rs:99
+#: crates/ui-gtk/src/backend/service/generators.rs:480
 msgid "The album is gone."
 msgstr "El álbum ya no existe."
 
@@ -11353,10 +12650,6 @@ msgstr "Elegir su Library.xml…"
 #: crates/ui-gtk/src/tools/import.rs:255
 msgid "Not found on this computer"
 msgstr "No se encuentra en este equipo"
-
-#: crates/ui-gtk/src/tools/import.rs:256
-msgid "Choose a file…"
-msgstr "Elegir un archivo…"
 
 #: crates/ui-gtk/src/tools/import.rs:290
 #, rust-format
@@ -12431,19 +13724,9 @@ msgstr "El valor tal como está guardado, sin los dos dígitos"
 msgid "body, where name stands for value"
 msgstr "body, donde name representa value"
 
-#: crates/ui-gtk/src/dialogs/analysis_band.rs:66
-#: crates/ui-gtk/src/dialogs/analysis_band.rs:74
-#, rust-format
-msgid "{} to {}"
-msgstr "{} a {}"
-
 #: crates/ui-gtk/src/dialogs/analysis_band.rs:69
 msgid "None: the track is silent"
 msgstr "Ninguno: la pista está en silencio"
-
-#: crates/ui-gtk/src/dialogs/analysis_band.rs:77
-msgid "None"
-msgstr "Ninguno"
 
 #: crates/ui-gtk/src/dialogs/analysis_band.rs:81
 #, rust-format
@@ -12822,8 +14105,575 @@ msgstr "No existe ese artista."
 msgid "A label cannot be merged into itself."
 msgstr "Una etiqueta no se puede fusionar consigo misma."
 
-#~ msgid "Sort by"
-#~ msgstr "Ordenar por"
+#: crates/ui-gtk/src/views/generator.rs:121
+#: crates/ui-gtk/src/views/generator.rs:123
+msgid "Make again"
+msgstr "Regenerar"
+
+#: crates/ui-gtk/src/views/generator.rs:170
+msgid "Generator playlist"
+msgstr "Lista de reproducción generada"
+
+#: crates/ui-gtk/src/views/generator.rs:185
+#: crates/ui-gtk/src/views/generator.rs:233
+#: crates/ui-gtk/src/views/generator.rs:664
+#: crates/ui-gtk/src/views/generator.rs:870
+msgid "Edit steps"
+msgstr "Editar los pasos"
+
+#: crates/ui-gtk/src/views/generator.rs:214
+msgid "Steps"
+msgstr "Pasos"
+
+#: crates/ui-gtk/src/views/generator.rs:218
+msgid "Tracks of the generator playlist"
+msgstr "Pistas de la lista de reproducción generada"
+
+#: crates/ui-gtk/src/views/generator.rs:230
+msgid "The steps leave no tracks."
+msgstr "Los pasos no dejan ninguna pista."
+
+#: crates/ui-gtk/src/views/generator.rs:248
+msgid ""
+"The steps set the order. To reorder by hand, save a copy as a playlist."
+msgstr ""
+"Los pasos fijan el orden. Para reordenar a mano, guarde una copia como lista"
+" de reproducción."
+
+#: crates/ui-gtk/src/views/generator.rs:264
+msgid "Each step works on the tracks the step before it left."
+msgstr "Cada paso trabaja con las pistas que dejó el paso anterior."
+
+#: crates/ui-gtk/src/views/generator.rs:274
+msgid "Make again when opened"
+msgstr "Regenerar al abrir"
+
+#: crates/ui-gtk/src/views/generator.rs:276
+msgid "Off: the tracks stay as they are until you choose Make again."
+msgstr ""
+"Desactivado: las pistas se quedan como están hasta que elija Regenerar."
+
+#: crates/ui-gtk/src/views/generator.rs:303
+msgid "Tracks the steps leave"
+msgstr "Pistas que dejan los pasos"
+
+#: crates/ui-gtk/src/views/generator.rs:616
+msgid "Making it again…"
+msgstr "Regenerando…"
+
+#: crates/ui-gtk/src/views/generator.rs:624
+msgid "could not be made again"
+msgstr "no se pudo regenerar"
+
+#: crates/ui-gtk/src/views/generator.rs:710
+msgid "made again each time it is opened"
+msgstr "se regenera cada vez que se abre"
+
+#: crates/ui-gtk/src/views/generator.rs:712
+msgid "kept until you choose Make again"
+msgstr "se conserva hasta que elija Regenerar"
+
+#: crates/ui-gtk/src/views/generator.rs:816
+#, rust-format
+msgid "“{}” was made again: {} track"
+msgid_plural "“{}” was made again: {} tracks"
+msgstr[0] "«{}» se regeneró: {} pista"
+msgstr[1] "«{}» se regeneró: {} pistas"
+
+#: crates/ui-gtk/src/views/generator.rs:967
+msgid "Making…"
+msgstr "Generando…"
+
+#: crates/ui-gtk/src/views/generator.rs:1035
+msgid "As the steps are now"
+msgstr "Según los pasos actuales"
+
+#: crates/ui-gtk/src/views/generator.rs:1049
+msgid "Choose a playlist"
+msgstr "Elegir una lista de reproducción"
+
+#: crates/ui-gtk/src/views/generator.rs:1091
+msgid "Add step"
+msgstr "Añadir paso"
+
+#: crates/ui-gtk/src/views/generator.rs:1124
+#, rust-format
+msgid "The playlist “{}” no longer exists"
+msgstr "La lista de reproducción «{}» ya no existe"
+
+#: crates/ui-gtk/src/views/generator.rs:1126
+msgid ""
+"Choose another playlist or remove this step. Until then the tracks stay as "
+"they were."
+msgstr ""
+"Elija otra lista de reproducción o quite este paso. Hasta entonces, las "
+"pistas se quedan como estaban."
+
+#: crates/ui-gtk/src/views/generator.rs:1131
+#, rust-format
+msgid "For example: {}"
+msgstr "Por ejemplo: {}"
+
+#: crates/ui-gtk/src/views/generator.rs:1135
+msgid "Until then the tracks stay as they were."
+msgstr "Hasta entonces, las pistas se quedan como estaban."
+
+#: crates/ui-gtk/src/views/generator.rs:1163
+msgid "Drag to move the step"
+msgstr "Arrastre para mover el paso"
+
+#: crates/ui-gtk/src/views/generator.rs:1190
+#, rust-format
+msgid "{} track left"
+msgid_plural "{} tracks left"
+msgstr[0] "Queda {} pista"
+msgstr[1] "Quedan {} pistas"
+
+#: crates/ui-gtk/src/views/generator.rs:1224
+#: crates/ui-gtk/src/views/generator.rs:1364
+msgid "Kind of step"
+msgstr "Tipo de paso"
+
+#: crates/ui-gtk/src/views/generator.rs:1232
+msgid "The library"
+msgstr "La biblioteca"
+
+#: crates/ui-gtk/src/views/generator.rs:1232
+msgid "A playlist"
+msgstr "Una lista de reproducción"
+
+#: crates/ui-gtk/src/views/generator.rs:1232
+msgid "A search"
+msgstr "Una búsqueda"
+
+#: crates/ui-gtk/src/views/generator.rs:1307
+msgid "Query"
+msgstr "Consulta"
+
+#. Translators: in the Exclude step of a generator playlist,
+#. before the dropdown of playlists.
+#: crates/ui-gtk/src/views/generator.rs:1392
+msgid "the tracks of"
+msgstr "las pistas de"
+
+#: crates/ui-gtk/src/views/generator.rs:1401
+#: crates/ui-gtk/src/views/generator_steps.rs:44
+msgid "Sort by"
+msgstr "Ordenar por"
+
+#: crates/ui-gtk/src/views/generator.rs:1419
+msgid "Direction"
+msgstr "Dirección"
+
+#: crates/ui-gtk/src/views/generator.rs:1452
+#: crates/ui-gtk/src/views/generator_steps.rs:45
+msgid "At most"
+msgstr "Como máximo"
+
+#. Translators: "At most [2] per [artist]" in a generator step.
+#: crates/ui-gtk/src/views/generator.rs:1457
+msgid "per"
+msgstr "por"
+
+#: crates/ui-gtk/src/views/generator.rs:1458
+msgid "artist"
+msgstr "artista"
+
+#: crates/ui-gtk/src/views/generator.rs:1458
+msgid "album"
+msgstr "álbum"
+
+#: crates/ui-gtk/src/views/generator.rs:1459
+msgid "Per"
+msgstr "Por"
+
+#: crates/ui-gtk/src/views/generator.rs:1495
+msgid "Unit"
+msgstr "Unidad"
+
+#: crates/ui-gtk/src/views/generator.rs:1514
+#, rust-format
+msgid "Step {}"
+msgstr "Paso {}"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:42
+msgid "Where"
+msgstr "Donde"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:43
+msgid "Exclude"
+msgstr "Excluir"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:113
+msgid "Highest first"
+msgstr "Más altas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:113
+msgid "Lowest first"
+msgstr "Más bajas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:114
+msgid "Most first"
+msgstr "Más primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:114
+msgid "Fewest first"
+msgstr "Menos primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:115
+msgid "Longest ago first"
+msgstr "Más antiguas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:115
+#: crates/ui-gtk/src/views/generator_steps.rs:116
+msgid "Latest first"
+msgstr "Más recientes primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:116
+msgid "Earliest first"
+msgstr "Más tempranas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:119
+msgid "A to Z"
+msgstr "De la A a la Z"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:119
+msgid "Z to A"
+msgstr "De la Z a la A"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:121
+#: crates/ui-gtk/src/views/generator_steps.rs:148
+msgid "Longest first"
+msgstr "Más largas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:121
+#: crates/ui-gtk/src/views/generator_steps.rs:149
+msgid "Shortest first"
+msgstr "Más cortas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:131
+msgid "Lowest rated first"
+msgstr "Peor puntuadas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:133
+msgid "Least played first"
+msgstr "Menos reproducidas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:134
+msgid "Most skipped first"
+msgstr "Más saltadas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:135
+msgid "Least skipped first"
+msgstr "Menos saltadas primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:136
+msgid "Longest unplayed first"
+msgstr "Más tiempo sin reproducir primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:137
+msgid "Played most lately first"
+msgstr "Reproducidas más recientemente primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:138
+msgid "Added most lately first"
+msgstr "Añadidas más recientemente primero"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:139
+msgid "Added earliest first"
+msgstr "Añadidas primero las más antiguas"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:142
+msgid "By title, A to Z"
+msgstr "Por título, de la A a la Z"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:143
+msgid "By title, Z to A"
+msgstr "Por título, de la Z a la A"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:144
+msgid "By artist, A to Z"
+msgstr "Por artista, de la A a la Z"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:145
+msgid "By artist, Z to A"
+msgstr "Por artista, de la Z a la A"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:146
+msgid "By album, A to Z"
+msgstr "Por álbum, de la A a la Z"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:147
+msgid "By album, Z to A"
+msgstr "Por álbum, de la Z a la A"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:201
+msgid "From the library"
+msgstr "De la biblioteca"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:202
+#, rust-format
+msgid "From “{}”"
+msgstr "De «{}»"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:206
+#, rust-format
+msgid "From the tracks where {}"
+msgstr "De las pistas donde {}"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:214
+#, rust-format
+msgid "Not in “{}”"
+msgstr "No en «{}»"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:217
+#, rust-format
+msgid "At most {} per artist"
+msgid_plural "At most {} per artist"
+msgstr[0] "Como máximo {} por artista"
+msgstr[1] "Como máximo {} por artista"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:221
+#, rust-format
+msgid "At most {} per album"
+msgid_plural "At most {} per album"
+msgstr[0] "Como máximo {} por álbum"
+msgstr[1] "Como máximo {} por álbum"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:241
+msgid "From a playlist that no longer exists"
+msgstr "De una lista de reproducción que ya no existe"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:243
+msgid "Not in a playlist that no longer exists"
+msgstr "No en una lista de reproducción que ya no existe"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:244
+msgid "A search that cannot be read"
+msgstr "Una búsqueda que no se puede interpretar"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:245
+msgid "A step that cannot run"
+msgstr "Un paso que no se puede ejecutar"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:347
+msgid "made just now"
+msgstr "generada ahora mismo"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:350
+#, rust-format
+msgid "made {} minute ago"
+msgid_plural "made {} minutes ago"
+msgstr[0] "generada hace {} minuto"
+msgstr[1] "generada hace {} minutos"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:357
+#, rust-format
+msgid "made {} hour ago"
+msgid_plural "made {} hours ago"
+msgstr[0] "generada hace {} hora"
+msgstr[1] "generada hace {} horas"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:361
+#, rust-format
+msgid "made {} day ago"
+msgid_plural "made {} days ago"
+msgstr[0] "generada hace {} día"
+msgstr[1] "generada hace {} días"
+
+#: crates/ui-gtk/src/views/generator_steps.rs:364
+#, rust-format
+msgid "made {}"
+msgstr "generada el {}"
+
+#. / "As made 2 days ago": the results pane's note on the last result.
+#. Translators: {} is "made 2 days ago" or "made 9 Nov 2026".
+#: crates/ui-gtk/src/views/generator_steps.rs:371
+#, rust-format
+msgid "As {}"
+msgstr "Versión {}"
+
+#: crates/ui-gtk/src/views/similar.rs:46
+msgid "Very close"
+msgstr "Muy parecida"
+
+#: crates/ui-gtk/src/views/similar.rs:50
+msgid "Somewhat alike"
+msgstr "Algo parecida"
+
+#: crates/ui-gtk/src/views/similar.rs:68
+msgid "This track could not be analysed"
+msgstr "No se pudo analizar esta pista"
+
+#: crates/ui-gtk/src/views/similar.rs:69
+msgid ""
+"Its file could not be read. Helikodu tries again when the file changes."
+msgstr ""
+"No se pudo leer su archivo. Helikodu lo intentará de nuevo cuando el archivo"
+" cambie."
+
+#: crates/ui-gtk/src/views/similar.rs:72
+msgid "Track analysis is turned off"
+msgstr "El análisis de pistas está desactivado"
+
+#: crates/ui-gtk/src/views/similar.rs:74
+msgid ""
+"Helikodu notes how tracks sound as part of the track analysis. Turn it on "
+"under Settings › Library, and the list appears here once this track is "
+"analysed."
+msgstr ""
+"Helikodu anota cómo suenan las pistas como parte del análisis de pistas. "
+"Actívelo en Configuración › Biblioteca y la lista aparecerá aquí cuando se "
+"haya analizado esta pista."
+
+#: crates/ui-gtk/src/views/similar.rs:78
+msgid "Too few tracks are analysed so far"
+msgstr "Aún hay muy pocas pistas analizadas"
+
+#: crates/ui-gtk/src/views/similar.rs:81
+#, rust-format
+msgid ""
+"Helikodu can compare this track with the {} track it has analysed, which is "
+"too few for a useful list. The list appears here once more are done."
+msgid_plural ""
+"Helikodu can compare this track with the {} tracks it has analysed, which is"
+" too few for a useful list. The list appears here once more are done."
+msgstr[0] ""
+"Helikodu puede comparar esta pista con la {} pista que ha analizado, lo que "
+"es muy poco para una lista útil. La lista aparecerá aquí cuando haya más."
+msgstr[1] ""
+"Helikodu puede comparar esta pista con las {} pistas que ha analizado, lo "
+"que es muy poco para una lista útil. La lista aparecerá aquí cuando haya "
+"más."
+
+#: crates/ui-gtk/src/views/similar.rs:89
+msgid "These tracks have not been analysed yet"
+msgstr "Estas pistas aún no se han analizado"
+
+#: crates/ui-gtk/src/views/similar.rs:91
+msgid ""
+"Helikodu notes how each track sounds while it analyses the library in the "
+"background. The list appears here by itself once the analysis has reached "
+"these tracks."
+msgstr ""
+"Helikodu anota cómo suena cada pista mientras analiza la biblioteca en "
+"segundo plano. La lista aparecerá aquí sola cuando el análisis llegue a "
+"estas pistas."
+
+#: crates/ui-gtk/src/views/similar.rs:95
+msgid "This track has not been analysed yet"
+msgstr "Esta pista aún no se ha analizado"
+
+#: crates/ui-gtk/src/views/similar.rs:97
+msgid ""
+"Helikodu notes how each track sounds while it analyses the library in the "
+"background. The list appears here by itself once the analysis has reached "
+"this track."
+msgstr ""
+"Helikodu anota cómo suena cada pista mientras analiza la biblioteca en "
+"segundo plano. La lista aparecerá aquí sola cuando el análisis llegue a esta"
+" pista."
+
+#: crates/ui-gtk/src/views/similar.rs:168
+msgid "Sounds like"
+msgstr "Suena como"
+
+#: crates/ui-gtk/src/views/similar.rs:179
+msgid "Start radio"
+msgstr "Iniciar radio"
+
+#: crates/ui-gtk/src/views/similar.rs:192
+msgid ""
+"Compared by sound alone: how bright each track is, how noisy or tonal, how "
+"busy its rhythm and how much its loudness varies. Tags are not used, so the "
+"list can cross genres. Take it as a guide."
+msgstr ""
+"Comparadas solo por el sonido: lo brillante que es cada pista, lo ruidosa o "
+"tonal, lo movido de su ritmo y cuánto varía su sonoridad. No se usan las "
+"etiquetas, así que la lista puede cruzar géneros. Tómela como una "
+"orientación."
+
+#: crates/ui-gtk/src/views/similar.rs:201
+msgid "Tracks that sound alike"
+msgstr "Pistas que suenan parecido"
+
+#: crates/ui-gtk/src/views/similar.rs:207
+msgid "Few tracks in the library sound like this one."
+msgstr "Pocas pistas de la biblioteca suenan como esta."
+
+#: crates/ui-gtk/src/views/similar.rs:218
+#, rust-format
+msgid "Show {} more"
+msgstr "Mostrar {} más"
+
+#: crates/ui-gtk/src/views/similar.rs:265
+#: crates/ui-gtk/src/views/similar.rs:615
+msgid "Open the analysis settings"
+msgstr "Abrir la configuración del análisis"
+
+#: crates/ui-gtk/src/views/similar.rs:353
+#, rust-format
+msgid "{}, {} of 100"
+msgstr "{}, {} de 100"
+
+#: crates/ui-gtk/src/views/similar.rs:466
+#, rust-format
+msgid "Album by {}"
+msgstr "Álbum de {}"
+
+#: crates/ui-gtk/src/views/similar.rs:542
+#, rust-format
+msgid "The {} closest track"
+msgid_plural "The {} closest tracks"
+msgstr[0] "La {} pista más cercana"
+msgstr[1] "Las {} pistas más cercanas"
+
+#: crates/ui-gtk/src/views/similar.rs:548
+#, rust-format
+msgid "All {} track that sounds alike"
+msgid_plural "All {} tracks that sound alike"
+msgstr[0] "La {} pista que suena parecido"
+msgstr[1] "Las {} pistas que suenan parecido"
+
+#: crates/ui-gtk/src/views/similar.rs:576
+#, rust-format
+msgid "the {} track that sounds most like its tracks"
+msgid_plural "the {} tracks that sound most like its tracks"
+msgstr[0] "la {} pista que más se parece a sus pistas"
+msgstr[1] "las {} pistas que más se parecen a sus pistas"
+
+#: crates/ui-gtk/src/views/similar.rs:585
+#, rust-format
+msgid "the {} track that sounds most like it"
+msgid_plural "the {} tracks that sound most like it"
+msgstr[0] "la {} pista que más se le parece"
+msgstr[1] "las {} pistas que más se le parecen"
+
+#: crates/ui-gtk/src/views/similar.rs:613
+msgid "Turn it on in Settings…"
+msgstr "Activarlo en la configuración…"
+
+#: crates/ui-gtk/src/views/similar.rs:677
+#, rust-format
+msgid "Sounds like {}"
+msgstr "Suena como {}"
+
+#, rust-format
+#~ msgid "Edit {}"
+#~ msgstr "Editar {}"
+
+#~ msgid "Dither: automatic, TPDF"
+#~ msgstr "Dither: automático, TPDF"
+
+#~ msgid "Processing stages"
+#~ msgstr "Etapas de procesado"
+
+#~ msgid ""
+#~ "Finds the silence and the loudness of each track once, for crossfades, "
+#~ "silence and the leveller. Nothing is written to the files."
+#~ msgstr ""
+#~ "Busca una vez el silencio y la sonoridad de cada pista, para los fundidos "
+#~ "encadenados, el silencio y el nivelador. No se escribe nada en los archivos."
 
 #~ msgid "Stop after"
 #~ msgstr "Detener después de"
@@ -13108,9 +14958,6 @@ msgstr "Una etiqueta no se puede fusionar consigo misma."
 
 #~ msgid "the top level"
 #~ msgstr "nivel superior"
-
-#~ msgid "tracks"
-#~ msgstr "pistas"
 
 #~ msgid "plays"
 #~ msgstr "reproducciones"
