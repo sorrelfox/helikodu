@@ -11,6 +11,9 @@
 //! Dither is always last and has no editor. Every change goes to the settings
 //! store at once, which the player applies live; while a control is dragged
 //! the changes are passed on at most every 80 ms, the last one always.
+//! Changes made elsewhere (the command line, the settings file, another
+//! window) show at once, keeping the stage chosen; while the user's own
+//! changes are still being passed on, they show after the last of them.
 
 mod chain;
 mod compressor;
@@ -27,7 +30,7 @@ use std::time::Duration;
 use gtk::glib;
 use gtk::prelude::*;
 use helikodu_model::settings::{
-    ChainStage, ChannelMode, CompressorPreset, DspSettings, EqMode, ImpulseFile,
+    ChainStage, ChannelMode, CompressorPreset, DspSettings, EqMode, ImpulseFile, SettingsGroup,
 };
 
 use super::{Context, page_body};
@@ -358,6 +361,9 @@ pub(crate) struct Live {
     facts: RefCell<Facts>,
     /// The convolution files the impulse responses were read for.
     read_for: RefCell<Option<(Option<PathBuf>, Vec<ImpulseFile>)>>,
+    /// The settings changed elsewhere while changes of the page were being
+    /// passed on: the page shows the store again when they are.
+    stale: Cell<bool>,
 }
 
 impl Live {
@@ -371,6 +377,7 @@ impl Live {
             after: RefCell::new(Vec::new()),
             facts: RefCell::new(Facts::default()),
             read_for: RefCell::new(None),
+            stale: Cell::new(false),
         })
     }
 
@@ -414,6 +421,14 @@ impl Live {
     pub(crate) fn reread_impulses(&self) {
         self.read_for.replace(None);
         self.update_facts();
+    }
+
+    /// Whether changes of the page are being passed on (a control is dragged).
+    fn passing_on(&self) -> bool {
+        let timer = self.timer.take();
+        let ticking = timer.is_some();
+        self.timer.set(timer);
+        ticking
     }
 
     /// Calls `listener` after every change that reached the store.
@@ -470,6 +485,10 @@ impl Live {
                 if let Some(change) = pending {
                     live.commit(&*change);
                     live.start_timer();
+                } else if live.stale.take() {
+                    // A change made elsewhere meanwhile.
+                    live.update_facts();
+                    live.notify();
                 }
             },
         )));
@@ -502,6 +521,8 @@ struct Page {
     track_notice: gtk::Box,
     track_notice_text: gtk::Label,
     editors: RefCell<Vec<Rc<dyn Fn()>>>,
+    /// The settings the page shows.
+    shown: RefCell<Option<DspSettings>>,
 }
 
 impl Page {
@@ -511,6 +532,7 @@ impl Page {
             return;
         };
         let dsp = &settings.dsp;
+        self.shown.replace(Some(dsp.clone()));
         let facts = self.live.facts();
         self.chain.refresh(dsp, &facts);
         self.refresh_readout(dsp, &facts);
@@ -584,6 +606,24 @@ impl Page {
     fn select(&self, stage: Stage) {
         self.stack.set_visible_child_name(stage.id());
         self.chain.select(stage);
+    }
+
+    /// Follows a change of the stored settings, which may come from
+    /// elsewhere: the page's own changes are shown already, and while they
+    /// are still being passed on the page waits for the last of them.
+    fn follow_store(&self) {
+        let Some(settings) = self.live.settings() else {
+            return;
+        };
+        if self.shown.borrow().as_ref() == Some(&settings.dsp) {
+            return;
+        }
+        if self.live.passing_on() {
+            self.live.stale.set(true);
+            return;
+        }
+        self.live.update_facts();
+        self.refresh();
     }
 }
 
@@ -831,6 +871,7 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
         track_notice: eq.notice.clone(),
         track_notice_text: eq.message.clone(),
         editors: RefCell::new(Vec::new()),
+        shown: RefCell::new(None),
     });
 
     let (pitch, pitch_refresh) = pitch::editor(&live);
@@ -877,6 +918,19 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
             if let Some(page) = weak.upgrade() {
                 page.live.update_facts();
                 page.refresh();
+            }
+        });
+    }
+    // Changes of the settings made elsewhere: the command line, the
+    // settings file, another window.
+    if let Some(playback) = &context.playback {
+        let weak = Rc::downgrade(&page);
+        playback.connect_event(move |update| {
+            if let crate::backend::Update::Settings { groups } = update
+                && groups.contains(&SettingsGroup::Dsp)
+                && let Some(page) = weak.upgrade()
+            {
+                page.follow_store();
             }
         });
     }

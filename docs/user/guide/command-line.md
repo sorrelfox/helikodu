@@ -69,7 +69,7 @@ While `play` runs in a terminal, Space pauses, `n` and `p` go to the next and pr
 
 ## The managed folder
 
-`helikodu-cli managed-folder` sets the [managed folder](file-tools.md#the-managed-folder) and imports files into it. It reads and writes the same settings file as the application; change the setting while Helikodu is closed, or the application may write its own copy over it.
+`helikodu-cli managed-folder` sets the [managed folder](file-tools.md#the-managed-folder) and imports files into it. It reads and writes the same settings file as the application, which reads the change at once when it runs.
 
 ```sh
 helikodu-cli managed-folder show [--json]          # the folder, pattern, mode, and a run cut short

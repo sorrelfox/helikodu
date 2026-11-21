@@ -1350,6 +1350,7 @@ dependencies = [
  "helikodu-library",
  "helikodu-model",
  "log",
+ "notify",
  "proptest",
  "rustix",
  "serde",

@@ -64,6 +64,7 @@ use helikodu_service::player::{
     AnalyzerWatch, ContextRequest, EndReason, Notice, PlayerCommand, PlayerEvent,
     QueueSnapshot as Snapshot,
 };
+use helikodu_service::settings::SettingsEvent;
 use helikodu_service::waveforms::WaveformEvent;
 use helikodu_service::{Event, Service, SubscribeOptions};
 
@@ -2604,6 +2605,21 @@ impl Forwarder {
         }
     }
 
+    fn settings_event(&self, event: &SettingsEvent) -> bool {
+        match event {
+            SettingsEvent::Changed { groups, .. } => self.send(Update::Settings {
+                groups: groups.clone(),
+            }),
+            SettingsEvent::Rejected { notice } => self.send(Update::Problem {
+                message: fill(
+                    &tr("The settings file was changed but cannot be used: {}. The settings stay as they were."),
+                    &[&notice.to_string()],
+                ),
+            }),
+            _ => true,
+        }
+    }
+
     fn library_event(&self, event: &LibraryEvent) -> bool {
         match event {
             LibraryEvent::ThumbnailReady { hash, size, path } => {
@@ -2733,6 +2749,11 @@ impl Forwarder {
                         if !self.send(Update::Waveform(peaks)) {
                             return;
                         }
+                    }
+                }
+                Ok(Event::Settings(event)) => {
+                    if !self.settings_event(&event) {
+                        return;
                     }
                 }
                 Ok(_) => {}

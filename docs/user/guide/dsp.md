@@ -36,7 +36,7 @@ Convolution applies an impulse response, such as a room correction filter export
 
 Under **Impulse responses**, **Choose…** picks a folder of such files; the table lists every sample rate that has a file, with its length, its channels and where it comes from. **Choose…** in a row picks a file by hand for that rate; a file chosen by hand comes before the folder, and the cross beside it goes back to the file of the folder. A rate without a file of its own uses the file with the nearest rate, resampled; while music plays, the rate in use is marked **In use now**. **Clear** forgets the folder.
 
-A file that cannot be used is marked in its row with the reason: it is missing, it is not a WAV file, it is longer than 20 seconds, or it cannot be read. When it is the file for the rate in use, convolution is left out until you choose another file: the chain box shows a warning, and the readout and the signal path leave the stage out. Music at another rate is still processed.
+A file that cannot be used is marked in its row with the reason: it is missing, it is not a WAV file, it is longer than 20 seconds, or it cannot be read. When it is the file for the rate in use, convolution is left out until you choose another file: the chain box shows a warning, and the readout and the signal path leave the stage out. Music at another rate is still processed. When this happens while music plays, a toast says so once for that file and rate ("The impulse response for 96 kHz cannot be read"); its **Details…** opens this page.
 
 Under **Mix**, **Normalize** brings the loudest frequency of the response to 0 dB, so that it boosts nothing; **Gain** and **Share of the processed sound** set the level and how much of the output is processed. Convolution adds about 11 ms of delay.
 
@@ -59,7 +59,7 @@ A library track can have an equalizer of its own, which replaces the main equali
 
 ## In the settings file
 
-The page writes the `[dsp]` table of `settings.toml` (see [Settings](settings.md)); `helikodu-cli dsp` writes the same file, and the running program reads a changed file the next time it starts. Every stage is off by default.
+The page writes the `[dsp]` table of `settings.toml` (see [Settings](settings.md)); `helikodu-cli dsp` writes the same file, and the running program reads a changed file at once: the sound changes while it plays, and an open settings page shows the change. Every stage is off by default.
 
 ```toml
 [dsp]

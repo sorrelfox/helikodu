@@ -71,6 +71,6 @@ Helikodu notices when your library holds the same file more than once: files who
 
 ## The settings file
 
-All settings are stored in `~/.config/helikodu/settings.toml`, a plain text file. You can edit it while Helikodu is closed. A value that is out of range resets its section to the defaults; a file that cannot be read at all is replaced by the defaults and kept as `settings.toml.bak`. To start over with all defaults, delete the file.
+All settings are stored in `~/.config/helikodu/settings.toml`, a plain text file. You can edit it with a text editor or change it with `helikodu-cli`, also while Helikodu runs: the running program reads the saved file at once and applies it as if the change had been made in the settings window (the window style and the language still wait for the next start). If the edited file cannot be used (it is not valid TOML, or a value is of the wrong type or out of range), the running program keeps its settings, says so in a toast, and keeps your file as `settings.toml.bak` when a setting changes next. When Helikodu starts, a value that is out of range resets its section to the defaults; a file that cannot be read at all is replaced by the defaults and kept as `settings.toml.bak`. To start over with all defaults, delete the file.
 
 Settings files of earlier versions, without the keys added since, load with the defaults for them.

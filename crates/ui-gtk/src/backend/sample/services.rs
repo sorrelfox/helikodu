@@ -293,6 +293,7 @@ impl Services for MemoryServices {
         let duplicates = settings.library.duplicates != state.settings.library.duplicates;
         let analysis =
             settings.library.analyze_in_background != state.settings.library.analyze_in_background;
+        let groups = state.settings.changed_groups(&settings);
         state.settings = Arc::new(settings);
         if moved {
             state.output = output.clone();
@@ -300,6 +301,10 @@ impl Services for MemoryServices {
         drop(state);
         if moved {
             self.set_output(output);
+        }
+        // As the service announces every change of the store.
+        if !groups.is_empty() {
+            self.emit(Update::Settings { groups });
         }
         if analysis {
             let settings = self.settings();

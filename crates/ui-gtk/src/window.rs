@@ -8,6 +8,7 @@
 //! drag it and hold the desktop's window buttons. In the classic style the
 //! desktop draws its title bar, and the menu bar can be shown (Ctrl+M).
 
+pub(crate) mod convolution_notice;
 pub(crate) mod desktop;
 pub(crate) mod dialog_hooks;
 pub(crate) mod grouping_hooks;
@@ -370,6 +371,7 @@ impl MainWindow {
         self.setup_desktop(backend, &playback, &lyrics, &covers);
         let toasts = ToastOverlay::new(&imp.toast_overlay);
         imp.toasts.replace(Some(toasts));
+        self.watch_convolution(backend, &playback);
         let weak = self.downgrade();
         let cache = Rc::downgrade(&covers);
         let requests = backend.clone();

@@ -14,7 +14,7 @@ use helikodu_model::settings::{Accent, LoudnessMode, Settings, SettingsGroup, Ui
 use helikodu_service::Event;
 use helikodu_service::bus::EventBus;
 use helikodu_service::settings::{
-    LoadNotice, SettingsEvent, SettingsStore, SettingsStoreError, UiStateStore,
+    LoadNotice, SettingsEvent, SettingsStore, SettingsStoreError, SettingsWatcher, UiStateStore,
 };
 
 fn folder(test: &str) -> PathBuf {
@@ -236,4 +236,143 @@ fn the_dsp_table_is_saved_and_a_bad_one_reset() {
         Some(LoadNotice::Reset { .. })
     ));
     assert_eq!(reread.get().dsp, Settings::default().dsp);
+}
+
+/// The next event about the settings within `wait`, if any.
+fn next_settings_event(
+    events: &helikodu_service::bus::Subscription<Event>,
+    wait: std::time::Duration,
+) -> Option<SettingsEvent> {
+    let end = std::time::Instant::now() + wait;
+    loop {
+        let left = end.saturating_duration_since(std::time::Instant::now());
+        match events.recv_timeout(left) {
+            Ok(Event::Settings(event)) => return Some(event),
+            Ok(_) => {}
+            Err(_) => return None,
+        }
+    }
+}
+
+#[test]
+fn the_watcher_reads_edits_from_outside() {
+    let path = folder("watch_outside").join("settings.toml");
+    let bus = EventBus::<Event>::new();
+    let events = bus.subscribe_with(|e: &Event| Some(e.clone()), None);
+    let store = std::sync::Arc::new(SettingsStore::open(&path, bus.clone()));
+    let _watcher =
+        SettingsWatcher::start(store.clone(), std::time::Duration::from_millis(50)).unwrap();
+    // Another program replaces the file, as the command line does.
+    let other = SettingsStore::open(&path, EventBus::new());
+    other.update(|s| s.dsp.limiter.enabled = true).unwrap();
+    let event = next_settings_event(&events, std::time::Duration::from_secs(5));
+    assert!(
+        matches!(
+            event,
+            Some(SettingsEvent::Changed { ref groups, ref settings })
+                if *groups == vec![SettingsGroup::Dsp] && settings.dsp.limiter.enabled
+        ),
+        "{event:?}"
+    );
+    assert!(store.get().dsp.limiter.enabled);
+    // A text editor writes in place.
+    let text = fs::read_to_string(&path)
+        .unwrap()
+        .replace("menu_bar = true", "menu_bar = false");
+    fs::write(&path, text).unwrap();
+    let event = next_settings_event(&events, std::time::Duration::from_secs(5));
+    assert!(
+        matches!(event, Some(SettingsEvent::Changed { ref groups, .. }) if *groups == vec![SettingsGroup::Appearance]),
+        "{event:?}"
+    );
+    assert!(!store.get().appearance.menu_bar);
+}
+
+#[test]
+fn the_stores_own_writes_are_not_read_again() {
+    let path = folder("watch_own").join("settings.toml");
+    let bus = EventBus::<Event>::new();
+    let events = bus.subscribe_with(|e: &Event| Some(e.clone()), None);
+    let store = std::sync::Arc::new(SettingsStore::open(&path, bus.clone()));
+    let _watcher =
+        SettingsWatcher::start(store.clone(), std::time::Duration::from_millis(50)).unwrap();
+    store.update(|s| s.dsp.limiter.enabled = true).unwrap();
+    assert!(matches!(
+        next_settings_event(&events, std::time::Duration::from_secs(1)),
+        Some(SettingsEvent::Changed { .. })
+    ));
+    // Only the change itself is announced; the watcher's read finds the file as
+    // it was written.
+    assert_eq!(
+        next_settings_event(&events, std::time::Duration::from_millis(600)),
+        None
+    );
+    assert_eq!(store.reload(), None);
+    assert_eq!(
+        next_settings_event(&events, std::time::Duration::from_millis(50)),
+        None
+    );
+}
+
+#[test]
+fn a_broken_edit_leaves_the_settings_as_they_were() {
+    let path = folder("watch_broken").join("settings.toml");
+    let bus = EventBus::<Event>::new();
+    let events = bus.subscribe_with(|e: &Event| Some(e.clone()), None);
+    let store = std::sync::Arc::new(SettingsStore::open(&path, bus.clone()));
+    store.update(|s| s.dsp.limiter.enabled = true).unwrap();
+    let _ = next_settings_event(&events, std::time::Duration::from_secs(1));
+    let _watcher =
+        SettingsWatcher::start(store.clone(), std::time::Duration::from_millis(50)).unwrap();
+    fs::write(&path, "[dsp\nlimiter = ").unwrap();
+    let event = next_settings_event(&events, std::time::Duration::from_secs(5));
+    assert!(
+        matches!(
+            event,
+            Some(SettingsEvent::Rejected {
+                notice: LoadNotice::Unreadable { .. }
+            })
+        ),
+        "{event:?}"
+    );
+    assert!(store.get().dsp.limiter.enabled);
+    // A value out of range would reset its table: also kept out.
+    fs::write(&path, "version = 1\n[playback]\nseek_step_s = 100000\n").unwrap();
+    let event = next_settings_event(&events, std::time::Duration::from_secs(5));
+    assert!(
+        matches!(
+            event,
+            Some(SettingsEvent::Rejected {
+                notice: LoadNotice::Reset { .. }
+            })
+        ),
+        "{event:?}"
+    );
+    assert_eq!(store.get().playback, Settings::default().playback);
+    assert!(store.get().dsp.limiter.enabled);
+    // The next change keeps the broken file beside the new one.
+    store
+        .update(|s| s.appearance.accent = Accent::Amber)
+        .unwrap();
+    assert!(
+        fs::read_to_string(path.with_extension("toml.bak"))
+            .unwrap()
+            .contains("seek_step_s = 100000")
+    );
+    // A good edit is read again.
+    let text = fs::read_to_string(&path)
+        .unwrap()
+        .replace("menu_bar = true", "menu_bar = false");
+    fs::write(&path, text).unwrap();
+    let mut seen = None;
+    while let Some(event) = next_settings_event(&events, std::time::Duration::from_secs(5)) {
+        if let SettingsEvent::Changed { groups, .. } = &event
+            && *groups == vec![SettingsGroup::Appearance]
+            && !store.get().appearance.menu_bar
+        {
+            seen = Some(event);
+            break;
+        }
+    }
+    assert!(seen.is_some());
 }

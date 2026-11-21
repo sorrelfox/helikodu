@@ -39,6 +39,7 @@ helikodu-engine.workspace = true
 helikodu-library.workspace = true
 helikodu-model.workspace = true
 log.workspace = true
+notify.workspace = true
 rustix.workspace = true
 serde.workspace = true
 serde_json.workspace = true

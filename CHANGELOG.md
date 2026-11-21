@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- A change of `settings.toml` made while Helikodu runs (by `helikodu-cli dsp` and the other settings commands, or in a text editor) applies at once instead of at the next start: the sound, the playback and smart play settings follow it. A file that cannot be used leaves the settings as they were, with a toast that says why.
+- Settings › DSP and EQ follows changes made elsewhere while it is open, keeping the stage chosen.
+- When convolution is left out because the impulse response for the playing rate cannot be read, a toast says so once for that file and rate; its **Details…** opens the Convolution stage of Settings › DSP and EQ.
 - `has:lyrics` also finds tracks with a `.lrc` or `.txt` lyrics file beside them, not only lyrics in the file's tags, and the **Lyrics** fact of the track details says so too. A lyrics file added or removed later is noticed by the next scan or by the folder watcher, without the track being read again.
 
 ## [0.9.5] - 2026-11-21

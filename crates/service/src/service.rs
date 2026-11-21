@@ -9,6 +9,8 @@
 //! - A changed `[playback]` table reconfigures the player at once; a changed output
 //!   device, backend or mode moves playback there; the other `[output]` settings and
 //!   the `[loudness]` and `[dsp]` tables reach the engine while it plays.
+//! - `settings.toml` edited outside the program (the command line, a text editor) is
+//!   read again while it runs, and applies as a change made in the window does.
 //! - A device chosen in the player (the quick switcher sends
 //!   [`SetOutput`](crate::player::PlayerCommand::SetOutput)) is written back to the
 //!   `[output]` settings, so the settings page and the next start agree.
@@ -39,7 +41,9 @@ use crate::player::{
     CommandSender, Player, PlayerCommand, PlayerConfig, PlayerError, PlayerEvent, PlayerPrefs,
     ReplayGain, SessionConfig, SinkPacing,
 };
-use crate::settings::{SETTINGS_FILE, SettingsEvent, SettingsStore, UI_STATE_FILE, UiStateStore};
+use crate::settings::{
+    SETTINGS_FILE, SettingsEvent, SettingsStore, SettingsWatcher, UI_STATE_FILE, UiStateStore,
+};
 use crate::waveforms::{PeakStore, WAVEFORM_FOLDER, WantedSources, WaveformService};
 
 /// Which library the service opens.
@@ -83,6 +87,9 @@ pub struct ServiceConfig {
     /// How the background track analysis behaves (the `[library]
     /// analyze_in_background` setting turns it on).
     pub analysis: BackgroundAnalysisOptions,
+    /// How long after an edit of `settings.toml` from outside the program it is
+    /// read again; `None` does not watch the file.
+    pub settings_debounce: Option<Duration>,
 }
 
 impl ServiceConfig {
@@ -100,6 +107,7 @@ impl ServiceConfig {
             reservation: SharedReservation::default(),
             backups_after: Some(Duration::from_secs(120)),
             analysis: BackgroundAnalysisOptions::default(),
+            settings_debounce: Some(SettingsWatcher::DEBOUNCE),
         }
     }
 }
@@ -132,6 +140,8 @@ pub struct Service {
     backups: Option<BackupScheduler>,
     notices: Vec<StartNotice>,
     settings: Arc<SettingsStore>,
+    // Reads edits of the settings file from outside while it is kept.
+    _settings_watch: Option<SettingsWatcher>,
     ui_state: UiStateStore,
     bus: EventBus<Event>,
     clock: SharedClock,
@@ -278,6 +288,12 @@ impl Service {
             library,
             backups,
             notices,
+            _settings_watch: config.settings_debounce.and_then(|debounce| {
+                // Without it, edits from outside apply at the next start.
+                SettingsWatcher::start(Arc::clone(&settings), debounce)
+                    .inspect_err(|e| log::warn!("cannot watch the settings file: {e}"))
+                    .ok()
+            }),
             settings,
             ui_state: UiStateStore::new(dirs.state.join(UI_STATE_FILE)),
             bus,

@@ -1809,6 +1809,12 @@ pub enum Update {
     /// The playback speed changed (the settings', or one set with
     /// [`PlayerRequest::SetSpeed`]).
     Speed(PlaybackSpeed),
+    /// The settings changed: in the window, from the command line or in the
+    /// file. [`services::Services::settings`] gives them as they are now.
+    Settings {
+        /// The tables that changed.
+        groups: Vec<helikodu_model::settings::SettingsGroup>,
+    },
 }
 
 /// Takes requests on the main thread.

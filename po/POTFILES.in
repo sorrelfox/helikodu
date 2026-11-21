@@ -154,6 +154,7 @@ crates/ui-gtk/src/widgets/insert_popover.rs
 crates/ui-gtk/src/widgets/insert_popover/catalogue.rs
 crates/ui-gtk/src/dialogs/analysis_band.rs
 crates/ui-gtk/src/views/tracks/grouping.rs
+crates/ui-gtk/src/window/convolution_notice.rs
 crates/ui-gtk/src/window/import_offer.rs
 crates/ui-gtk/src/views/labels.rs
 crates/ui-gtk/src/views/label_chips.rs

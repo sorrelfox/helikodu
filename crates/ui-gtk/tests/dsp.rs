@@ -651,6 +651,167 @@ fn the_signal_path_follows_the_chain(app: &gtk::Application) {
     window.destroy();
 }
 
+/// A change of the settings made elsewhere (the command line, the settings
+/// file, another window) shows on the open page at once: the chain, the
+/// editor of the chosen stage and the readout follow, the chosen stage stays,
+/// and the page writes nothing back.
+fn the_page_follows_changes_made_elsewhere(app: &gtk::Application) {
+    let (window, backend, _) = window(app);
+    let services = backend.services();
+    let settings = window.open_dsp_stage("compressor");
+    spin(100);
+    let stack: gtk::Stack = named(&settings, "dsp-editors");
+    let threshold: gtk::Scale = named(&settings, "compressor-threshold");
+    assert!(!named::<gtk::Switch>(&settings, "stage-switch-limiter").is_active());
+    assert!(label_text(&settings, "dsp-path").starts_with("Every stage is off"));
+    // Changed outside the page, as the service announces a reloaded file.
+    services
+        .update_settings(&mut |s| {
+            s.dsp.compressor.enabled = true;
+            s.dsp.compressor.preset = CompressorPreset::Custom;
+            s.dsp.compressor.threshold_db = -24.0;
+            s.dsp.limiter.enabled = true;
+            s.dsp.order = vec![
+                ChainStage::Limiter,
+                ChainStage::Pitch,
+                ChainStage::Equalizer,
+                ChainStage::Convolution,
+                ChainStage::Crossfeed,
+                ChainStage::ChannelMix,
+                ChainStage::Compressor,
+            ];
+        })
+        .unwrap();
+    let stored = services.settings();
+    spin(150);
+    assert!(named::<gtk::Switch>(&settings, "stage-switch-limiter").is_active());
+    assert!(named::<gtk::Switch>(&settings, "stage-switch-compressor").is_active());
+    assert_eq!(label_text(&settings, "stage-place-limiter"), "1");
+    assert_eq!(
+        label_text(&settings, "stage-summary-compressor"),
+        "4 : 1 at −24 dB"
+    );
+    assert_eq!(threshold.value(), -24.0);
+    assert!(threshold.is_sensitive());
+    let path = label_text(&settings, "dsp-path");
+    assert!(path.find("limiter") < path.find("compressor"), "{path}");
+    // The stage chosen stays.
+    assert_eq!(stack.visible_child_name().as_deref(), Some("compressor"));
+    assert!(named::<gtk::ToggleButton>(&settings, "stage-compressor").is_active());
+    // Showing it wrote nothing back.
+    assert_eq!(services.settings(), stored);
+    // The page's own changes go on as before.
+    threshold.set_value(-12.0);
+    spin(150);
+    assert_eq!(services.settings().dsp.compressor.threshold_db, -12.0);
+    assert_eq!(threshold.value(), -12.0);
+    // A change elsewhere while a control is dragged shows after the drag.
+    threshold.set_value(-14.0);
+    services
+        .update_settings(&mut |s| s.dsp.crossfeed.enabled = true)
+        .unwrap();
+    threshold.set_value(-16.0);
+    spin(250);
+    let dsp = services.settings().dsp.clone();
+    assert_eq!(dsp.compressor.threshold_db, -16.0);
+    assert!(dsp.crossfeed.enabled);
+    assert_eq!(threshold.value(), -16.0);
+    assert!(named::<gtk::Switch>(&settings, "stage-switch-crossfeed").is_active());
+    settings.close();
+    window.destroy();
+}
+
+/// Convolution left out while music plays: one toast names the rate, it is
+/// not shown again for the same file, and "Details…" opens the convolution
+/// stage of Settings › DSP and EQ.
+fn the_convolution_toast_shows_once(app: &gtk::Application) {
+    let (window, backend, updates) = window(app);
+    let services = backend.services();
+    services
+        .update_settings(&mut |s| {
+            s.dsp.convolution.enabled = true;
+            s.dsp.convolution.files = vec![helikodu_model::settings::ImpulseFile {
+                rate_hz: 96_000,
+                path: PathBuf::from("/sample/room-96k-broken.wav"),
+            }];
+        })
+        .unwrap();
+    spin(50);
+    let mut path = sample::signal_path(SignalLamp::Resampled);
+    path.device.format.rate = helikodu_model::audio::SampleRate::new(96_000).unwrap();
+    for stage in &mut path.stages {
+        if stage.kind == StageKind::Convolution {
+            stage.state = StageState::Bypassed;
+            stage.detail = "left out: the impulse response cannot be used".into();
+        }
+    }
+    let text = "The impulse response for 96 kHz cannot be read";
+    updates
+        .try_send(Update::SignalPath(Some(Box::new(path.clone()))))
+        .unwrap();
+    spin(100);
+    assert_eq!(window.toast_text().as_deref(), Some(text));
+    // It stays: no clock.
+    spin(5500);
+    assert_eq!(window.toast_text().as_deref(), Some(text));
+    shot(window.upcast_ref(), "convolution-toast");
+    // Dismissed, it does not come back for the same file and rate.
+    window.toast("Something else", false);
+    updates
+        .try_send(Update::SignalPath(Some(Box::new(path.clone()))))
+        .unwrap();
+    spin(100);
+    assert_eq!(window.toast_text().as_deref(), Some("Something else"));
+    // Another file for the rate that cannot be read either: told again.
+    services
+        .update_settings(&mut |s| {
+            s.dsp.convolution.files[0].path = PathBuf::from("/sample/room-96k-broken-2.wav");
+        })
+        .unwrap();
+    updates
+        .try_send(Update::SignalPath(Some(Box::new(path.clone()))))
+        .unwrap();
+    spin(100);
+    assert_eq!(window.toast_text().as_deref(), Some(text));
+    // "Details…" opens the convolution stage.
+    let details = button(&window, "Details…");
+    details.emit_clicked();
+    spin(200);
+    assert_eq!(window.toast_text(), None);
+    assert_eq!(window.settings_page().as_deref(), Some("dsp"));
+    let settings = gtk::Window::list_toplevels()
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Window>().ok())
+        .find(|w| has_named(w, "dsp-editors"))
+        .unwrap();
+    let stack: gtk::Stack = named(&settings, "dsp-editors");
+    assert_eq!(stack.visible_child_name().as_deref(), Some("convolution"));
+    settings.close();
+    // Fixed: a toast still up goes.
+    services
+        .update_settings(&mut |s| {
+            s.dsp.convolution.files[0].path = PathBuf::from("/sample/room-96k-broken-3.wav");
+        })
+        .unwrap();
+    updates
+        .try_send(Update::SignalPath(Some(Box::new(path.clone()))))
+        .unwrap();
+    spin(100);
+    assert_eq!(window.toast_text().as_deref(), Some(text));
+    for stage in &mut path.stages {
+        if stage.kind == StageKind::Convolution {
+            stage.state = StageState::Active;
+            stage.detail = "convolution mono · 32768 taps · latency 10.7 ms".into();
+        }
+    }
+    updates
+        .try_send(Update::SignalPath(Some(Box::new(path))))
+        .unwrap();
+    spin(100);
+    assert_eq!(window.toast_text(), None);
+    window.destroy();
+}
+
 type Test = fn(&gtk::Application);
 
 const TESTS: &[(&str, Test)] = &[
@@ -672,6 +833,14 @@ const TESTS: &[(&str, Test)] = &[
     (
         "the_signal_path_follows_the_chain",
         the_signal_path_follows_the_chain,
+    ),
+    (
+        "the_page_follows_changes_made_elsewhere",
+        the_page_follows_changes_made_elsewhere,
+    ),
+    (
+        "the_convolution_toast_shows_once",
+        the_convolution_toast_shows_once,
     ),
 ];
 

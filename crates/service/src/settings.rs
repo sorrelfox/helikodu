@@ -21,8 +21,16 @@
 //! - **Changes** go through [`SettingsStore::update`]: validated, saved, then
 //!   published as [`SettingsEvent::Changed`] with the groups that changed.
 //!   [`applies`] tells front ends when a setting takes effect.
+//! - **Edits from outside** (the command line, a text editor) are read while the
+//!   program runs: [`SettingsWatcher`] watches the file and calls
+//!   [`SettingsStore::reload`], which announces them like a change made through
+//!   the store. The store's own writes are recognised and not read again; a file
+//!   that cannot be used as it is (not TOML, a wrong type, a value out of range)
+//!   leaves the settings as they are and is announced as
+//!   [`SettingsEvent::Rejected`].
 
 mod migrate;
+mod watch;
 
 use std::fmt;
 use std::io;
@@ -37,6 +45,7 @@ use crate::bus::EventBus;
 use crate::files::{read_if_exists, write_atomic};
 
 pub use migrate::{MIGRATIONS, Migration, migrate};
+pub use watch::SettingsWatcher;
 
 /// The file name of the settings.
 pub const SETTINGS_FILE: &str = "settings.toml";
@@ -54,6 +63,13 @@ pub enum SettingsEvent {
         groups: Vec<SettingsGroup>,
         /// All settings as they are now.
         settings: Arc<Settings>,
+    },
+    /// The file was changed outside the program but cannot be used as it is; the
+    /// settings stay as they were. A setting changed afterwards replaces the file,
+    /// keeping it as `settings.toml.bak`.
+    Rejected {
+        /// What is wrong with it.
+        notice: LoadNotice,
     },
 }
 
@@ -135,6 +151,9 @@ struct State {
     newer: Option<u32>,
     /// The file could not be used as it is: keep a copy before replacing it.
     keep_backup: bool,
+    /// A fingerprint of the file as the store last wrote or read it, so that its own
+    /// writes and unchanged files are not read again.
+    on_disk: Option<u64>,
 }
 
 /// The settings, shared by every part of the service. All methods may be called from
@@ -153,7 +172,20 @@ impl SettingsStore {
     pub fn open(path: impl Into<PathBuf>, bus: EventBus<Event>) -> Self {
         let path = path.into();
         crate::files::remove_stale_temporaries(&path);
-        let (settings, notice) = load(&path);
+        let (bytes, read_error) = match read_if_exists(&path) {
+            Ok(bytes) => (bytes, None),
+            Err(error) => (None, Some(error)),
+        };
+        let (settings, notice) = match (&bytes, read_error) {
+            (_, Some(error)) => (
+                Settings::default(),
+                Some(LoadNotice::Unreadable {
+                    reason: error.to_string(),
+                }),
+            ),
+            (Some(bytes), None) => read_settings(bytes),
+            (None, None) => (Settings::default(), None),
+        };
         let newer = match &notice {
             Some(LoadNotice::Newer { version }) => Some(*version),
             _ => None,
@@ -168,6 +200,7 @@ impl SettingsStore {
                 settings: Arc::new(settings),
                 newer,
                 keep_backup,
+                on_disk: bytes.as_deref().map(fingerprint),
             }),
             notice,
             bus,
@@ -212,16 +245,53 @@ impl SettingsStore {
     }
 
     /// Reads the file again after it was edited outside the program, and announces
-    /// what changed. A file that cannot be used now is ignored: the settings stay.
+    /// what changed, as [`update`](Self::update) does.
+    ///
+    /// Nothing is read when the file is as the store last wrote or read it (its own
+    /// writes), or when it is gone. A file that cannot be used as it is (not TOML, a
+    /// value of the wrong type or out of range) changes nothing: it is announced once
+    /// as [`SettingsEvent::Rejected`] and returned, and kept as `settings.toml.bak`
+    /// when a setting changes next. A file of a newer version is read, and from then
+    /// on not written.
     pub fn reload(&self) -> Option<LoadNotice> {
-        let (settings, notice) = load(&self.path);
-        if matches!(notice, Some(LoadNotice::Unreadable { .. })) {
-            return notice;
-        }
         let mut state = self.lock();
+        let bytes = match read_if_exists(&self.path) {
+            Ok(Some(bytes)) => bytes,
+            Ok(None) => return None,
+            Err(error) => {
+                let notice = LoadNotice::Unreadable {
+                    reason: error.to_string(),
+                };
+                log::warn!("cannot read the settings again: {notice}");
+                return Some(notice);
+            }
+        };
+        let print = fingerprint(&bytes);
+        if state.on_disk == Some(print) {
+            return None;
+        }
+        state.on_disk = Some(print);
+        let (settings, notice) = read_settings(&bytes);
+        if let Some(notice @ (LoadNotice::Unreadable { .. } | LoadNotice::Reset { .. })) = notice {
+            log::warn!(
+                "the changed settings file is not used, the settings stay as they were: {notice}"
+            );
+            state.keep_backup = true;
+            drop(state);
+            self.bus.publish(&Event::Settings(SettingsEvent::Rejected {
+                notice: notice.clone(),
+            }));
+            return Some(notice);
+        }
+        state.newer = match &notice {
+            Some(LoadNotice::Newer { version }) => Some(*version),
+            _ => None,
+        };
+        state.keep_backup = false;
         let groups = state.settings.changed_groups(&settings);
         state.settings = Arc::new(settings);
         if !groups.is_empty() {
+            log::info!("the settings file was changed outside the program; it is read again");
             self.announce(groups, Arc::clone(&state.settings));
         }
         notice
@@ -250,7 +320,9 @@ impl SettingsStore {
             }
             state.keep_backup = false;
         }
-        write_atomic(&self.path, to_toml(&settings).as_bytes()).map_err(write_error)?;
+        let text = to_toml(&settings);
+        write_atomic(&self.path, text.as_bytes()).map_err(write_error)?;
+        state.on_disk = Some(fingerprint(text.as_bytes()));
         state.settings = Arc::new(settings);
         self.announce(groups.clone(), Arc::clone(&state.settings));
         Ok(groups)
@@ -285,15 +357,12 @@ pub fn applies(key: &str) -> Applies {
     }
 }
 
-/// Reads the settings at `path`, and what was wrong with them.
-fn load(path: &Path) -> (Settings, Option<LoadNotice>) {
-    let unreadable =
-        |reason: String| (Settings::default(), Some(LoadNotice::Unreadable { reason }));
-    match read_if_exists(path) {
-        Ok(Some(bytes)) => read_settings(&bytes),
-        Ok(None) => (Settings::default(), None),
-        Err(error) => unreadable(error.to_string()),
-    }
+/// A fingerprint of the contents of a settings file.
+fn fingerprint(bytes: &[u8]) -> u64 {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    hasher.finish()
 }
 
 /// The settings in `bytes`, the contents of a settings file, and what was wrong
@@ -356,7 +425,7 @@ fn to_toml(settings: &Settings) -> String {
     let body = toml::to_string(settings).unwrap_or_default();
     format!(
         "# Helikodu settings. Written by the program; edits made while it runs are read\n\
-         # when it is told to reload them.\n\n{body}"
+         # at once.\n\n{body}"
     )
 }
 
