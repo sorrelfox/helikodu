@@ -252,7 +252,7 @@ impl Output {
 impl Worker {
     /// Builds the current item's processing for the open stream.
     pub(super) fn attach_current(&mut self) -> Result<(), EngineError> {
-        let (Some(output), Some(source)) = (&self.output, &mut self.current) else {
+        let (Some(output), Some(_)) = (&self.output, &self.current) else {
             return Err(EngineError::NothingLoaded);
         };
         let device = output.spec();
@@ -265,6 +265,10 @@ impl Worker {
         {
             self.dsp = Some(DspChain::new(&self.config.dsp, device.rate.hz(), channels));
         }
+        self.apply_track_equalizer();
+        let (Some(output), Some(source)) = (&self.output, &mut self.current) else {
+            return Err(EngineError::NothingLoaded);
+        };
         let dsp = self.dsp.as_ref().map(DspChain::plan).unwrap_or_default();
         let mut plan = plan_for(&self.config.processing, output, source, dsp);
         if source.decoder_info().dop && !super::formats::keeps_dop(&plan) {
@@ -294,6 +298,27 @@ impl Worker {
             self.staging.resize(needed, 0.0);
         }
         Ok(())
+    }
+
+    /// Gives the DSP chain the equalizer of the current item, if it has one, and
+    /// returns whether that changed the chain. On a stream in exclusive mode the
+    /// track's equalizer is left out when the path would be bit-perfect without it,
+    /// as the leveller is.
+    pub(super) fn apply_track_equalizer(&mut self) -> bool {
+        let (Some(dsp), Some(output), Some(source)) = (&mut self.dsp, &self.output, &self.current)
+        else {
+            return false;
+        };
+        let mut wanted = source.item().equalizer.as_deref();
+        if wanted.is_some() && output.mode == OutputMode::Exclusive {
+            let without = dsp.plan_without_track_equalizer();
+            if plan_for(&self.config.processing, output, source, without).is_bit_perfect() {
+                wanted = None;
+            }
+        }
+        let before = dsp.plan();
+        dsp.set_track_equalizer(wanted);
+        dsp.plan() != before
     }
 
     /// The output settings for playing to `device` of the chosen backend, in the

@@ -20,7 +20,7 @@ use helikodu_model::player::{
     EngineEvent, ItemId, LimiterActivity, PlaybackStats, SignalDevice, SignalLamp, SignalPath,
     SignalSource, SignalStage, StageKind, StageState, TransportState, Volume,
 };
-use helikodu_model::settings::DspSettings;
+use helikodu_model::settings::{ChainStage, DspSettings};
 
 use super::worker::Worker;
 use crate::pipeline::{LoudnessMode, PathPlan, VolumePlan};
@@ -76,6 +76,9 @@ pub(crate) struct Switches {
     pub(crate) crossfeed: bool,
     pub(crate) mixer: bool,
     pub(crate) limiter: bool,
+    pub(crate) compressor: bool,
+    pub(crate) convolution: bool,
+    pub(crate) pitch: bool,
 }
 
 impl Switches {
@@ -86,6 +89,9 @@ impl Switches {
             crossfeed: dsp.crossfeed.enabled,
             mixer: dsp.channel_mix.enabled,
             limiter: dsp.limiter.enabled,
+            compressor: dsp.compressor.enabled,
+            convolution: dsp.convolution.enabled,
+            pitch: dsp.pitch.enabled,
         }
     }
 }
@@ -304,7 +310,7 @@ pub(crate) fn signal_path(plan: &PathPlan, context: &PathContext) -> SignalPath 
         VolumePlan::Software(_) => context.level != Volume::FULL,
         _ => false,
     };
-    let mut stages = Vec::with_capacity(12);
+    let mut stages = Vec::with_capacity(15);
     let mut stage = |kind, state, detail: String| {
         stages.push(SignalStage {
             kind,
@@ -363,26 +369,18 @@ pub(crate) fn signal_path(plan: &PathPlan, context: &PathContext) -> SignalPath 
         None if on => stage(kind, StageState::Bypassed, String::new()),
         None => stage(kind, StageState::Off, String::new()),
     };
-    dsp_stage(
-        StageKind::Equalizer,
-        dsp.equalizer.map(|s| s.to_string()),
-        switches.equalizer,
-    );
-    dsp_stage(
-        StageKind::Crossfeed,
-        dsp.crossfeed.map(|s| s.to_string()),
-        switches.crossfeed,
-    );
-    dsp_stage(
-        StageKind::ChannelMixer,
-        dsp.mixer.map(|s| s.to_string()),
-        switches.mixer,
-    );
-    dsp_stage(
-        StageKind::Limiter,
-        dsp.limiter.map(|s| s.to_string()),
-        switches.limiter,
-    );
+    for chain_stage in dsp.order {
+        let (kind, on) = match chain_stage {
+            ChainStage::Pitch => (StageKind::Pitch, switches.pitch),
+            ChainStage::Equalizer => (StageKind::Equalizer, switches.equalizer),
+            ChainStage::Convolution => (StageKind::Convolution, switches.convolution),
+            ChainStage::Crossfeed => (StageKind::Crossfeed, switches.crossfeed),
+            ChainStage::ChannelMix => (StageKind::ChannelMixer, switches.mixer),
+            ChainStage::Compressor => (StageKind::Compressor, switches.compressor),
+            ChainStage::Limiter => (StageKind::Limiter, switches.limiter),
+        };
+        dsp_stage(kind, dsp.stage(chain_stage).map(|s| s.to_string()), on);
+    }
     let percent = |volume: Volume| format!("{:.0} %", volume.position() * 100.0);
     match context.volume {
         VolumePlan::Software(_) if volume_touches => stage(
@@ -609,7 +607,7 @@ mod tests {
         assert_eq!(state(&path, StageKind::Volume), StageState::External);
         assert_eq!(state(&path, StageKind::Loudness), StageState::Off);
         assert_eq!(state(&path, StageKind::Decoder), StageState::Bypassed);
-        assert_eq!(path.stages.len(), 12);
+        assert_eq!(path.stages.len(), 15);
         assert_eq!(path.source.bits, 32);
         assert_eq!(path.device.exact_bits, None);
         assert_eq!(

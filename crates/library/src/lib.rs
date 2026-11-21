@@ -40,6 +40,7 @@ mod stats;
 mod tag_journal;
 pub mod tag_tools;
 mod tag_writes;
+mod track_equalizers;
 mod track_source;
 mod user_fields;
 mod watch;

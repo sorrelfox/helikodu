@@ -194,3 +194,63 @@ fn an_idle_limiter_reports_nothing() {
         "{events:?}"
     );
 }
+
+#[test]
+fn a_track_with_its_own_equalizer_plays_with_it() {
+    use helikodu_model::settings::EqualizerSettings;
+
+    let signal = media::sine(RATE, FRAMES);
+    let first = media::write_wav("dsp-track-eq-1.wav", &signal);
+    let second = media::write_wav("dsp-track-eq-2.wav", &signal);
+    let out = media::path("dsp-track-eq-out.wav");
+    let mut session = Session::new(wav_config(&out));
+    // A preamp of -6 dB and no filters: the track plays at half.
+    let half = EqualizerSettings {
+        enabled: true,
+        auto_preamp: false,
+        preamp_db: 20.0 * 0.5f64.log10(),
+        ..EqualizerSettings::default()
+    };
+    session.play_queue(&[item(1, &first), item(2, &second).with_equalizer(Some(half))]);
+    session.wait_state(TransportState::Stopped);
+    drop(session);
+
+    let written = media::read_output(&out).ints;
+    assert_eq!(written.len(), 2 * signal.samples.len());
+    // The first track is untouched, the second at half after the crossfade.
+    assert_eq!(written[..signal.samples.len()], signal.samples[..]);
+    let fade = media::fade_frames(20, RATE);
+    let second_part = &written[signal.samples.len()..];
+    for i in fade..FRAMES {
+        let want = f64::from(signal.samples[2 * i]) * 0.5;
+        let got = f64::from(second_part[2 * i]);
+        assert!((got - want).abs() <= 2.0, "frame {i}: {got} vs {want}");
+    }
+}
+
+#[test]
+fn the_compressor_delays_but_loses_nothing() {
+    let signal = media::sine(RATE, FRAMES);
+    let path = media::write_wav("dsp-compressor-in.wav", &signal);
+    let out = media::path("dsp-compressor-out.wav");
+    let mut config = wav_config(&out);
+    config.dsp.compressor.enabled = true;
+    let mut session = Session::new(config);
+    session.load(&item(1, &path), MediaTime::ZERO);
+    session.wait_state(TransportState::Stopped);
+    drop(session);
+
+    let written = media::read_output(&out).ints;
+    // The lookahead (2 ms) is played out at the end.
+    let delay = (written.len() - signal.samples.len()) / 2;
+    assert_eq!(delay, media::fade_frames(2, RATE));
+    // Night mode: once the attack has acted, the sine at -6 dBFS comes out quieter
+    // than it went in, but louder than the threshold.
+    let settled = media::fade_frames(100, RATE) * 2;
+    let peak = written[settled..]
+        .iter()
+        .map(|s| i32::from(*s).abs())
+        .max()
+        .unwrap();
+    assert!(peak < 16_000 && peak > 1_000, "{peak}");
+}

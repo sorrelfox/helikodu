@@ -57,7 +57,7 @@ use helikodu_library::{
 };
 use helikodu_model::library::TrackId;
 use helikodu_model::player::TrackFlags;
-use helikodu_model::settings::{AdvancedSettings, LibrarySettings};
+use helikodu_model::settings::{AdvancedSettings, EqualizerSettings, LibrarySettings};
 use std::collections::HashMap;
 
 /// Held while tags are written to files: by a tag edit or its undo in the
@@ -550,6 +550,30 @@ impl MusicLibrary {
     /// its `SetTrackFlags` command instead, so that its queue follows at once.
     pub fn set_track_flags(&self, track: TrackId, flags: TrackFlags) -> Result<(), LibraryError> {
         Ok(self.library.set_track_flags(track, flags)?)
+    }
+
+    /// The equalizer of `track`, which replaces the equalizer of the settings while
+    /// it plays, if one was set.
+    pub fn track_equalizer(
+        &self,
+        track: TrackId,
+    ) -> Result<Option<EqualizerSettings>, LibraryError> {
+        Ok(self.library.track_equalizer(track)?)
+    }
+
+    /// Sets the equalizer of `track`, or removes it with `None`. It applies from the
+    /// next time the track starts.
+    pub fn set_track_equalizer(
+        &self,
+        track: TrackId,
+        equalizer: Option<&EqualizerSettings>,
+    ) -> Result<(), LibraryError> {
+        Ok(self.library.set_track_equalizer(track, equalizer)?)
+    }
+
+    /// The tracks that have an equalizer of their own.
+    pub fn tracks_with_equalizer(&self) -> Result<Vec<TrackId>, LibraryError> {
+        Ok(self.library.tracks_with_equalizer()?)
     }
 
     /// The album, folder, grouping, artist and flags of `tracks`, for the play modes.

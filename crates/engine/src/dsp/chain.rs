@@ -1,86 +1,229 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The DSP chain: the stages in their fixed order, and click-free changes.
+//! The DSP chain: the stages in the order of the settings, and click-free changes.
 
 use std::f64::consts::PI;
+use std::sync::Arc;
 use std::time::Duration;
 
-use helikodu_model::settings::DspSettings;
+use helikodu_model::settings::{ChainStage, ConvolutionSettings, DspSettings, EqualizerSettings};
 
+use super::impulse::{self, Impulse};
 use super::plan::DspPlan;
-use super::{ChannelMixer, Crossfeed, DspStage, Equalizer, Limiter, LimiterActivity, guard};
+use super::{
+    ChannelMixer, Compressor, Convolver, Crossfeed, DspStage, Equalizer, Limiter, LimiterActivity,
+    PitchShifter, guard,
+};
 
 /// Frames processed at once; the crossfade's scratch buffer holds this many.
 const CHUNK: usize = 512;
 /// How much of the input the chain keeps, to bring new stages up to date.
 const HISTORY: Duration = Duration::from_millis(100);
 
+/// One built stage.
+#[derive(Debug)]
+enum Stage {
+    Pitch(PitchShifter),
+    Equalizer(Equalizer),
+    Convolution(Convolver),
+    Crossfeed(Crossfeed),
+    Mixer(ChannelMixer),
+    Compressor(Compressor),
+    Limiter(Limiter),
+}
+
+impl Stage {
+    fn as_dyn(&mut self) -> &mut dyn DspStage {
+        match self {
+            Self::Pitch(s) => s,
+            Self::Equalizer(s) => s,
+            Self::Convolution(s) => s,
+            Self::Crossfeed(s) => s,
+            Self::Mixer(s) => s,
+            Self::Compressor(s) => s,
+            Self::Limiter(s) => s,
+        }
+    }
+
+    fn latency(&self) -> usize {
+        match self {
+            Self::Pitch(s) => s.latency(),
+            Self::Convolution(s) => s.latency(),
+            Self::Compressor(s) => s.latency(),
+            Self::Limiter(s) => s.latency(),
+            Self::Equalizer(_) | Self::Crossfeed(_) | Self::Mixer(_) => 0,
+        }
+    }
+}
+
+/// What names an impulse response: the folder, the files by rate, and the rate.
+type ImpulseKey = (
+    Option<std::path::PathBuf>,
+    Vec<(u32, std::path::PathBuf)>,
+    u32,
+);
+
+/// The impulse response last read, so that other changes do not read it again.
+#[derive(Debug, Default)]
+pub(super) struct ImpulseCache {
+    key: Option<ImpulseKey>,
+    found: Option<Result<Arc<Impulse>, String>>,
+}
+
+impl ImpulseCache {
+    /// The impulse response `settings` give for `rate` Hz, or why there is none.
+    fn get(&mut self, settings: &ConvolutionSettings, rate: u32) -> Result<Arc<Impulse>, String> {
+        let key = (
+            settings.folder.clone(),
+            settings
+                .files
+                .iter()
+                .map(|f| (f.rate_hz, f.path.clone()))
+                .collect(),
+            rate,
+        );
+        if self.key.as_ref() != Some(&key) || self.found.is_none() {
+            self.found = Some(
+                impulse::find(settings, rate)
+                    .map(Arc::new)
+                    .map_err(|e| e.to_string()),
+            );
+            self.key = Some(key);
+        }
+        self.found.clone().unwrap_or_else(|| Err(String::new()))
+    }
+}
+
 /// One set of stages built from one version of the settings.
 #[derive(Debug)]
 struct Stages {
-    equalizer: Option<Equalizer>,
-    crossfeed: Option<Crossfeed>,
-    mixer: Option<ChannelMixer>,
-    limiter: Option<Limiter>,
+    stages: Vec<Stage>,
     plan: DspPlan,
+    /// The equalizer's sections and preamp, to tell equal equalizers apart.
+    equalizer: Option<(Vec<super::Coefficients>, f64)>,
+    impulse: Option<Arc<Impulse>>,
+    /// Why convolution is switched on but does not run.
+    problem: Option<String>,
 }
 
 impl Stages {
-    fn new(settings: &DspSettings, rate: u32, channels: usize) -> Self {
-        let eq = &settings.equalizer;
-        let equalizer = eq
-            .enabled
-            .then(|| Equalizer::new(eq, rate, channels))
-            .filter(|stage| !stage.is_identity());
-        let crossfeed = (settings.crossfeed.enabled && channels == 2).then(|| {
-            let (cutoff, level) = settings.crossfeed.effective();
-            Crossfeed::new(cutoff, level, rate)
-        });
-        let mix = &settings.channel_mix;
-        let mixer = (mix.enabled && channels >= 2)
-            .then(|| ChannelMixer::new(mix.channels, mix.balance_db, channels))
-            .filter(|stage| !stage.is_identity());
-        let limiter = settings.limiter.enabled.then(|| {
-            Limiter::new(
-                settings.limiter.lookahead_ms,
-                settings.limiter.ceiling_db,
-                rate,
-                channels,
-            )
-        });
-        let plan = DspPlan {
-            equalizer: equalizer.as_ref().map(Equalizer::plan),
-            crossfeed: crossfeed.as_ref().map(Crossfeed::plan),
-            mixer: mixer.as_ref().map(ChannelMixer::plan),
-            limiter: limiter.as_ref().map(Limiter::plan),
-        };
+    fn new(settings: &DspSettings, rate: u32, channels: usize, cache: &mut ImpulseCache) -> Self {
+        let mut stages = Vec::new();
+        let mut plan = DspPlan::default();
+        let order = settings.effective_order();
+        for (slot, stage) in plan.order.iter_mut().zip(&order) {
+            *slot = *stage;
+        }
+        let mut equalizer = None;
+        let mut impulse = None;
+        let mut problem = None;
+        for stage in order {
+            if !settings.is_enabled(stage) {
+                continue;
+            }
+            match stage {
+                ChainStage::Pitch => {
+                    let s = PitchShifter::new(&settings.pitch, rate, channels);
+                    if !s.is_identity() {
+                        plan.pitch = Some(s.plan());
+                        stages.push(Stage::Pitch(s));
+                    }
+                }
+                ChainStage::Equalizer => {
+                    let s = Equalizer::new(&settings.equalizer, rate, channels);
+                    if !s.is_identity() {
+                        plan.equalizer = Some(s.plan());
+                        equalizer = Some((s.sections().to_vec(), s.preamp()));
+                        stages.push(Stage::Equalizer(s));
+                    }
+                }
+                ChainStage::Convolution => match cache.get(&settings.convolution, rate) {
+                    Ok(found) => {
+                        let s = Convolver::new(&found, &settings.convolution, rate, channels);
+                        plan.convolution = Some(s.plan());
+                        impulse = Some(found);
+                        stages.push(Stage::Convolution(s));
+                    }
+                    Err(why) => problem = Some(why),
+                },
+                ChainStage::Crossfeed => {
+                    if channels == 2 {
+                        let (cutoff, level) = settings.crossfeed.effective();
+                        let s = Crossfeed::new(cutoff, level, rate);
+                        plan.crossfeed = Some(s.plan());
+                        stages.push(Stage::Crossfeed(s));
+                    }
+                }
+                ChainStage::ChannelMix => {
+                    let mix = &settings.channel_mix;
+                    if channels >= 2 {
+                        let s = ChannelMixer::new(mix.channels, mix.balance_db, channels);
+                        if !s.is_identity() {
+                            plan.mixer = Some(s.plan());
+                            stages.push(Stage::Mixer(s));
+                        }
+                    }
+                }
+                ChainStage::Compressor => {
+                    let s = Compressor::new(&settings.compressor, rate, channels);
+                    plan.compressor = Some(s.plan());
+                    stages.push(Stage::Compressor(s));
+                }
+                ChainStage::Limiter => {
+                    let s = Limiter::new(
+                        settings.limiter.lookahead_ms,
+                        settings.limiter.ceiling_db,
+                        rate,
+                        channels,
+                    );
+                    plan.limiter = Some(s.plan());
+                    stages.push(Stage::Limiter(s));
+                }
+            }
+        }
         Self {
-            equalizer,
-            crossfeed,
-            mixer,
-            limiter,
+            stages,
             plan,
+            equalizer,
+            impulse,
+            problem,
         }
     }
 
     fn is_active(&self) -> bool {
-        !self.plan.is_empty()
+        !self.stages.is_empty()
     }
 
     /// Whether `other` sounds the same: the same stages with the same values.
     fn same_as(&self, other: &Self) -> bool {
-        let sections = |s: &Self| {
-            s.equalizer
-                .as_ref()
-                .map(|eq| (eq.sections().to_vec(), eq.preamp()))
+        let impulse = match (&self.impulse, &other.impulse) {
+            (Some(a), Some(b)) => Arc::ptr_eq(a, b),
+            (None, None) => true,
+            _ => false,
         };
-        self.plan == other.plan && sections(self) == sections(other)
+        (self.plan == other.plan || (self.plan.is_empty() && other.plan.is_empty()))
+            && self.equalizer == other.equalizer
+            && impulse
+    }
+
+    fn limiter(&self) -> Option<&Limiter> {
+        self.stages.iter().find_map(|s| match s {
+            Stage::Limiter(l) => Some(l),
+            _ => None,
+        })
+    }
+
+    fn limiter_mut(&mut self) -> Option<&mut Limiter> {
+        self.stages.iter_mut().find_map(|s| match s {
+            Stage::Limiter(l) => Some(l),
+            _ => None,
+        })
     }
 
     /// Carries on what `old` counted (the limiter's statistics).
     fn continue_from(&mut self, old: &Self) {
-        if let (Some(new), Some(old)) = (&mut self.limiter, &old.limiter) {
+        if let (Some(new), Some(old)) = (self.limiter_mut(), old.limiter()) {
             new.continue_activity(old);
         }
     }
@@ -89,35 +232,20 @@ impl Stages {
         if !self.is_active() {
             return;
         }
-        if let Some(stage) = &mut self.equalizer {
-            stage.process(block);
-        }
-        if let Some(stage) = &mut self.crossfeed {
-            stage.process(block);
-        }
-        if let Some(stage) = &mut self.mixer {
-            stage.process(block);
-        }
-        if let Some(stage) = &mut self.limiter {
-            stage.process(block);
+        for stage in &mut self.stages {
+            stage.as_dyn().process(block);
         }
         guard(block);
     }
 
     fn reset(&mut self) {
-        if let Some(stage) = &mut self.equalizer {
-            stage.reset();
-        }
-        if let Some(stage) = &mut self.crossfeed {
-            stage.reset();
-        }
-        if let Some(stage) = &mut self.limiter {
-            stage.reset();
+        for stage in &mut self.stages {
+            stage.as_dyn().reset();
         }
     }
 
     fn latency(&self) -> usize {
-        self.limiter.as_ref().map_or(0, DspStage::latency)
+        self.stages.iter().map(Stage::latency).sum()
     }
 }
 
@@ -146,6 +274,9 @@ pub struct DspChain {
     rate: u32,
     channels: usize,
     settings: DspSettings,
+    /// The equalizer of the track that plays, which replaces the one of the settings.
+    track_equalizer: Option<EqualizerSettings>,
+    impulses: ImpulseCache,
     current: Stages,
     fade: Option<Fade>,
     pending: Option<Stages>,
@@ -170,11 +301,14 @@ impl DspChain {
         let channels = channels.max(1);
         let fade_frames =
             ((f64::from(rate) * Self::CROSSFADE.as_secs_f64()).round() as usize).max(1);
+        let mut impulses = ImpulseCache::default();
         Self {
             rate,
             channels,
             settings: settings.clone(),
-            current: Stages::new(settings, rate, channels),
+            track_equalizer: None,
+            current: Stages::new(settings, rate, channels, &mut impulses),
+            impulses,
             fade: None,
             pending: None,
             retired: None,
@@ -219,14 +353,55 @@ impl DspChain {
 
     /// What the limiter has done, if it runs.
     pub fn limiter_activity(&self) -> Option<LimiterActivity> {
-        self.current.limiter.as_ref().map(Limiter::activity)
+        self.current.limiter().map(Limiter::activity)
     }
 
     /// Starts the limiter's statistics anew, for example for a new track.
     pub fn reset_limiter_activity(&mut self) {
-        if let Some(limiter) = &mut self.current.limiter {
+        if let Some(limiter) = self.current.limiter_mut() {
             limiter.reset_activity();
         }
+    }
+
+    /// Why convolution is switched on but does not run (no impulse response for the
+    /// rate, a file that cannot be read), as the latest settings make it.
+    pub fn convolution_problem(&self) -> Option<&str> {
+        self.newest().problem.as_deref()
+    }
+
+    /// The equalizer of the track that plays now, which replaces the equalizer of
+    /// the settings while `dsp.track_equalizer` is on; `None` for the settings' own.
+    /// A change crossfades in like any other.
+    pub fn set_track_equalizer(&mut self, equalizer: Option<&EqualizerSettings>) {
+        if self.track_equalizer.as_ref() == equalizer {
+            return;
+        }
+        self.track_equalizer = equalizer.cloned();
+        self.rebuild();
+    }
+
+    /// The stages the settings alone make, without the track's equalizer.
+    pub fn plan_without_track_equalizer(&mut self) -> DspPlan {
+        if self.track_equalizer().is_none() {
+            return self.plan();
+        }
+        Stages::new(&self.settings, self.rate, self.channels, &mut self.impulses).plan
+    }
+
+    /// The track's equalizer, if one replaces the settings' now.
+    pub fn track_equalizer(&self) -> Option<&EqualizerSettings> {
+        self.track_equalizer
+            .as_ref()
+            .filter(|_| self.settings.track_equalizer)
+    }
+
+    /// The settings with the track's equalizer in place of their own.
+    fn effective(&self) -> DspSettings {
+        let mut settings = self.settings.clone();
+        if let Some(equalizer) = self.track_equalizer() {
+            settings.equalizer = equalizer.clone();
+        }
+        settings
     }
 
     fn newest(&self) -> &Stages {
@@ -240,8 +415,20 @@ impl DspChain {
             return;
         }
         self.settings = settings.clone();
-        let stages = Stages::new(settings, self.rate, self.channels);
+        self.rebuild();
+    }
+
+    /// Builds the stages the settings and the track's equalizer make, and fades to
+    /// them unless they sound as the current ones do.
+    fn rebuild(&mut self) {
+        let settings = self.effective();
+        let stages = Stages::new(&settings, self.rate, self.channels, &mut self.impulses);
         if stages.same_as(self.newest()) {
+            let problem = stages.problem;
+            match &mut self.pending {
+                Some(pending) => pending.problem = problem,
+                None => self.current.problem = problem,
+            }
             return;
         }
         self.retired = None;

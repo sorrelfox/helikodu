@@ -17,6 +17,7 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand};
 
 use self::offline::analyze::AnalyzeArgs;
+use self::offline::dsp::DspArgs;
 use self::offline::duplicates::DuplicatesArgs;
 use self::offline::fields::FieldsArgs;
 use self::offline::info::InfoArgs;
@@ -107,6 +108,9 @@ enum Command {
     /// List, define and remove computed fields (named expressions) and custom
     /// fields (names for tags).
     Fields(FieldsArgs),
+    /// Show and change the DSP chain in the settings file: its order, saved chains,
+    /// the compressor, convolution, pitch shift, and the equalizers of single tracks.
+    Dsp(DspArgs),
     /// Show what the running application plays.
     Status(JsonArgs),
     /// Show the queue of the running application.
@@ -176,6 +180,7 @@ fn main() -> ExitCode {
         Command::ManagedFolder(args) => offline::managed_folder::run(&args),
         Command::Labels(args) => offline::labels::run(&args),
         Command::Fields(args) => offline::fields::run(&args),
+        Command::Dsp(args) => offline::dsp::run(&args),
         Command::Status(args) => remote::commands::status(&args),
         Command::Queue(args) => remote::commands::queue(&args),
         Command::Playlists(args) => remote::commands::playlists(&args),

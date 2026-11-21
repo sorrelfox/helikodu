@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::analysis::TrackAnalysis;
 use crate::library::MediaSource;
+use crate::settings::EqualizerSettings;
 
 /// Identifies one request to play something. The sender chooses it, and the engine
 /// repeats it in every event about that item, so that the same file queued twice can
@@ -73,6 +74,10 @@ pub struct PlaybackItem {
     /// is looked up again when the item is made.
     #[serde(skip)]
     pub analysis: Option<Arc<TrackAnalysis>>,
+    /// The track's own equalizer, stored in the library, which replaces the
+    /// equalizer of the settings while it plays (when `dsp.track_equalizer` is on).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub equalizer: Option<Box<EqualizerSettings>>,
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)] // serde passes a reference
@@ -92,6 +97,17 @@ impl PlaybackItem {
             audio_stream: None,
             track_volume_db: 0.0,
             analysis: None,
+            equalizer: None,
+        }
+    }
+
+    /// The same item with the track's own equalizer `equalizer` (see
+    /// [`equalizer`](Self::equalizer)).
+    #[must_use]
+    pub fn with_equalizer(self, equalizer: Option<EqualizerSettings>) -> Self {
+        Self {
+            equalizer: equalizer.map(Box::new),
+            ..self
         }
     }
 

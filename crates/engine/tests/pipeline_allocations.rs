@@ -203,3 +203,63 @@ fn the_dsp_chain_does_not_allocate() {
         assert_eq!(count, 0, "round {round}: {count} allocations");
     }
 }
+
+#[test]
+fn the_newer_stages_do_not_allocate() {
+    use helikodu_engine::dsp::{DspChain, impulse};
+    use helikodu_model::settings::{ChainStage, DspSettings, EqualizerSettings};
+
+    let dir = std::env::temp_dir().join(format!("helikodu-alloc-ir-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let response: Vec<f64> = (0..6000)
+        .map(|i| 0.999f64.powi(i) * ((i % 7) as f64 - 3.0) / 3.0)
+        .collect();
+    impulse::write_wav(&dir.join("room.wav"), 48_000, &[response.clone(), response]).unwrap();
+
+    let mut settings = DspSettings::default();
+    settings.compressor.enabled = true;
+    settings.pitch.enabled = true;
+    settings.pitch.semitones = 3.0;
+    settings.convolution.enabled = true;
+    settings.convolution.folder = Some(dir.clone());
+    settings.limiter.enabled = true;
+    let mut chain = DspChain::new(&settings, 48_000, 2);
+    assert!(
+        chain.plan().convolution.is_some(),
+        "{:?}",
+        chain.convolution_problem()
+    );
+    let input: Vec<f32> = (0..4800).map(|i| (i as f32 * 0.05).sin() * 0.9).collect();
+    let mut block = input.clone();
+    let mut tail = vec![0.0f32; 8192];
+    let mut track_eq = EqualizerSettings {
+        enabled: true,
+        ..EqualizerSettings::default()
+    };
+    track_eq.mode = helikodu_model::settings::EqMode::Graphic10;
+    track_eq.graphic_10[4] = 5.0;
+    for round in 0..4 {
+        match round {
+            1 => settings.order = vec![ChainStage::Limiter, ChainStage::Compressor],
+            2 => {
+                settings.pitch.semitones = -5.0;
+                settings.convolution.wet_percent = 40.0;
+            }
+            3 => chain.set_track_equalizer(Some(&track_eq)),
+            _ => {}
+        }
+        chain.set_settings(&settings);
+        let count = allocations(|| {
+            for _ in 0..10 {
+                block.copy_from_slice(&input);
+                chain.process(&mut block);
+            }
+            let _ = chain.flush(&mut tail);
+            chain.reset();
+        });
+        assert_eq!(count, 0, "round {round}: {count} allocations");
+        assert!(block.iter().all(|s| s.is_finite()));
+    }
+    assert!(chain.plan().equalizer.is_some());
+    let _ = std::fs::remove_dir_all(dir);
+}

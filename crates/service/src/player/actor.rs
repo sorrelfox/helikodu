@@ -20,6 +20,7 @@ use helikodu_model::player::{
     PlaybackItem, PlaybackState, QueueContext, QueueEntry, ShuffleMode, StopAfter, TrackEndReason,
     TrackFlags, TransportState, Volume,
 };
+use helikodu_model::settings::EqualizerSettings;
 
 use super::command::{ContextRequest, PlayerCommand};
 use super::config::{PlayerPrefs, SessionConfig};
@@ -1354,7 +1355,8 @@ impl Actor {
         let item = self
             .loudness
             .complete(&path, &neighbours, item, measured.as_ref())
-            .with_analysis(self.track_analysis(library_track));
+            .with_analysis(self.track_analysis(library_track))
+            .with_equalizer(self.track_equalizer(library_track));
         Ok((
             item,
             Slot {
@@ -1383,6 +1385,12 @@ impl Actor {
             AnalysisOutcome::Analyzed(analysis) if stored.current => Some(Arc::new(analysis)),
             _ => None,
         }
+    }
+
+    /// The library's equalizer of `track`, if it has one of its own. Read here, on
+    /// the player's thread, like the analysis.
+    fn track_equalizer(&self, track: Option<TrackId>) -> Option<EqualizerSettings> {
+        self.library.as_ref()?.track_equalizer(track?).ok()?
     }
 
     /// The file of `track` without asking the library for more than its path.

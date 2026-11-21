@@ -41,6 +41,7 @@ helikodu-cli write-stats           # write changed play counts and ratings into 
 helikodu-cli managed-folder ...    # the managed folder: show, set, import, consolidate
 helikodu-cli labels list|add|...   # labels of tracks, albums and artists
 helikodu-cli fields list|define|... # computed and custom fields
+helikodu-cli dsp show|order|chain|... # the DSP chain in the settings file (see Equalizer and sound processing)
 ```
 
 Some examples:

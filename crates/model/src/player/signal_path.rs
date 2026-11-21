@@ -121,6 +121,12 @@ pub enum StageKind {
     ChannelMixer,
     /// The true-peak limiter.
     Limiter,
+    /// The dynamics compressor.
+    Compressor,
+    /// Convolution with an impulse response.
+    Convolution,
+    /// Pitch shift.
+    Pitch,
     /// The volume.
     Volume,
     /// TPDF dither to the device's integer width.
@@ -135,7 +141,13 @@ impl StageKind {
     pub fn is_dsp(self) -> bool {
         matches!(
             self,
-            Self::Equalizer | Self::Crossfeed | Self::ChannelMixer | Self::Limiter
+            Self::Equalizer
+                | Self::Crossfeed
+                | Self::ChannelMixer
+                | Self::Limiter
+                | Self::Compressor
+                | Self::Convolution
+                | Self::Pitch
         )
     }
 }

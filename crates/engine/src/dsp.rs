@@ -1,14 +1,18 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The DSP chain: equalizer, crossfeed, channel mixer and limiter, in that fixed
-//! order, on the mixed stream at the device's rate and layout.
+//! The DSP chain: pitch shift, equalizer, convolution, crossfeed, channel mixer,
+//! compressor and limiter, by default in that order (the settings may reorder
+//! them), on the mixed stream at the device's rate and layout.
 //!
 //! | Stage | Type | What it does |
 //! |---|---|---|
+//! | Pitch shift | [`PitchShifter`] | Moves the pitch, keeping the tempo (WSOLA time stretch, then resampling) |
 //! | Equalizer | [`Equalizer`] | Preamp, then a graphic (10 or 31 bands, overlap-corrected) or parametric (up to 64 RBJ filters) equalizer |
+//! | Convolution | [`Convolver`] | Uniformly partitioned FFT convolution with an impulse response per sample rate |
 //! | Crossfeed | [`Crossfeed`] | Bauer stereophonic-to-binaural crossfeed for headphones (stereo only) |
 //! | Channel mixer | [`ChannelMixer`] | Mono, left/right swap and balance on the front pair |
+//! | Compressor | [`Compressor`] | Feed-forward compressor with a soft knee and lookahead, and a night mode |
 //! | Limiter | [`Limiter`] | True-peak lookahead limiter (1 to 5 ms), the chain's safety net |
 //!
 //! [`DspChain`] builds the stages from the `[dsp]` settings for one rate and
@@ -23,16 +27,22 @@
 //! ends with a guard that turns NaN, infinities and subnormal numbers into zero.
 //!
 //! [`DspPlan`] describes the active stages for the signal-path view. The AutoEQ
-//! `ParametricEQ.txt` reader is [`autoeq`].
+//! `ParametricEQ.txt` reader is [`autoeq`]; impulse responses are read by
+//! [`impulse`].
 
 pub mod autoeq;
 mod biquad;
 mod chain;
 mod channel_mixer;
+mod compressor;
+mod convolver;
 mod crossfeed;
 mod equalizer;
+pub mod impulse;
 mod limiter;
+mod pitch;
 mod plan;
+mod wsola;
 
 use std::fmt;
 
@@ -43,10 +53,17 @@ use crate::pipeline::{ProcessingSettings, ResamplerQuality};
 pub use self::biquad::{Cascade, Coefficients, MAX_RELATIVE_FREQUENCY};
 pub use self::chain::DspChain;
 pub use self::channel_mixer::ChannelMixer;
+pub use self::compressor::Compressor;
+pub use self::convolver::{Convolver, partition_for};
 pub use self::crossfeed::Crossfeed;
 pub use self::equalizer::Equalizer;
 pub use self::limiter::{Limiter, LimiterActivity};
-pub use self::plan::{CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan};
+pub use self::pitch::PitchShifter;
+pub use self::plan::{
+    CompressorPlan, ConvolutionPlan, CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan,
+    PitchPlan, StagePlan,
+};
+pub use self::wsola::Wsola;
 /// The graphic equalizer's bands, with overlap-corrected gains.
 pub use helikodu_model::eq::graphic;
 

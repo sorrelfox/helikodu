@@ -80,7 +80,7 @@ impl Worker {
 
     /// Moves the current item's gain to what the settings now give it, from the
     /// first frame rendered after this, and its plan to the DSP chain's stages.
-    fn retune_gain(&mut self) {
+    pub(super) fn retune_gain(&mut self) {
         let (Some(output), Some(source)) = (&self.output, &self.current) else {
             return;
         };

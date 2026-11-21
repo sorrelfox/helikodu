@@ -61,6 +61,10 @@ pub(crate) struct PlayArgs {
         value_parser = parse_preamp
     )]
     preamp: f64,
+    /// Process the audio with the DSP chain of the settings file (the `[dsp]`
+    /// table: equalizer, convolution, compressor, pitch shift and the rest).
+    #[arg(long)]
+    dsp: bool,
 }
 
 /// A preamp in dB, within the player's range.
@@ -140,6 +144,9 @@ pub(crate) fn run(args: PlayArgs) -> Result<Outcome> {
         preamp_db: args.preamp,
         ..ReplayGain::default()
     };
+    if args.dsp {
+        config.dsp = super::database::app_settings().dsp;
+    }
     if output.backend == BackendSelection::Backend(OutputBackendKind::Wav) {
         // A file has no clock: write it as fast as it is decoded.
         config.pacing = SinkPacing::Freewheel;

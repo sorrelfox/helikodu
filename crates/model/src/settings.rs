@@ -30,9 +30,11 @@ pub use advanced::{AdvancedSettings, Id3Version, LogDetail};
 pub use appearance::{Accent, AppearanceSettings, ColorScheme, WindowStyle};
 pub use decoders::{DecoderSettings, MEMORY_BUFFER_LIMIT, TrackerInterpolation};
 pub use dsp::{
-    BuiltInPreset, ChannelMixSettings, ChannelMode, CrossfeedPreset, CrossfeedSettings,
+    BuiltInPreset, ChainStage, ChannelMixSettings, ChannelMode, CompressorPreset,
+    CompressorSettings, CompressorValues, ConvolutionSettings, CrossfeedPreset, CrossfeedSettings,
     DspSettings, EqMode, EqualizerSettings, FilterKind, GRAPHIC_10_BANDS_HZ, GRAPHIC_31_BANDS_HZ,
-    GraphicPreset, LimiterSettings, ParametricFilter, ResamplerQuality,
+    GraphicPreset, ImpulseFile, LimiterSettings, ParametricFilter, PitchSettings, ResamplerQuality,
+    SavedChain,
 };
 pub use library::{
     DuplicateScan, DuplicateSettings, LibrarySettings, ManagedFolderSettings, ManagedMode,

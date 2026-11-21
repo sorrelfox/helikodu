@@ -9,6 +9,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - Helikodu can tell how alike two tracks sound, offline and without any downloaded model: the background track analysis now also notes each track's timbre, rhythm, tonality and dynamics (tracks analysed before are analysed once more). `helikodu-cli similar FILE|TRACK-ID` lists the tracks that sound most like a track, or with `--album` or `--artist` like its album or artist, with a similarity from 0 to 1.
+- A dynamics compressor with a night mode, for listening at a low volume: `[dsp.compressor]` in the settings file, or `helikodu-cli dsp compressor`. It sits just before the limiter.
+- Convolution with an impulse response per sample rate (room correction from REW and similar programs), from a folder of WAV files or a file per rate, with normalization, gain and a wet/dry mix: `[dsp.convolution]`, or `helikodu-cli dsp convolution`. The delay it adds is shown in the signal path.
+- Pitch shift that keeps the tempo, up to 12 semitones either way: `[dsp.pitch]`, or `helikodu-cli dsp pitch`.
+- The stages of the DSP chain can be put in another order, and orders with their stages saved as named chains and chosen while music plays: `dsp.order` and `[[dsp.chains]]`, or `helikodu-cli dsp order` and `helikodu-cli dsp chain`.
+- A library track can have an equalizer of its own, which replaces the equalizer of the settings while it plays: `helikodu-cli dsp track-eq`.
+- `helikodu-cli play --dsp` plays files through the DSP chain of the settings file.
 - Each smart playlist can show its own columns: **Columns**, at the end of its rule line, shows or hides **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length**, and the choice is remembered per smart playlist. The stars of the **Rating** column rate a track.
 
 ### Changed

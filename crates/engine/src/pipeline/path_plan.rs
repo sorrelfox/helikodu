@@ -30,7 +30,10 @@ use super::{
     LoudnessSettings, MixKind, MixMatrix, MixOptions, REFERENCE_LUFS, ResampleMethod,
     ResamplerQuality, TpdfDither, resolve_track_gain,
 };
-use crate::dsp::{CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan};
+use crate::dsp::{
+    CompressorPlan, ConvolutionPlan, CrossfeedPlan, DspPlan, EqualizerPlan, LimiterPlan, MixerPlan,
+    PitchPlan, StagePlan,
+};
 use crate::output::StreamConfig;
 
 /// The format of a source, as the decoder delivers it.
@@ -207,6 +210,12 @@ pub enum PlannedStage {
     Mixer(MixerPlan),
     /// The true-peak limiter.
     Limiter(LimiterPlan),
+    /// The dynamics compressor.
+    Compressor(CompressorPlan),
+    /// Convolution with an impulse response.
+    Convolution(ConvolutionPlan),
+    /// Pitch shift.
+    Pitch(PitchPlan),
     /// Software volume.
     Volume(Volume),
     /// TPDF dither to an integer width.
@@ -228,6 +237,9 @@ impl fmt::Display for PlannedStage {
             Self::Crossfeed(stage) => stage.fmt(f),
             Self::Mixer(stage) => stage.fmt(f),
             Self::Limiter(stage) => stage.fmt(f),
+            Self::Compressor(stage) => stage.fmt(f),
+            Self::Convolution(stage) => stage.fmt(f),
+            Self::Pitch(stage) => stage.fmt(f),
             Self::Volume(volume) => write!(f, "volume {:.0} %", volume.position() * 100.0),
             Self::Dither { bits } => write!(f, "TPDF dither {bits}-bit"),
         }
@@ -361,11 +373,15 @@ impl PathPlan {
         if self.dsp && self.dsp_stages.is_empty() {
             stages.push(PlannedStage::Dsp);
         }
-        let dsp = &self.dsp_stages;
-        stages.extend(dsp.equalizer.map(PlannedStage::Equalizer));
-        stages.extend(dsp.crossfeed.map(PlannedStage::Crossfeed));
-        stages.extend(dsp.mixer.map(PlannedStage::Mixer));
-        stages.extend(dsp.limiter.map(PlannedStage::Limiter));
+        stages.extend(self.dsp_stages.active().map(|stage| match stage {
+            StagePlan::Equalizer(s) => PlannedStage::Equalizer(s),
+            StagePlan::Crossfeed(s) => PlannedStage::Crossfeed(s),
+            StagePlan::Mixer(s) => PlannedStage::Mixer(s),
+            StagePlan::Limiter(s) => PlannedStage::Limiter(s),
+            StagePlan::Compressor(s) => PlannedStage::Compressor(s),
+            StagePlan::Convolution(s) => PlannedStage::Convolution(s),
+            StagePlan::Pitch(s) => PlannedStage::Pitch(s),
+        }));
         if let Some(volume) = self.software_volume().filter(|v| *v != Volume::FULL) {
             stages.push(PlannedStage::Volume(volume));
         }

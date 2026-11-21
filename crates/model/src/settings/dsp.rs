@@ -3,15 +3,27 @@
 
 //! The DSP settings: the `[dsp]` table.
 //!
-//! The chain has a fixed order (equalizer, crossfeed, channel mix, limiter) and a
+//! The chain runs its stages in the order of `order` (by default pitch shift,
+//! equalizer, convolution, crossfeed, channel mix, compressor, limiter), with a
 //! switch for each stage. Every stage is off by default, so playback stays
 //! bit-perfect until one is switched on. A stage keeps its values while it is off.
+//! Saved chains (`[[dsp.chains]]`) keep an order and a choice of stages by name.
+
+mod chain;
+mod compressor;
+mod convolution;
+mod pitch;
 
 use std::ops::RangeInclusive;
 
 use serde::{Deserialize, Serialize};
 
 use super::{SettingsError, check_range};
+
+pub use self::chain::{ChainStage, SavedChain};
+pub use self::compressor::{CompressorPreset, CompressorSettings, CompressorValues};
+pub use self::convolution::{ConvolutionSettings, ImpulseFile};
+pub use self::pitch::PitchSettings;
 
 /// The centre frequencies of the 10-band graphic equalizer, in Hz: octaves from
 /// 31.5 Hz to 16 kHz (ISO 266).
@@ -32,6 +44,13 @@ pub const GRAPHIC_31_BANDS_HZ: [f64; 31] = [
 /// ```toml
 /// [dsp]
 /// resampler = "high"           # fast | medium | high | maximum
+/// order = ["pitch", "equalizer", "convolution", "crossfeed", "channel-mix",
+///          "compressor", "limiter"]  # stages left out follow in this order
+/// track_equalizer = true       # tracks with their own equalizer use it
+///
+/// [[dsp.chains]]               # saved chains
+/// name = "Night"
+/// stages = ["equalizer", "compressor", "limiter"]
 ///
 /// [dsp.equalizer]
 /// enabled = true
@@ -68,8 +87,34 @@ pub const GRAPHIC_31_BANDS_HZ: [f64; 31] = [
 /// enabled = false
 /// lookahead_ms = 2.0           # 1 to 5, in steps of 0.5
 /// ceiling_db = -1.0            # true peak, -6 to 0 dBTP
+///
+/// [dsp.compressor]
+/// enabled = false
+/// preset = "night"             # night | gentle | custom
+/// threshold_db = -30.0         # custom only: -60 to 0
+/// ratio = 4.0                  # custom only: 1 to 20
+/// attack_ms = 5.0              # custom only: 0.1 to 200
+/// release_ms = 250.0           # custom only: 10 to 3000
+/// knee_db = 10.0               # custom only: 0 to 24
+/// makeup_db = 12.0             # custom only: 0 to 24
+/// lookahead_ms = 2.0           # 1 to 5, in steps of 0.5
+///
+/// [dsp.convolution]
+/// enabled = false
+/// folder = "/path/to/impulses" # WAV files, one per sample rate
+/// normalize = true             # the response boosts no frequency
+/// gain_db = 0.0                # -24 to +12
+/// wet_percent = 100.0          # 0 to 100
+///
+/// [[dsp.convolution.files]]    # before the folder's files
+/// rate_hz = 48000
+/// path = "/path/to/room-48k.wav"
+///
+/// [dsp.pitch]
+/// enabled = false
+/// semitones = 0.0              # -12 to +12
 /// ```
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DspSettings {
     /// The quality of sample-rate conversion, where the device rate differs from the
@@ -83,6 +128,37 @@ pub struct DspSettings {
     pub channel_mix: ChannelMixSettings,
     /// The true-peak limiter at the end of the chain.
     pub limiter: LimiterSettings,
+    /// The dynamics compressor, with its night mode.
+    pub compressor: CompressorSettings,
+    /// Convolution with an impulse response per sample rate.
+    pub convolution: ConvolutionSettings,
+    /// Pitch shift.
+    pub pitch: PitchSettings,
+    /// The order of the stages. Stages it leaves out follow in the default order.
+    pub order: Vec<ChainStage>,
+    /// The saved chains.
+    pub chains: Vec<SavedChain>,
+    /// Whether tracks that have an equalizer of their own (stored in the library)
+    /// play with it instead of the equalizer above.
+    pub track_equalizer: bool,
+}
+
+impl Default for DspSettings {
+    fn default() -> Self {
+        Self {
+            resampler: ResamplerQuality::default(),
+            equalizer: EqualizerSettings::default(),
+            crossfeed: CrossfeedSettings::default(),
+            channel_mix: ChannelMixSettings::default(),
+            limiter: LimiterSettings::default(),
+            compressor: CompressorSettings::default(),
+            convolution: ConvolutionSettings::default(),
+            pitch: PitchSettings::default(),
+            order: ChainStage::DEFAULT_ORDER.to_vec(),
+            chains: Vec::new(),
+            track_equalizer: true,
+        }
+    }
 }
 
 impl DspSettings {
@@ -91,15 +167,96 @@ impl DspSettings {
         self.equalizer.validate()?;
         self.crossfeed.validate()?;
         self.channel_mix.validate()?;
-        self.limiter.validate()
+        self.limiter.validate()?;
+        self.compressor.validate()?;
+        self.convolution.validate()?;
+        self.pitch.validate()?;
+        chain::check_unique("dsp.order", &self.order)?;
+        for (i, saved) in self.chains.iter().enumerate() {
+            let key = format!("dsp.chains[{i}]");
+            saved.validate(&key)?;
+            if self.chains[..i].iter().any(|c| c.name == saved.name) {
+                return Err(SettingsError {
+                    key: format!("{key}.name"),
+                    problem: format!("is \"{}\", which an earlier chain has too", saved.name),
+                });
+            }
+        }
+        Ok(())
     }
 
     /// Whether any stage is switched on.
     pub fn any_enabled(&self) -> bool {
-        self.equalizer.enabled
-            || self.crossfeed.enabled
-            || self.channel_mix.enabled
-            || self.limiter.enabled
+        ChainStage::DEFAULT_ORDER
+            .into_iter()
+            .any(|stage| self.is_enabled(stage))
+    }
+
+    /// Every stage in the order the chain runs them.
+    pub fn effective_order(&self) -> Vec<ChainStage> {
+        chain::complete(&self.order)
+    }
+
+    /// Whether `stage` is switched on.
+    pub fn is_enabled(&self, stage: ChainStage) -> bool {
+        match stage {
+            ChainStage::Pitch => self.pitch.enabled,
+            ChainStage::Equalizer => self.equalizer.enabled,
+            ChainStage::Convolution => self.convolution.enabled,
+            ChainStage::Crossfeed => self.crossfeed.enabled,
+            ChainStage::ChannelMix => self.channel_mix.enabled,
+            ChainStage::Compressor => self.compressor.enabled,
+            ChainStage::Limiter => self.limiter.enabled,
+        }
+    }
+
+    /// Switches `stage` on or off.
+    pub fn set_enabled(&mut self, stage: ChainStage, on: bool) {
+        match stage {
+            ChainStage::Pitch => self.pitch.enabled = on,
+            ChainStage::Equalizer => self.equalizer.enabled = on,
+            ChainStage::Convolution => self.convolution.enabled = on,
+            ChainStage::Crossfeed => self.crossfeed.enabled = on,
+            ChainStage::ChannelMix => self.channel_mix.enabled = on,
+            ChainStage::Compressor => self.compressor.enabled = on,
+            ChainStage::Limiter => self.limiter.enabled = on,
+        }
+    }
+
+    /// The saved chain named `name`.
+    pub fn chain(&self, name: &str) -> Option<&SavedChain> {
+        self.chains.iter().find(|c| c.name == name)
+    }
+
+    /// Saves the current order and choice of stages as the chain `name`, replacing
+    /// a saved chain of that name.
+    pub fn save_chain(&mut self, name: &str) {
+        let stages = self
+            .effective_order()
+            .into_iter()
+            .filter(|stage| self.is_enabled(*stage))
+            .collect();
+        let saved = SavedChain {
+            name: name.to_owned(),
+            stages,
+        };
+        match self.chains.iter_mut().find(|c| c.name == name) {
+            Some(existing) => *existing = saved,
+            None => self.chains.push(saved),
+        }
+    }
+
+    /// Uses the saved chain `name`: its stages in its order, switched on, and every
+    /// other stage switched off. Returns false when there is no such chain.
+    pub fn apply_chain(&mut self, name: &str) -> bool {
+        let Some(saved) = self.chain(name).cloned() else {
+            return false;
+        };
+        self.order = chain::complete(&saved.stages);
+        for stage in ChainStage::DEFAULT_ORDER {
+            self.set_enabled(stage, saved.stages.contains(&stage));
+        }
+        true
     }
 }
 
@@ -763,6 +920,67 @@ mod tests {
             bands: vec![0.0; 9],
         }];
         assert!(dsp.validate().is_err());
+    }
+
+    #[test]
+    fn saved_chains_set_the_order_and_the_switches() {
+        let mut dsp = DspSettings::default();
+        assert_eq!(dsp.effective_order(), ChainStage::DEFAULT_ORDER.to_vec());
+        dsp.order = vec![ChainStage::Limiter, ChainStage::Equalizer];
+        assert_eq!(
+            dsp.effective_order()[..3],
+            [
+                ChainStage::Limiter,
+                ChainStage::Equalizer,
+                ChainStage::Pitch
+            ]
+        );
+        assert_eq!(dsp.effective_order().len(), 7);
+        dsp.compressor.enabled = true;
+        dsp.limiter.enabled = true;
+        dsp.save_chain("Night");
+        assert_eq!(
+            dsp.chain("Night").unwrap().stages,
+            [ChainStage::Limiter, ChainStage::Compressor]
+        );
+        let mut other = DspSettings::default();
+        other.equalizer.enabled = true;
+        other.chains = dsp.chains.clone();
+        assert!(other.apply_chain("Night"));
+        assert!(!other.equalizer.enabled);
+        assert!(other.compressor.enabled && other.limiter.enabled);
+        assert_eq!(other.effective_order()[0], ChainStage::Limiter);
+        assert!(!other.apply_chain("Day"));
+        assert_eq!(other.validate(), Ok(()));
+        other.order.push(ChainStage::Limiter);
+        assert_eq!(other.validate().unwrap_err().key, "dsp.order");
+        other.order.pop();
+        other.chains.push(other.chains[0].clone());
+        assert_eq!(other.validate().unwrap_err().key, "dsp.chains[1].name");
+    }
+
+    #[test]
+    fn the_new_tables_parse() {
+        let text = "[dsp]\norder = [\"limiter\", \"compressor\"]\n\
+                    [[dsp.chains]]\nname = \"Room\"\nstages = [\"convolution\"]\n\
+                    [dsp.compressor]\nenabled = true\npreset = \"gentle\"\n\
+                    [dsp.convolution]\nenabled = true\nfolder = \"/ir\"\nwet_percent = 50.0\n\
+                    [[dsp.convolution.files]]\nrate_hz = 48000\npath = \"/ir/48.wav\"\n\
+                    [dsp.pitch]\nenabled = true\nsemitones = -2.5\n";
+        let settings: Settings = toml::from_str(text).unwrap();
+        let dsp = &settings.dsp;
+        assert_eq!(settings.validate(), Ok(()));
+        assert_eq!(dsp.compressor.preset, CompressorPreset::Gentle);
+        assert_eq!(
+            dsp.convolution.file_for(48_000).unwrap().to_str(),
+            Some("/ir/48.wav")
+        );
+        assert!(dsp.convolution.normalize);
+        assert_eq!(dsp.pitch.semitones, -2.5);
+        assert_eq!(dsp.chains[0].stages, [ChainStage::Convolution]);
+        assert!(dsp.track_equalizer);
+        let back: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();
+        assert_eq!(back, settings);
     }
 
     #[test]

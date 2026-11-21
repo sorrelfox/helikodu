@@ -523,6 +523,10 @@ impl Worker {
         }
         self.ramp = ramp;
         self.crossfade_checked = None;
+        // The incoming item's own equalizer, if it has one, takes over now.
+        if self.apply_track_equalizer() {
+            self.retune_gain();
+        }
     }
 
     /// Ends a crossfade or ramp under way, for a new start, and returns the incoming

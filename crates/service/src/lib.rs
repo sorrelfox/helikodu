@@ -35,6 +35,12 @@ pub use service::{LibraryChoice, Service, ServiceConfig, ServiceError};
 /// Reading and writing AutoEQ `ParametricEQ.txt` files for the parametric
 /// equalizer.
 pub use helikodu_engine::dsp::autoeq;
+/// The DSP chain's parts that tools look at: impulse responses for convolution and
+/// the partition (latency) the convolution stage uses at a rate.
+pub mod dsp {
+    pub use helikodu_engine::dsp::impulse;
+    pub use helikodu_engine::dsp::partition_for;
+}
 pub use helikodu_engine::output::{
     DeviceReservation, NoReservation, ReservationError, ReservationGuard, ReservedCard,
     SharedReservation,
