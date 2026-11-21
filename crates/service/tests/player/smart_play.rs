@@ -12,12 +12,15 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use helikodu_library::{DatabaseConfig, Library, Rating};
+use helikodu_model::audio::MediaTime;
 use helikodu_model::library::{TrackId, TrackRef};
-use helikodu_model::player::{QueueContext, RepeatMode, ShuffleMode};
+use helikodu_model::player::{EnqueueAt, PlaybackState, QueueContext, RepeatMode, ShuffleMode};
 use helikodu_model::settings::{PlaybackSettings, SmartPlaySettings, SpeedSettings};
 use helikodu_service::bus::Subscription;
 use helikodu_service::library::{MusicLibrary, PlaySeed};
-use helikodu_service::player::{Player, PlayerCommand, PlayerEvent, SinkPacing};
+use helikodu_service::player::{
+    Player, PlayerCommand, PlayerConfig, PlayerEvent, SessionConfig, SinkPacing,
+};
 
 use crate::media::{folder, next_path, null_output, player_with, until, wav_files, wav_output};
 use crate::stats::add;
@@ -39,6 +42,18 @@ fn setup(
     real_time: bool,
     smart: SmartPlaySettings,
 ) -> Setup {
+    setup_with(test, count, millis, real_time, smart, |_| {})
+}
+
+/// [`setup`] with more of the player's configuration changed by `change`.
+fn setup_with(
+    test: &str,
+    count: usize,
+    millis: usize,
+    real_time: bool,
+    smart: SmartPlaySettings,
+    change: impl FnOnce(&mut PlayerConfig),
+) -> Setup {
     let dir = folder(test);
     let files = wav_files(&dir, count, millis);
     let library = Arc::new(Library::open(&DatabaseConfig::in_memory()).unwrap());
@@ -56,6 +71,7 @@ fn setup(
         config.library = Some(music);
         config.shuffle_seed = Some(5);
         config.smart_play = smart;
+        change(config);
     });
     Setup {
         files,
@@ -326,4 +342,201 @@ fn intro_scan_counts_listening_time_at_another_speed() {
         longest >= Duration::from_millis(1_800) && longest < Duration::from_secs(3),
         "{longest:?}"
     );
+}
+
+/// Waits until the player's status is `playback`.
+fn until_playback(s: &Setup, playback: PlaybackState) {
+    eventually(&format!("{playback:?}"), || {
+        s.player.status().playback == playback
+    });
+}
+
+/// A queue of tracks 0 to 2 shuffled, with track 4 queued with "Play Next" and
+/// track 3 with "Add to Queue", the first playing.
+fn queue_with_queued_entries(s: &Setup) {
+    s.player
+        .send(PlayerCommand::SetShuffle(ShuffleMode::Tracks))
+        .unwrap();
+    play(s, &s.tracks[..3]);
+    s.player
+        .send(PlayerCommand::Enqueue {
+            tracks: vec![TrackRef::Library(s.tracks[3])],
+            at: EnqueueAt::End,
+        })
+        .unwrap();
+    s.player
+        .send(PlayerCommand::Enqueue {
+            tracks: vec![TrackRef::Library(s.tracks[4])],
+            at: EnqueueAt::Next,
+        })
+        .unwrap();
+    assert_eq!(next_path(&s.events), s.files[0]);
+}
+
+/// Starts a radio from track 1 and waits until it plays.
+fn start_radio(s: &Setup) {
+    s.player
+        .send(PlayerCommand::StartRadio(PlaySeed::Track(s.tracks[1])))
+        .unwrap();
+    assert_eq!(next_path(&s.events), s.files[1]);
+    assert_eq!(s.player.queue().modes.repeat, RepeatMode::Endless);
+}
+
+/// The parts of the queue an Undo of a radio puts back.
+fn queue_state(s: &Setup) -> impl PartialEq + std::fmt::Debug {
+    let queue = s.player.queue();
+    (
+        queue.context.clone(),
+        queue.entries.clone(),
+        queue.current,
+        queue.modes,
+        queue.smart.clone(),
+    )
+}
+
+#[test]
+fn undo_of_a_radio_puts_a_paused_queue_back_exactly() {
+    let s = setup("undo_radio_paused", 6, 20_000, true, smart());
+    queue_with_queued_entries(&s);
+    until(&s.events, position_past(400));
+    s.player.send(PlayerCommand::Pause).unwrap();
+    until_playback(&s, PlaybackState::Paused);
+    s.player.sync().unwrap();
+    let before = queue_state(&s);
+    let position = s.player.status().position;
+    assert!(position >= MediaTime::from_millis(400), "{position:?}");
+
+    start_radio(&s);
+    s.player.send(PlayerCommand::UndoRadio).unwrap();
+    s.player.sync().unwrap();
+    // The entries with their kinds, the shuffled order, the current entry and
+    // the modes are those from before; the queued entries stay queued.
+    assert_eq!(queue_state(&s), before);
+    let queue = s.player.queue();
+    assert_eq!(
+        queue.entries.iter().filter(|e| !e.from_context).count(),
+        2,
+        "{queue:?}"
+    );
+    // Paused where it was, and it stays paused.
+    until_playback(&s, PlaybackState::Paused);
+    std::thread::sleep(Duration::from_millis(400));
+    let status = s.player.status();
+    assert_eq!(status.playback, PlaybackState::Paused);
+    let off = status
+        .position
+        .as_duration()
+        .abs_diff(position.as_duration());
+    assert!(off < Duration::from_millis(50), "{status:?} {position:?}");
+    // A second Undo has nothing left to do.
+    s.player.send(PlayerCommand::UndoRadio).unwrap();
+    s.player.sync().unwrap();
+    assert_eq!(queue_state(&s), before);
+    s.player.send(PlayerCommand::Stop).unwrap();
+}
+
+#[test]
+fn undo_of_a_radio_puts_a_playing_queue_back_playing_where_it_was() {
+    let s = setup("undo_radio_playing", 6, 20_000, true, smart());
+    queue_with_queued_entries(&s);
+    until(&s.events, position_past(500));
+    s.player.sync().unwrap();
+    let before = queue_state(&s);
+    start_radio(&s);
+    s.player.send(PlayerCommand::UndoRadio).unwrap();
+    assert_eq!(next_path(&s.events), s.files[0]);
+    let (event, _) = until(&s.events, |e| matches!(e, PlayerEvent::Position { .. }));
+    assert!(position_past(450)(&event), "{event:?}");
+    assert_eq!(queue_state(&s), before);
+    assert_eq!(s.player.status().playback, PlaybackState::Playing);
+    s.player.send(PlayerCommand::Stop).unwrap();
+}
+
+#[test]
+fn undo_of_a_radio_leaves_a_stopped_queue_stopped() {
+    let s = setup("undo_radio_stopped", 6, 20_000, true, smart());
+    queue_with_queued_entries(&s);
+    s.player.send(PlayerCommand::Stop).unwrap();
+    until_playback(&s, PlaybackState::Stopped);
+    s.player.sync().unwrap();
+    let before = queue_state(&s);
+    start_radio(&s);
+    s.player.send(PlayerCommand::UndoRadio).unwrap();
+    s.player.sync().unwrap();
+    assert_eq!(queue_state(&s), before);
+    until_playback(&s, PlaybackState::Stopped);
+    std::thread::sleep(Duration::from_millis(300));
+    assert_eq!(s.player.status().playback, PlaybackState::Stopped);
+}
+
+#[test]
+fn undo_of_a_radio_does_nothing_once_the_queue_changed_otherwise() {
+    let s = setup("undo_radio_changed", 6, 150, false, smart());
+    play(&s, &s.tracks[..3]);
+    s.player.send(PlayerCommand::Stop).unwrap();
+    s.player
+        .send(PlayerCommand::StartRadio(PlaySeed::Track(s.tracks[1])))
+        .unwrap();
+    s.player.send(PlayerCommand::Stop).unwrap();
+    s.player
+        .send(PlayerCommand::Enqueue {
+            tracks: vec![TrackRef::Library(s.tracks[5])],
+            at: EnqueueAt::End,
+        })
+        .unwrap();
+    s.player.sync().unwrap();
+    let radio = queue_state(&s);
+    s.player.send(PlayerCommand::UndoRadio).unwrap();
+    s.player.sync().unwrap();
+    assert_eq!(queue_state(&s), radio);
+    assert_eq!(s.player.queue().modes.repeat, RepeatMode::Endless);
+}
+
+#[test]
+fn what_helikodu_added_is_still_marked_after_a_restart() {
+    let state = folder("radio_session_state");
+    let session = |restore: bool| {
+        let state = state.clone();
+        move |config: &mut PlayerConfig| {
+            let mut session = SessionConfig::new(&state);
+            session.debounce = Duration::ZERO;
+            session.restore = restore;
+            config.session = Some(session);
+        }
+    };
+    let s = setup_with("radio_session", 5, 150, false, smart(), session(true));
+    s.player
+        .send(PlayerCommand::StartRadio(PlaySeed::Track(s.tracks[1])))
+        .unwrap();
+    s.player.send(PlayerCommand::Stop).unwrap();
+    s.player.sync().unwrap();
+    let before = s.player.queue();
+    assert!(!before.smart.added.is_empty());
+    let Setup {
+        library, player, ..
+    } = s;
+    drop(player);
+
+    let music = MusicLibrary::from_library(Arc::clone(&library), ":memory:");
+    let (player, _events) = player_with(null_output(), SinkPacing::RealTime, |config| {
+        config.library = Some(music);
+        config.shuffle_seed = Some(5);
+        session(true)(config);
+    });
+    player.sync().unwrap();
+    let after = player.queue();
+    assert_eq!(after.entries, before.entries);
+    assert_eq!(after.smart.added, before.smart.added);
+    assert_eq!(
+        after.smart.radio_seed,
+        Some(PlaySeed::Track(library_track(&before)))
+    );
+}
+
+/// The seed track of a radio started from a track: the queue's first entry.
+fn library_track(queue: &helikodu_service::player::QueueSnapshot) -> TrackId {
+    match queue.entries[0].track {
+        TrackRef::Library(id) => id,
+        TrackRef::File(_) => panic!("not a library track"),
+    }
 }

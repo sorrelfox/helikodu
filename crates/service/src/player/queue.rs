@@ -204,6 +204,21 @@ impl Queue {
         }
     }
 
+    /// Puts `saved`, an earlier copy of this queue, back exactly as it was: its
+    /// entries with their identifiers, the play and context orders (a shuffled
+    /// order included), the current entry, the context, the modes and the next
+    /// shuffled cycle. The version moves on, entries added later get identifiers
+    /// not given out before, and the shuffle weights stay as they are now.
+    pub(crate) fn put_back(&mut self, mut saved: Queue) {
+        saved.version = self.version + 1;
+        saved.last_id = saved.last_id.max(self.last_id);
+        if saved.weights != self.weights {
+            saved.next_cycle = None;
+        }
+        saved.weights = std::mem::take(&mut self.weights);
+        *self = saved;
+    }
+
     // --- Reading ----------------------------------------------------------------
 
     pub(crate) fn items(&self) -> &[QueueEntry] {

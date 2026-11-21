@@ -178,10 +178,12 @@ impl FakePlayer {
         self.announce();
     }
 
-    /// Forgets what a new queue no longer has: the radio and the marks.
+    /// Forgets what a new queue no longer has: the radio, its Undo and the
+    /// marks.
     pub(super) fn forget_smart(&self) {
         let mut state = self.state.borrow_mut();
         state.radio = None;
+        state.before_radio = None;
         state.nothing_to_add = false;
         let entries: HashSet<u64> = state.queue.iter().filter_map(|t| t.entry).collect();
         state.added.retain(|e| entries.contains(e));

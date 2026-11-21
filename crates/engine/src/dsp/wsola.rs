@@ -14,6 +14,12 @@
 //!
 //! The channels are linked: every channel takes the same segment, so the stereo
 //! image stays. The stretcher allocates when it is built and never afterwards.
+//!
+//! The ends of a stream keep their level, so that streams played one after the
+//! other join without a dip: the first frame has no frame before it to overlap
+//! with, so its first half is taken as it is instead of faded in; after
+//! [`finish`](Wsola::finish), the last frames are taken from within the input
+//! instead of from the silence after it.
 
 /// The streaming time stretcher.
 #[derive(Debug, Clone)]
@@ -37,6 +43,9 @@ pub struct Wsola {
     sum: Box<[f32]>,
     /// The channels' sum of the target and of a candidate, for the search.
     target: Box<[f32]>,
+    /// The input has ended after this many frames: no more is pushed, and the
+    /// frames are taken from within it.
+    end: Option<u64>,
 }
 
 impl Wsola {
@@ -75,6 +84,7 @@ impl Wsola {
             previous: None,
             sum: vec![0.0; length * channels].into_boxed_slice(),
             target: vec![0.0; 2 * hop].into_boxed_slice(),
+            end: None,
         }
     }
 
@@ -118,22 +128,50 @@ impl Wsola {
         }
     }
 
+    /// The end of the input: what was pushed is all there is. From now on
+    /// [`pull`](Self::pull) always writes, taking every frame from within the
+    /// input (but for an input shorter than a frame, which is followed by
+    /// silence). Nothing more may be pushed until [`reset`](Self::reset).
+    pub fn finish(&mut self) {
+        if self.end.is_some() {
+            return;
+        }
+        self.end = Some(self.pushed);
+        // Silence after the end, for an input too short to stay within: these
+        // slots held frames older than any still needed.
+        let after = 4 * self.hop + 2 * self.tolerance;
+        for frame in self.pushed..self.pushed + after as u64 {
+            let slot = (frame as usize) & (self.capacity - 1);
+            self.input[slot * self.channels..(slot + 1) * self.channels].fill(0.0);
+        }
+    }
+
     /// Writes the next `H` output frames into `out` when enough input has been
-    /// pushed, and returns whether it did.
+    /// pushed (always after [`finish`](Self::finish)), and returns whether it did.
     pub fn pull(&mut self, out: &mut [f32]) -> bool {
-        if self.pushed < self.needed() {
+        if self.end.is_none() && self.pushed < self.needed() {
             return false;
         }
         let channels = self.channels;
         let hop = self.hop;
         let length = 2 * hop;
         let nominal = self.nominal.floor() as u64;
-        let start = match self.previous {
-            None => nominal,
-            Some(previous) => self.best_match(nominal, previous + hop as u64),
+        // After the end, no frame reaches past the input.
+        let last = self.end.map(|end| end.saturating_sub(length as u64));
+        let start = match (self.previous, last) {
+            (None, None) => nominal,
+            (None, Some(last)) => nominal.min(last),
+            (Some(previous), _) => self.best_match(nominal, previous + hop as u64, last),
         };
+        let first = self.previous.is_none();
         for i in 0..length {
-            let w = self.window[i];
+            // The first frame has none before it to overlap with: its first half
+            // is taken as it is.
+            let w = if first && i < hop {
+                1.0
+            } else {
+                self.window[i]
+            };
             for c in 0..channels {
                 self.sum[i * channels + c] += w * self.sample(start + i as u64, c);
             }
@@ -152,14 +190,19 @@ impl Wsola {
     }
 
     /// The start within `±Δ` of `nominal` whose first `H` frames are most like
-    /// those at `continuation`.
-    fn best_match(&mut self, nominal: u64, continuation: u64) -> u64 {
+    /// those at `continuation`; at most `last` when given (the search range then
+    /// moves down to end there).
+    fn best_match(&mut self, nominal: u64, continuation: u64, last: Option<u64>) -> u64 {
         let hop = self.hop;
         for i in 0..hop {
             self.target[i] = self.mono(continuation + i as u64);
         }
-        let low = nominal.saturating_sub(self.tolerance as u64);
-        let high = nominal + self.tolerance as u64;
+        let mut low = nominal.saturating_sub(self.tolerance as u64);
+        let mut high = nominal + self.tolerance as u64;
+        if let Some(last) = last.filter(|&last| last < high) {
+            high = last;
+            low = low.min(last.saturating_sub(2 * self.tolerance as u64));
+        }
         let score = |this: &Self, start: u64, step: usize| -> f64 {
             let (mut dot, mut energy) = (0.0f64, 0.0f64);
             let mut i = 0;
@@ -204,6 +247,7 @@ impl Wsola {
         self.nominal = 0.0;
         self.previous = None;
         self.sum.fill(0.0);
+        self.end = None;
     }
 }
 
@@ -261,6 +305,35 @@ mod tests {
             let peak = middle.iter().fold(0.0f32, |m, s| m.max(s.abs()));
             assert!((peak - 0.5).abs() < 0.05, "{stretch}: peak {peak}");
         }
+    }
+
+    #[test]
+    fn neither_end_is_faded() {
+        let tone: Vec<f32> = (0..24_000)
+            .map(|i| (2.0 * std::f32::consts::PI * 220.0 * i as f32 / 48_000.0).sin() * 0.5)
+            .collect();
+        let mut wsola = Wsola::new(1, 480, 144, 0.8, 256);
+        let mut out = Vec::new();
+        let mut hop = vec![0.0; 480];
+        for chunk in tone.chunks(256) {
+            wsola.push(chunk);
+            while wsola.pull(&mut hop) {
+                out.extend_from_slice(&hop);
+            }
+        }
+        wsola.finish();
+        let length = (24_000.0 * 0.8) as usize;
+        while out.len() < length {
+            assert!(wsola.pull(&mut hop), "it always pulls after the end");
+            out.extend_from_slice(&hop);
+        }
+        // The start is the input as it is.
+        assert_eq!(out[..480], tone[..480]);
+        // The last 10 ms keep the level.
+        let peak = out[length - 480..length]
+            .iter()
+            .fold(0.0f32, |m, s| m.max(s.abs()));
+        assert!((peak - 0.5).abs() < 0.05, "peak {peak}");
     }
 
     #[test]

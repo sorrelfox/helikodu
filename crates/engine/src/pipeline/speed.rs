@@ -243,7 +243,8 @@ const CHUNK: usize = 256;
 /// `n` input frames become `ceil(n × source / played)` output frames: the
 /// stretcher's output is aligned with its input (frame `k` of the output comes from
 /// around `k × speed` of the input), and at the end of the source the tail is
-/// flushed with silence and cut to that length. Output waits in a queue until the
+/// taken from within the source and cut to that length. Neither end is faded, so
+/// tracks joined gaplessly stay at their level across the join. Output waits in a queue until the
 /// stage after it takes it. Allocates when built, never while processing.
 #[derive(Debug, Clone)]
 pub struct TempoStage {
@@ -344,8 +345,9 @@ impl TempoStage {
         }
     }
 
-    /// The end of the source: flushes the stretcher with silence until the output
-    /// has its full length. Only when nothing is waiting; the next
+    /// The end of the source: takes the stretcher's last frames from within the
+    /// source (not from silence after it, which would fade the end out) until the
+    /// output has its full length. Only when nothing is waiting; the next
     /// [`push`](Self::push) starts a new stream.
     pub fn finish(&mut self) {
         if self.finished {
@@ -355,12 +357,13 @@ impl TempoStage {
         self.start = 0;
         self.end = 0;
         self.finished = true;
-        let silence = [0.0f32; CHUNK];
-        let channels = self.channels;
-        let per = (CHUNK / channels).max(1) * channels;
-        while self.made < self.target() && self.end + self.hop.len() <= self.queue.len() {
-            self.wsola.push(&silence[..per]);
-            self.pull();
+        self.wsola.finish();
+        let hop = self.hop.len();
+        while self.made < self.target() && self.end + hop <= self.queue.len() {
+            self.wsola.pull(&mut self.hop);
+            self.queue[self.end..self.end + hop].copy_from_slice(&self.hop);
+            self.end += hop;
+            self.made += (hop / self.channels) as u64;
         }
     }
 
@@ -378,7 +381,7 @@ impl TempoStage {
         self.start = (self.start + frames * self.channels).min(self.end);
         self.taken += frames as u64;
         if self.is_done() {
-            // What is left is the silence of the flush.
+            // What is left is past the full length.
             self.start = self.end;
         }
     }

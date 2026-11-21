@@ -158,6 +158,13 @@ pub enum PlayerCommand {
     /// follow whenever the queue runs out (the repeat mode becomes
     /// [`RepeatMode::Endless`]).
     StartRadio(PlaySeed),
+    /// Puts back exactly what the last [`StartRadio`](Self::StartRadio)
+    /// replaced: the entries (queued ones stay queued), their play order with a
+    /// shuffled one, the current entry and its position, playing, paused or
+    /// stopped as it was, and the play modes. Nothing happens once the queue has
+    /// been changed otherwise since (a new queue, entries added, removed or
+    /// moved, the queue cleared, or shuffle or repeat changed).
+    UndoRadio,
     /// The entry selected in the queue, for "Continue from the selected track".
     SetCursor(Option<EntryId>),
     /// Go to the first track of the next album in the queue.

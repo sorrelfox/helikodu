@@ -400,3 +400,39 @@ fn bit_perfect_output_plays_at_the_normal_speed() {
     let written = run(helikodu_model::audio::OutputMode::Shared);
     assert_eq!(written.len() / 2, rendered(signal.frames(), 1.5));
 }
+
+/// The level of `x` in windows of `window` frames, one value per window.
+fn levels(x: &[f32], window: usize) -> Vec<f64> {
+    x.chunks_exact(window)
+        .map(|w| (w.iter().map(|s| f64::from(*s).powi(2)).sum::<f64>() / window as f64).sqrt())
+        .collect()
+}
+
+#[test]
+fn a_gapless_join_at_another_tempo_has_no_dip() {
+    // One tone cut into two files, joined gaplessly at 1.25× with the pitch kept.
+    let cut = seconds(0.6) + 13;
+    let signal = tone(440.0, seconds(1.2));
+    let first = media::write_wav("speed-join-0.wav", &signal.slice(0, cut));
+    let second = media::write_wav("speed-join-1.wav", &signal.slice(cut, signal.frames()));
+    let out = media::path("speed-join-out.wav");
+    let mut session = Session::new(config(&out, 1.25, true));
+    session.play_queue(&[item(1, &first), item(2, &second)]);
+    session.wait_state(TransportState::Stopped);
+    drop(session);
+    let x = left(&out);
+    // Each track keeps its exact length.
+    let join = rendered(cut, 1.25);
+    assert_eq!(x.len(), join + rendered(signal.frames() - cut, 1.25));
+    // The level around the join is the level elsewhere: no fade out and in.
+    let window = seconds(0.005);
+    let steady = levels(&x[seconds(0.1)..join - seconds(0.1)], window);
+    let typical = steady.iter().sum::<f64>() / steady.len() as f64;
+    let around = levels(&x[join - seconds(0.04)..join + seconds(0.04)], window);
+    let lowest = around.iter().copied().fold(f64::INFINITY, f64::min);
+    let lowest_steady = steady.iter().copied().fold(f64::INFINITY, f64::min);
+    assert!(
+        lowest > 0.9 * typical,
+        "lowest {lowest:.4} around the join, {typical:.4} typical, {lowest_steady:.4} lowest elsewhere"
+    );
+}

@@ -14,14 +14,40 @@ use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::player::{EnqueueAt, EntryId, QueueContext, RepeatMode};
 use helikodu_model::settings::{SeedKind, SmartPlaySettings};
 
-use super::{Actor, ContextRequest, Direction, Notice, PlayerEvent, Slot};
+use super::{Actor, ContextRequest, Direction, LoadMode, Notice, PlayerEvent, Slot};
 use crate::player::SmartQueue;
+use crate::player::queue::Queue;
 
 /// How many entries "Revert" remembers.
 const REMEMBERED_SKIPS: usize = 50;
 
 /// How many recently started tracks are remembered, at most the largest window.
 const RECENT_LIMIT: usize = 10_000;
+
+/// How the player was going before a radio started.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Going {
+    Playing,
+    Paused,
+    Stopped,
+}
+
+/// What a radio replaced, kept for its Undo.
+#[derive(Debug)]
+pub(super) struct BeforeRadio {
+    queue: Queue,
+    going: Going,
+    position: MediaTime,
+    restored: Option<MediaTime>,
+    resume: Option<EntryId>,
+    endless_seed: Option<PlaySeed>,
+    added: HashSet<EntryId>,
+    nothing_to_add: bool,
+    skipped: Vec<(EntryId, MediaTime)>,
+    unplayable: HashSet<EntryId>,
+    played: usize,
+    failed: usize,
+}
 
 impl Actor {
     /// Takes the smarter playback settings at the start.
@@ -364,6 +390,7 @@ impl Actor {
         };
         match started {
             Ok((context, tracks)) if !tracks.is_empty() => {
+                self.before_radio = Some(Box::new(self.before_radio_now()));
                 if self.queue.modes().repeat != RepeatMode::Endless {
                     self.queue.set_repeat(RepeatMode::Endless);
                     self.emit(PlayerEvent::ModesChanged(self.queue.modes()));
@@ -395,6 +422,86 @@ impl Actor {
                 reason: "nothing in the library is related to it".into(),
             })),
             Err(reason) => self.emit(PlayerEvent::Notice(Notice::ContextUnavailable { reason })),
+        }
+    }
+
+    /// The queue and how it plays now, as a radio is about to replace it.
+    fn before_radio_now(&self) -> BeforeRadio {
+        let going = if self.is_stopped() {
+            Going::Stopped
+        } else if self.engine_state == helikodu_model::player::TransportState::Paused
+            && self.resume_fade.is_none()
+        {
+            Going::Paused
+        } else {
+            Going::Playing
+        };
+        BeforeRadio {
+            queue: self.queue.clone(),
+            going,
+            position: self.position,
+            restored: self.restored,
+            resume: self.resume,
+            endless_seed: self.endless_seed,
+            added: self.added.clone(),
+            nothing_to_add: self.nothing_to_add,
+            skipped: self.skipped.clone(),
+            unplayable: self.unplayable.clone(),
+            played: self.played,
+            failed: self.failed,
+        }
+    }
+
+    /// Undo of the last radio: puts back exactly what it replaced, playing,
+    /// paused or stopped as it was. Nothing happens once the queue has been
+    /// changed otherwise since.
+    pub(super) fn undo_radio(&mut self) {
+        let Some(before) = self.before_radio.take() else {
+            return;
+        };
+        let before = *before;
+        self.queue.put_back(before.queue);
+        self.endless_seed = before.endless_seed;
+        self.added = before.added;
+        self.nothing_to_add = before.nothing_to_add;
+        self.smart_dirty = true;
+        self.skipped = before.skipped;
+        self.unplayable = before.unplayable;
+        self.radio_seek = None;
+        self.played = before.played;
+        self.failed = before.failed;
+        self.emit(PlayerEvent::ModesChanged(self.queue.modes()));
+        let current = self.queue.current().map(|e| e.id);
+        match (before.going, current) {
+            (Going::Playing, Some(entry)) => {
+                self.load(entry, Direction::Forward, Some(before.position));
+            }
+            (Going::Paused, Some(entry)) => {
+                self.load_as(
+                    entry,
+                    Direction::Forward,
+                    Some(before.position),
+                    LoadMode::Paused,
+                );
+            }
+            _ => {
+                // Stopped as before: what the radio plays ends without an end
+                // of playback being told again.
+                let busy = !self.is_stopped();
+                self.finish_listen(helikodu_library::ListenEnd::Skipped);
+                self.current = None;
+                self.pending = None;
+                self.in_flight = None;
+                self.near_end = false;
+                self.resume_fade = None;
+                self.ended = true;
+                if busy {
+                    self.send(helikodu_model::player::EngineCommand::Stop);
+                }
+                self.position = before.position;
+                self.restored = before.restored;
+                self.resume = before.resume;
+            }
         }
     }
 }

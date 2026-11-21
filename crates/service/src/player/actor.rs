@@ -32,7 +32,7 @@ use super::loudness::LoudnessTags;
 use super::outputs::{next_output, output_choices};
 use super::queue::{Advance, EntryKeys, Keyed, Queue};
 use super::rng::Rng;
-use super::session::{SESSION_VERSION, SavedSession, SessionFiles, Strike};
+use super::session::{SESSION_VERSION, SavedSession, SavedSmart, SessionFiles, Strike};
 use super::shared::{NowPlaying, QueueSnapshot, Shared};
 use super::timers::{AbLoop, SLEEP_FADE, SleepTimerStatus, SleepWhen};
 use super::{EndReason, Notice, PlayerEvent};
@@ -82,6 +82,18 @@ enum Direction {
     Backward,
 }
 
+/// How an entry is loaded.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LoadMode {
+    /// It plays at once.
+    Play,
+    /// Loaded paused and played once the engine has paused there, so that it
+    /// starts with the fade after a pause.
+    FadeIn,
+    /// Loaded paused, and it stays paused.
+    Paused,
+}
+
 /// An entry handed to the engine.
 #[derive(Debug, Clone)]
 struct Slot {
@@ -127,6 +139,9 @@ pub(super) struct Startup {
     pub(super) speed: SpeedSettings,
     /// The random numbers of endless play, the Auto-DJ and Radio Random.
     pub(super) draws: Rng,
+    /// What endless play, the Auto-DJ or a radio added to the restored queue,
+    /// and the radio's seed.
+    pub(super) smart: SavedSmart,
 }
 
 pub(super) struct Actor {
@@ -223,6 +238,9 @@ pub(super) struct Actor {
     speed_override: Option<SpeedSettings>,
     /// Whether "Revert" had somewhere to go when the queue was last published.
     published_revert: bool,
+    /// What the last radio replaced, for its Undo, until the queue is changed
+    /// otherwise.
+    before_radio: Option<Box<smart::BeforeRadio>>,
 }
 
 impl Actor {
@@ -289,8 +307,8 @@ impl Actor {
             sleep: None,
             smart: SmartPlaySettings::default(),
             shuffle_skips: HashSet::new(),
-            endless_seed: None,
-            added: HashSet::new(),
+            endless_seed: startup.smart.radio_seed.map(Into::into),
+            added: startup.smart.added.iter().copied().collect(),
             nothing_to_add: false,
             smart_dirty: false,
             recent: VecDeque::new(),
@@ -300,6 +318,7 @@ impl Actor {
             speed: startup.speed,
             speed_override: None,
             published_revert: false,
+            before_radio: None,
         }
         .with_smart_play(startup.smart_play)
         .with_keys()
@@ -515,6 +534,16 @@ impl Actor {
             suspects: self.suspects.iter().cloned().collect(),
             stop_after: self.stop_after,
             playing: self.playing_for_session(),
+            smart: SavedSmart {
+                added: self
+                    .queue
+                    .items()
+                    .iter()
+                    .map(|e| e.id)
+                    .filter(|id| self.added.contains(id))
+                    .collect(),
+                radio_seed: self.endless_seed.map(Into::into),
+            },
         };
         let now = self.clock.elapsed();
         let Some(session) = &mut self.session else {
@@ -569,6 +598,21 @@ impl Actor {
     // --- Commands -----------------------------------------------------------------
 
     fn command(&mut self, command: PlayerCommand) {
+        if matches!(
+            command,
+            PlayerCommand::PlayFiles { .. }
+                | PlayerCommand::PlayContext { .. }
+                | PlayerCommand::PlayTracks { .. }
+                | PlayerCommand::Enqueue { .. }
+                | PlayerCommand::Remove(_)
+                | PlayerCommand::Move { .. }
+                | PlayerCommand::Clear
+                | PlayerCommand::SetShuffle(_)
+                | PlayerCommand::SetRepeat(_)
+        ) {
+            // The queue changes otherwise: Undo of the radio has nothing to do.
+            self.before_radio = None;
+        }
         match command {
             PlayerCommand::PlayFiles { files, start } => {
                 let tracks = files
@@ -785,6 +829,7 @@ impl Actor {
             PlayerCommand::Revert => self.revert(),
             PlayerCommand::RadioRandom => self.radio_random(),
             PlayerCommand::StartRadio(seed) => self.start_radio(seed),
+            PlayerCommand::UndoRadio => self.undo_radio(),
             PlayerCommand::ConfigureTransitions(transitions) => {
                 self.send(EngineCommand::SetTransitions(transitions));
             }
@@ -1314,7 +1359,7 @@ impl Actor {
             return;
         }
         let start = self.restored.take();
-        self.load_as(entry, Direction::Forward, start, true);
+        self.load_as(entry, Direction::Forward, start, LoadMode::FadeIn);
     }
 
     /// Saves the session, and takes the tracks playing out of the sentinel until
@@ -1547,17 +1592,16 @@ impl Actor {
     /// `start`, or where a long track last stopped. An entry that cannot be resolved
     /// is skipped in `direction`.
     fn load(&mut self, entry: EntryId, direction: Direction, start: Option<MediaTime>) {
-        self.load_as(entry, direction, start, false);
+        self.load_as(entry, direction, start, LoadMode::Play);
     }
 
-    /// [`load`](Self::load), or with `fade_in` loaded paused and played once the
-    /// engine has paused there, so that it starts with the fade after a pause.
+    /// [`load`](Self::load), or loaded paused as `mode` says.
     fn load_as(
         &mut self,
         entry: EntryId,
         mut direction: Direction,
         start: Option<MediaTime>,
-        fade_in: bool,
+        mode: LoadMode,
     ) {
         self.resume = None;
         self.resume_fade = None;
@@ -1582,11 +1626,11 @@ impl Actor {
                     self.stopped_after = false;
                     self.slept = false;
                     self.ended = false;
-                    self.resume_fade = fade_in.then_some(item.id);
+                    self.resume_fade = (mode == LoadMode::FadeIn).then_some(item.id);
                     self.send(EngineCommand::Load {
                         item,
                         start,
-                        paused: fade_in,
+                        paused: mode != LoadMode::Play,
                     });
                     return;
                 }

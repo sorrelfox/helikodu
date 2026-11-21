@@ -137,6 +137,7 @@ impl Player {
             draws: config
                 .shuffle_seed
                 .map_or_else(Rng::from_entropy, |seed| Rng::new(seed.rotate_left(17))),
+            smart: session::SavedSmart::default(),
         };
         if let Some(session_config) = &config.session {
             let mut files = SessionFiles::new(&session_config.dir);
@@ -159,6 +160,7 @@ impl Player {
                     startup.volume = saved.volume;
                     startup.stop_after = saved.stop_after;
                     startup.selection = saved.output;
+                    startup.smart = saved.smart;
                 }
             }
             startup.suspects.extend(report.suspects().cloned());

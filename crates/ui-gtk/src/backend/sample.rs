@@ -1602,6 +1602,20 @@ impl PlayerControl for FakePlayer {
     }
 
     fn send(&self, request: PlayerRequest) {
+        if matches!(
+            request,
+            PlayerRequest::Enqueue { .. }
+                | PlayerRequest::RemoveEntries(_)
+                | PlayerRequest::MoveEntry { .. }
+                | PlayerRequest::ClearQueue
+                | PlayerRequest::SetShuffle(_)
+                | PlayerRequest::SetRepeat(_)
+                | PlayerRequest::SetShuffleMode(_)
+                | PlayerRequest::SetRepeatMode(_)
+        ) {
+            // The queue changes otherwise: Undo of a radio has nothing to do.
+            self.state.borrow_mut().before_radio = None;
+        }
         match request {
             PlayerRequest::PlayAlbum { album, start, .. } => {
                 let Some(detail) = self.library.detail(album) else {

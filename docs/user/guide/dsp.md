@@ -122,6 +122,8 @@ Times stay those of the track: a track of 4:00 still shows 4:00 at 1.25×, its p
 
 The speed applies to each track before the tracks are mixed, so it is not one of the stages in `order` and is not kept in saved chains. In exclusive mode, when nothing else changes the samples, bit-perfect playback wins and tracks play at their normal speed; in shared mode, or when another stage is on, the speed applies. The signal path shows it with the resampler.
 
+Gapless albums stay gapless at another speed: with the pitch kept, tracks that run into each other join without a dip in level.
+
 `helikodu-cli dsp speed 1.25` sets it (`--tape` lets the pitch follow, `--keep-pitch` keeps it; without either, it stays as it was), and `helikodu-cli dsp speed 1` goes back to the normal speed. `helikodu-cli speed 1.25 [--tape]` changes the speed of the running program at once, until it ends; playback goes on where it was. The settings file gives the speed it starts with.
 
 ## Trying it out

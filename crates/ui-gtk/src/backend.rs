@@ -1407,8 +1407,10 @@ pub enum PlayerRequest {
     RadioRandom,
     /// Starts endless play from a library track, album or artist.
     StartRadio(RadioSeed),
-    /// Puts back the queue, the position and the Repeat mode as they were
-    /// before the last `StartRadio`.
+    /// Puts back exactly what the last `StartRadio` replaced: the entries
+    /// (queued ones stay queued), their order with a shuffled one, the current
+    /// track and its position, playing, paused or stopped as it was, and the
+    /// play modes. Does nothing once the queue was changed otherwise since.
     UndoRadio,
     /// Sets the start of the A-B loop at the playing position.
     LoopStartHere,

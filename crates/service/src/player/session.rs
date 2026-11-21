@@ -5,7 +5,8 @@
 //!
 //! - `session.json` holds the queue (entries, context order, context, current
 //!   entry), the position, whether it was playing, the play modes, the volume, the
-//!   output and the tracks marked suspect. It is written by atomic replace.
+//!   output, the tracks marked suspect, and the entries endless play, the Auto-DJ
+//!   or a radio added with the radio's seed. It is written by atomic replace.
 //! - `playing.json` is the **crash sentinel**: it names the tracks being loaded or
 //!   played (the current one, and the next one once the engine opened it for a
 //!   gapless join), each with the number of abnormal ends in a row that named it
@@ -18,8 +19,9 @@ use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use helikodu_library::{AlbumId, PersonId, PlaySeed};
 use helikodu_model::audio::OutputSelection;
-use helikodu_model::library::TrackRef;
+use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::player::{EntryId, PlayModes, QueueContext, QueueEntry, StopAfter, Volume};
 use serde::{Deserialize, Serialize};
 
@@ -62,6 +64,50 @@ pub(crate) struct SavedSession {
     /// playing.
     #[serde(default)]
     pub(crate) playing: bool,
+    /// What endless play, the Auto-DJ or a radio added to the queue, and the
+    /// radio's seed. Files written before it existed read as nothing added.
+    #[serde(default)]
+    pub(crate) smart: SavedSmart,
+}
+
+/// What endless play, the Auto-DJ or a radio added to the saved queue.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub(crate) struct SavedSmart {
+    /// The entries they added, in play order.
+    #[serde(default)]
+    pub(crate) added: Vec<EntryId>,
+    /// The seed of the radio that endless play continues from.
+    #[serde(default)]
+    pub(crate) radio_seed: Option<SavedSeed>,
+}
+
+/// The seed of a radio, by its number in the library.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum SavedSeed {
+    Track(u64),
+    Album(i64),
+    Artist(i64),
+}
+
+impl From<PlaySeed> for SavedSeed {
+    fn from(seed: PlaySeed) -> Self {
+        match seed {
+            PlaySeed::Track(track) => Self::Track(track.get()),
+            PlaySeed::Album(album) => Self::Album(album.get()),
+            PlaySeed::Artist(person) => Self::Artist(person.get()),
+        }
+    }
+}
+
+impl From<SavedSeed> for PlaySeed {
+    fn from(seed: SavedSeed) -> Self {
+        match seed {
+            SavedSeed::Track(track) => Self::Track(TrackId::new(track)),
+            SavedSeed::Album(album) => Self::Album(AlbumId::from_raw(album)),
+            SavedSeed::Artist(person) => Self::Artist(PersonId::from_raw(person)),
+        }
+    }
 }
 
 /// One track the sentinel names.
@@ -218,13 +264,17 @@ mod tests {
             suspects: vec![TrackRef::Library(TrackId::new(9))],
             stop_after: StopAfter::Album,
             playing: true,
+            smart: SavedSmart {
+                added: vec![EntryId::new(4)],
+                radio_seed: Some(SavedSeed::Artist(7)),
+            },
         };
         files.save(&session).unwrap();
         assert_eq!(files.load(), Some(session));
     }
 
     #[test]
-    fn an_older_session_reads_as_not_playing() {
+    fn an_older_session_reads_as_not_playing_with_nothing_added() {
         let dir = dir("older");
         std::fs::create_dir_all(&dir).unwrap();
         let mut value = serde_json::to_value(SavedSession {
@@ -240,12 +290,30 @@ mod tests {
             suspects: Vec::new(),
             stop_after: StopAfter::Off,
             playing: true,
+            smart: SavedSmart {
+                added: vec![EntryId::new(1)],
+                radio_seed: Some(SavedSeed::Track(3)),
+            },
         })
         .unwrap();
-        value.as_object_mut().unwrap().remove("playing");
+        let object = value.as_object_mut().unwrap();
+        object.remove("playing");
+        object.remove("smart");
         std::fs::write(dir.join(SESSION_FILE), value.to_string()).unwrap();
         let loaded = SessionFiles::new(&dir).load().unwrap();
         assert!(!loaded.playing);
+        assert_eq!(loaded.smart, SavedSmart::default());
+    }
+
+    #[test]
+    fn a_radio_seed_converts_both_ways() {
+        for seed in [
+            PlaySeed::Track(TrackId::new(5)),
+            PlaySeed::Album(AlbumId::from_raw(6)),
+            PlaySeed::Artist(PersonId::from_raw(7)),
+        ] {
+            assert_eq!(PlaySeed::from(SavedSeed::from(seed)), seed);
+        }
     }
 
     #[test]

@@ -801,10 +801,11 @@ fn play_mode_track_flags(app: &gtk::Application) {
 
 /// "Start Radio" in the context menu of one track replaces the queue with it
 /// and related tracks, turns on endless play and says so in a toast whose
-/// Undo puts the queue back; with several tracks selected it is insensitive.
+/// Undo puts the queue back, but does nothing once the queue was changed
+/// otherwise; with several tracks selected it is insensitive.
 fn start_radio_from_the_context_menu(app: &gtk::Application) {
     use helikodu_ui_gtk::backend::AlbumKey;
-    let (window, _) = playing_window(app);
+    let (window, backend) = playing_window(app);
     let queue_texts = |window: &MainWindow| -> Vec<String> {
         descendants(window.queue_list().upcast_ref())
             .into_iter()
@@ -853,6 +854,22 @@ fn start_radio_from_the_context_menu(app: &gtk::Application) {
         .expect("the toast's Undo");
     toast_undo.emit_clicked();
     wait_for("the queue as it was", || queue_texts(&window) == before);
+    // Another radio, then the queue changes: Undo has nothing to do.
+    backend.send(PlayerRequest::StartRadio(
+        helikodu_ui_gtk::backend::RadioSeed::Artist(1),
+    ));
+    wait_for("the radio's queue again", || {
+        queue_texts(&window)
+            .iter()
+            .any(|t| t == "Added by Helikodu")
+    });
+    backend.send(PlayerRequest::ClearQueue);
+    spin(100);
+    let cleared = queue_texts(&window);
+    assert_ne!(cleared, before);
+    backend.send(PlayerRequest::UndoRadio);
+    spin(100);
+    assert_eq!(queue_texts(&window), cleared);
     // Several tracks: no seed.
     assert!(window.open_first_playlist());
     wait_for("the entries", || !window.playlist_titles().is_empty());
