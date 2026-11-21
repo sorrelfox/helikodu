@@ -313,13 +313,21 @@ impl Facts {
             .filter(|s| s.state == StageState::Active && s.detail.starts_with("track "));
         self.track_eq = track.map(|stage| {
             let context = live.context();
-            let name = context
-                .as_ref()
-                .and_then(|c| c.services.dsp().playing_equalizer_name())
-                .unwrap_or_else(|| tr("Own settings"));
             let playing = context
+                .as_ref()
                 .and_then(|c| c.playback.clone())
                 .and_then(|p| p.view().now.map(|n| n.track.key));
+            // The name the library keeps for the playing track's equalizer.
+            let name = context
+                .as_ref()
+                .and_then(|c| {
+                    playing
+                        .and_then(|key| c.services.track_equalizer(key).ok().flatten())
+                        .map(|eq| eq.name)
+                        .filter(|name| !name.is_empty())
+                        .or_else(|| c.services.dsp().playing_equalizer_name())
+                })
+                .unwrap_or_else(|| tr("Own settings"));
             // The engine's words up to the preamp: `track EQ 4 filters`.
             let path = stage
                 .detail
@@ -743,7 +751,7 @@ fn equalizer_page(live: &Rc<Live>) -> EqualizerParts {
                 return;
             };
             if let Some(main) = context.main.upgrade() {
-                crate::dialogs::tag_editor::open(&main, &[track]);
+                crate::dialogs::tag_editor::open_on_equalizer(&main, &[track]);
             }
         });
     }
