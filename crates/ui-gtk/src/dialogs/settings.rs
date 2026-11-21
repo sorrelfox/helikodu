@@ -19,7 +19,7 @@ mod output;
 mod playback;
 mod search;
 mod shortcuts;
-mod track_analysis;
+pub(crate) mod track_analysis;
 mod your_data;
 
 use std::cell::RefCell;
@@ -214,6 +214,30 @@ fn build_page(page: Page, context: &Rc<Context>) -> gtk::Widget {
 
 /// Opens the Settings window over `main` at `page` (or the page shown last),
 /// or brings it to the front.
+/// Opens the Settings window at `page` and scrolls to the widget named `row`.
+pub(crate) fn open_at(main: &MainWindow, page: Page, row: &str) {
+    let window = open(main, Some(page));
+    let row = row.to_owned();
+    // Once the page has its size.
+    glib::timeout_add_local_once(std::time::Duration::from_millis(60), move || {
+        let Some(target) = find_widget(&window, |w| w.widget_name() == row.as_str()) else {
+            return;
+        };
+        let scroller = target
+            .ancestor(gtk::ScrolledWindow::static_type())
+            .and_downcast::<gtk::ScrolledWindow>();
+        if let Some(scroller) = scroller
+            && let Some(body) = scroller.child()
+            && let Some(point) = target.compute_point(&body, &gtk::graphene::Point::zero())
+        {
+            scroller
+                .vadjustment()
+                .set_value(f64::from(point.y()) - 18.0);
+        }
+        target.child_focus(gtk::DirectionType::TabForward);
+    });
+}
+
 pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
     let parent = main.upcast_ref::<gtk::Window>();
     if let Some(window) = find_open(parent, NAME) {

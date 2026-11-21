@@ -79,6 +79,7 @@ pub(crate) fn playlist_icon(kind: PlaylistType, from_file: bool) -> &'static str
     match kind {
         PlaylistType::Folder => "folder-symbolic",
         PlaylistType::Smart => "helikodu-funnel-symbolic",
+        PlaylistType::Generator => "helikodu-steps-symbolic",
         PlaylistType::Static if from_file => "text-x-generic-symbolic",
         PlaylistType::Static => "helikodu-playlist-symbolic",
     }
@@ -311,7 +312,10 @@ impl Sidebar {
             row.set_child(Some(&line));
             row.update_property(&[gtk::accessible::Property::Label(&playlist.name)]);
             row.set_visible(!hidden_by(playlists, playlist, &closed));
-            self.attach_playlist_controllers(&row, playlist.key, folder);
+            // The steps of a generator playlist choose its tracks: it takes
+            // no dropped tracks.
+            let generator = playlist.kind == PlaylistType::Generator;
+            self.attach_playlist_controllers(&row, playlist.key, folder, generator);
             self.list
                 .insert(&row, position + i32::try_from(i).unwrap_or(0));
             rows.push(row);
@@ -455,6 +459,7 @@ impl Sidebar {
         row: &gtk::ListBoxRow,
         key: PlaylistKey,
         folder: bool,
+        generator: bool,
     ) {
         // Dragging a playlist or folder, onto a folder.
         let source = gtk::DragSource::new();
@@ -528,7 +533,7 @@ impl Sidebar {
             gtk::glib::Propagation::Stop
         });
         row.add_controller(keys);
-        if folder {
+        if folder || generator {
             return;
         }
         let target = DraggedTracks::target(gtk::gdk::DragAction::COPY);

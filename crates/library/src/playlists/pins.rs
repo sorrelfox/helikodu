@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What the user pinned to the sidebar: albums, artists and playlists, in the order
-//! they were pinned. A pin whose album, artist or playlist has gone is not listed.
+//! What the user pinned to the sidebar: albums, artists, playlists and generator
+//! playlists, in the order they were pinned. A pin whose album, artist or playlist
+//! has gone is not listed.
 
 use helikodu_meta::covers::CoverHash;
 use rusqlite::{Connection, params};
 
 use super::{PlaylistId, PlaylistType};
 use crate::catalog::{AlbumId, PersonId};
+use crate::generators::GeneratorId;
 
 /// Something that can be pinned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -19,6 +21,8 @@ pub enum PinTarget {
     Artist(PersonId),
     /// A playlist or a folder.
     Playlist(PlaylistId),
+    /// A generator playlist.
+    Generator(GeneratorId),
 }
 
 impl PinTarget {
@@ -27,6 +31,7 @@ impl PinTarget {
             Self::Album(id) => (0, id.get()),
             Self::Artist(id) => (1, id.get()),
             Self::Playlist(id) => (2, id.0),
+            Self::Generator(id) => (3, id.get()),
         }
     }
 }
@@ -70,15 +75,17 @@ pub(crate) fn pins(c: &Connection) -> rusqlite::Result<Vec<Pin>> {
     let rows = c
         .prepare_cached(
             "SELECT p.kind, p.target,
-                    CASE p.kind WHEN 0 THEN a.title WHEN 1 THEN pe.name ELSE pl.name END,
+                    CASE p.kind WHEN 0 THEN a.title WHEN 1 THEN pe.name WHEN 2 THEN pl.name
+                        ELSE g.name END,
                     cv.hash, pl.kind
              FROM pins p
              LEFT JOIN albums a ON p.kind = 0 AND a.id = p.target
              LEFT JOIN covers cv ON cv.id = a.cover_id
              LEFT JOIN people pe ON p.kind = 1 AND pe.id = p.target
              LEFT JOIN playlists pl ON p.kind = 2 AND pl.id = p.target
+             LEFT JOIN generators g ON p.kind = 3 AND g.id = p.target
              WHERE (p.kind = 0 AND a.id IS NOT NULL) OR (p.kind = 1 AND pe.id IS NOT NULL)
-                OR (p.kind = 2 AND pl.id IS NOT NULL)
+                OR (p.kind = 2 AND pl.id IS NOT NULL) OR (p.kind = 3 AND g.id IS NOT NULL)
              ORDER BY p.position, p.id",
         )?
         .query_map([], |row| {
@@ -87,6 +94,7 @@ pub(crate) fn pins(c: &Connection) -> rusqlite::Result<Vec<Pin>> {
             let target = match kind {
                 0 => PinTarget::Album(AlbumId::from_raw(id)),
                 1 => PinTarget::Artist(PersonId::from_raw(id)),
+                3 => PinTarget::Generator(GeneratorId::from_raw(id)),
                 _ => PinTarget::Playlist(PlaylistId(id)),
             };
             Ok(Pin {

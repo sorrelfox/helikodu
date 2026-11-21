@@ -246,3 +246,56 @@ fn generators_run_their_steps() {
     assert!(library.remove_generator(id).unwrap());
     assert!(library.find_generator("Jazz").unwrap().is_none());
 }
+
+#[test]
+fn generator_trials_count_each_step() {
+    let (library, _, ids) = filled();
+    let heard = library.create_playlist("Heard").unwrap();
+    library.add_to_playlist(heard, vec![ids[0]]).unwrap();
+    let steps: GeneratorSteps = "from library\n\
+                                 where genre:Jazz\n\
+                                 exclude playlist \"Heard\"\n\
+                                 per-artist 1\n\
+                                 limit 1"
+        .parse()
+        .unwrap();
+    let trial = library.try_generator(&steps, 1, None);
+    assert!(trial.failure.is_none());
+    assert_eq!(trial.counts, vec![10, 5, 4, 2, 1]);
+    assert_eq!(trial.tracks.len(), 1);
+
+    // A playlist that is gone stops the run at its step, with the counts before.
+    let gone: GeneratorSteps =
+        "from library\nwhere genre:Metal\nexclude playlist \"Gone\"\nlimit 2"
+            .parse()
+            .unwrap();
+    let trial = library.try_generator(&gone, 1, None);
+    assert_eq!(trial.counts, vec![10, 4]);
+    assert!(matches!(
+        trial.failure,
+        Some((2, GeneratorError::UnknownPlaylist(ref name))) if name == "Gone"
+    ));
+    assert_eq!(trial.tracks.len(), 4);
+}
+
+#[test]
+fn generators_sit_in_folders_and_pins() {
+    use helikodu_library::PinTarget;
+    let (library, _, _) = filled();
+    let folder = library.create_playlist_folder("Moods", None).unwrap();
+    let id = library
+        .create_generator("Picks", &GeneratorSteps::default(), true)
+        .unwrap();
+    library.move_generator(id, Some(folder)).unwrap();
+    assert_eq!(library.generator(id).unwrap().unwrap().parent, Some(folder));
+    library.pin(PinTarget::Generator(id)).unwrap();
+    let pins = library.pins().unwrap();
+    assert_eq!(pins.len(), 1);
+    assert_eq!(pins[0].name, "Picks");
+    assert_eq!(pins[0].target, PinTarget::Generator(id));
+    // Deleting the folder moves the generator up; removing it drops its pin.
+    library.delete_playlist(folder).unwrap();
+    assert_eq!(library.generator(id).unwrap().unwrap().parent, None);
+    assert!(library.remove_generator(id).unwrap());
+    assert!(library.pins().unwrap().is_empty());
+}

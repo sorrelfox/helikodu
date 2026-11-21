@@ -38,7 +38,7 @@ pub(super) struct SamplePlaylist {
     pub(super) name: String,
     pub(super) entries: Vec<Entry>,
     pub(super) modified: SystemTime,
-    kind: PlaylistType,
+    pub(super) kind: PlaylistType,
     parent: Option<PlaylistKey>,
     locked: bool,
     grouped: bool,
@@ -47,6 +47,8 @@ pub(super) struct SamplePlaylist {
     query: Option<Query>,
     undo: Vec<Snapshot>,
     redo: Vec<Snapshot>,
+    /// The steps and last result of a generator playlist.
+    pub(super) generator: Option<super::generators::SampleGenerator>,
 }
 
 impl SamplePlaylist {
@@ -65,6 +67,7 @@ impl SamplePlaylist {
             query: None,
             undo: Vec::new(),
             redo: Vec::new(),
+            generator: None,
         }
     }
 
@@ -100,7 +103,12 @@ pub(super) struct Playlists {
 }
 
 impl Playlists {
-    fn add(&mut self, name: &str, kind: PlaylistType, parent: Option<PlaylistKey>) -> PlaylistKey {
+    pub(super) fn add(
+        &mut self,
+        name: &str,
+        kind: PlaylistType,
+        parent: Option<PlaylistKey>,
+    ) -> PlaylistKey {
         self.next += 1;
         let key = PlaylistKey(self.next);
         self.lists
@@ -108,7 +116,7 @@ impl Playlists {
         key
     }
 
-    fn get(&mut self, key: PlaylistKey) -> Result<&mut SamplePlaylist, BackendError> {
+    pub(super) fn get(&mut self, key: PlaylistKey) -> Result<&mut SamplePlaylist, BackendError> {
         self.lists
             .iter_mut()
             .find(|p| p.key == key)
@@ -167,8 +175,13 @@ impl SampleLibrary {
         let evenings = lists.add("Evenings out", PlaylistType::Folder, None);
         let late = lists.add("Late evening", PlaylistType::Static, None);
         let road = lists.add("Road trip", PlaylistType::Static, None);
+        let heard = lists.add("Heard this week", PlaylistType::Static, None);
         let recent = lists.add("Recently added", PlaylistType::Smart, None);
         let hires = lists.add("Unrated hi-res", PlaylistType::Smart, None);
+        let forgotten = lists.add("Forgotten favourites", PlaylistType::Generator, None);
+        if let Ok(list) = lists.get(forgotten) {
+            list.generator = Some(super::generators::SampleGenerator::forgotten_favourites());
+        }
         let _ = evenings;
         for (key, count) in [
             (favourites, 214),
@@ -176,6 +189,7 @@ impl SampleLibrary {
             (long_run, 58),
             (late, 48),
             (road, 41),
+            (heard, 36),
         ] {
             let filled = entries(count);
             if let Ok(list) = lists.get(key) {
@@ -222,7 +236,7 @@ impl SampleLibrary {
     }
 
     /// The tracks the sample says the rules `query` select.
-    fn sample_matches(&self, query: &Query) -> Vec<TrackKey> {
+    pub(super) fn sample_matches(&self, query: &Query) -> Vec<TrackKey> {
         let total = self.tracks.len() as u64;
         if total == 0 {
             return Vec::new();
@@ -288,6 +302,18 @@ impl SampleLibrary {
                             .sum();
                         (tracks.len(), duration, 0)
                     }
+                    PlaylistType::Generator => {
+                        let tracks = p
+                            .generator
+                            .as_ref()
+                            .and_then(|g| g.last.clone())
+                            .unwrap_or_default();
+                        let duration = tracks
+                            .iter()
+                            .filter_map(|k| self.track(*k).and_then(|t| t.duration))
+                            .sum();
+                        (tracks.len(), duration, 0)
+                    }
                     PlaylistType::Static => (
                         p.entries.len(),
                         p.entries
@@ -325,6 +351,9 @@ impl SampleLibrary {
         &self,
         key: PlaylistKey,
     ) -> Result<Vec<TrackRow>, BackendError> {
+        if let Some(rows) = self.sample_generator_items(key) {
+            return Ok(rows);
+        }
         let entries = self.lists().get(key)?.entries.clone();
         Ok(entries
             .iter()
@@ -448,7 +477,7 @@ impl SampleLibrary {
         key: PlaylistKey,
         name: &str,
     ) -> Result<PlaylistKey, BackendError> {
-        let (kind, parent, entries, query) = {
+        let (kind, parent, entries, query, generator) = {
             let mut lists = self.lists();
             let list = lists.get(key)?;
             (
@@ -456,8 +485,15 @@ impl SampleLibrary {
                 list.parent,
                 list.entries.clone(),
                 list.query.clone(),
+                list.generator.clone(),
             )
         };
+        if let Some(generator) = generator {
+            let mut lists = self.lists();
+            let copy = lists.add(name, PlaylistType::Generator, parent);
+            lists.get(copy)?.generator = Some(generator);
+            return Ok(copy);
+        }
         let entries = match kind {
             PlaylistType::Smart => self
                 .sample_matches(query.as_ref().unwrap_or(&Query::default()))

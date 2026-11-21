@@ -49,6 +49,12 @@ harness = false
 name = "views"
 harness = false
 
+[[test]]
+# Generator playlists and tracks that sound alike against the sample backend;
+# GTK needs its own main function.
+name = "generators"
+harness = false
+
 [[example]]
 name = "views"
 

@@ -118,7 +118,7 @@ fn artists_genres_and_folders_list(app: &gtk::Application) {
 
 fn playlists_edit_with_undo(app: &gtk::Application) {
     let (window, _) = window(app);
-    wait_for("the playlists", 2, || window.playlist_names().len() == 9);
+    wait_for("the playlists", 2, || window.playlist_names().len() == 11);
     app.activate_action("new-playlist", None);
     wait_for("a new playlist", 2, || {
         window.playlist_names().iter().any(|n| n == "New playlist")
@@ -142,7 +142,7 @@ fn playlists_edit_with_undo(app: &gtk::Application) {
 
 fn playlists_lock_group_tidy_and_redo(app: &gtk::Application) {
     let (window, _) = window(app);
-    wait_for("the playlists", 2, || window.playlist_names().len() == 9);
+    wait_for("the playlists", 2, || window.playlist_names().len() == 11);
     assert!(window.open_first_playlist());
     wait_for("the entries", 2, || window.playlist_titles().len() == 48);
     let before = window.playlist_titles();
@@ -174,7 +174,7 @@ fn playlists_lock_group_tidy_and_redo(app: &gtk::Application) {
 
 fn smart_playlists_folders_and_pins(app: &gtk::Application) {
     let (window, _) = window(app);
-    wait_for("the playlists", 2, || window.playlist_names().len() == 9);
+    wait_for("the playlists", 2, || window.playlist_names().len() == 11);
     wait_for("the pins", 2, || window.pin_names().len() == 2);
     assert!(window.open_playlist_named("Unrated hi-res", false));
     assert_eq!(window.visible_view().as_deref(), Some("smart-playlist"));

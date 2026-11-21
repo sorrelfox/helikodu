@@ -42,7 +42,7 @@ fn count_text(progress: &AnalysisProgress) -> String {
 
 /// What the analysis does now, and after it how many tracks could not be
 /// read.
-fn state_text(progress: &AnalysisProgress) -> String {
+pub(crate) fn state_text(progress: &AnalysisProgress) -> String {
     let state = match progress.state {
         AnalysisState::Off => tr("Crossfades use their fixed length, and silence is not left out."),
         AnalysisState::Idle if progress.remaining() == 0 => tr("Every track is analysed."),
@@ -139,7 +139,7 @@ pub(super) fn group(context: &Rc<Context>) -> gtk::Box {
     let (line, switch) = switch_row(
         &tr("Analyse tracks in the background"),
         Some(&tr(
-            "Finds the silence and the loudness of each track once, for crossfades, silence and the leveller. Nothing is written to the files.",
+            "Finds the silence and the loudness of each track once, for crossfades, silence and the leveller, and notes how the track sounds, so that Helikodu can find tracks that sound alike. Tracks analysed by an earlier version are analysed once more. Nothing is written to the files.",
         )),
     );
     switch.set_widget_name("analyze-in-background");

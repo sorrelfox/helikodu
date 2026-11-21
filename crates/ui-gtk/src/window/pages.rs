@@ -29,9 +29,11 @@ use crate::views::artists::ArtistsView;
 use crate::views::category::{Category, CategoryView};
 use crate::views::drag::{self, DraggedTracks};
 use crate::views::folders::FoldersView;
+use crate::views::generator::GeneratorView;
 use crate::views::genres::GenresView;
 use crate::views::playlist::PlaylistView;
 use crate::views::search::SearchView;
+use crate::views::similar::SimilarView;
 use crate::views::smart_playlist::SmartPlaylistView;
 use crate::views::tracks::TracksView;
 
@@ -51,6 +53,8 @@ pub(crate) struct Pages {
     folders: OnceCell<Rc<FoldersView>>,
     playlist: OnceCell<Rc<PlaylistView>>,
     smart: OnceCell<Rc<SmartPlaylistView>>,
+    generator: OnceCell<Rc<GeneratorView>>,
+    similar: OnceCell<Rc<SimilarView>>,
     pub(super) covers: Rc<CoverCache>,
     pub(super) pins: RefCell<Vec<PinRow>>,
     search: OnceCell<Rc<SearchView>>,
@@ -176,6 +180,25 @@ impl Pages {
         })
     }
 
+    /// The generator playlist page.
+    pub(super) fn generator(&self) -> &Rc<GeneratorView> {
+        self.generator.get_or_init(|| {
+            let view = GeneratorView::new(&self.backend, &self.covers, &self.playback);
+            view.install_actions();
+            self.add("generator-playlist", &view.root);
+            view
+        })
+    }
+
+    /// The page of tracks that sound alike.
+    pub(super) fn similar(&self) -> &Rc<SimilarView> {
+        self.similar.get_or_init(|| {
+            let view = SimilarView::new(&self.backend, &self.covers, &self.playback);
+            self.add("similar", &view.root);
+            view
+        })
+    }
+
     fn search(&self) -> &Rc<SearchView> {
         self.search.get_or_init(|| {
             let view = SearchView::new(&self.backend, &self.covers, &self.playback);
@@ -261,6 +284,8 @@ impl MainWindow {
             folders: OnceCell::new(),
             playlist: OnceCell::new(),
             smart: OnceCell::new(),
+            generator: OnceCell::new(),
+            similar: OnceCell::new(),
             covers: covers.clone(),
             pins: RefCell::new(Vec::new()),
             search: OnceCell::new(),
@@ -483,13 +508,25 @@ impl MainWindow {
                 views.set_visible_child_name("folders");
                 "folders".into()
             }
+            Page::Similar(seed) => {
+                pages.similar().show(seed);
+                views.set_visible_child_name("similar");
+                String::new()
+            }
             Page::Playlist(key) => {
-                let smart = pages
+                let kind = pages
                     .playlists
                     .borrow()
                     .iter()
-                    .any(|p| p.key == key && p.kind == PlaylistType::Smart);
-                if smart {
+                    .find(|p| p.key == key)
+                    .map(|p| p.kind);
+                let smart = kind == Some(PlaylistType::Smart);
+                if kind == Some(PlaylistType::Generator) {
+                    let editing =
+                        pages.generator().key() == Some(key) && pages.generator().is_editing();
+                    pages.generator().show(key, editing);
+                    views.set_visible_child_name("generator-playlist");
+                } else if smart {
                     let editing = pages.smart().key() == Some(key) && pages.smart().is_editing();
                     pages.smart().show(key, editing);
                     views.set_visible_child_name("smart-playlist");
@@ -520,6 +557,8 @@ impl MainWindow {
             "folders" => pages.folders().focus_target(),
             "playlist" => pages.playlist().focus_target(),
             "smart-playlist" => pages.smart().focus_target(),
+            "generator-playlist" => pages.generator().focus_target(),
+            "similar" => pages.similar().focus_target(),
             "search" => pages.search_entry.clone().upcast(),
             "history" => self.history_view()?.focus_target(),
             "home" => self.home_focus_target()?,
@@ -554,6 +593,9 @@ impl MainWindow {
             view.reload();
         }
         if let Some(view) = pages.smart.get() {
+            view.reload();
+        }
+        if let Some(view) = pages.generator.get() {
             view.reload();
         }
         self.load_playlists(None);
@@ -608,10 +650,12 @@ impl MainWindow {
         let Some(pages) = self.pages() else { return };
         if let Some(target) = &target {
             let (album, artist, remove) = actions::applies(target);
+            let similar = actions::similar_seed(target).is_some();
             for (name, on) in [
                 ("sel-go-album", album),
                 ("sel-go-artist", artist),
                 ("sel-remove", remove),
+                ("sel-similar", similar),
             ] {
                 if let Some(action) = self.lookup_action(name).and_downcast::<gio::SimpleAction>() {
                     action.set_enabled(on);
@@ -634,6 +678,8 @@ impl MainWindow {
             Some("artists") => pages.artists().target(),
             Some("playlist") => pages.playlist().target(),
             Some("smart-playlist") => pages.smart().target(),
+            Some("generator-playlist") => pages.generator().target(),
+            Some("similar") => pages.similar().target(),
             Some("folders") => pages.folders().target(),
             Some("search") => pages.search().target(),
             _ => None,
@@ -677,6 +723,11 @@ impl MainWindow {
                 view.reload();
             }
             if let Some(view) = pages.smart.get()
+                && view.key() == changed
+            {
+                view.reload();
+            }
+            if let Some(view) = pages.generator.get()
                 && view.key() == changed
             {
                 view.reload();
@@ -727,13 +778,18 @@ impl MainWindow {
             }
             let visible = window.imp().views.visible_child_name();
             if let Some(Page::Playlist(key)) = window.current_page()
-                && matches!(visible.as_deref(), Some("playlist" | "smart-playlist"))
+                && matches!(
+                    visible.as_deref(),
+                    Some("playlist" | "smart-playlist" | "generator-playlist")
+                )
             {
                 // A playlist opened before the list came shows on its own page.
-                let smart = lists
-                    .iter()
-                    .any(|p| p.key == key && p.kind == PlaylistType::Smart);
-                if smart != (visible.as_deref() == Some("smart-playlist")) {
+                let page = match lists.iter().find(|p| p.key == key).map(|p| p.kind) {
+                    Some(PlaylistType::Smart) => "smart-playlist",
+                    Some(PlaylistType::Generator) => "generator-playlist",
+                    _ => "playlist",
+                };
+                if visible.as_deref() != Some(page) {
                     window.go(Page::Playlist(key), false);
                 }
                 if lists.iter().any(|p| p.key == key) {
@@ -829,9 +885,18 @@ impl MainWindow {
         }
         match self.playlist_row(key).map(|p| p.kind) {
             Some(PlaylistType::Folder) => self.ask_folder_name(key),
-            Some(PlaylistType::Smart) => {
-                self.open_smart_playlist(key, pages.smart().is_editing());
-                let name = pages.smart().name_label();
+            Some(kind @ (PlaylistType::Smart | PlaylistType::Generator)) => {
+                let name = if kind == PlaylistType::Smart {
+                    self.open_smart_playlist(key, pages.smart().is_editing());
+                    pages.smart().name_label()
+                } else {
+                    // A generator just opened (in the editor, say) stays as
+                    // it is.
+                    if pages.generator().key() != Some(key) {
+                        self.open_generator_playlist(key, false);
+                    }
+                    pages.generator().name_label()
+                };
                 let current = self.playlist_row(key).map(|p| p.name).unwrap_or_default();
                 let weak = self.downgrade();
                 super::playlists::ask_name(
@@ -852,6 +917,22 @@ impl MainWindow {
                 pages.playlist().ask_name();
             }
         }
+    }
+
+    /// Opens the generator playlist `key`, viewing or editing its steps.
+    pub(crate) fn open_generator_playlist(&self, key: PlaylistKey, editing: bool) {
+        let Some(pages) = self.pages() else { return };
+        self.go(Page::Playlist(key), true);
+        // After going there, which shows the page as it was.
+        pages.generator().show(key, editing);
+        self.imp()
+            .views
+            .set_visible_child_name("generator-playlist");
+    }
+
+    /// Opens the tracks that sound like `seed`.
+    pub(crate) fn show_similar(&self, seed: crate::backend::SimilarSeed) {
+        self.go(Page::Similar(seed), true);
     }
 
     /// Opens the smart playlist `key`, viewing or editing its rules.
@@ -1328,6 +1409,9 @@ impl MainWindow {
         let smart = self
             .playlist_row(key)
             .is_some_and(|p| p.kind == PlaylistType::Smart);
+        let generator = self
+            .playlist_row(key)
+            .is_some_and(|p| p.kind == PlaylistType::Generator);
         glib::spawn_future_local(async move {
             let Ok(items) = backend
                 .query(move |l| {
@@ -1346,14 +1430,142 @@ impl MainWindow {
                 .filter(|t| !t.missing && t.key.0 != 0)
                 .map(|t| t.key)
                 .collect();
-            backend.send(PlayerRequest::PlayPlaylist {
-                key,
-                tracks,
-                start: 0,
-                title: name,
-                shuffle: false,
+            // A generator's tracks are no playlist of the library to
+            // remember as the queue's source.
+            backend.send(if generator {
+                PlayerRequest::PlayTracks {
+                    tracks,
+                    start: 0,
+                    title: name,
+                    shuffle: false,
+                }
+            } else {
+                PlayerRequest::PlayPlaylist {
+                    key,
+                    tracks,
+                    start: 0,
+                    title: name,
+                    shuffle: false,
+                }
             });
         });
+    }
+
+    /// What the open generator playlist shows (for tests).
+    #[doc(hidden)]
+    pub fn generator_state(&self) -> crate::views::generator::GeneratorState {
+        self.pages()
+            .map(|p| p.generator().state())
+            .unwrap_or_default()
+    }
+
+    /// Edits the steps of the open generator playlist, or stops (for tests).
+    #[doc(hidden)]
+    pub fn generator_edit(&self, editing: bool) {
+        if let Some(pages) = self.pages() {
+            pages.generator().set_editing(editing);
+        }
+    }
+
+    /// Adds a step of the `n`th kind of the "Add step" menu (for tests).
+    #[doc(hidden)]
+    pub fn generator_add_step(&self, n: usize) {
+        if let Some(pages) = self.pages() {
+            pages.generator().add_step(n);
+        }
+    }
+
+    /// Moves a step of the open generator as Alt+Up or Alt+Down would (for
+    /// tests); `index` counts the steps after the source.
+    #[doc(hidden)]
+    pub fn generator_move_step(&self, index: usize, up: bool) {
+        if let Some(pages) = self.pages() {
+            let to = if up {
+                index.saturating_sub(1)
+            } else {
+                index + 2
+            };
+            pages.generator().move_step(index, to);
+        }
+    }
+
+    /// Makes the open generator playlist again (for tests).
+    #[doc(hidden)]
+    pub fn generator_make_again(&self) {
+        if let Some(pages) = self.pages() {
+            pages.generator().make_again();
+        }
+    }
+
+    /// Makes a generator playlist as "Generator Playlist" of the New
+    /// playlist menu does (for tests).
+    #[doc(hidden)]
+    pub fn demo_new_generator(&self) {
+        self.new_generator_playlist(None);
+    }
+
+    /// Opens the tracks that sound like the track `key` (for tests).
+    #[doc(hidden)]
+    pub fn demo_show_similar(&self, seed: crate::backend::SimilarSeed) {
+        self.show_similar(seed);
+    }
+
+    /// What the page of tracks that sound alike shows (for tests).
+    #[doc(hidden)]
+    pub fn similar_state(&self) -> crate::views::similar::SimilarState {
+        self.pages()
+            .map(|p| p.similar().state())
+            .unwrap_or_default()
+    }
+
+    /// Shows 50 more similar tracks (for tests).
+    #[doc(hidden)]
+    pub fn similar_more(&self) {
+        if let Some(pages) = self.pages() {
+            pages.similar().demo_more();
+        }
+    }
+
+    /// Saves the similar tracks as a playlist (for tests).
+    #[doc(hidden)]
+    pub fn similar_save(&self) {
+        if let Some(pages) = self.pages() {
+            pages.similar().demo_save();
+        }
+    }
+
+    /// Whether the context menu of `tracks` has "Show Similar Tracks" and
+    /// whether it can be chosen; the tracks become the menu's target, so that
+    /// `win.sel-similar` acts on them (for tests).
+    #[doc(hidden)]
+    pub fn demo_similar_item(&self, tracks: &[TrackKey]) -> (bool, bool) {
+        let rows = tracks
+            .iter()
+            .map(|key| {
+                Rc::new(TrackRow {
+                    key: *key,
+                    ..TrackRow::default()
+                })
+            })
+            .collect();
+        let target = Target::tracks(rows);
+        let menu = actions::menu(&target, &[]);
+        let mut labels = Vec::new();
+        menu_labels(menu.upcast_ref(), &mut labels);
+        self.set_target(Some(target));
+        let enabled = self
+            .lookup_action("sel-similar")
+            .is_some_and(|a| a.is_enabled());
+        (
+            labels.iter().any(|l| l == &tr("Show Similar Tracks")),
+            enabled,
+        )
+    }
+
+    /// The New playlist menu (for tests).
+    #[doc(hidden)]
+    pub fn demo_new_menu(&self) -> gtk::gio::Menu {
+        self.new_menu_model()
     }
 
     /// Opens the playlist named `name` (for tests and screenshots).
@@ -1364,6 +1576,8 @@ impl MainWindow {
         };
         if row.kind == PlaylistType::Smart {
             self.open_smart_playlist(row.key, editing);
+        } else if row.kind == PlaylistType::Generator {
+            self.open_generator_playlist(row.key, editing);
         } else {
             self.open_playlist(row.key);
         }
@@ -1865,4 +2079,21 @@ pub(crate) fn playing_marks_in(root: gtk::Widget) -> (usize, Vec<bool>) {
         }
     }
     (rows + positions.len(), moving)
+}
+
+/// The labels of `model` and its sections and submenus.
+fn menu_labels(model: &gio::MenuModel, out: &mut Vec<String>) {
+    for i in 0..model.n_items() {
+        if let Some(label) = model
+            .item_attribute_value(i, "label", Some(glib::VariantTy::STRING))
+            .and_then(|v| v.get::<String>())
+        {
+            out.push(label);
+        }
+        for link in ["section", "submenu"] {
+            if let Some(inner) = model.item_link(i, link) {
+                menu_labels(&inner, out);
+            }
+        }
+    }
 }

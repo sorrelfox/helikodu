@@ -120,6 +120,15 @@ The **Browse** button opens three linked lists above the table: **Genre**, **Alb
 
 **Library ▸ Statistics** in the main menu counts your library: the tracks (and how many were added this month), albums (and how many have no cover), artists (and composers), the playing time and the size of the files. Below are the **Formats** and their **Quality** (lossless at CD quality, lossless hi-res, lossy), with the share of each; what you listened to this year (plays, time listened, skips, and the share of the library never played); and the most played artists and albums. A row of **Formats** or **Quality** opens **Tracks** with those tracks; an artist or album opens its page. The figures are counted when the page opens; **Copy as text** puts them on the clipboard.
 
+## Tracks that sound alike
+
+**Show Similar Tracks** in the menu of a track, an album or an artist lists the tracks whose sound comes closest to it: how bright each track is, how noisy or tonal, how busy its rhythm and how much its loudness varies. Tags are not used, so the list can cross genres; take it as a guide. For an album or an artist their own tracks are left out.
+
+- **How alike** shows a bar and a word: **Very close**, **Close** or **Somewhat alike**. Tracks that are less alike are never listed.
+- The list shows the 50 closest tracks; **Show 50 more** adds the next ones while there are any.
+- **Play**, **Add to queue** and **Start radio** act on the list; **Save as playlist** makes an ordinary playlist of it. Tracks play on a double click or **Enter**, have the usual menu, and can be dragged to the queue or a playlist. **Back** returns to where you came from.
+- The list needs the [track analysis](settings.md#tracks-that-sound-alike). Until the analysis has reached the track (or while too few tracks are analysed, or with the analysis turned off) the page says so and shows how far the analysis is; the list appears by itself once it is there.
+
 ## Folders
 
 **Folders** shows your library folders and the folders inside them as they are on disk, as a tree on the left; the **+** button (**Add a library folder**) adds another library folder. Choose a folder to see the audio files in it, with **File name**, **Title**, **Length** and **Size**, and whether the folder is in the library (**In the library · watched for changes**, **In the library · rescanned now and then**, **In the library · not connected**, or **Not in the library**). **Play** and **Add to queue** act on the files of that folder, and **Open in file manager** shows it in your file manager.
@@ -137,6 +146,7 @@ Right-click a track for its menu, or press the **Menu** key or **Shift+F10**. Wi
 | **Add to Queue** | Adds it to the end of the queue |
 | **Add to Playlist** | Adds it to a playlist, or to a **New Playlist** |
 | **Go to Album**, **Go to Artist** | Opens that page |
+| **Show Similar Tracks** | Opens the tracks that sound most like it (one track only; albums and artists have it too) |
 | **Edit Tags…** (**Alt+Return**) | Opens the [tag editor](tags.md) |
 | **Rate** | Gives it one to five stars, or **Not Rated** |
 | **Open Containing Folder** | Shows the file in your file manager |

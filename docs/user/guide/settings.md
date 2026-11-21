@@ -57,7 +57,7 @@ The analysis works on one track at a time at the lowest priority, and is shown n
 
 ### Tracks that sound alike
 
-The same pass also notes how each track sounds: how bright or dark, how noisy or tonal, how busy its rhythm and how much its loudness varies. From these Helikodu can tell how alike two tracks sound, on this computer alone: nothing is sent anywhere and no downloaded model is used. It compares sound, not tags, so it can pair tracks from different genres, and the pairing is a guide rather than a verdict. Tracks analysed by an earlier version are analysed once more in the background to get it. For now it is used from the command line: `helikodu-cli similar` lists the tracks that sound most like a track, its album or its artist (see [The command line](command-line.md)).
+The same pass also notes how each track sounds: how bright or dark, how noisy or tonal, how busy its rhythm and how much its loudness varies. From these Helikodu can tell how alike two tracks sound, on this computer alone: nothing is sent anywhere and no downloaded model is used. It compares sound, not tags, so it can pair tracks from different genres, and the pairing is a guide rather than a verdict. Tracks analysed by an earlier version are analysed once more in the background to get it. Choose **Show Similar Tracks** in the right-click menu of a track, an album or an artist to see them (see [Tracks that sound alike](browsing.md#tracks-that-sound-alike)); `helikodu-cli similar` lists them on the command line (see [The command line](command-line.md)).
 
 ## Copies of the same file
 

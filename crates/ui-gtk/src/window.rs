@@ -123,6 +123,8 @@ pub(crate) enum Page {
     Label(crate::backend::LabelKey),
     Playlist(PlaylistKey),
     Search,
+    /// The tracks that sound like a track, an album or an artist.
+    Similar(crate::backend::SimilarSeed),
 }
 
 const SIDEBAR_WIDTH: (i32, (i32, i32)) = (228, (180, 360));
@@ -713,9 +715,11 @@ impl MainWindow {
             Page::Library(labels::PAGE) => self.show_labels(None),
             Page::Label(key) => self.show_labels(Some(key)),
             Page::Library(name) if self.has_page(name) => self.show_page(page),
-            Page::Artist(_) | Page::Genre(_) | Page::Playlist(_) | Page::Search => {
-                self.show_page(page)
-            }
+            Page::Artist(_)
+            | Page::Genre(_)
+            | Page::Playlist(_)
+            | Page::Search
+            | Page::Similar(_) => self.show_page(page),
             Page::Library(name) => {
                 if name != "albums" && imp.placeholders.borrow_mut().insert(name) {
                     imp.views

@@ -253,6 +253,8 @@ pub(crate) fn delete(c: &Connection, playlist: PlaylistId) -> rusqlite::Result<(
         for (position, child) in (first..).zip(children) {
             set.execute(params![child, parent.map(|p| p.0), position])?;
         }
+        c.prepare_cached("UPDATE generators SET parent_id = ?2 WHERE parent_id = ?1")?
+            .execute(params![playlist.0, parent.map(|p| p.0)])?;
     }
     c.prepare_cached("DELETE FROM playlists WHERE id = ?1")?
         .execute([playlist.0])?;

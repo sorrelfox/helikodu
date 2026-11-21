@@ -231,11 +231,14 @@ impl MainWindow {
             PlaylistType::Static => {
                 first.append_item(&item(&tr("Play"), "win.playlist-play"));
             }
+            PlaylistType::Generator => {}
         }
-        menu.append_section(None, &first);
+        if first.n_items() > 0 {
+            menu.append_section(None, &first);
+        }
         let edit = gio::Menu::new();
         let mut rename = item(&tr("Rename…"), "win.playlist-rename");
-        if kind == PlaylistType::Static {
+        if matches!(kind, PlaylistType::Static | PlaylistType::Generator) {
             rename = item(&tr("Rename…"), "win.playlist-rename");
             rename.set_attribute_value("accel", Some(&"F2".to_variant()));
         }
@@ -243,7 +246,7 @@ impl MainWindow {
             edit.append_item(&rename);
         }
         match kind {
-            PlaylistType::Static => {
+            PlaylistType::Static | PlaylistType::Generator => {
                 edit.append_item(&item(&tr("Duplicate"), "win.playlist-duplicate"));
             }
             PlaylistType::Smart => {
@@ -266,9 +269,15 @@ impl MainWindow {
             },
             "win.playlist-pin",
         ));
+        if kind == PlaylistType::Generator {
+            edit.append_item(&item(
+                &tr("Save a Copy as a Playlist"),
+                "win.generator-save-copy",
+            ));
+        }
         menu.append_section(None, &edit);
         let last = gio::Menu::new();
-        if kind == PlaylistType::Static {
+        if matches!(kind, PlaylistType::Static | PlaylistType::Generator) {
             last.append_item(&item(&tr("Export…"), "win.playlist-export"));
         }
         if !builtin {
@@ -415,22 +424,108 @@ impl MainWindow {
         });
     }
 
-    /// The menu of the "New playlist" row: a playlist, a smart playlist or a
-    /// folder.
+    /// The menu of the "New playlist" row: a playlist, a smart playlist, a
+    /// generator playlist or a folder, each with its icon.
     pub(crate) fn new_menu(&self, widget: &gtk::Widget) {
+        popup_menu(widget, &self.new_menu_model());
+    }
+
+    /// The model of the "New playlist" menu.
+    pub(crate) fn new_menu_model(&self) -> gio::Menu {
+        let with_icon = |label: &str, icon: &str, action: &str, target: Option<u64>| {
+            let item = gio::MenuItem::new(Some(label), None);
+            item.set_action_and_target_value(Some(action), target.map(|t| t.to_variant()).as_ref());
+            item.set_icon(&gio::ThemedIcon::new(icon));
+            item
+        };
         let menu = gio::Menu::new();
-        menu.append(Some(&tr("Playlist")), Some("app.new-playlist"));
-        let smart = gio::MenuItem::new(Some(&tr("Smart Playlist")), None);
-        smart.set_action_and_target_value(
-            Some("win.new-smart-playlist-in"),
-            Some(&0u64.to_variant()),
-        );
-        menu.append_item(&smart);
-        let folder = gio::MenuItem::new(Some(&tr("Folder")), None);
-        folder
-            .set_action_and_target_value(Some("win.new-playlist-folder"), Some(&0u64.to_variant()));
-        menu.append_item(&folder);
-        popup_menu(widget, &menu);
+        let kinds = gio::Menu::new();
+        kinds.append_item(&with_icon(
+            &tr("Playlist"),
+            "helikodu-playlist-symbolic",
+            "app.new-playlist",
+            None,
+        ));
+        kinds.append_item(&with_icon(
+            &tr("Smart Playlist"),
+            "helikodu-funnel-symbolic",
+            "win.new-smart-playlist-in",
+            Some(0),
+        ));
+        kinds.append_item(&with_icon(
+            &tr("Generator Playlist"),
+            "helikodu-steps-symbolic",
+            "win.new-generator-in",
+            Some(0),
+        ));
+        menu.append_section(None, &kinds);
+        let folders = gio::Menu::new();
+        folders.append_item(&with_icon(
+            &tr("Folder"),
+            "folder-symbolic",
+            "win.new-playlist-folder",
+            Some(0),
+        ));
+        menu.append_section(None, &folders);
+        menu
+    }
+
+    /// Makes a generator playlist in `parent` with the single step "From the
+    /// library", opens it in the editor and asks for its name.
+    pub(crate) fn new_generator_playlist(&self, parent: Option<PlaylistKey>) {
+        let Some(backend) = self.backend() else {
+            return;
+        };
+        let taken: Vec<String> = self.playlist_rows().into_iter().map(|p| p.name).collect();
+        let name = unused_name(&tr("New generator playlist"), &taken);
+        let weak = self.downgrade();
+        glib::spawn_future_local(async move {
+            let created = backend
+                .query(move |l| l.create_generator(&name, parent))
+                .await;
+            let Some(window) = weak.upgrade() else { return };
+            match created {
+                Ok(key) => window.reload_playlists_then(move |window| {
+                    window.open_generator_playlist(key, true);
+                    window.rename_playlist(key);
+                }),
+                Err(error) => window.toast(&error.0, true),
+            }
+        });
+    }
+
+    /// Makes a playlist of the tracks a generator made last, and opens it.
+    fn save_generator_copy(&self, key: PlaylistKey) {
+        let Some(backend) = self.backend() else {
+            return;
+        };
+        let name = self.playlist_row(key).map(|p| p.name).unwrap_or_default();
+        let taken: Vec<String> = self.playlist_rows().into_iter().map(|p| p.name).collect();
+        let copy = unused_name(&fill(&tr("{} (copy)"), &[&name]), &taken);
+        let weak = self.downgrade();
+        glib::spawn_future_local(async move {
+            let result = backend
+                .query(move |l| {
+                    let tracks: Vec<crate::backend::TrackKey> = l
+                        .playlist_items(key)?
+                        .into_iter()
+                        .filter(|t| !t.missing)
+                        .map(|t| t.key)
+                        .collect();
+                    let new = l.create_playlist(&copy)?;
+                    l.add_to_playlist(new, &tracks, None)?;
+                    Ok(new)
+                })
+                .await;
+            let Some(window) = weak.upgrade() else { return };
+            match result {
+                Ok(new) => {
+                    window.playlists_changed(None);
+                    window.go(Page::Playlist(new), true);
+                }
+                Err(error) => window.toast(&error.0, true),
+            }
+        });
     }
 
     /// Moves the playlist `key` into `folder` (the top for `None`), with Undo.
@@ -622,6 +717,10 @@ impl MainWindow {
             number("new-playlist-folder", |w, k| {
                 w.new_playlist_folder((k.0 != 0).then_some(k));
             }),
+            number("new-generator-in", |w, k| {
+                w.new_generator_playlist((k.0 != 0).then_some(k));
+            }),
+            number("generator-save-copy", |w, k| w.save_generator_copy(k)),
             number("new-smart-playlist-in", |w, k| {
                 let query = parse_query(NEW_RULES).unwrap_or_default();
                 w.new_smart_playlist(query, (k.0 != 0).then_some(k));

@@ -22,7 +22,7 @@ The interface is versioned by its name. Version 1 is `Control1`; its `Version` p
 |---|---|---|---|
 | `GetStatus` | | `s` | The status as a JSON object (below) |
 | `GetQueue` | | `s` | The queue as a JSON object (below) |
-| `ListPlaylists` | | `s` | The playlists as a JSON array: `id`, `name`, `kind` (`static` or `smart`), `tracks`, `length_ms` |
+| `ListPlaylists` | | `s` | The playlists as a JSON array: `id`, `name`, `kind` (`static`, `smart` or `generator`), `tracks`, `length_ms` |
 | `PlayPause`, `Play`, `Pause`, `Stop`, `Next`, `Previous` | | | The transport. `Pause` does nothing unless playing; `Previous` goes to the start of the track after its first seconds |
 | `Seek` | `x` offset_ms | | Moves the position by the offset, back when negative |
 | `SetPosition` | `t` position_ms | | Moves to the position in the playing track |

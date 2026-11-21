@@ -146,6 +146,21 @@ impl Target {
     }
 }
 
+/// What "Show Similar Tracks" compares with: one track, an album or an
+/// artist; none for several tracks.
+pub(crate) fn similar_seed(target: &Target) -> Option<crate::backend::SimilarSeed> {
+    use crate::backend::SimilarSeed;
+    match target {
+        Target::Tracks { .. } => match target.rows().as_slice() {
+            [one] => Some(SimilarSeed::Track(one.key)),
+            _ => None,
+        },
+        Target::Album(key) => Some(SimilarSeed::Album(*key)),
+        Target::Artist(key) => Some(SimilarSeed::Artist(*key)),
+        Target::Genre(_) => None,
+    }
+}
+
 /// Which of the actions that depend on the target apply to `target`: go to
 /// album, go to artist, remove.
 pub(crate) fn applies(target: &Target) -> (bool, bool, bool) {
@@ -230,6 +245,12 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     if matches!(target, Target::Tracks { .. } | Target::Album(_)) {
         go.append_item(&item(&tr("Go to Album"), "win.sel-go-album"));
         go.append_item(&item(&tr("Go to Artist"), "win.sel-go-artist"));
+    }
+    if matches!(
+        target,
+        Target::Tracks { .. } | Target::Album(_) | Target::Artist(_)
+    ) {
+        go.append_item(&item(&tr("Show Similar Tracks"), "win.sel-similar"));
     }
     if go.n_items() > 0 {
         menu.append_section(None, &go);
@@ -883,6 +904,11 @@ pub(crate) fn install(window: &MainWindow) {
         }
     });
     let go_artist = simple("sel-go-artist", go_to_artist);
+    let similar = simple("sel-similar", |w, _, t| {
+        if let Some(seed) = similar_seed(&t) {
+            w.show_similar(seed);
+        }
+    });
     let edit = simple("sel-edit-tags", |w, b, t| {
         let w2 = w.downgrade();
         glib::spawn_future_local(async move {
@@ -994,6 +1020,7 @@ pub(crate) fn install(window: &MainWindow) {
         enqueue,
         go_album,
         go_artist,
+        similar,
         edit,
         measure,
         folder,

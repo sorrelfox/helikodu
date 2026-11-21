@@ -15,6 +15,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <file>style/tags.css</file>
     <file>style/browse.css</file>
     <file>style/playlists.css</file>
+    <file>style/generators.css</file>
     <file>style/desktop.css</file>
     <file>style/insights.css</file>
     <file>style/interchange.css</file>
@@ -38,6 +39,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <file>icons/scalable/actions/helikodu-warning-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-tag-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-shuffle-symbolic.svg</file>
+    <file>icons/scalable/actions/helikodu-steps-symbolic.svg</file>
+    <file>icons/scalable/actions/helikodu-radio-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-repeat-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-repeat-one-symbolic.svg</file>
     <file>icons/scalable/actions/helikodu-repeat-plus-symbolic.svg</file>

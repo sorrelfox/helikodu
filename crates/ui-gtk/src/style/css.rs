@@ -29,6 +29,7 @@ impl Providers {
             "tags.css",
             "browse.css",
             "playlists.css",
+            "generators.css",
             "desktop.css",
             "insights.css",
             "interchange.css",

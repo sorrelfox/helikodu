@@ -94,6 +94,12 @@ crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test tag_editing
 crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test desktop
 ```
 
+`tests/generators.rs` covers generator playlists (the page with its steps line and Make again, the editor with the tracks left after each step, moving and adding steps, a step that cannot run, a new one from the New playlist menu) and tracks that sound alike (the list, Show 50 more, Save as playlist, Show Similar Tracks in the context menu, the not-yet page). With `HELIKODU_GENERATOR_SHOTS=DIR` it saves the screens to `DIR`:
+
+```sh
+crates/ui-gtk/tests/headless.sh cargo test -p helikodu-ui-gtk --test generators
+```
+
 `tests/labels.rs` covers labels: the sidebar row shown once a label exists, the Labels view and its empty state, the Labels popover (ticked, mixed and inherited rows, typing, Enter, one Undo for everything done while it was open), the chips of the album and artist pages, and renaming, merging and removing with Undo. With `HELIKODU_LABELS_SHOTS=DIR` it saves the screens to `DIR`:
 
 ```sh

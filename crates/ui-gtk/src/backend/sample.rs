@@ -14,6 +14,7 @@ mod copies;
 mod export;
 mod fields;
 mod files;
+mod generators;
 mod grouping;
 mod history;
 mod insights;
@@ -1051,6 +1052,51 @@ impl LibrarySource for SampleLibrary {
     fn unpin(&self, key: PinKey) -> Result<(), BackendError> {
         self.sample_pin(key, false);
         Ok(())
+    }
+
+    fn generator(&self, key: PlaylistKey) -> Result<Option<super::GeneratorInfo>, BackendError> {
+        self.sample_generator_info(key)
+    }
+
+    fn create_generator(
+        &self,
+        name: &str,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        self.sample_new_generator(name, parent)
+    }
+
+    fn generator_tracks(
+        &self,
+        key: PlaylistKey,
+        again: bool,
+    ) -> Result<super::GeneratorRun, BackendError> {
+        self.sample_generator_tracks(key, again)
+    }
+
+    fn try_generator(
+        &self,
+        key: PlaylistKey,
+        steps: &super::GeneratorSteps,
+    ) -> Result<super::GeneratorRun, BackendError> {
+        self.sample_try_generator(key, steps)
+    }
+
+    fn set_generator(
+        &self,
+        key: PlaylistKey,
+        steps: Option<&super::GeneratorSteps>,
+        on_open: Option<bool>,
+    ) -> Result<(), BackendError> {
+        self.sample_set_generator(key, steps, on_open)
+    }
+
+    fn similar_tracks(
+        &self,
+        seed: super::SimilarSeed,
+        limit: usize,
+    ) -> Result<super::SimilarFound, BackendError> {
+        self.sample_similar(seed, limit)
     }
 
     fn import_playlist(&self, path: &Path) -> Result<(PlaylistKey, String), BackendError> {

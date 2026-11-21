@@ -36,6 +36,8 @@ pub use application::{
     APP_ID, RunOptions, install_actions, prepare_display, register_resources, request_restart,
     restart_requested, run,
 };
+pub use views::generator::GeneratorState;
+pub use views::similar::SimilarState;
 pub use window::{MainWindow, WindowStyle};
 
 /// The path of the resource bundle, from the application ID.

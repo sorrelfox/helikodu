@@ -90,8 +90,8 @@ pub use self::service::{
 };
 pub use self::smart_play::{
     Generator, GeneratorError, GeneratorId, GeneratorSort, GeneratorSource, GeneratorStep,
-    GeneratorSteps, NoSoundSimilarity, PickError, PlaySeed, SeedProfile, SoundSimilarity,
-    StepError, TrackFacts, related_score, time_seed,
+    GeneratorSteps, GeneratorTrial, NoSoundSimilarity, PickError, PlaySeed, SeedProfile,
+    SoundSimilarity, StepError, TrackFacts, related_score, time_seed,
 };
 pub use self::source::TrackSource;
 pub use self::stats_import::{STATS_BATCH, stats_to_files};

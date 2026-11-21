@@ -155,3 +155,8 @@ crates/ui-gtk/src/dialogs/label_merge.rs
 crates/ui-gtk/src/window/labels.rs
 crates/ui-gtk/src/backend/sample/labels.rs
 crates/ui-gtk/src/backend/service/labels.rs
+crates/ui-gtk/src/backend/service/generators.rs
+crates/ui-gtk/src/views/generator.rs
+crates/ui-gtk/src/views/generator_steps.rs
+crates/ui-gtk/src/views/list_table.rs
+crates/ui-gtk/src/views/similar.rs

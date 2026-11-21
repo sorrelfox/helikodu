@@ -18,6 +18,7 @@ mod browse;
 mod columns;
 mod export;
 mod fields;
+mod generators;
 mod grouping;
 mod history;
 mod insights;
@@ -512,7 +513,10 @@ impl ServiceLibrary {
                 PinTarget::Album(AlbumId::from_raw(i64::try_from(album.0).unwrap_or(-1)))
             }
             PinKey::Artist(artist) => PinTarget::Artist(person(artist)),
-            PinKey::Playlist(playlist) => PinTarget::Playlist(self.playlist_id(playlist)?),
+            PinKey::Playlist(playlist) => match generators::generator_id(playlist) {
+                Some(id) => PinTarget::Generator(id),
+                None => PinTarget::Playlist(self.playlist_id(playlist)?),
+            },
         })
     }
 
@@ -1003,7 +1007,7 @@ impl LibrarySource for ServiceLibrary {
     fn playlists(&self) -> Result<Vec<PlaylistRow>, BackendError> {
         let tree = self.library()?.playlist_tree().map_err(error)?;
         let mut ids = lock(&self.playlists);
-        Ok(tree
+        let mut rows: Vec<PlaylistRow> = tree
             .iter()
             .map(|node| {
                 let p = &node.summary;
@@ -1032,7 +1036,10 @@ impl LibrarySource for ServiceLibrary {
                     builtin: p.builtin,
                 }
             })
-            .collect())
+            .collect();
+        drop(ids);
+        self.add_generator_rows(self.library()?, &mut rows)?;
+        Ok(rows)
     }
 
     fn is_favourite(&self, track: TrackKey) -> Result<bool, BackendError> {
@@ -1049,6 +1056,9 @@ impl LibrarySource for ServiceLibrary {
     }
 
     fn playlist_items(&self, key: PlaylistKey) -> Result<Vec<TrackRow>, BackendError> {
+        if generators::generator_id(key).is_some() {
+            return self.generator_items(key);
+        }
         let id = self.playlist_id(key)?;
         let items = self.library()?.playlist_items(id).map_err(error)?;
         Ok(items
@@ -1079,11 +1089,17 @@ impl LibrarySource for ServiceLibrary {
     }
 
     fn rename_playlist(&self, key: PlaylistKey, name: &str) -> Result<(), BackendError> {
+        if generators::generator_id(key).is_some() {
+            return self.rename_generator(key, name);
+        }
         let id = self.playlist_id(key)?;
         self.library()?.rename_playlist(id, name).map_err(error)
     }
 
     fn delete_playlist(&self, key: PlaylistKey) -> Result<(), BackendError> {
+        if generators::generator_id(key).is_some() {
+            return self.delete_generator(key);
+        }
         let id = self.playlist_id(key)?;
         self.library()?.delete_playlist(id).map_err(error)
     }
@@ -1153,6 +1169,9 @@ impl LibrarySource for ServiceLibrary {
     }
 
     fn export_playlist(&self, key: PlaylistKey, path: &Path) -> Result<usize, BackendError> {
+        if generators::generator_id(key).is_some() {
+            return self.export_generator(key, path);
+        }
         let id = self.playlist_id(key)?;
         self.library()?
             .export_playlist(id, path)
@@ -1181,6 +1200,9 @@ impl LibrarySource for ServiceLibrary {
         parent: Option<PlaylistKey>,
         position: Option<usize>,
     ) -> Result<(), BackendError> {
+        if generators::generator_id(key).is_some() {
+            return self.move_generator_to(key, parent);
+        }
         let id = self.playlist_id(key)?;
         let parent = parent.map(|p| self.playlist_id(p)).transpose()?;
         self.library()?
@@ -1193,6 +1215,9 @@ impl LibrarySource for ServiceLibrary {
         key: PlaylistKey,
         name: &str,
     ) -> Result<PlaylistKey, BackendError> {
+        if generators::generator_id(key).is_some() {
+            return self.duplicate_generator(key, name);
+        }
         let id = self.playlist_id(key)?;
         let copy = self
             .library()?
@@ -1336,6 +1361,7 @@ impl LibrarySource for ServiceLibrary {
                         lock(&self.playlists).insert(key, id);
                         PinKey::Playlist(key)
                     }
+                    PinTarget::Generator(id) => PinKey::Playlist(generators::generator_key(id)),
                 };
                 PinRow {
                     key,
@@ -1345,7 +1371,10 @@ impl LibrarySource for ServiceLibrary {
                         PinKey::Album(album) => seed(album),
                         _ => 0,
                     },
-                    playlist: pin.playlist.map(playlist_type),
+                    playlist: match pin.target {
+                        PinTarget::Generator(_) => Some(PlaylistType::Generator),
+                        _ => pin.playlist.map(playlist_type),
+                    },
                 }
             })
             .collect())
@@ -1629,6 +1658,51 @@ impl LibrarySource for ServiceLibrary {
 
     fn label_track_keys(&self, key: super::LabelKey) -> Result<Vec<TrackKey>, BackendError> {
         self.label_tracks(key)
+    }
+
+    fn generator(&self, key: PlaylistKey) -> Result<Option<super::GeneratorInfo>, BackendError> {
+        self.generator_info(key)
+    }
+
+    fn create_generator(
+        &self,
+        name: &str,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        self.new_generator(name, parent)
+    }
+
+    fn generator_tracks(
+        &self,
+        key: PlaylistKey,
+        again: bool,
+    ) -> Result<super::GeneratorRun, BackendError> {
+        self.run_generator(key, again)
+    }
+
+    fn try_generator(
+        &self,
+        key: PlaylistKey,
+        steps: &super::GeneratorSteps,
+    ) -> Result<super::GeneratorRun, BackendError> {
+        self.trial(key, steps)
+    }
+
+    fn set_generator(
+        &self,
+        key: PlaylistKey,
+        steps: Option<&super::GeneratorSteps>,
+        on_open: Option<bool>,
+    ) -> Result<(), BackendError> {
+        self.change_generator(key, steps, on_open)
+    }
+
+    fn similar_tracks(
+        &self,
+        seed: super::SimilarSeed,
+        limit: usize,
+    ) -> Result<super::SimilarFound, BackendError> {
+        self.similar(seed, limit)
     }
 
     fn thumbnail(&self, cover: &CoverKey, size: u32) -> ThumbnailState {

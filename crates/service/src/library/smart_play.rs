@@ -11,11 +11,11 @@ use helikodu_model::settings::{AutoDjSettings, EndlessSettings, PlayFacts};
 
 pub use helikodu_library::{
     Generator, GeneratorError, GeneratorId, GeneratorSort, GeneratorSource, GeneratorStep,
-    GeneratorSteps, NoSoundSimilarity, PickError, PlaySeed, SeedProfile, SoundSimilarity,
-    StepError, TrackFacts, related_score, time_seed,
+    GeneratorSteps, GeneratorTrial, NoSoundSimilarity, PickError, PlaySeed, SeedProfile,
+    SoundSimilarity, StepError, TrackFacts, related_score, time_seed,
 };
 
-use super::{LibraryError, MusicLibrary};
+use super::{LibraryError, MusicLibrary, PlaylistId};
 
 impl MusicLibrary {
     /// The statistics of `tracks` that weighted picks weigh, by track.
@@ -108,6 +108,31 @@ impl MusicLibrary {
     /// Removes a generator; whether it was there.
     pub fn remove_generator(&self, id: GeneratorId) -> Result<bool, LibraryError> {
         Ok(self.library.remove_generator(id)?)
+    }
+
+    /// The generator `id`, if it is there.
+    pub fn generator(&self, id: GeneratorId) -> Result<Option<Generator>, LibraryError> {
+        Ok(self.library.generator(id)?)
+    }
+
+    /// Puts a generator in a playlist folder, or at the top for `None`.
+    pub fn move_generator(
+        &self,
+        id: GeneratorId,
+        parent: Option<PlaylistId>,
+    ) -> Result<(), LibraryError> {
+        Ok(self.library.move_generator(id, parent)?)
+    }
+
+    /// Runs steps without storing anything, with the number of tracks left after
+    /// each step and the step that could not run, if one could not.
+    pub fn try_generator(
+        &self,
+        steps: &GeneratorSteps,
+        seed: u64,
+        name: Option<&str>,
+    ) -> GeneratorTrial {
+        self.library.try_generator(steps, seed, name)
     }
 
     /// Runs steps without storing anything.

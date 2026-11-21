@@ -23,6 +23,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Generator playlists, made by steps (source, filters, sorts, per-artist and per-album caps, a limit, leaving out another playlist's tracks), with `helikodu-cli generator`.
 - A track's own equalizer is chosen in the tag editor: **Equalizer for this track** in the **Playback** group of **File info** takes a copy of the current equalizer, a preset or an AutoEQ file, for one track or all tracks in the editor. **Equalizer for This Track…** and **No Equalizer for This Track**, which plays the tracks without any equalizer, are in the context menu of tracks.
 - The playback speed can be set from the deck: **Speed…** in the **Playback** menu and the play button's menu opens a popover with the speed, whether the pitch stays, the pitch shift and **Start with this speed next time**; a chip before the time left shows a speed other than 1×.
+- Generator playlists in the window: they are listed among the playlists (with folders and pins), **New playlist** ▸ **Generator Playlist** makes one, and their page shows the steps as chips with **Make again**; **Edit steps** edits the steps beside the tracks they leave, with the number of tracks left after each step. A step that cannot run is explained and keeps the last result.
+- **Show Similar Tracks** in the menu of a track, an album or an artist lists the tracks that sound most like it, 50 at a time, with how alike each one is; **Play**, **Add to queue**, **Start radio** and **Save as playlist** act on the list. Until the track analysis has reached the track, the page says so with the analysis's progress.
 - Each smart playlist can show its own columns: **Columns**, at the end of its rule line, shows or hides **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length**, and the choice is remembered per smart playlist. The stars of the **Rating** column rate a track.
 
 ### Changed
@@ -31,6 +33,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - On an album page, the facts of the selected track come first in the details column, above the album's.
 - **Revert to the Skipped Track** is greyed out while there is no track to go back to.
 - The repeat button shows a plus between its arrows for **Continue with Related Tracks** and **Auto-DJ**, and the **Playback** menu reads "Repeat: Related Tracks" for the first. **Revert to the Skipped Track** tells where it went back to.
+- **Settings** ▸ **Library**: the explanation of **Analyse tracks in the background** says that it also notes how tracks sound.
 
 ### Fixed
 

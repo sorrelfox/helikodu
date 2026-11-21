@@ -895,6 +895,8 @@ pub(crate) fn open_with(main: &MainWindow, playlist: Option<PlaylistKey>) -> Opt
     let rows = main.playlist_rows();
     let mut choices: Vec<Choice> = rows
         .iter()
+        // A generator's tracks are not a playlist of the library to sync.
+        .filter(|p| p.kind != PlaylistType::Generator)
         .map(|p| {
             let (icon, count) = match p.kind {
                 PlaylistType::Folder => {
@@ -905,7 +907,9 @@ pub(crate) fn open_with(main: &MainWindow, playlist: Option<PlaylistKey>) -> Opt
                     )
                 }
                 PlaylistType::Smart => ("helikodu-funnel-symbolic", format::count(p.items)),
-                PlaylistType::Static => ("helikodu-playlist-symbolic", format::count(p.items)),
+                PlaylistType::Static | PlaylistType::Generator => {
+                    ("helikodu-playlist-symbolic", format::count(p.items))
+                }
             };
             Choice {
                 source: SyncSource::Playlist {

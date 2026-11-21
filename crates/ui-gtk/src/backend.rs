@@ -16,6 +16,7 @@ pub mod browse;
 pub mod columns;
 pub mod export;
 pub mod fields;
+pub mod generators;
 pub mod grouping;
 pub mod insights;
 pub mod interchange;
@@ -34,6 +35,10 @@ use std::time::{Duration, SystemTime};
 
 pub use browse::{ChapterRow, MediaKind, YearRange, YearRow};
 pub use columns::{ExtraColumns, ExtraValues, FieldName, FieldWords, Vocabulary, YourField};
+pub use generators::{
+    GeneratorInfo, GeneratorRun, GeneratorSort, GeneratorSource, GeneratorStep, GeneratorSteps,
+    GeneratorTrack, NotYet, SimilarFound, SimilarRow, SimilarSeed, StepProblem,
+};
 pub use grouping::{TrackGroup, TrackGrouping};
 pub use helikodu_model::player::{AnalyzerFrame, ChannelLevel};
 pub use helikodu_model::player::{
@@ -437,6 +442,8 @@ pub enum PlaylistType {
     Static,
     /// A playlist whose tracks rules select.
     Smart,
+    /// A playlist made by steps, kept until it is made again.
+    Generator,
 }
 
 /// A playlist or a playlist folder in the sidebar, in the sidebar's order:
@@ -1025,6 +1032,61 @@ pub trait LibrarySource: Send + Sync + fmt::Debug {
     fn label_track_keys(&self, key: LabelKey) -> Result<Vec<TrackKey>, BackendError> {
         let _ = key;
         Ok(Vec::new())
+    }
+    /// The generator playlist `key`, if there is one.
+    fn generator(&self, key: PlaylistKey) -> Result<Option<GeneratorInfo>, BackendError> {
+        let _ = key;
+        Ok(None)
+    }
+    /// Makes a generator playlist named `name` in the folder `parent` with the
+    /// single step "from the library".
+    fn create_generator(
+        &self,
+        name: &str,
+        parent: Option<PlaylistKey>,
+    ) -> Result<PlaylistKey, BackendError> {
+        let _ = (name, parent);
+        Err(unsupported())
+    }
+    /// The tracks of the generator `key` as opening it shows them: made again
+    /// when it is made on open (or `again`), its last result otherwise. A
+    /// step that cannot run leaves the last result.
+    fn generator_tracks(
+        &self,
+        key: PlaylistKey,
+        again: bool,
+    ) -> Result<GeneratorRun, BackendError> {
+        let _ = (key, again);
+        Err(unsupported())
+    }
+    /// Runs `steps` for the generator `key` without storing anything.
+    fn try_generator(
+        &self,
+        key: PlaylistKey,
+        steps: &GeneratorSteps,
+    ) -> Result<GeneratorRun, BackendError> {
+        let _ = (key, steps);
+        Err(unsupported())
+    }
+    /// Stores new steps or a new "made again when opened" of the generator
+    /// `key`; new steps make it again.
+    fn set_generator(
+        &self,
+        key: PlaylistKey,
+        steps: Option<&GeneratorSteps>,
+        on_open: Option<bool>,
+    ) -> Result<(), BackendError> {
+        let _ = (key, steps, on_open);
+        Err(unsupported())
+    }
+    /// The `limit` tracks that sound most like `seed`, or why there is no list.
+    fn similar_tracks(
+        &self,
+        seed: SimilarSeed,
+        limit: usize,
+    ) -> Result<SimilarFound, BackendError> {
+        let _ = (seed, limit);
+        Ok(SimilarFound::NotYet(NotYet::NotAnalysed))
     }
 }
 

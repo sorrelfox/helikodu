@@ -81,7 +81,7 @@ pub use details::{
 };
 pub use generators::{
     Generator, GeneratorError, GeneratorId, GeneratorSort, GeneratorSource, GeneratorStep,
-    GeneratorSteps, StepError,
+    GeneratorSteps, GeneratorTrial, StepError,
 };
 pub use grouping::{GroupBy, TrackGroup};
 /// The content hash of a cover, the key of the thumbnail cache.

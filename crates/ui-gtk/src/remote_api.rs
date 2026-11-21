@@ -319,6 +319,7 @@ impl Server {
                                 "name": r.name,
                                 "kind": match r.kind {
                                     PlaylistType::Smart => "smart",
+                                    PlaylistType::Generator => "generator",
                                     _ => "static",
                                 },
                                 "tracks": r.items,

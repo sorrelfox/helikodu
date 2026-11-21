@@ -49,7 +49,17 @@ The right side shows how many tracks match, and the tracks themselves, as you ed
 
 ## Generator playlists
 
-A generator playlist is made by steps: a source, then filters, sorts, caps and a limit, each working on what the step before left. It keeps its last result and is made again each time it is opened, or only when you ask (`--keep`). Generator playlists have no place in the sidebar yet; they are made and played with `helikodu-cli generator`:
+A generator playlist is made by steps: a source, then filters, sorts, caps and a limit, each working on what the step before left. It keeps its last result and is made again each time it is opened, or only when you ask.
+
+Generator playlists are listed among your playlists with an icon of three rising steps and the number of tracks they hold; they can be pinned and put in folders like other playlists. To make one, click **New playlist** at the end of the sidebar's playlists and choose **Generator Playlist**: it starts with the single step "From the library" and opens in the editor, with its name ready to change.
+
+- **The page** shows the steps as a line of chips (click one to edit the steps), then the tracks. A column shows what the steps sort by; a click on a header sorts the list for this visit only. **Make again** makes it again now; until it is done the last tracks stay in view. When the steps leave no tracks, the page says so.
+- **Edit steps** shows the steps beside the tracks they leave. Each step works on the tracks the step before it left; the number at the end of each row is how many tracks are left after it. The kinds are **From** (the library, a playlist or a search; always the first step), **Where** (a query in the search field's language), **Exclude** (the tracks of a playlist, smart playlist or other generator playlist), **Sort by**, **At most** (so many per artist or per album) and **Limit** (tracks or minutes). Add steps with **Add step**; move them by dragging their grip or with **Alt+Up** and **Alt+Down**, and remove the focused one with **Delete**. The tracks follow half a second after each change. **Done editing** keeps the steps.
+- **Make again when opened**: off, the tracks stay as they are until you choose **Make again**.
+- **A step that cannot run**, such as one that leaves out a playlist you deleted, is marked on its chip and explained under its row in the editor. Nothing is lost: the tracks of the last result stay until you change the step.
+- The more button has **Save a Copy as a Playlist**, which makes an ordinary playlist of the tracks shown, to reorder by hand; and **Export…**, which writes them to a playlist file.
+
+The command line edits the steps as text, with `helikodu-cli generator`:
 
 ```text
 # The source: library, playlist "Name" or query <query>.

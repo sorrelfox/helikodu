@@ -402,6 +402,22 @@ pub struct Generator {
     pub created: SystemTime,
     /// When its name, steps or `on_open` last changed.
     pub modified: SystemTime,
+    /// The playlist folder it is in, `None` at the top.
+    pub parent: Option<PlaylistId>,
+}
+
+/// What running steps without storing them gave: see
+/// [`Library::try_generator`].
+#[derive(Debug)]
+pub struct GeneratorTrial {
+    /// The tracks the steps left, or, when a step failed, those the steps before
+    /// it left.
+    pub tracks: Vec<TrackId>,
+    /// How many tracks were left after the source (first) and after each step
+    /// that ran.
+    pub counts: Vec<usize>,
+    /// The step that could not run, counted with the source as 0, and why.
+    pub failure: Option<(usize, GeneratorError)>,
 }
 
 /// Why a generator could not be stored or run.
@@ -437,7 +453,8 @@ pub enum GeneratorError {
     Cycle(String),
 }
 
-const COLUMNS: &str = "id, name, steps, on_open, tracks, generated_at, created_at, modified_at";
+const COLUMNS: &str =
+    "id, name, steps, on_open, tracks, generated_at, created_at, modified_at, parent_id";
 
 fn read_generator(row: &rusqlite::Row<'_>) -> rusqlite::Result<(Generator, String)> {
     let tracks: Option<String> = row.get(4)?;
@@ -459,6 +476,7 @@ fn read_generator(row: &rusqlite::Row<'_>) -> rusqlite::Result<(Generator, Strin
             generated: row.get::<_, Option<i64>>(5)?.map(from_unix_seconds),
             created: from_unix_seconds(row.get(6)?),
             modified: from_unix_seconds(row.get(7)?),
+            parent: row.get::<_, Option<i64>>(8)?.map(PlaylistId),
         },
         steps,
     ))
@@ -650,6 +668,35 @@ impl Library {
             .write(move |c| Ok(c.execute("DELETE FROM generators WHERE id = ?1", [id.0])? > 0))
     }
 
+    /// Puts the generator `id` in the playlist folder `parent` (at the top for
+    /// `None`).
+    pub fn move_generator(
+        &self,
+        id: GeneratorId,
+        parent: Option<PlaylistId>,
+    ) -> Result<(), GeneratorError> {
+        if let Some(folder) = parent {
+            let is_folder = self.database().read(move |c| {
+                c.prepare_cached("SELECT 1 FROM playlists WHERE id = ?1 AND kind = 0")?
+                    .query_row([folder.0], |_| Ok(()))
+                    .optional()
+            })?;
+            if is_folder.is_none() {
+                return Err(GeneratorError::Unknown(format!("folder {}", folder.0)));
+            }
+        }
+        let changed = self.database().writer()?.write(move |c| {
+            c.execute(
+                "UPDATE generators SET parent_id = ?2 WHERE id = ?1",
+                (id.0, parent.map(|p| p.0)),
+            )
+        })?;
+        if changed == 0 {
+            return Err(GeneratorError::Unknown(id.to_string()));
+        }
+        Ok(())
+    }
+
     /// Runs `steps` without storing anything; `seed` orders `sort random`.
     pub fn preview_generator(
         &self,
@@ -657,6 +704,30 @@ impl Library {
         seed: u64,
     ) -> Result<Vec<TrackId>, GeneratorError> {
         self.run_steps(steps, seed, &mut Vec::new())
+    }
+
+    /// Runs `steps` without storing anything, counting the tracks left after
+    /// each step; a step that cannot run ends the run and is reported with the
+    /// counts so far. `name` is the generator being edited, if any, so that
+    /// steps that use it are refused.
+    pub fn try_generator(
+        &self,
+        steps: &GeneratorSteps,
+        seed: u64,
+        name: Option<&str>,
+    ) -> GeneratorTrial {
+        let mut using: Vec<String> = name.map(str::to_owned).into_iter().collect();
+        let mut counts = Vec::new();
+        let mut tracks = Vec::new();
+        let failure = self
+            .run_counted(steps, seed, &mut using, &mut counts, &mut tracks)
+            .err()
+            .map(|error| (counts.len(), error));
+        GeneratorTrial {
+            tracks,
+            counts,
+            failure,
+        }
     }
 
     /// Runs the generator `id` again and stores its result.
@@ -753,7 +824,22 @@ impl Library {
         seed: u64,
         using: &mut Vec<String>,
     ) -> Result<Vec<TrackId>, GeneratorError> {
-        let mut tracks: Vec<TrackId> = match &steps.source {
+        let mut tracks = Vec::new();
+        self.run_counted(steps, seed, using, &mut Vec::new(), &mut tracks)?;
+        Ok(tracks)
+    }
+
+    /// Runs `steps` into `tracks`, pushing the number left after the source and
+    /// after each step to `counts`.
+    fn run_counted(
+        &self,
+        steps: &GeneratorSteps,
+        seed: u64,
+        using: &mut Vec<String>,
+        counts: &mut Vec<usize>,
+        tracks: &mut Vec<TrackId>,
+    ) -> Result<(), GeneratorError> {
+        *tracks = match &steps.source {
             GeneratorSource::Library => self.database().read(|c| {
                 let visible = visibility(c, false)?;
                 c.prepare(&format!(
@@ -771,6 +857,7 @@ impl Library {
         // Each track once, in its first place.
         let mut seen = HashSet::new();
         tracks.retain(|t| seen.insert(*t));
+        counts.push(tracks.len());
         for (index, step) in steps.steps.iter().enumerate() {
             match step {
                 GeneratorStep::Where(query) => {
@@ -785,33 +872,33 @@ impl Library {
                 GeneratorStep::Sort {
                     by: GeneratorSort::Random,
                     ..
-                } => shuffle(&mut tracks, seed.wrapping_add(index as u64)),
+                } => shuffle(tracks, seed.wrapping_add(index as u64)),
                 GeneratorStep::Sort { by, descending } => {
-                    let json = json_list(&tracks);
+                    let json = json_list(tracks);
                     let order = if *descending { "DESC" } else { "ASC" };
                     let value = by.sql();
-                    tracks = self
+                    *tracks = self
                         .database()
                         .read(move |c| sorted(c, &json, value, order))?;
                 }
                 GeneratorStep::PerArtist(cap) => {
                     let firsts = self.database().read({
-                        let json = json_list(&tracks);
+                        let json = json_list(tracks);
                         move |c| first_artists(c, &json)
                     })?;
-                    capped(&mut tracks, *cap, |t| firsts.get(t).copied());
+                    capped(tracks, *cap, |t| firsts.get(t).copied());
                 }
                 GeneratorStep::PerAlbum(cap) => {
                     let albums = self.database().read({
-                        let json = json_list(&tracks);
+                        let json = json_list(tracks);
                         move |c| albums_of(c, &json)
                     })?;
-                    capped(&mut tracks, *cap, |t| albums.get(t).copied());
+                    capped(tracks, *cap, |t| albums.get(t).copied());
                 }
                 GeneratorStep::Limit(n) => tracks.truncate(*n),
                 GeneratorStep::LimitMinutes(minutes) => {
                     let lengths = self.database().read({
-                        let json = json_list(&tracks);
+                        let json = json_list(tracks);
                         move |c| lengths_of(c, &json)
                     })?;
                     let budget = minutes.saturating_mul(60_000);
@@ -826,8 +913,9 @@ impl Library {
                     tracks.truncate(keep);
                 }
             }
+            counts.push(tracks.len());
         }
-        Ok(tracks)
+        Ok(())
     }
 }
 
