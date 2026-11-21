@@ -17,7 +17,9 @@ use crate::backend::{PlaybackStats, SignalState};
 use crate::format;
 use crate::i18n::{fill, tr};
 use crate::playback::{Change, Playback, PlayerView};
-use crate::widgets::signal_path_list::{SignalPathList, diagnostics, sentence, state_label};
+use crate::widgets::signal_path_list::{
+    SignalPathList, added_delay_ms, diagnostics, sentence, state_label,
+};
 use crate::widgets::{SignalLamp, label};
 
 /// The tab's widgets.
@@ -28,6 +30,7 @@ pub(crate) struct SignalPathPage {
     state: gtk::Label,
     sentence: gtk::Label,
     list: Rc<SignalPathList>,
+    delay: gtk::Label,
     buffer: gtk::Label,
     underruns: gtk::Label,
     silence: gtk::Label,
@@ -103,6 +106,7 @@ impl SignalPathPage {
         let stats = gtk::Box::new(gtk::Orientation::Vertical, 0);
         stats.add_css_class("hk-path-stats");
         stats.append(&label(&tr("Playback"), &["hk-section-label"]));
+        let delay = stat_row(&stats, &tr("Delay added by processing"));
         let buffer = stat_row(&stats, &tr("Buffer"));
         let underruns = stat_row(&stats, &tr("Underruns"));
         let silence = stat_row(&stats, &tr("Silence inserted"));
@@ -140,6 +144,7 @@ impl SignalPathPage {
             state,
             sentence,
             list,
+            delay,
             buffer,
             underruns,
             silence,
@@ -200,6 +205,12 @@ impl SignalPathPage {
         });
         self.sentence.set_text(&sentence(path));
         self.list.show(path, &view.output.device);
+        let delay = path.map(|p| added_delay_ms(p).round());
+        self.delay.set_text(
+            &delay
+                .map(|ms| fill(&tr("{} ms"), &[&format!("{ms:.0}")]))
+                .unwrap_or_default(),
+        );
     }
 
     fn show_stats(&self, view: &PlayerView) {
@@ -250,6 +261,7 @@ impl SignalPathPage {
                 .map(|(name, value, node)| format!("{name}: {value} [{node:?}]")),
         );
         for (name, value) in [
+            ("Delay", &self.delay),
             ("Buffer", &self.buffer),
             ("Underruns", &self.underruns),
             ("Silence", &self.silence),

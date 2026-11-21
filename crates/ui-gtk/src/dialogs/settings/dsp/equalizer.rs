@@ -710,12 +710,12 @@ pub(super) fn editor(live: &Rc<Live>, presets: &gtk::Box) -> (gtk::Widget, Rc<dy
     let column = gtk::Box::new(gtk::Orientation::Vertical, 14);
 
     // The preset row.
-    presets.append(&label(&tr("Preset"), &["hk-row-label"]));
+    presets.append(&label(&tr("Equalizer preset"), &["hk-row-label"]));
     let preset_strings = gtk::StringList::new(&[]);
     let preset_choice = dropdown(&[], 0, 220);
     preset_choice.set_model(Some(&preset_strings));
     preset_choice.set_widget_name("eq-preset");
-    preset_choice.update_property(&[gtk::accessible::Property::Label(&tr("Preset"))]);
+    preset_choice.update_property(&[gtk::accessible::Property::Label(&tr("Equalizer preset"))]);
     presets.append(&preset_choice);
     let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     spacer.set_hexpand(true);

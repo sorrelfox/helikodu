@@ -269,6 +269,10 @@ impl Services for MemoryServices {
         })
     }
 
+    fn dsp(&self) -> Arc<dyn super::super::dsp::DspServices> {
+        Arc::new(super::dsp::SampleDsp)
+    }
+
     fn user_fields(&self) -> Arc<dyn super::super::fields::FieldServices> {
         self.fields.clone()
     }

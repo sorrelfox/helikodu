@@ -77,6 +77,12 @@ name = "closing"
 harness = false
 
 [[test]]
+# Settings › DSP and EQ (the chain, saved chains, the stage editors) against the
+# sample backend; GTK needs its own main function.
+name = "dsp"
+harness = false
+
+[[test]]
 # The play modes against the sample backend; GTK needs its own main function.
 name = "play_modes"
 harness = false

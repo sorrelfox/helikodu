@@ -203,6 +203,11 @@ impl BipolarScale {
         self.queue_draw();
     }
 
+    /// Moves in steps of `step` (0.5 unless set).
+    pub(crate) fn set_step(&self, step: f64) {
+        self.imp().step.set(step);
+    }
+
     /// Reads values with `text` instead of in decibels, for assistive
     /// technology.
     pub(crate) fn set_value_text(&self, text: impl Fn(f64) -> String + 'static) {

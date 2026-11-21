@@ -42,6 +42,7 @@ impl Equalizer {
                 mode: settings.mode,
                 filters,
                 preamp_db,
+                track: false,
             },
         }
     }

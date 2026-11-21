@@ -15,6 +15,7 @@
 //! **Lookahead.** The audio is delayed by the lookahead, as in the limiter, so the
 //! gain is already on its way down when a transient arrives.
 
+use helikodu_model::player::CompressorActivity;
 use helikodu_model::settings::{CompressorPreset, CompressorSettings};
 
 use super::DspStage;
@@ -36,6 +37,8 @@ pub struct Compressor {
     release: f64,
     /// The smoothed gain reduction, in dB (zero or below).
     reduction: f64,
+    /// The largest reduction since the statistics started, in dB (zero or below).
+    largest: f64,
     /// The delayed audio, frame-interleaved.
     delay: Box<[f32]>,
     delay_pos: usize,
@@ -77,6 +80,7 @@ impl Compressor {
             attack: coefficient(attack_ms),
             release: coefficient(release_ms),
             reduction: 0.0,
+            largest: 0.0,
             delay: vec![0.0; (lookahead + 1) * channels].into_boxed_slice(),
             delay_pos: 0,
         }
@@ -104,6 +108,25 @@ impl Compressor {
     /// The gain reduction applied now, in dB (zero or below).
     pub fn reduction_db(&self) -> f64 {
         self.reduction
+    }
+
+    /// What the compressor has done: the reduction now and the largest one since
+    /// [`reset_activity`](Self::reset_activity), as positive dB.
+    pub fn activity(&self) -> CompressorActivity {
+        CompressorActivity {
+            reduction_db: -self.reduction,
+            largest_db: -self.largest,
+        }
+    }
+
+    /// Starts the statistics anew, for example for a new track.
+    pub fn reset_activity(&mut self) {
+        self.largest = self.reduction;
+    }
+
+    /// Carries on the statistics of `other`, the compressor this one replaces.
+    pub fn continue_activity(&mut self, other: &Self) {
+        self.largest = self.largest.min(other.largest);
     }
 }
 
@@ -139,6 +162,7 @@ impl DspStage for Compressor {
                 // Keeps the smoothing from creeping into subnormal numbers.
                 self.reduction = 0.0;
             }
+            self.largest = self.largest.min(self.reduction);
             let gain = 10f64.powf((self.reduction + self.makeup) / 20.0);
 
             let write = self.delay_pos * channels;
@@ -229,6 +253,12 @@ mod tests {
         c.process(&mut quiet);
         assert_eq!(c.reduction_db(), 0.0);
         assert!(quiet.iter().all(|s| s.is_finite() && !s.is_subnormal()));
+        // The largest reduction is kept until the statistics start anew.
+        let activity = c.activity();
+        assert_eq!(activity.reduction_db, 0.0);
+        assert!(activity.largest_db > 20.0, "{activity:?}");
+        c.reset_activity();
+        assert_eq!(c.activity().largest_db, 0.0);
     }
 
     #[test]

@@ -620,6 +620,10 @@ pub trait Services: fmt::Debug + Send + Sync {
 
     /// The converter, folder sync and the cover manager.
     fn export(&self) -> Arc<dyn super::export::ExportServices>;
+    /// What the DSP and EQ page needs beyond the settings.
+    fn dsp(&self) -> Arc<dyn super::dsp::DspServices> {
+        Arc::new(super::dsp::NoDsp)
+    }
     /// The fields the user defines, for Your fields.
     fn user_fields(&self) -> Arc<dyn super::fields::FieldServices> {
         Arc::new(super::fields::NoFields)

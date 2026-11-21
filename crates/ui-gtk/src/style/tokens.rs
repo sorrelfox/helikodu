@@ -617,7 +617,7 @@ pub(crate) mod metric {
         pub(crate) const FREQ_MAX: i32 = 20000;
         pub(crate) const FREQ_MIN: i32 = 20;
         pub(crate) const HANDLE: i32 = 18;
-        pub(crate) const HEIGHT: i32 = 232;
+        pub(crate) const HEIGHT: i32 = 192;
         pub(crate) mod plot_inset {
             #[allow(unused_imports)]
             use super::*;
@@ -631,11 +631,11 @@ pub(crate) mod metric {
     pub(crate) mod eq_graphic {
         #[allow(unused_imports)]
         use super::*;
-        pub(crate) const FREQUENCY_LABELS_TOP: i32 = 326;
-        pub(crate) const GAIN_LABELS_TOP: i32 = 343;
+        pub(crate) const FREQUENCY_LABELS_TOP: i32 = 294;
+        pub(crate) const GAIN_LABELS_TOP: i32 = 311;
         pub(crate) const HANDLE10: i32 = 14;
         pub(crate) const HANDLE31: i32 = 12;
-        pub(crate) const HEIGHT: i32 = 372;
+        pub(crate) const HEIGHT: i32 = 340;
         pub(crate) mod plot_inset {
             #[allow(unused_imports)]
             use super::*;

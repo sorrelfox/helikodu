@@ -19,10 +19,17 @@ fn rate(hz: u32) -> SampleRate {
 }
 
 fn stage(kind: StageKind, state: StageState, detail: &str) -> SignalStage {
+    // The limiter of these paths looks 2 ms ahead.
+    let delay_ms = if kind == StageKind::Limiter && state == StageState::Active {
+        2.0
+    } else {
+        0.0
+    };
     SignalStage {
         kind,
         state,
         detail: detail.into(),
+        delay_ms,
     }
 }
 
@@ -68,9 +75,12 @@ pub fn signal_path(lamp: SignalLamp) -> SignalPath {
                 stage(K::Loudness, S::Off, ""),
                 stage(K::Resampler, S::NotNeeded, "96 kHz"),
                 stage(K::Crossfade, S::NotNeeded, ""),
+                stage(K::Pitch, S::Off, ""),
                 stage(K::Equalizer, S::Bypassed, ""),
+                stage(K::Convolution, S::Off, ""),
                 stage(K::Crossfeed, S::Bypassed, ""),
                 stage(K::ChannelMixer, S::Bypassed, ""),
+                stage(K::Compressor, S::Off, ""),
                 stage(K::Limiter, S::Bypassed, ""),
                 stage(K::Volume, S::External, "fixed 100 %"),
                 stage(K::Dither, S::NotNeeded, ""),
@@ -88,9 +98,12 @@ pub fn signal_path(lamp: SignalLamp) -> SignalPath {
                 stage(K::Loudness, S::Active, "ReplayGain -6.30 dB (album)"),
                 stage(K::Resampler, S::NotNeeded, "96 kHz"),
                 stage(K::Crossfade, S::NotNeeded, ""),
+                stage(K::Pitch, S::Off, ""),
                 stage(K::Equalizer, S::Active, "EQ 5 filters · preamp -4.5 dB"),
+                stage(K::Convolution, S::Off, ""),
                 stage(K::Crossfeed, S::Off, ""),
                 stage(K::ChannelMixer, S::Off, ""),
+                stage(K::Compressor, S::Off, ""),
                 stage(K::Limiter, S::Active, "limiter -1.0 dBTP · lookahead 2 ms"),
                 stage(K::Volume, S::Active, "volume 85 %"),
                 stage(K::Dither, S::Active, "TPDF dither 24-bit"),
@@ -108,9 +121,12 @@ pub fn signal_path(lamp: SignalLamp) -> SignalPath {
                 stage(K::Loudness, S::Active, "ReplayGain -6.30 dB (album)"),
                 stage(K::Resampler, S::Active, "resample 96 → 48 kHz (high)"),
                 stage(K::Crossfade, S::NotNeeded, ""),
+                stage(K::Pitch, S::Off, ""),
                 stage(K::Equalizer, S::Active, "EQ 5 filters · preamp -4.5 dB"),
+                stage(K::Convolution, S::Off, ""),
                 stage(K::Crossfeed, S::Bypassed, ""),
                 stage(K::ChannelMixer, S::Bypassed, ""),
+                stage(K::Compressor, S::Off, ""),
                 stage(K::Limiter, S::Active, "limiter -1.0 dBTP · lookahead 2 ms"),
                 stage(K::Volume, S::Active, "volume 85 %"),
                 stage(K::Dither, S::Active, "TPDF dither 24-bit"),
@@ -149,9 +165,12 @@ pub fn signal_path(lamp: SignalLamp) -> SignalPath {
                 stage(K::Loudness, S::Bypassed, "0 dB"),
                 stage(K::Resampler, S::NotNeeded, "44.1 kHz"),
                 stage(K::Crossfade, S::NotNeeded, ""),
+                stage(K::Pitch, S::Off, ""),
                 stage(K::Equalizer, S::Off, ""),
+                stage(K::Convolution, S::Off, ""),
                 stage(K::Crossfeed, S::Off, ""),
                 stage(K::ChannelMixer, S::Off, ""),
+                stage(K::Compressor, S::Off, ""),
                 stage(K::Limiter, S::Off, ""),
                 stage(K::Volume, S::Bypassed, "100 %"),
                 stage(K::Dither, S::Active, "TPDF dither 16-bit"),

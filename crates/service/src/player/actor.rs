@@ -1775,6 +1775,10 @@ impl Actor {
                 self.shared
                     .update_status(|status| status.limiter = activity);
             }
+            EngineEvent::Compressor(activity) => {
+                self.shared
+                    .update_status(|status| status.compressor = activity);
+            }
             EngineEvent::PlaybackStats(stats) => {
                 self.shared
                     .update_status(|status| status.stats = Some(stats));

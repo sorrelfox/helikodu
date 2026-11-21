@@ -168,6 +168,7 @@ impl Session {
                         | EngineEvent::SignalPath(_)
                         | EngineEvent::PlaybackStats(_)
                         | EngineEvent::Limiter(_)
+                        | EngineEvent::Compressor(_)
                 )
             })
             .cloned()

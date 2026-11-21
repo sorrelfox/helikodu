@@ -244,12 +244,7 @@ impl MainWindow {
     #[doc(hidden)]
     pub fn open_dsp_stage(&self, stage: &str) -> gtk::Window {
         use crate::dialogs::settings::dsp::{Stage, open_stage};
-        let stage = match stage {
-            "crossfeed" => Stage::Crossfeed,
-            "channel-mix" => Stage::ChannelMix,
-            "limiter" => Stage::Limiter,
-            _ => Stage::Equalizer,
-        };
+        let stage = Stage::from_id(stage).unwrap_or(Stage::Equalizer);
         open_stage(self, stage)
     }
 

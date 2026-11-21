@@ -69,6 +69,10 @@ crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs
 crates/ui-gtk/src/dialogs/settings/dsp.rs
 crates/ui-gtk/src/dialogs/settings/dsp/stages.rs
 crates/ui-gtk/src/dialogs/track_equalizer.rs
+crates/ui-gtk/src/dialogs/settings/dsp/chain.rs
+crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs
+crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs
+crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs
 crates/ui-gtk/src/dialogs/track_flags.rs
 crates/ui-gtk/src/i18n.rs
 crates/ui-gtk/src/play_modes.rs

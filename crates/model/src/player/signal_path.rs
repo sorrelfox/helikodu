@@ -182,6 +182,10 @@ pub struct SignalStage {
     /// (track)`, `resample 96 → 48 kHz (high)`, `s16le → s32le`). Values, not
     /// sentences; front ends translate the [`state`](Self::state), not this.
     pub detail: String,
+    /// The delay the stage adds while it changes the samples, in milliseconds
+    /// (lookahead, block or analysis latency); 0 for stages that add none.
+    #[serde(default)]
+    pub delay_ms: f64,
 }
 
 /// The device end of the path.
@@ -271,6 +275,15 @@ pub struct LimiterActivity {
     pub times: u64,
 }
 
+/// What the compressor has done, for its activity readout.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct CompressorActivity {
+    /// The gain reduction applied to the last frame, in dB (0 or positive).
+    pub reduction_db: f64,
+    /// The largest reduction in the track, in dB.
+    pub largest_db: f64,
+}
+
 /// Playback counters of the open stream, sent a few times per second while playing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlaybackStats {
@@ -326,11 +339,13 @@ mod tests {
                     kind: StageKind::Resampler,
                     state: StageState::Active,
                     detail: "resample 96 → 48 kHz (high)".into(),
+                    delay_ms: 0.0,
                 },
                 SignalStage {
                     kind: StageKind::Equalizer,
                     state: StageState::Off,
                     detail: String::new(),
+                    delay_ms: 0.0,
                 },
             ],
             device: SignalDevice {

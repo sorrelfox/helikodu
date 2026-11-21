@@ -30,8 +30,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Start Radio** in the menu of a track, an album or an artist starts endless play from it; **Undo** puts the queue back.
 - Each smart playlist can show its own columns: **Columns**, at the end of its rule line, shows or hides **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length**, and the choice is remembered per smart playlist. The stars of the **Rating** column rate a track.
 
+- **Settings → DSP and EQ** has pages for the compressor (Night, Gentle or your own values, its lookahead, a note that turns the limiter on, and its activity while music plays), convolution (a folder of impulse responses or a file per sample rate, the rate in use, files that cannot be read with the reason, normalization, gain and the share of the processed sound) and pitch shift in whole semitones.
+- The chain on **Settings → DSP and EQ** shows its eight stages in two numbered rows; a stage moves by dragging, with **Alt+Left** and **Alt+Right**, or from its menu, and **Default order** puts the order back. **Saved chains** saves, applies and deletes chains (with **Undo**).
+- The readout of **Settings → DSP and EQ** stays at the bottom of the page and gives the delay the stages add; the Signal path tab lists the DSP stages in the order of the chain, with their delay and the row **Delay added by processing**.
+- While a track plays with its own equalizer, the DSP page says so and names it; **Use the equalizers of single tracks** turns all of them off.
+
 ### Changed
 
+- On **Settings → DSP and EQ** the equalizer's preset row sits in the equalizer's editor, under the chain, and the equalizer graph is a little lower so that the chain's second row fits.
 - Every menu is now in title case, as the main menu was: the context menus of tracks, albums, artists, playlists and labels, the playback menus, the sort and group menus ("Add to Queue", "Edit Tags…", "Stop After").
 - On an album page, the facts of the selected track come first in the details column, above the album's.
 - **Revert to the Skipped Track** is greyed out while there is no track to go back to.

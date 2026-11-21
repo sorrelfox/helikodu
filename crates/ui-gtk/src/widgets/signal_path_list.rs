@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! SignalPathList: the signal path as a vertical list of ten fixed stages,
-//! from the file to the device, on a rail of nodes. Each row says what its
+//! SignalPathList: the signal path as a vertical list of stages, from the
+//! file to the device, on a rail of nodes. Source, Loudness and Resampler
+//! come first and Volume, Output format and Device last, always in their
+//! places; the stages of the DSP chain sit between them in the order of the
+//! chain. Each row says what its
 //! stage does with the samples now, in the engine's words; a stage that does
 //! nothing says so, and its node stays hollow. On a bit-perfect path the rail
 //! and the hollow nodes are drawn in the bit-perfect line colour, one
@@ -70,6 +73,20 @@ fn bits(bits: u32, float: bool) -> String {
 
 /// The words for a stage that does not change the samples.
 fn idle_words(stage: &SignalStage) -> String {
+    if stage.kind == StageKind::Convolution
+        && stage.state == StageState::Bypassed
+        && stage.detail.starts_with("left out")
+    {
+        // Its file for the rate in use cannot be used.
+        return fill(
+            &ntr(
+                "Left out: {} file cannot be read",
+                "Left out: {} files cannot be read",
+                1,
+            ),
+            &["1"],
+        );
+    }
     match stage.state {
         StageState::Off => tr("Off"),
         StageState::Bypassed => tr("Bypassed"),
@@ -99,7 +116,19 @@ fn active_words(stage: &SignalStage) -> String {
     if stage.kind == StageKind::Loudness && stage.detail.starts_with(LEVELLER) {
         return tr("Leveller (no loudness values)");
     }
+    // The delay a stage adds, unless the engine's words already give it.
+    if stage.delay_ms >= 0.5 && !stage.detail.contains(" ms") {
+        return fill(
+            &tr("{} · {} ms"),
+            &[&stage.detail, &format!("{:.0}", stage.delay_ms)],
+        );
+    }
     stage.detail.clone()
+}
+
+/// The delay the stages that change the samples add, in milliseconds.
+pub(crate) fn added_delay_ms(path: &SignalPath) -> f64 {
+    path.active_stages().fold(0.0, |sum, s| sum + s.delay_ms)
 }
 
 /// The value and node of the stages of `kinds` taken together: active when
@@ -164,7 +193,52 @@ pub(crate) fn device_name(path: &SignalPath, fallback: &str) -> String {
     }
 }
 
-/// The ten rows for `path`; with nothing heard, only the Device row, named
+/// The DSP stages in the default order of the chain, for a list with
+/// nothing heard.
+const DSP_ORDER: [StageKind; 7] = [
+    StageKind::Pitch,
+    StageKind::Equalizer,
+    StageKind::Convolution,
+    StageKind::Crossfeed,
+    StageKind::ChannelMixer,
+    StageKind::Compressor,
+    StageKind::Limiter,
+];
+
+/// The name of a DSP stage's row.
+fn dsp_name(kind: StageKind) -> String {
+    match kind {
+        StageKind::Pitch => tr("Pitch"),
+        StageKind::Equalizer => tr("Equalizer"),
+        StageKind::Convolution => tr("Convolution"),
+        StageKind::Crossfeed => tr("Crossfeed"),
+        StageKind::ChannelMixer => tr("Channel mix"),
+        StageKind::Compressor => tr("Compressor"),
+        StageKind::Limiter => tr("Limiter"),
+        _ => String::new(),
+    }
+}
+
+/// The DSP stages of `path` in the order of the chain, as the engine lists
+/// them; with nothing heard, in the default order.
+fn dsp_kinds(path: Option<&SignalPath>) -> Vec<StageKind> {
+    let reported: Vec<StageKind> = path
+        .map(|p| {
+            p.stages
+                .iter()
+                .map(|s| s.kind)
+                .filter(|k| k.is_dsp())
+                .collect()
+        })
+        .unwrap_or_default();
+    if reported.is_empty() {
+        DSP_ORDER.to_vec()
+    } else {
+        reported
+    }
+}
+
+/// The rows for `path`; with nothing heard, only the Device row, named
 /// `device`, has a value.
 pub(crate) fn rows(path: Option<&SignalPath>, device: &str) -> Vec<PathRow> {
     const DSP: &[&str] = &["app.preferences-dsp", "app.preferences"];
@@ -177,8 +251,9 @@ pub(crate) fn rows(path: Option<&SignalPath>, device: &str) -> Vec<PathRow> {
         node,
         settings,
     };
+    let kinds = dsp_kinds(path);
     let Some(path) = path else {
-        let mut rows: Vec<PathRow> = names()
+        let mut rows: Vec<PathRow> = names(&kinds)
             .into_iter()
             .map(|(name, settings)| row(name, (String::new(), Node::Hollow), settings))
             .collect();
@@ -214,7 +289,7 @@ pub(crate) fn rows(path: Option<&SignalPath>, device: &str) -> Vec<PathRow> {
         device_format(path),
     ]
     .join(" · ");
-    vec![
+    let mut rows = vec![
         PathRow {
             detail: Some(source_detail),
             ..row(tr("Source"), (source_text(path), Node::End), &[])
@@ -229,14 +304,18 @@ pub(crate) fn rows(path: Option<&SignalPath>, device: &str) -> Vec<PathRow> {
             stages(path, &[StageKind::Resampler]),
             OUTPUT,
         ),
-        row(tr("Equalizer"), stages(path, &[StageKind::Equalizer]), DSP),
-        row(tr("Crossfeed"), stages(path, &[StageKind::Crossfeed]), DSP),
-        row(
-            tr("Channel mix"),
-            stages(path, &[StageKind::ChannelMixer, StageKind::ChannelMix]),
-            DSP,
-        ),
-        row(tr("Limiter"), stages(path, &[StageKind::Limiter]), DSP),
+    ];
+    for kind in kinds {
+        // The channel mixer's row also tells of the mapping to the device's
+        // channels.
+        let value = if kind == StageKind::ChannelMixer {
+            stages(path, &[StageKind::ChannelMixer, StageKind::ChannelMix])
+        } else {
+            stages(path, &[kind])
+        };
+        rows.push(row(dsp_name(kind), value, DSP));
+    }
+    rows.extend([
         row(
             tr("Volume"),
             stages(path, &[StageKind::Volume, StageKind::Crossfade]),
@@ -247,31 +326,33 @@ pub(crate) fn rows(path: Option<&SignalPath>, device: &str) -> Vec<PathRow> {
             detail: Some(device_detail),
             ..row(tr("Device"), (device_name(path, device), Node::End), OUTPUT)
         },
-    ]
+    ]);
+    rows
 }
 
-/// The number of rows.
-const ROWS: usize = 10;
+/// The rows a list has with more than ten get less padding.
+const ROOMY_ROWS: usize = 10;
 
-/// The stage names and the settings each row opens.
-fn names() -> [(String, &'static [&'static str]); ROWS] {
+/// The stage names and the settings each row opens, with the DSP stages
+/// `kinds` in their order.
+fn names(kinds: &[StageKind]) -> Vec<(String, &'static [&'static str])> {
     const DSP: &[&str] = &["app.preferences-dsp", "app.preferences"];
     const OUTPUT: &[&str] = &["app.preferences-output", "app.preferences"];
-    [
+    let mut names: Vec<(String, &'static [&'static str])> = vec![
         (tr("Source"), &[]),
         (
             tr("Loudness"),
             &["app.preferences-loudness", "app.preferences"],
         ),
         (tr("Resampler"), OUTPUT),
-        (tr("Equalizer"), DSP),
-        (tr("Crossfeed"), DSP),
-        (tr("Channel mix"), DSP),
-        (tr("Limiter"), DSP),
+    ];
+    names.extend(kinds.iter().map(|k| (dsp_name(*k), DSP)));
+    names.extend([
         (tr("Volume"), OUTPUT),
         (tr("Output format"), OUTPUT),
         (tr("Device"), OUTPUT),
-    ]
+    ]);
+    names
 }
 
 /// The state label of the lamp, as the deck and the tab show it (upper case
@@ -306,7 +387,15 @@ pub(crate) fn sentence(path: Option<&SignalPath>) -> String {
             &[&active.to_string()],
         );
         // The engine's processing stages work on 32-bit float samples.
-        fill(&tr("{} Processing runs in 32-bit float."), &[&count])
+        let delay = added_delay_ms(path).round();
+        if delay >= 1.0 {
+            fill(
+                &tr("{} Processing runs in 32-bit float and adds {} ms."),
+                &[&count, &format!("{delay:.0}")],
+            )
+        } else {
+            fill(&tr("{} Processing runs in 32-bit float."), &[&count])
+        }
     } else {
         tr("The sound server may change the samples.")
     };
@@ -344,6 +433,8 @@ mod imp_node {
         /// Whether the rail goes up from the node, and down from it.
         pub(super) up: Cell<bool>,
         pub(super) down: Cell<bool>,
+        /// The height of the row's first line, when not the usual one.
+        pub(super) row: Cell<Option<f32>>,
     }
 
     #[glib::object_subclass]
@@ -363,7 +454,10 @@ mod imp_node {
         fn measure(&self, orientation: gtk::Orientation, _: i32) -> (i32, i32, i32, i32) {
             match orientation {
                 gtk::Orientation::Horizontal => (NODE as i32, NODE as i32, -1, -1),
-                _ => (ROW as i32, ROW as i32, -1, -1),
+                _ => {
+                    let row = self.row.get().unwrap_or(ROW) as i32;
+                    (row, row, -1, -1)
+                }
             }
         }
 
@@ -377,7 +471,7 @@ mod imp_node {
             }
             .to_gdk();
             let cx = width / 2.0;
-            let cy = ROW / 2.0;
+            let cy = self.row.get().unwrap_or(ROW) / 2.0;
             let x = (cx - RAIL / 2.0).round();
             if self.up.get() {
                 snapshot.append_color(&rail, &graphene::Rect::new(x, 0.0, RAIL, cy));
@@ -411,6 +505,8 @@ const BORDER: f32 = 1.5;
 const RAIL: f32 = 1.0;
 /// The height of a row's first line; the node sits at its middle.
 const ROW: f32 = 30.0;
+/// The same in a list of more than ten rows.
+const COMPACT_ROW: f32 = 26.0;
 
 glib::wrapper! {
     /// A node on the rail of the signal path list.
@@ -420,10 +516,11 @@ glib::wrapper! {
 }
 
 impl PathNode {
-    fn new(up: bool, down: bool) -> Self {
+    fn new(up: bool, down: bool, compact: bool) -> Self {
         let node: Self = glib::Object::new();
         node.imp().up.set(up);
         node.imp().down.set(down);
+        node.imp().row.set(compact.then_some(COMPACT_ROW));
         node.set_valign(gtk::Align::Fill);
         node
     }
@@ -462,12 +559,56 @@ struct RowParts {
     detail: gtk::Label,
 }
 
-/// The list: ten rows that stay in place and change their text.
+/// The list: rows that stay in place and change their text; they are made
+/// again only when their number changes.
 #[derive(Debug)]
 pub(crate) struct SignalPathList {
     list: gtk::ListBox,
-    rows: Vec<RowParts>,
+    rows: std::cell::RefCell<Vec<RowParts>>,
     settings: std::cell::RefCell<Vec<&'static [&'static str]>>,
+}
+
+/// One row of a list of `count`, at `i`.
+fn row_parts(i: usize, count: usize) -> RowParts {
+    let compact = count > ROOMY_ROWS;
+    let row = gtk::ListBoxRow::new();
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    let node = PathNode::new(i > 0, i + 1 < count, compact);
+    line.append(&node);
+    let text = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    text.set_hexpand(true);
+    let first = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    first.add_css_class("hk-path-line");
+    if compact {
+        first.add_css_class("compact");
+    }
+    let name = label("", &["hk-micro-label", "hk-path-name"]);
+    name.set_ellipsize(gtk::pango::EllipsizeMode::None);
+    name.set_valign(gtk::Align::Center);
+    first.append(&name);
+    let value = label("", &["hk-path-value"]);
+    value.set_hexpand(true);
+    value.set_xalign(1.0);
+    value.set_valign(gtk::Align::Center);
+    // The engine's words can be long: they wrap rather than lose their end.
+    wrap(&value);
+    first.append(&value);
+    text.append(&first);
+    let detail = label("", &["hk-path-detail"]);
+    detail.set_xalign(1.0);
+    detail.set_visible(false);
+    wrap(&detail);
+    text.append(&detail);
+    line.append(&text);
+    row.set_child(Some(&line));
+    RowParts {
+        row,
+        node,
+        line: first,
+        name,
+        value,
+        detail,
+    }
 }
 
 impl SignalPathList {
@@ -477,51 +618,9 @@ impl SignalPathList {
         list.set_selection_mode(gtk::SelectionMode::None);
         list.add_css_class("hk-path-list");
         list.update_property(&[gtk::accessible::Property::Label(&tr("Signal path"))]);
-        let count = ROWS;
-        let rows = (0..count)
-            .map(|i| {
-                let row = gtk::ListBoxRow::new();
-                let line = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-                let node = PathNode::new(i > 0, i + 1 < count);
-                line.append(&node);
-                let text = gtk::Box::new(gtk::Orientation::Vertical, 0);
-                text.set_hexpand(true);
-                let first = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-                first.add_css_class("hk-path-line");
-                let name = label("", &["hk-micro-label", "hk-path-name"]);
-                name.set_ellipsize(gtk::pango::EllipsizeMode::None);
-                name.set_valign(gtk::Align::Center);
-                first.append(&name);
-                let value = label("", &["hk-path-value"]);
-                value.set_hexpand(true);
-                value.set_xalign(1.0);
-                value.set_valign(gtk::Align::Center);
-                // The engine's words can be long: they wrap rather than lose
-                // their end.
-                wrap(&value);
-                first.append(&value);
-                text.append(&first);
-                let detail = label("", &["hk-path-detail"]);
-                detail.set_xalign(1.0);
-                detail.set_visible(false);
-                wrap(&detail);
-                text.append(&detail);
-                line.append(&text);
-                row.set_child(Some(&line));
-                list.append(&row);
-                RowParts {
-                    row,
-                    node,
-                    line: first,
-                    name,
-                    value,
-                    detail,
-                }
-            })
-            .collect();
         let this = std::rc::Rc::new(Self {
             list,
-            rows,
+            rows: std::cell::RefCell::new(Vec::new()),
             settings: std::cell::RefCell::new(Vec::new()),
         });
         let weak = std::rc::Rc::downgrade(&this);
@@ -547,7 +646,18 @@ impl SignalPathList {
     pub(crate) fn show(&self, path: Option<&SignalPath>, device: &str) {
         let rows = rows(path, device);
         let bit_perfect = path.is_some_and(|p| p.lamp == SignalLamp::BitPerfect);
-        for (parts, row) in self.rows.iter().zip(&rows) {
+        if self.rows.borrow().len() != rows.len() {
+            for parts in self.rows.borrow_mut().drain(..) {
+                self.list.remove(&parts.row);
+            }
+            let count = rows.len();
+            let made: Vec<RowParts> = (0..count).map(|i| row_parts(i, count)).collect();
+            for parts in &made {
+                self.list.append(&parts.row);
+            }
+            self.rows.replace(made);
+        }
+        for (parts, row) in self.rows.borrow().iter().zip(&rows) {
             parts.name.set_text(&row.name);
             parts.value.set_text(&row.value);
             parts
@@ -590,6 +700,7 @@ impl SignalPathList {
     /// The text of each row, as assistive technology reads it, and its node.
     pub(crate) fn texts(&self) -> Vec<(String, String, Node)> {
         self.rows
+            .borrow()
             .iter()
             .map(|r| {
                 (
@@ -608,7 +719,7 @@ mod tests {
     use crate::backend::sample::signal_path;
 
     #[test]
-    fn ten_rows_in_a_fixed_order() {
+    fn the_dsp_stages_sit_in_the_order_of_the_chain() {
         for lamp in [
             SignalLamp::BitPerfect,
             SignalLamp::LosslessProcessed,
@@ -617,14 +728,58 @@ mod tests {
         ] {
             let path = signal_path(lamp);
             let rows = rows(Some(&path), "x");
-            assert_eq!(rows.len(), 10);
+            assert_eq!(rows.len(), 13);
             assert_eq!(rows[0].node, Node::End);
-            assert_eq!(rows[9].node, Node::End);
+            assert_eq!(rows[12].node, Node::End);
         }
         let idle = rows(None, "Studio Interface");
-        assert_eq!(idle.len(), 10);
-        assert!(idle[..9].iter().all(|r| r.value.is_empty()));
-        assert_eq!(idle[9].value, "Studio Interface");
+        assert_eq!(idle.len(), 13);
+        assert!(idle[..12].iter().all(|r| r.value.is_empty()));
+        assert_eq!(idle[12].value, "Studio Interface");
+        // A reordered chain: the rows follow it.
+        let mut path = signal_path(SignalLamp::LosslessProcessed);
+        let at = |path: &SignalPath, kind| path.stages.iter().position(|s| s.kind == kind).unwrap();
+        let (pitch, convolution) = (
+            at(&path, StageKind::Pitch),
+            at(&path, StageKind::Convolution),
+        );
+        path.stages.swap(pitch, convolution);
+        let names: Vec<String> = super::rows(Some(&path), "")
+            .into_iter()
+            .map(|r| r.name)
+            .collect();
+        assert_eq!(names[3..6], ["Convolution", "Equalizer", "Pitch"]);
+        assert_eq!(names[..3], ["Source", "Loudness", "Resampler"]);
+        assert_eq!(names[10..], ["Volume", "Output format", "Device"]);
+    }
+
+    #[test]
+    fn delays_and_a_convolution_left_out() {
+        let mut path = signal_path(SignalLamp::LosslessProcessed);
+        for stage in &mut path.stages {
+            match stage.kind {
+                StageKind::Pitch => {
+                    stage.state = StageState::Active;
+                    stage.detail = "pitch +2.00 semitones".into();
+                    stage.delay_ms = 33.0;
+                }
+                StageKind::Convolution => {
+                    stage.state = StageState::Bypassed;
+                    stage.detail = "left out: the impulse response cannot be used".into();
+                }
+                _ => {}
+            }
+        }
+        let rows = rows(Some(&path), "");
+        let value = |name: &str| rows.iter().find(|r| r.name == name).unwrap().clone();
+        assert_eq!(value("Pitch").value, "pitch +2.00 semitones · 33 ms");
+        let convolution = value("Convolution");
+        assert_eq!(convolution.value, "Left out: 1 file cannot be read");
+        assert_eq!(convolution.node, Node::Hollow);
+        // The limiter's words give its lookahead already.
+        assert_eq!(value("Limiter").value, "limiter -1.0 dBTP · lookahead 2 ms");
+        assert_eq!(added_delay_ms(&path), 35.0);
+        assert!(sentence(Some(&path)).ends_with("and adds 35 ms."));
     }
 
     #[test]
@@ -651,12 +806,12 @@ mod tests {
         let rows = rows(Some(&path), "");
         assert_eq!(rows[0].value, "FLAC · 96 kHz · 24-bit");
         assert_eq!(rows[0].detail.as_deref(), Some("stereo"));
-        assert!(rows[1..9].iter().all(|r| r.node == Node::Hollow));
-        assert_eq!(rows[7].value, "fixed 100 %");
-        assert_eq!(rows[8].value, "24-bit · untouched");
-        assert_eq!(rows[9].value, "Studio Interface");
+        assert!(rows[1..12].iter().all(|r| r.node == Node::Hollow));
+        assert_eq!(rows[10].value, "fixed 100 %");
+        assert_eq!(rows[11].value, "24-bit · untouched");
+        assert_eq!(rows[12].value, "Studio Interface");
         assert_eq!(
-            rows[9].detail.as_deref(),
+            rows[12].detail.as_deref(),
             Some("ALSA · exclusive · 96 kHz / 24-bit")
         );
 
@@ -680,12 +835,12 @@ mod tests {
         );
         assert_eq!(rows[2].value, "resample 96 → 48 kHz (high)");
         assert_eq!(
-            rows[9].detail.as_deref(),
+            rows[12].detail.as_deref(),
             Some("PipeWire · shared · 48 kHz / 32-bit float")
         );
         assert_eq!(
             sentence(Some(&path)),
-            "6 stages are active. Processing runs in 32-bit float."
+            "6 stages are active. Processing runs in 32-bit float and adds 2 ms."
         );
     }
 

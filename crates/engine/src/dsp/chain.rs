@@ -7,6 +7,7 @@ use std::f64::consts::PI;
 use std::sync::Arc;
 use std::time::Duration;
 
+use helikodu_model::player::CompressorActivity;
 use helikodu_model::settings::{ChainStage, ConvolutionSettings, DspSettings, EqualizerSettings};
 
 use super::impulse::{self, Impulse};
@@ -145,7 +146,12 @@ impl Stages {
                         impulse = Some(found);
                         stages.push(Stage::Convolution(s));
                     }
-                    Err(why) => problem = Some(why),
+                    Err(why) => {
+                        // Named files that cannot be used leave the stage out;
+                        // with none named it simply has nothing to do.
+                        plan.convolution_left_out = settings.convolution.has_source();
+                        problem = Some(why);
+                    }
                 },
                 ChainStage::Crossfeed => {
                     if channels == 2 {
@@ -221,9 +227,27 @@ impl Stages {
         })
     }
 
-    /// Carries on what `old` counted (the limiter's statistics).
+    fn compressor(&self) -> Option<&Compressor> {
+        self.stages.iter().find_map(|s| match s {
+            Stage::Compressor(c) => Some(c),
+            _ => None,
+        })
+    }
+
+    fn compressor_mut(&mut self) -> Option<&mut Compressor> {
+        self.stages.iter_mut().find_map(|s| match s {
+            Stage::Compressor(c) => Some(c),
+            _ => None,
+        })
+    }
+
+    /// Carries on what `old` counted (the limiter's and the compressor's
+    /// statistics).
     fn continue_from(&mut self, old: &Self) {
         if let (Some(new), Some(old)) = (self.limiter_mut(), old.limiter()) {
+            new.continue_activity(old);
+        }
+        if let (Some(new), Some(old)) = (self.compressor_mut(), old.compressor()) {
             new.continue_activity(old);
         }
     }
@@ -361,6 +385,14 @@ impl DspChain {
         if let Some(limiter) = self.current.limiter_mut() {
             limiter.reset_activity();
         }
+        if let Some(compressor) = self.current.compressor_mut() {
+            compressor.reset_activity();
+        }
+    }
+
+    /// What the compressor has done, if it runs.
+    pub fn compressor_activity(&self) -> Option<CompressorActivity> {
+        self.current.compressor().map(Compressor::activity)
     }
 
     /// Why convolution is switched on but does not run (no impulse response for the
@@ -422,12 +454,17 @@ impl DspChain {
     /// them unless they sound as the current ones do.
     fn rebuild(&mut self) {
         let settings = self.effective();
-        let stages = Stages::new(&settings, self.rate, self.channels, &mut self.impulses);
+        let mut stages = Stages::new(&settings, self.rate, self.channels, &mut self.impulses);
+        if self.track_equalizer().is_some()
+            && let Some(equalizer) = &mut stages.plan.equalizer
+        {
+            equalizer.track = true;
+        }
         if stages.same_as(self.newest()) {
-            let problem = stages.problem;
+            let (problem, plan) = (stages.problem, stages.plan);
             match &mut self.pending {
-                Some(pending) => pending.problem = problem,
-                None => self.current.problem = problem,
+                Some(pending) => (pending.problem, pending.plan) = (problem, plan),
+                None => (self.current.problem, self.current.plan) = (problem, plan),
             }
             return;
         }
@@ -592,6 +629,38 @@ mod tests {
         assert!(!chain.is_active());
         chain.process(&mut block);
         assert_eq!(block, input);
+    }
+
+    #[test]
+    fn the_plan_says_what_replaces_or_leaves_out_a_stage() {
+        let mut settings = DspSettings::default();
+        settings.convolution.enabled = true;
+        // Nothing named: the stage has nothing to do and is not left out.
+        let mut chain = DspChain::new(&settings, 48_000, 2);
+        assert!(!chain.plan().convolution_left_out);
+        assert!(chain.convolution_problem().is_some());
+        // A file that is missing leaves it out.
+        settings.convolution.files = vec![helikodu_model::settings::ImpulseFile {
+            rate_hz: 48_000,
+            path: "/nonexistent/helikodu/room.wav".into(),
+        }];
+        chain.set_settings(&settings);
+        assert!(chain.plan().convolution_left_out);
+        assert!(chain.plan().convolution.is_none());
+        // The equalizer of a track is marked as such.
+        let mut track = EqualizerSettings {
+            enabled: true,
+            ..EqualizerSettings::default()
+        };
+        track.mode = helikodu_model::settings::EqMode::Graphic10;
+        track.graphic_10[3] = 4.0;
+        chain.set_track_equalizer(Some(&track));
+        let equalizer = chain.plan().equalizer.unwrap();
+        assert!(equalizer.track);
+        assert!(equalizer.to_string().starts_with("track EQ"), "{equalizer}");
+        settings.track_equalizer = false;
+        chain.set_settings(&settings);
+        assert!(chain.plan().equalizer.is_none());
     }
 
     #[test]

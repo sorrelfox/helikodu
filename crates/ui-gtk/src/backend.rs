@@ -14,6 +14,7 @@
 
 pub mod browse;
 pub mod columns;
+pub mod dsp;
 pub mod export;
 pub mod fields;
 pub mod generators;

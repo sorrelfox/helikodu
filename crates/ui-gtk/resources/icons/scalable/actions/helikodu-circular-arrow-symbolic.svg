@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
+SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <path fill="#222222" d="M13.75 8A5.75 5.75 0 1 1 12.008 3.877A.75 .75 0 0 1 10.963 4.953A4.25 4.25 0 1 0 12.25 8A.75 .75 0 0 1 13.75 8ZM12.25 3v1.75H10.5a.75.75 0 0 0 0 1.5H13a.75.75 0 0 0 .75-.75V3a.75.75 0 0 0-1.5 0z"/>
+</svg>

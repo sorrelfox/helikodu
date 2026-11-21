@@ -17,8 +17,9 @@ use helikodu_model::audio::{
     DeviceSelection, OutputBackendKind, OutputMode, SampleFormat, SampleRate,
 };
 use helikodu_model::player::{
-    EngineEvent, ItemId, LimiterActivity, PlaybackStats, SignalDevice, SignalLamp, SignalPath,
-    SignalSource, SignalStage, StageKind, StageState, TransportState, Volume,
+    CompressorActivity, EngineEvent, ItemId, LimiterActivity, PlaybackStats, SignalDevice,
+    SignalLamp, SignalPath, SignalSource, SignalStage, StageKind, StageState, TransportState,
+    Volume,
 };
 use helikodu_model::settings::{ChainStage, DspSettings};
 
@@ -27,6 +28,9 @@ use crate::pipeline::{LoudnessMode, PathPlan, VolumePlan};
 
 /// How often the playback counters are sent while playing.
 const STATS_INTERVAL: Duration = Duration::from_millis(250);
+/// The detail of a convolution stage that is switched on but left out because its
+/// impulse response cannot be used.
+const LEFT_OUT: &str = "left out: the impulse response cannot be used";
 /// The shortest time between two reports of the limiter's activity.
 const LIMITER_INTERVAL: Duration = Duration::from_millis(200);
 /// How many items' plans are remembered: the heard one and those written after it.
@@ -45,6 +49,9 @@ pub(super) struct SignalTracker {
     /// The limiter's activity sent last (`Some(None)`: that it is off), and when.
     limiter_sent: Option<Option<LimiterActivity>>,
     last_limiter: Option<Instant>,
+    /// The same for the compressor.
+    compressor_sent: Option<Option<CompressorActivity>>,
+    last_compressor: Option<Instant>,
 }
 
 #[derive(Debug)]
@@ -177,6 +184,30 @@ impl Worker {
         self.signal.limiter_sent = Some(now);
         self.signal.last_limiter = Some(Instant::now());
         self.emit(EngineEvent::Limiter(now));
+    }
+
+    /// Sends the compressor's activity as [`update_limiter`](Self::update_limiter)
+    /// sends the limiter's.
+    pub(super) fn update_compressor(&mut self) {
+        let now = self.dsp.as_ref().and_then(|dsp| dsp.compressor_activity());
+        if self.signal.compressor_sent == Some(now) {
+            return;
+        }
+        let switched = self
+            .signal
+            .compressor_sent
+            .is_none_or(|sent| sent.is_some() != now.is_some());
+        if !switched
+            && self
+                .signal
+                .last_compressor
+                .is_some_and(|last| last.elapsed() < LIMITER_INTERVAL)
+        {
+            return;
+        }
+        self.signal.compressor_sent = Some(now);
+        self.signal.last_compressor = Some(Instant::now());
+        self.emit(EngineEvent::Compressor(now));
     }
 
     /// Starts the limiter's counts anew for the item that is now heard.
@@ -316,8 +347,11 @@ pub(crate) fn signal_path(plan: &PathPlan, context: &PathContext) -> SignalPath 
             kind,
             state,
             detail,
+            delay_ms: 0.0,
         });
     };
+    // The delays of the DSP stages that add one, set once every stage is listed.
+    let mut delays: Vec<(StageKind, f64)> = Vec::new();
 
     let codec = context.codec.clone().unwrap_or_default();
     let lossy = is_lossy_codec(&codec);
@@ -372,8 +406,9 @@ pub(crate) fn signal_path(plan: &PathPlan, context: &PathContext) -> SignalPath 
     }
     let dsp = &plan.dsp_stages;
     let switches = context.switches;
-    let mut dsp_stage = |kind, active: Option<String>, on: bool| match active {
+    let mut dsp_stage = |kind, active: Option<String>, on: bool, left_out: bool| match active {
         Some(detail) => stage(kind, StageState::Active, detail),
+        None if on && left_out => stage(kind, StageState::Bypassed, LEFT_OUT.into()),
         None if on => stage(kind, StageState::Bypassed, String::new()),
         None => stage(kind, StageState::Off, String::new()),
     };
@@ -387,7 +422,16 @@ pub(crate) fn signal_path(plan: &PathPlan, context: &PathContext) -> SignalPath 
             ChainStage::Compressor => (StageKind::Compressor, switches.compressor),
             ChainStage::Limiter => (StageKind::Limiter, switches.limiter),
         };
-        dsp_stage(kind, dsp.stage(chain_stage).map(|s| s.to_string()), on);
+        let planned = dsp.stage(chain_stage);
+        if let Some(planned) = planned
+            && planned.delay_ms() > 0.0
+        {
+            delays.push((kind, planned.delay_ms()));
+        }
+        // Convolution that is switched on but cannot use its impulse response
+        // says so; the front ends name the problem.
+        let left_out = chain_stage == ChainStage::Convolution && dsp.convolution_left_out;
+        dsp_stage(kind, planned.map(|s| s.to_string()), on, left_out);
     }
     let percent = |volume: Volume| format!("{:.0} %", volume.position() * 100.0);
     match context.volume {
@@ -495,6 +539,11 @@ pub(crate) fn signal_path(plan: &PathPlan, context: &PathContext) -> SignalPath 
         SignalLamp::BitPerfect
     };
 
+    for (kind, delay_ms) in delays {
+        if let Some(stage) = stages.iter_mut().find(|s| s.kind == kind) {
+            stage.delay_ms = delay_ms;
+        }
+    }
     SignalPath {
         item: context.item,
         source: SignalSource {
@@ -734,6 +783,37 @@ mod tests {
         context.volume = VolumePlan::Fixed;
         context.level = Volume::FULL;
         assert_eq!(signal_path(&plan, &context).lamp, SignalLamp::Resampled);
+    }
+
+    #[test]
+    fn dsp_stages_give_their_delay_and_a_convolution_left_out() {
+        use crate::dsp::{LimiterPlan, PitchPlan};
+        let s32 = spec(SampleFormat::S32(LE), 48_000, ChannelLayout::STEREO);
+        let mut plan = plan(SourceFormat::new(s32), s32, |r| r.dsp = true);
+        plan.dsp_stages.limiter = Some(LimiterPlan {
+            lookahead_ms: 2.0,
+            ceiling_db: -1.0,
+        });
+        plan.dsp_stages.pitch = Some(PitchPlan {
+            semitones: 2.0,
+            latency_ms: 33.0,
+        });
+        plan.dsp_stages.convolution_left_out = true;
+        let mut context = context(
+            OutputBackendKind::Alsa,
+            "hw:CARD=DAC,DEV=0",
+            OutputMode::Exclusive,
+        );
+        context.switches.limiter = true;
+        context.switches.pitch = true;
+        context.switches.convolution = true;
+        let path = signal_path(&plan, &context);
+        assert_eq!(path.stage(StageKind::Limiter).unwrap().delay_ms, 2.0);
+        assert_eq!(path.stage(StageKind::Pitch).unwrap().delay_ms, 33.0);
+        let convolution = path.stage(StageKind::Convolution).unwrap();
+        assert_eq!(convolution.state, StageState::Bypassed);
+        assert!(convolution.detail.starts_with("left out"));
+        assert_eq!(convolution.delay_ms, 0.0);
     }
 
     #[test]

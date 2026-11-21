@@ -567,6 +567,12 @@ impl Services for ServiceServices {
         })
     }
 
+    fn dsp(&self) -> Arc<dyn super::super::dsp::DspServices> {
+        Arc::new(super::dsp::ServiceDsp {
+            service: self.service.clone(),
+        })
+    }
+
     fn user_fields(&self) -> Arc<dyn super::super::fields::FieldServices> {
         Arc::new(super::fields::ServiceFields {
             service: self.service.clone(),

@@ -316,7 +316,7 @@ fn the_signal_path_tab_follows_each_lamp(app: &gtk::Application) {
         if lamp == SignalLamp::Resampled {
             assert_eq!(
                 texts[1],
-                "6 stages are active. Processing runs in 32-bit float."
+                "6 stages are active. Processing runs in 32-bit float and adds 2 ms."
             );
             assert!(has(&texts, "Device: Built-in Audio [End]"), "{texts:?}");
             shots(&window, "signal-dsp");
@@ -368,15 +368,16 @@ fn the_signal_path_tab_is_reachable_by_keyboard(app: &gtk::Application) {
         .find(|b| b.label().as_deref() == Some("Signal path"))
         .unwrap();
     assert!(tab.is_visible() && tab.is_focusable() && tab.is_active());
-    // Ten rows, the stages that have a setting can be activated.
+    // Thirteen rows (the seven DSP stages among them), the stages that have a
+    // setting can be activated.
     let list = all
         .iter()
         .filter_map(|w| w.downcast_ref::<gtk::ListBox>())
         .find(|l| l.has_css_class("hk-path-list"))
         .unwrap();
-    let rows: Vec<gtk::ListBoxRow> = (0..10).filter_map(|i| list.row_at_index(i)).collect();
-    assert_eq!(rows.len(), 10);
-    assert!(list.row_at_index(10).is_none());
+    let rows: Vec<gtk::ListBoxRow> = (0..13).filter_map(|i| list.row_at_index(i)).collect();
+    assert_eq!(rows.len(), 13);
+    assert!(list.row_at_index(13).is_none());
     assert!(!rows[0].is_activatable(), "Source has no setting");
     assert!(
         rows[1..]

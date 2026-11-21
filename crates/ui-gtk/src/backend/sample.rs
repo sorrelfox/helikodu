@@ -11,6 +11,7 @@
 mod analysis;
 mod browse;
 mod copies;
+mod dsp;
 mod export;
 mod fields;
 mod files;

@@ -16,10 +16,16 @@ pub struct EqualizerPlan {
     pub filters: usize,
     /// The preamp, in dB.
     pub preamp_db: f64,
+    /// Whether it is the equalizer of the track that plays, in place of the
+    /// settings' own.
+    pub track: bool,
 }
 
 impl fmt::Display for EqualizerPlan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.track {
+            f.write_str("track ")?;
+        }
         match self.mode {
             EqMode::Graphic10 => f.write_str("EQ 10-band")?,
             EqMode::Graphic31 => f.write_str("EQ 31-band")?,
@@ -220,6 +226,9 @@ pub struct DspPlan {
     pub convolution: Option<ConvolutionPlan>,
     /// Pitch shift.
     pub pitch: Option<PitchPlan>,
+    /// Whether convolution is switched on and has files, but is left out because
+    /// the impulse response for the rate cannot be used.
+    pub convolution_left_out: bool,
     /// The order of all stages, active or not.
     pub order: [ChainStage; 7],
 }
@@ -234,6 +243,7 @@ impl Default for DspPlan {
             compressor: None,
             convolution: None,
             pitch: None,
+            convolution_left_out: false,
             order: ChainStage::DEFAULT_ORDER,
         }
     }
@@ -268,6 +278,20 @@ impl fmt::Display for StagePlan {
             Self::Compressor(s) => s.fmt(f),
             Self::Convolution(s) => s.fmt(f),
             Self::Pitch(s) => s.fmt(f),
+        }
+    }
+}
+
+impl StagePlan {
+    /// The delay the stage adds, in milliseconds: the lookahead of the limiter
+    /// and the compressor, the latency of convolution and pitch shift.
+    pub fn delay_ms(&self) -> f64 {
+        match self {
+            Self::Pitch(p) => p.latency_ms,
+            Self::Convolution(c) => c.latency_ms,
+            Self::Compressor(c) => c.lookahead_ms,
+            Self::Limiter(l) => l.lookahead_ms,
+            Self::Equalizer(_) | Self::Crossfeed(_) | Self::Mixer(_) => 0.0,
         }
     }
 }
@@ -324,6 +348,7 @@ mod tests {
                 mode: EqMode::Parametric,
                 filters: 5,
                 preamp_db: -4.5,
+                track: false,
             }),
             crossfeed: Some(CrossfeedPlan {
                 cutoff_hz: 700,

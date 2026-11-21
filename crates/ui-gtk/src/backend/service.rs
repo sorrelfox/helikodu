@@ -16,6 +16,7 @@ mod analysis_and_import;
 mod artist_photos;
 mod browse;
 mod columns;
+mod dsp;
 mod export;
 mod fields;
 mod generators;

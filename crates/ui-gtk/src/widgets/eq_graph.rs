@@ -8,10 +8,10 @@
 //! engine builds its filters with (`helikodu_model::eq`), 2 px in the accent with
 //! a 14 % fill to the zero line.
 //!
-//! In parametric mode (232 high) each enabled or disabled filter has an 18 px
+//! In parametric mode (192 high) each enabled or disabled filter has an 18 px
 //! numbered handle on the curve at its frequency; disabled ones are grey.
 //!
-//! In graphic mode (372 high) each band has a vertical track and a round handle
+//! In graphic mode (340 high) each band has a vertical track and a round handle
 //! that is its fader: a focusable child of role slider, named by its frequency.
 //! Up and Down change it by 0.5 dB, Page Up and Page Down by 3 dB, 0 or a
 //! double-click return it to 0 dB, Left and Right move to the neighbours.
@@ -288,7 +288,7 @@ mod imp {
             match orientation {
                 gtk::Orientation::Horizontal => (360, 760, -1, -1),
                 _ => {
-                    let h = if self.obj().is_graphic() { 372 } else { 232 };
+                    let h = if self.obj().is_graphic() { 340 } else { 192 };
                     (h, h, -1, -1)
                 }
             }

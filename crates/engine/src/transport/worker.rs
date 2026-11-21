@@ -344,6 +344,7 @@ impl Worker {
         }
         self.update_signal();
         self.update_limiter();
+        self.update_compressor();
     }
 
     /// Follows the heard position: item starts and ends, `NearEnd`, position ticks.
