@@ -6,7 +6,7 @@ The sidebar lists the views of your library (**Home**, **Albums**, **Artists**, 
 
 ## Home
 
-**Home** shows the albums added most recently and those played most recently, each in one row of covers (as many as fit the window); **Show all** opens Albums sorted by date added, and **History** opens the play history. Below, **Most played** lists the five tracks played most often (double-click one to play the list from there), and **Rediscover** lists albums you have not played for three months, or never, with when you played them last; click one to open it.
+**Home** shows the albums added most recently and those played most recently, each in one row of covers (as many as fit the window); **Show all** opens Albums sorted by date added, and **History** opens the play history. Below, **Most played** lists the five tracks played most often (double-click one to play the list from there; right-click one for the context menu of tracks), and **Rediscover** lists albums you have not played for three months, or never, with when you played them last; click one to open it.
 
 ### A narrow window
 
@@ -60,7 +60,7 @@ Double-click an album cover to play the album at once. A single click opens its 
 
 On the album page, **Play** plays the album from the start, **Shuffle** in random order, and **Add to queue** adds it to the end of the queue; **More** opens the album's menu. Click a track to play the album from that track. Under **Details**, **Edit tags** opens the [tag editor](tags.md) for all its tracks and **Open folder** shows the album folder in your file manager.
 
-Select a track to see its own facts below the album's: its artist when it differs from the album artist, composer, number, length, format, track gain, plays, when it was last played, rating, when it was added, whether it has lyrics, its copies, its file size and its file. With a track selected, **Open folder** shows that track's folder.
+Select a track to see its own facts above the album's: its artist when it differs from the album artist, composer, number, length, format, track gain, plays, when it was last played, rating, when it was added, whether it has lyrics, its copies, its file size and its file. With a track selected, **Open folder** shows that track's folder.
 
 Drag the left border of the **Details** column to make it wider or narrower; when the page is too narrow for it beside the tracks, it is under them. The width is kept for every album and audiobook page and the next time Helikodu starts.
 
@@ -68,7 +68,7 @@ Drag the left border of the **Details** column to make it wider or narrower; whe
 
 **Artists** lists the album artists on the left, under letter headings; sort them by **Name** or **Number of albums**. Choose an artist to see their page: **Play all**, **Shuffle**, and **More** (**Play next**, **Add to queue**), with two tabs:
 
-- **Releases**: the artist's **Albums**, **EPs and singles**, the albums they appear on (**Appears on**), and their **Most played** tracks.
+- **Releases**: the artist's **Albums**, **EPs and singles**, the albums they appear on (**Appears on**), and their **Most played** tracks, which have the context menu of tracks.
 - **All tracks**: all their tracks in a track table, as in the Tracks view.
 
 ### Artist photos

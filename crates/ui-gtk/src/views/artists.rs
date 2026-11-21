@@ -474,6 +474,12 @@ impl ArtistsView {
         });
         self.list.add_controller(click);
         let weak = Rc::downgrade(self);
+        actions::track_list_menu(&self.most_played, move |index| {
+            let view = weak.upgrade()?;
+            let detail = view.detail_data.borrow();
+            detail.as_ref()?.most_played.get(index).cloned()
+        });
+        let weak = Rc::downgrade(self);
         self.most_played.connect_row_activated(move |_, row| {
             let Some(view) = weak.upgrade() else { return };
             let detail = view.detail_data.borrow();
@@ -780,9 +786,7 @@ impl ArtistsView {
     }
 
     fn show_most_played(&self) {
-        while let Some(child) = self.most_played.first_child() {
-            self.most_played.remove(&child);
-        }
+        crate::widgets::remove_rows(&self.most_played);
         let detail = self.detail_data.borrow();
         let tracks: &[TrackRow] = detail.as_ref().map_or(&[], |d| &d.most_played);
         self.most_played_box.set_visible(!tracks.is_empty());

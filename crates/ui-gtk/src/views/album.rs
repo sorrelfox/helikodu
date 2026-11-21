@@ -610,7 +610,7 @@ impl AlbumPage {
         detail.as_ref()?.tracks().nth(index).cloned()
     }
 
-    /// Shows the selected track below the album's details: what its row
+    /// Shows the selected track above the album's details: what its row
     /// knows at once, the rest when the library has answered.
     fn show_selected(&self) {
         let imp = self.imp();

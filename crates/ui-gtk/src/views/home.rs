@@ -405,6 +405,11 @@ impl HomeView {
             }
         });
         let weak = Rc::downgrade(&view);
+        actions::track_list_menu(&view.most, move |index| {
+            let view = weak.upgrade()?;
+            view.data.borrow().most_played.get(index).cloned()
+        });
+        let weak = Rc::downgrade(&view);
         view.most.connect_row_activated(move |_, row| {
             if let Some(view) = weak.upgrade() {
                 view.play_most_played(row.index());

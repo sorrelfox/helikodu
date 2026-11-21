@@ -390,6 +390,62 @@ pub(crate) fn popup_with(
     Some(popover)
 }
 
+/// Gives `list`, a short list of tracks in a page (one track per row), the
+/// context menu of tracks: a right click, the Menu key or Shift+F10 opens it
+/// for the row under the pointer or the focused row. `track` gives the track
+/// of a row by its index.
+pub(crate) fn track_list_menu(
+    list: &gtk::ListBox,
+    track: impl Fn(usize) -> Option<TrackRow> + 'static,
+) {
+    let target_of = Rc::new(move |row: &gtk::ListBoxRow| {
+        let index = usize::try_from(row.index()).ok()?;
+        track(index).map(|t| Target::tracks(vec![Rc::new(t)]))
+    });
+    let click = gtk::GestureClick::new();
+    click.set_button(gdk::BUTTON_SECONDARY);
+    let weak = list.downgrade();
+    let target = target_of.clone();
+    click.connect_pressed(move |gesture, _, x, y| {
+        let Some(list) = weak.upgrade() else { return };
+        let Some(row) = list.row_at_y(y as i32) else {
+            return;
+        };
+        let Some(target) = target(&row) else { return };
+        gesture.set_state(gtk::EventSequenceState::Claimed);
+        row.grab_focus();
+        popup(&list, target, Some((x, y)));
+    });
+    list.add_controller(click);
+    let keys = gtk::EventControllerKey::new();
+    let weak = list.downgrade();
+    keys.connect_key_pressed(move |_, key, _, state| {
+        let Some(list) = weak.upgrade() else {
+            return glib::Propagation::Proceed;
+        };
+        if !is_menu_key(key, state) {
+            return glib::Propagation::Proceed;
+        }
+        let row = list
+            .root()
+            .and_then(|r| r.focus())
+            .and_then(|f| f.ancestor(gtk::ListBoxRow::static_type()))
+            .and_downcast::<gtk::ListBoxRow>();
+        let Some((row, target)) = row.and_then(|r| target_of(&r).map(|t| (r, t))) else {
+            return glib::Propagation::Proceed;
+        };
+        let at = row
+            .compute_point(
+                &list,
+                &gtk::graphene::Point::new(40.0, row.height() as f32 / 2.0),
+            )
+            .map(|p| (f64::from(p.x()), f64::from(p.y())));
+        popup(&list, target, at);
+        glib::Propagation::Stop
+    });
+    list.add_controller(keys);
+}
+
 /// Shows a menu made just now once GTK has finished building it, so that it
 /// opens at its full size. GTK adds the separators between the sections in an
 /// idle callback, and a popover already shown keeps the size it was first
@@ -613,7 +669,7 @@ fn remove(window: &MainWindow, backend: Backend, target: Target) {
 /// Sets the rating of the target's tracks: shown at once, while the library
 /// stores it (and announces each stored one); where that fails, the rows show
 /// what is stored again.
-fn rate(window: &MainWindow, backend: Backend, target: Target, stars: Option<u8>) {
+pub(crate) fn rate(window: &MainWindow, backend: Backend, target: Target, stars: Option<u8>) {
     let rows = target.rows();
     let keys: Vec<TrackKey> = rows.iter().map(|r| r.key).collect();
     let before: Vec<(TrackKey, Option<u8>)> = rows.iter().map(|r| (r.key, r.rating)).collect();
