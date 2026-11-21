@@ -43,6 +43,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Revert to the Skipped Track** is greyed out while there is no track to go back to.
 - The repeat button shows a plus between its arrows for **Continue with Related Tracks** and **Auto-DJ**, and the **Playback** menu reads "Repeat: Related Tracks" for the first. **Revert to the Skipped Track** tells where it went back to.
 - **Settings** ▸ **Library**: the explanation of **Analyse tracks in the background** says that it also notes how tracks sound.
+- The manual page `helikodu-cli(1)` describes every command again, also `analyze`, `similar`, `managed-folder`, `dsp`, `related`, `auto-dj`, `generator`, `revert`, `radio-random`, `intro-scan`, `start-radio`, `speed` and `play --dsp`.
+- The website shows the speed popover, endless play in the queue, the shuffle and queue-end settings, the compressor, generator playlists and similar tracks.
 
 ### Fixed
 

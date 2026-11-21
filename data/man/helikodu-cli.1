@@ -1,6 +1,6 @@
 .\" SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors
 .\" SPDX-License-Identifier: CC-BY-SA-4.0
-.TH HELIKODU-CLI 1 2026-11-18 Helikodu "User Commands"
+.TH HELIKODU-CLI 1 2026-11-21 Helikodu "User Commands"
 .SH NAME
 helikodu\-cli \- play audio files, query the Helikodu library and control the application from the terminal
 .SH SYNOPSIS
@@ -60,6 +60,21 @@ helikodu\-cli \- play audio files, query the Helikodu library and control the ap
 .IR path ]
 .RI [ file | track-id ...]
 .br
+.B helikodu\-cli analyze
+.RB [ \-\-no\-loudness ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli similar
+.IR file | track-id
+.RB [ \-\-album | \-\-artist ]
+.RB [ \-\-limit
+.IR n ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
 .B helikodu\-cli duplicates
 .RB [ \-\-json ]
 .RB [ \-\-database
@@ -114,6 +129,15 @@ helikodu\-cli \- play audio files, query the Helikodu library and control the ap
 .RB [ \-\-play\-counts ]
 .RB [ \-\-worker
 .IR path ]
+.br
+.B helikodu\-cli managed\-folder
+.RB { show | set | off | import | consolidate | resume | roll\-back }
+.RI [ arguments ]
+.RB [ \-\-settings
+.IR path ]
+.RB [ \-\-database
+.IR path ]
+.br
 .B helikodu\-cli labels
 .RB { list | show | add | remove | rename | merge | delete }
 .RI [ arguments ]
@@ -122,6 +146,38 @@ helikodu\-cli \- play audio files, query the Helikodu library and control the ap
 .br
 .B helikodu\-cli fields
 .RB { list | define | remove | value }
+.RI [ arguments ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli dsp
+.RB { show | order | default\-order | on | off | chain | compressor | convolution | pitch | speed | track\-eq }
+.RI [ arguments ]
+.RB [ \-\-settings
+.IR path ]
+.br
+.B helikodu\-cli related
+.RB { \-\-track | \-\-album | \-\-artist }
+.I id
+.RB [ \-\-count
+.IR n ]
+.RB [ \-\-random\-seed
+.IR n ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli auto\-dj
+.RB [ \-\-count
+.IR n ]
+.RB [ \-\-random\-seed
+.IR n ]
+.RB [ \-\-json ]
+.RB [ \-\-database
+.IR path ]
+.br
+.B helikodu\-cli generator
+.RB { list | show | add | edit | remove | run | open | preview | play }
 .RI [ arguments ]
 .RB [ \-\-database
 .IR path ]
@@ -169,6 +225,20 @@ helikodu\-cli \- play audio files, query the Helikodu library and control the ap
 .br
 .B helikodu\-cli export\-playlist
 .I playlist file
+.br
+.B helikodu\-cli
+.BR revert " | " radio\-random
+.br
+.B helikodu\-cli intro\-scan
+.BR on | off
+.br
+.B helikodu\-cli start\-radio
+.RB { \-\-track | \-\-album | \-\-artist }
+.I id
+.br
+.B helikodu\-cli speed
+.I rate
+.RB [ \-\-keep\-pitch | \-\-tape ]
 .br
 .B helikodu\-cli \-\-version
 .SH DESCRIPTION
@@ -237,6 +307,15 @@ A positive gain is lowered so that the tagged peak stays at or below full scale.
 .TP
 .BI \-\-preamp " dB"
 Added to the gain of files with loudness tags, \-24 to 24 (default 0).
+.TP
+.B \-\-dsp
+Processes the audio with the DSP chain of the settings file (its
+.B [dsp]
+table: the equalizer, convolution, the compressor, pitch shift and the
+other stages, and the playback speed).
+With
+.B \-\-backend wav
+the processed audio is written to the file.
 .PP
 When standard input is a terminal, these keys control playback and a status
 line on standard error shows the file, position, volume and output:
@@ -374,6 +453,38 @@ The default is half the processors.
 .BI \-\-worker " path"
 The scan worker program that reads written files again, as for
 .BR scan .
+.SS analyze
+Analyses every library track that has no current analysis, one at a time,
+as the application does in the background: where its sound starts and ends,
+its silent stretches, its loudness envelope and its sound features.
+The same pass measures the loudness of tracks without any loudness values
+(no tags, no measurement), an album as one programme.
+Each track's result is stored at once; a file that cannot be decoded is
+recorded and not tried again until it changes.
+Progress goes to standard error.
+.TP
+.B \-\-no\-loudness
+Leaves the loudness measurement out.
+.SS similar
+Lists the library tracks that sound most like a track, given as a library
+file or a track number, from the sound features of the track analysis: most
+alike first, with the track number, the similarity from 0 to 1, artist,
+title, album and length.
+Copies of the same recording are left out.
+The track must have been analysed (see
+.BR analyze ).
+.TP
+.B \-\-album
+Compares with the album of the track as a whole and leaves out the album's
+own tracks.
+.TP
+.B \-\-artist
+The same for the first artist of the track.
+.TP
+.BI \-\-limit " n"
+At most
+.I n
+tracks (default 20).
 .SS duplicates
 Lists the groups of copies in the library: files with exactly the same
 content.
@@ -430,7 +541,7 @@ made are deleted.
 lists the imports instead.
 .SS export\-user\-data
 Writes the ratings, play counts, history, playlists, smart playlists,
-Favourites and saved searches to a JSON file, keyed by path and tags.
+Favourites, saved searches, labels and fields to a JSON file, keyed by path and tags.
 .SS import\-user\-data
 Reads a file written by
 .B export\-user\-data
@@ -459,6 +570,60 @@ settings say, or as
 and
 .B \-\-play\-counts
 say.
+.SS managed\-folder
+The managed media folder, the
+.B [library.managed]
+table of the settings file.
+Change it while the application is closed, or the application may write its
+own copy of the settings over it.
+.B managed\-folder show
+prints the folder, its naming pattern and mode, and a run that was cut short.
+.B managed\-folder set
+.RI [ folder ]
+turns it on or changes it; a folder outside every library folder becomes a
+library folder:
+.TP
+.BI \-\-pattern " pattern"
+The naming pattern below the folder, as in the file organizer.
+.TP
+.BI \-\-mode " mode"
+Whether imports
+.B copy
+or
+.B move
+the files.
+.TP
+.BI \-\-characters " set"
+Which characters names may hold:
+.B portable
+(names Windows can read),
+.B as\-is
+or
+.BR ascii .
+.PP
+.B managed\-folder off
+turns it off; its files stay where they are.
+.BI "managed\-folder import " path ...
+copies or moves files and folders from outside the library into the managed
+folder, named by its pattern, with their covers, CUE sheets, lyrics and logs.
+.B managed\-folder consolidate
+moves or copies the library files outside the managed folder into it; the
+tracks keep their ratings, play counts and history.
+Both take:
+.TP
+.BR \-\-move ", " \-\-copy
+Moves or copies the files, whatever the setting says.
+.TP
+.B \-\-dry\-run
+Only shows the plan: every file and where it goes, names that are taken,
+skipped files, and the space needed and free.
+Nothing changes.
+.PP
+.B managed\-folder resume
+continues a run that was cut short, and
+.B managed\-folder roll\-back
+rolls it back: copies go, moved files go back.
+No new run starts before one of them.
 .SS labels
 Labels are free words given to library tracks, albums and artists.
 They are kept in the library and never written to the files; a label of an
@@ -476,7 +641,7 @@ give and take a label;
 and
 .BI "labels delete " label
 change the labels themselves.
-.B show ,
+.BR show ,
 .B add
 and
 .B remove
@@ -512,6 +677,251 @@ removes one, and
 .BI "fields value " "name track-id" ...
 shows a field's value for library tracks.
 The running application uses changed fields after it is started again.
+.SS dsp
+Shows and changes the DSP chain in the
+.B [dsp]
+table of the settings file; the running application reads a changed file the
+next time it starts.
+The stages are
+.BR pitch ,
+.BR equalizer ,
+.BR convolution ,
+.BR crossfeed ,
+.BR channel\-mix ,
+.B compressor
+and
+.BR limiter .
+.TP
+.B dsp show
+Shows the stages in order, which are on, and the saved chains;
+.B \-\-json
+prints them as JSON.
+.TP
+.BI "dsp order " stage ...
+Puts the stages in this order, first to last; stages left out follow in the
+default order.
+.B dsp default\-order
+puts them back in the default order.
+.TP
+.BI "dsp on " stage "...\fR, \fBdsp off " stage ...
+Switches stages on or off.
+.TP
+.B dsp chain list
+Lists the saved chains.
+.BI "dsp chain save " name
+saves the current order and the stages that are on as a chain (a chain of
+that name is replaced);
+.BI "dsp chain apply " name
+uses a saved chain: its stages in its order, the others off;
+.BI "dsp chain delete " name
+deletes one.
+.TP
+.BR "dsp compressor " [ night | gentle | custom ]
+Switches the compressor on with a preset:
+.B night
+(the default: strong compression with makeup gain, for listening at a low
+volume),
+.B gentle
+(light compression) or
+.B custom
+(the values of
+.B [dsp.compressor]
+in the settings file).
+.TP
+.BI "dsp convolution folder " folder
+Uses the WAV files in a folder, one per sample rate, and switches
+convolution on.
+.BI "dsp convolution file " "rate path"
+uses a WAV file for one sample rate in Hz;
+.B dsp convolution clear
+forgets the folder and the files and switches convolution off.
+.TP
+.B dsp convolution mix
+Sets the mix:
+.BI \-\-wet " percent"
+the share of the processed signal, 0 to 100;
+.BI \-\-gain " dB"
+its gain, \-24 to 12;
+.BR \-\-normalize " " true | false
+whether the impulse response is scaled to boost no frequency.
+.TP
+.BR "dsp convolution check " [\fIfile\fR...]
+Shows the impulse response the settings give for the common sample rates, or
+describes WAV files: their rate, channels, length and the latency they add.
+.TP
+.BI "dsp pitch " semitones
+Shifts the pitch by \-12 to 12 semitones, keeping the tempo; fractions are
+cents.
+.B 0
+switches pitch shift off.
+.TP
+.BI "dsp speed " rate
+The playback speed the application starts with, 0.5 to 2;
+.B 1
+switches it off.
+.B \-\-keep\-pitch
+keeps the pitch, so the tempo changes;
+.B \-\-tape
+lets the pitch follow the speed, as on a tape.
+Without either, the pitch does as it was set before (kept by default).
+The speed is not a stage of the order and is not kept in saved chains.
+.TP
+.B dsp track\-eq list
+Lists the library tracks that have an equalizer of their own; it replaces
+the equalizer of the settings while the track plays.
+.BI "dsp track\-eq show " track-id
+prints the equalizer of a track as JSON;
+.BI "dsp track\-eq clear " track-id
+removes it, so the track plays with the settings' equalizer again.
+.TP
+.BI "dsp track\-eq set " track-id
+Gives a track an equalizer of its own, with one of:
+.B \-\-from\-settings
+(a copy of the equalizer of the settings),
+.BI \-\-autoeq " file"
+(an AutoEQ or EqualizerAPO ParametricEQ.txt file),
+.BI \-\-preset " id"
+(a built-in graphic preset such as
+.BR flat ,
+.B bass\-boost
+or
+.BR vocal )
+or
+.B \-\-none
+(no equalizer for this track, whatever the settings say).
+A change applies the next time the track starts.
+.SS related
+Lists the library tracks endless play would add after a library track, album
+or artist, given by its number with
+.BR \-\-track ,
+.B \-\-album
+or
+.BR \-\-artist ,
+with the
+.B [playback.endless]
+settings.
+.TP
+.BI \-\-count " n"
+How many tracks to pick (default 20).
+.TP
+.BI \-\-random\-seed " n"
+The random seed; the same seed picks the same tracks.
+The default is taken from the time.
+.SS auto\-dj
+Lists the library tracks the Auto-DJ would add, with the
+.B [playback.auto_dj]
+settings.
+.TP
+.BI \-\-count " n"
+How many tracks to pick; the default is
+.BR playback.auto_dj.ahead .
+.TP
+.BI \-\-random\-seed " n"
+The random seed, as for
+.BR related .
+.SS generator
+Generator playlists are made by steps, one per line: a source
+.RB ( "from library" ,
+.BI "from playlist \(dq" name \(dq
+or
+.BI "from query " query\fR),
+then filters
+.RB ( where
+.IR query ,
+.B exclude playlist
+.BI \(dq name \(dq\fR),
+sorts
+.RB ( sort
+.I key
+.RB [ asc | desc ],
+by
+.BR rating ,
+.BR plays ,
+.BR skips ,
+.BR last\-played ,
+.BR added ,
+.BR year ,
+.BR title ,
+.BR artist ,
+.BR album ,
+.B length
+or
+.BR random ),
+caps
+.RB ( per\-artist
+.IR n ,
+.B per\-album
+.IR n )
+and a limit
+.RB ( limit
+.IR n ,
+or
+.B limit
+.I n
+.BR minutes ).
+Lines starting with
+.B #
+are comments.
+A generator is given by its name or its number, as
+.B generator list
+prints them.
+.TP
+.B generator list
+Lists the generator playlists;
+.BI "generator show " generator
+prints its steps, in the form
+.B add
+and
+.B edit
+take.
+.TP
+.BI "generator add " name
+Adds a generator with the steps of
+.BI \-\-steps " text"
+or
+.BI \-\-steps\-file " file"
+.RB ( \-
+for the standard input).
+It is made again each time it is opened, unless
+.B \-\-keep
+keeps the result until
+.B run
+makes it again.
+.TP
+.BI "generator edit " generator
+Changes its name
+.RB ( \-\-name
+.IR name ),
+its steps
+.RB ( \-\-steps ,
+.BR \-\-steps\-file )
+or whether it is made again on open
+.RB ( \-\-on\-open
+.BR yes | no ).
+.BI "generator remove " generator
+removes it.
+.TP
+.BI "generator run " generator
+Makes its tracks again, stores and prints them.
+.BI "generator open " generator
+prints the tracks as opening it shows them.
+.B generator preview
+runs the steps of
+.B \-\-steps
+or
+.B \-\-steps\-file
+without storing anything.
+.B run
+and
+.B preview
+take
+.BI \-\-random\-seed " n"
+for
+.BR "sort random" .
+.TP
+.BI "generator play " generator
+Opens the generator and plays its tracks in the running application,
+replacing its queue, as the commands for the running application do.
 .SH COMMANDS FOR THE RUNNING APPLICATION
 These commands talk to the running Helikodu window through its D-Bus
 interface,
@@ -561,7 +971,15 @@ Sets the shuffle
 .SS repeat
 Sets the repeat
 .IR mode :
-.BR off ", " one " (the track), " album " or " all " (the queue)."
+.BR off ", " one " (the track), " album ", " all " (the queue),"
+.B endless
+(tracks related to the last one are added when the queue runs out, with the
+.B [playback.endless]
+settings) or
+.B auto\-dj
+(tracks from the library are kept queued ahead, with the
+.B [playback.auto_dj]
+settings).
 .SS enqueue
 Adds files to the end of the queue, or with
 .B \-\-next
@@ -599,6 +1017,44 @@ prints them, to
 .IR file ;
 the extension picks the format:
 .BR .m3u8 ", " .m3u ", " .pls " or " .xspf .
+.SS revert
+Goes back to the track
+.B next
+last moved on from, where it was.
+.SS radio\-random
+Plays a random track of the queue from a random point in it.
+.SS intro\-scan
+Turns intro scan
+.B on
+or
+.BR off :
+only the first seconds of each track play, as many as the
+.B playback.intro_scan_s
+setting says (10 by default).
+.SS start\-radio
+Replaces the queue with a library track, album or artist, given by its number
+with
+.BR \-\-track ,
+.B \-\-album
+or
+.BR \-\-artist ,
+and related tracks, and turns on endless play, which keeps adding tracks
+related to it.
+.SS speed
+Plays at another
+.IR rate ,
+0.5 to 2
+.RB ( 1
+is the normal speed), until the application ends; playback goes on where it
+was.
+.B dsp speed
+sets the speed it starts with.
+.TP
+.B \-\-keep\-pitch
+Keeps the pitch, so the tempo changes (the default).
+.TP
+.B \-\-tape
+Lets the pitch follow the speed, as on a tape.
 .SH COMMON OPTIONS
 .TP
 .B \-\-json
@@ -613,6 +1069,12 @@ Later versions may add keys; existing keys keep their meaning.
 .TP
 .BI \-\-database " path"
 Uses this library database instead of the default one.
+.TP
+.BI \-\-settings " path"
+Uses this settings file instead of the default one
+.RB ( managed\-folder
+and
+.BR dsp ).
 .TP
 .BR \-h ", " \-\-help
 Prints help for the tool or a command.
@@ -638,7 +1100,14 @@ a scan could not start, or
 .B info
 found no such track; for
 .BR loudness ,
-also a track that could not be measured or whose tags could not be written.
+also a track that could not be measured or whose tags could not be written;
+for
+.BR analyze ,
+a track that could not be analysed; for
+.BR similar ,
+no similar track (the track is not analysed yet or is silent); for
+.BR managed\-folder ,
+a file that could not be placed or a run that was not finished.
 .TP
 .B 2
 A usage error: an unknown option or value, or options that do not go together.
@@ -658,6 +1127,12 @@ The library database is
 .RI ( ~/.local/share/helikodu/library.db
 when it is not set).
 .TP
+.B XDG_CONFIG_HOME
+The settings file is
+.I $XDG_CONFIG_HOME/helikodu/settings.toml
+.RI ( ~/.config/helikodu/settings.toml
+when it is not set).
+.TP
 .BR LC_ALL ", " LC_COLLATE ", " LANG
 The locale that sorting follows.
 .TP
@@ -672,6 +1147,21 @@ The library database, shared with
 creates it; the other library commands need it, except
 .B info
 on a file.
+.TP
+.I ~/.config/helikodu/settings.toml
+The settings file, shared with
+.BR helikodu (1).
+.BR dsp ,
+.BR managed\-folder ,
+.BR related ,
+.B auto\-dj
+and
+.B play \-\-dsp
+read it;
+.B dsp
+and
+.B managed\-folder
+also write it.
 .SH EXAMPLES
 List the ALSA devices, then play an album exclusively to one of them with
 album gain:
@@ -700,6 +1190,18 @@ shuffled, then skip a track:
 helikodu\-cli play\-query \-\-shuffle \(aqgenre:jazz rating>=4\(aq
 helikodu\-cli next
 helikodu\-cli status \-\-json
+.EE
+.RE
+.PP
+Switch the compressor on for listening at night, try the chain on a file
+written to a WAV file, and play an audiobook a little faster in the running
+application:
+.PP
+.RS
+.EX
+helikodu\-cli dsp compressor night
+helikodu\-cli play \-\-dsp \-\-backend wav \-\-wav\-out out.wav track.flac
+helikodu\-cli speed 1.25
 .EE
 .RE
 .SH SEE ALSO

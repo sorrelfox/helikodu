@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Renders the screenshots of the website (`docs/site`) over the sample
-//! backend: the library views, the panel's tabs, Now Playing, the settings,
-//! the tag editor, the tools and the mini player, in one colour scheme and at
+//! backend: the library views, the panel's tabs, Now Playing, endless play
+//! and the speed, the settings, the tag editor, the tools and the mini player, in one colour scheme and at
 //! the pixel scale asked for. `docs/site/shots.py` runs it once per scheme
 //! under a headless compositor and turns the pictures into the files the
 //! pages show. Run it by hand as the other examples:
@@ -38,8 +38,8 @@ use gtk::{gio, glib, graphene};
 use helikodu_model::settings::{FilterKind, ParametricFilter, VolumeControl};
 use helikodu_ui_gtk::backend::services::AnalysisFacts;
 use helikodu_ui_gtk::backend::{
-    AlbumKey, AlbumQuery, Backend, MediaKind, OutputInfo, PlayerRequest, SignalLamp, SignalState,
-    StageKind, TrackGrouping, TrackKey, TrackQuery, Update, sample,
+    AlbumKey, AlbumQuery, Backend, MediaKind, OutputInfo, PlayerRequest, RepeatMode, SignalLamp,
+    SignalState, SimilarSeed, StageKind, TrackGrouping, TrackKey, TrackQuery, Update, sample,
 };
 use helikodu_ui_gtk::style::{AccentChoice, SchemeChoice, set_choice};
 use helikodu_ui_gtk::{MainWindow, WindowStyle, install_actions, prepare_display};
@@ -340,6 +340,14 @@ fn descendants(root: &gtk::Widget) -> Vec<gtk::Widget> {
     all
 }
 
+/// Closes the Settings window, if it is open.
+fn close_settings() {
+    if let Some(settings) = toplevel("settings") {
+        settings.close();
+        spin(300);
+    }
+}
+
 /// The shown window named `name`.
 fn toplevel(name: &str) -> Option<gtk::Window> {
     gtk::Window::list_toplevels()
@@ -426,6 +434,8 @@ fn shoot_library(application: &gtk::Application, shots: &Shots) {
         "playlist",
         "smart-playlist-view",
         "smart-playlist",
+        "generator",
+        "similar",
         "history",
         "statistics",
         "lyrics",
@@ -606,6 +616,45 @@ fn shoot_library(application: &gtk::Application, shots: &Shots) {
         spin(500);
         shots.window("smart-playlist", &main);
     }
+    // Without the queue panel, so that the pages of a generator and of similar
+    // tracks have the width their titles need.
+    let wide = shots.any(&["generator", "similar"]);
+    if wide {
+        let _ = WidgetExt::activate_action(&main, "win.toggle-panel", None);
+        spin(300);
+    }
+    // The sample's generator playlist with its steps and the tracks they make.
+    if shots.wanted("generator") {
+        wait(3000, || {
+            main.playlist_names()
+                .iter()
+                .any(|n| n == "Forgotten favourites")
+        });
+        if main.open_playlist_named("Forgotten favourites", false)
+            && wait(5000, || main.generator_state().tracks > 0)
+        {
+            spin(400);
+            shots.window("generator", &main);
+        } else {
+            eprintln!("site-shots: generator: the generator has no tracks");
+            shots.failed.set(true);
+        }
+    }
+    // The tracks that sound like one track.
+    if shots.wanted("similar") {
+        main.demo_show_similar(SimilarSeed::Track(TrackKey(2)));
+        if wait(5000, || main.similar_state().tracks > 0) {
+            spin(400);
+            shots.window("similar", &main);
+        } else {
+            eprintln!("site-shots: similar: no similar tracks were found");
+            shots.failed.set(true);
+        }
+    }
+    if wide {
+        let _ = WidgetExt::activate_action(&main, "win.toggle-panel", None);
+        spin(300);
+    }
     if shots.wanted("history") {
         let _ = WidgetExt::activate_action(&main, "win.show-history", None);
         spin(500);
@@ -685,7 +734,8 @@ fn shoot_windows(application: &gtk::Application, shots: &Shots) {
     let settings_wanted = SETTINGS
         .iter()
         .any(|page| shots.wanted(&format!("settings-{page}")));
-    let settings_wanted = settings_wanted || shots.wanted("settings-analysis");
+    let settings_wanted =
+        settings_wanted || shots.wanted("settings-analysis") || shots.wanted("settings-queue-end");
     if !(settings_wanted || shots.any(EDITOR) || shots.any(MINI) || shots.wanted("volume-confirm"))
     {
         return;
@@ -744,6 +794,15 @@ fn shoot_windows(application: &gtk::Application, shots: &Shots) {
         spin(400);
         scroll_to(&settings, "track-analysis");
         shots.window("settings-analysis", &settings);
+    }
+    // The Playback page further up, at Shuffle, Intro scan and When the queue
+    // ends.
+    if shots.wanted("settings-queue-end") {
+        let settings = main.open_settings("playback");
+        settings.set_default_size(1080, 780);
+        spin(400);
+        scroll_to(&settings, "shuffle-favour");
+        shots.window("settings-queue-end", &settings);
     }
     if let Some(settings) = toplevel("settings") {
         settings.close();
@@ -857,12 +916,13 @@ fn analysed_track(backend: &Backend) -> Option<TrackKey> {
 }
 
 /// Settings › DSP and EQ with each editor, and the signal path while the
-/// equalizer and the limiter work.
+/// equalizer and the limiter work; the compressor is on for its own page.
 fn shoot_dsp(application: &gtk::Application, shots: &Shots) {
-    const STAGES: [(&str, &str); 4] = [
+    const STAGES: [(&str, &str); 5] = [
         ("equalizer", "eq-parametric"),
         ("crossfeed", "crossfeed"),
         ("channel-mix", "channel-mix"),
+        ("compressor", "compressor"),
         ("limiter", "limiter"),
     ];
     const GRAPHIC: [(&str, &str); 2] = [
@@ -919,9 +979,25 @@ fn shoot_dsp(application: &gtk::Application, shots: &Shots) {
 
     for (stage, name) in STAGES {
         if shots.wanted(name) {
+            let compressor = stage == "compressor";
+            // The open page shows the settings it was opened with.
+            if compressor {
+                close_settings();
+                let _ = backend
+                    .services()
+                    .update_settings(&mut |s| s.dsp.compressor.enabled = true);
+                spin(300);
+            }
             let settings = main.open_dsp_stage(stage);
             settings.set_default_size(1080, 780);
             shots.window(name, &settings);
+            if compressor {
+                close_settings();
+                let _ = backend
+                    .services()
+                    .update_settings(&mut |s| s.dsp.compressor.enabled = false);
+                spin(300);
+            }
         }
     }
     for (mode, name) in GRAPHIC {
@@ -936,6 +1012,70 @@ fn shoot_dsp(application: &gtk::Application, shots: &Shots) {
     }
     if let Some(settings) = toplevel("settings") {
         settings.close();
+    }
+    main.destroy();
+}
+
+/// The queue panel while endless play adds related tracks, then the speed
+/// popover over the deck.
+fn shoot_smart_play(application: &gtk::Application, shots: &Shots) {
+    if !shots.any(&["queue-endless", "speed"]) {
+        return;
+    }
+    let backend = sample::backend(&playing(sample::SampleOptions::default().albums));
+    let main = main_window(application, &backend, MAIN_SIZE);
+    if shots.wanted("queue-endless") {
+        // The last entry of the queue plays, so that endless play adds tracks
+        // after it.
+        let queue = main.queue_list();
+        let last = descendants(queue.upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::ListBoxRow>().ok())
+            .filter_map(|r| r.widget_name().parse::<u64>().ok())
+            .max();
+        if let Some(last) = last {
+            backend.send(PlayerRequest::PlayEntry(last));
+            spin(200);
+        }
+        backend.send(PlayerRequest::SetRepeatMode(RepeatMode::Endless));
+        let sparks = || {
+            descendants(queue.upcast_ref())
+                .into_iter()
+                .filter_map(|w| w.downcast::<gtk::Image>().ok())
+                .filter(|i| i.icon_name().as_deref() == Some("helikodu-spark-symbolic"))
+                .count()
+        };
+        if wait(5000, || sparks() > 0) {
+            spin(300);
+            // Scrolled to the end: the added tracks and what comes next.
+            if let Some(scroller) = queue
+                .ancestor(gtk::ScrolledWindow::static_type())
+                .and_downcast::<gtk::ScrolledWindow>()
+            {
+                let adjustment = scroller.vadjustment();
+                adjustment.set_value(adjustment.upper());
+                spin(300);
+            }
+            shots.window("queue-endless", &main);
+        } else {
+            eprintln!("site-shots: queue-endless: no tracks were added");
+            shots.failed.set(true);
+        }
+    }
+    if shots.wanted("speed") {
+        backend.send(PlayerRequest::SetSpeed {
+            rate: 1.25,
+            keep_pitch: true,
+        });
+        spin(300);
+        if let Some(popover) = main.open_speed() {
+            spin(300);
+            shots.window_with("speed", &main, &popover);
+            popover.popdown();
+        } else {
+            eprintln!("site-shots: speed: the popover did not open");
+            shots.failed.set(true);
+        }
     }
     main.destroy();
 }
@@ -1212,6 +1352,7 @@ fn main() -> ExitCode {
         shoot_library(application, &s);
         shoot_windows(application, &s);
         shoot_dsp(application, &s);
+        shoot_smart_play(application, &s);
         shoot_tools(application, &s);
         shoot_other(application, &s);
         application.quit();
