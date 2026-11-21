@@ -64,32 +64,51 @@ Each track in your library can also have its own settings, under **Playback** in
 
 ## Smarter shuffle, endless play and the Auto-DJ
 
-These work from your library, offline, and have no page in the settings window yet: they are set in the settings file, `~/.config/helikodu/settings.toml`, and take effect as soon as the file is saved.
+These work from your library, offline. They are set in **Settings ▸ Playback**, and every change applies at once, also to what is playing.
 
-### Weighted and filtered shuffle
+### Shuffle and intro scan
 
-```toml
-[playback.shuffle]
-weight_by = ["rating", "not-recently-played"]   # also: "less-played"
-min_rating = 4                                  # in half stars: skip tracks rated below two stars
-skip_query = "genre:Christmas"                  # tracks this query finds are passed over
-```
+Under **Shuffle**, **Favour** brings tracks up earlier when shuffling by tracks: **Higher rated tracks** (tracks without a rating count as three stars), **Tracks not played for a while**, **Tracks played less often**, in any combination. Every track still plays once in each round. **Skip tracks rated below** passes over rated tracks under a number of stars, and **tracks that match** passes over the tracks a search query finds (`genre:Christmas`), in every shuffle mode, as **Leave out when shuffling** does. Tracks without a rating are never skipped for their rating.
 
-With `weight_by`, shuffling by tracks brings the favoured tracks up earlier: higher rated ones (tracks without a rating count as three stars), those not played for a long time, or those played less. Every track still plays once per round. `min_rating` and `skip_query` (the query language of the search field) pass tracks over in every shuffle mode, as **Leave out when shuffling** does. Tracks without a rating are never passed over by `min_rating`.
+The query fields use the language of the search field, with the same completion. A query that cannot be read is not used: the field keeps the last one that could, and says under it what is wrong.
+
+**Intro scan** sets how much of each track **Queue ▸ Intro Scan** in the Playback menu plays: 3 seconds to 2 minutes, 10 seconds by default.
 
 ### Endless play and the Auto-DJ
 
-**Repeat** ▸ **Continue with Related Tracks** adds tracks to the end of the queue whenever it runs out: tracks like the last one of the queue, its album or its artist (`seed`), by artist, album artist, genre, release year, labels and play statistics. Tracks played or queued lately are not added again.
+**Repeat** ▸ **Continue with Related Tracks** adds tracks to the end of the queue whenever it runs out. Under **When the queue ends**, the card **Continue with related tracks** sets what they are **Related to** (**The last track** of the queue, **Its album** or **Its artist**), **How alike** they are, how many are added at a time (10), how many of the tracks played or queued last are not added again (100), and a query they must match.
+
+**How alike** offers **A mix** (artist and genre count most; years, labels and play counts a little), **Same artist**, **Same genre**, **Sounds alike** (from the [track analysis](settings.md#track-analysis), for tracks that are analysed), and **Your own weights**: seven sliders from 0 to 10 for the same artist, the same album artist, the same genre, years close together (within 5 years, which you can change), shared labels, similar play counts and ratings, and how alike they sound. A likeness at 0 is not used; with all of them at 0 nothing is added. Choosing a named mix again keeps your weights for the next time you choose **Your own weights** while Helikodu runs.
+
+**Repeat** ▸ **Auto-DJ** keeps a number of tracks from your library queued after the playing one, so the music never stops. In its card, set how many **Tracks kept ahead** (5), how many recent tracks are not added again (200), what it favours, a rating below which tracks are skipped, and a query the tracks must match (empty for the whole library). It works from an empty queue too: choose it and press Play.
+
+In the queue panel, the tracks that endless play or the Auto-DJ added are listed under **Added by Helikodu** and carry a small spark; they play, move and are removed like any other. After the last track a box says what comes next, for example "Then: tracks related to “Mirror Lake”" or "Auto-DJ keeps 5 tracks ahead", with **Change…**, which opens these settings, and **Turn off**, which sets Repeat to Off and keeps the tracks already added. When nothing more can be added (no track matches the filter, or every related track was played or queued lately), the box says so and the music stops after the last track; if the queue is not in view then, a message with **Settings…** tells you once.
+
+### Starting a radio
+
+**Start Radio** in the menu of a track, an album or an artist replaces the queue with it and related tracks, and turns on **Continue with Related Tracks**, which then keeps adding tracks related to it. **Undo** in the message that follows puts back the queue, the playing position and the Repeat mode. (Tracks you had queued with **Play Next** or **Add to Queue** come back as part of the queue's own list.) Start Radio needs one track: with several selected it is greyed out.
+
+### In the settings file
+
+The same settings are kept in `~/.config/helikodu/settings.toml`:
 
 ```toml
+[playback]
+intro_scan_s = 10
+
+[playback.shuffle]
+weight_by = ["rating", "not-recently-played"]   # also: "less-played"
+min_rating = 4                                  # in half stars: skip tracks rated below two stars
+skip_query = "genre:Christmas"
+
 [playback.endless]
 seed = "track"     # track | album | artist
-batch = 10         # tracks added each time
-window = 100       # no repeats within this many tracks
-year_range = 5     # years either side that count as the same time
-filter = ""        # a query the added tracks must match
+batch = 10
+window = 100
+year_range = 5
+filter = ""
 
-[playback.endless.weights]   # 0 to 10: how much each likeness counts
+[playback.endless.weights]   # 0 to 10
 artist = 4
 album_artist = 3
 genre = 3
@@ -97,14 +116,10 @@ year = 2
 labels = 2
 statistics = 1
 sound = 0
-```
 
-**Repeat** ▸ **Auto-DJ** keeps a number of tracks from your library queued after the playing one, so the music never stops. It works from an empty queue too: choose it and press Play.
-
-```toml
 [playback.auto_dj]
-ahead = 5                                # tracks kept queued
-filter = "genre:Jazz OR genre:Soul"      # empty for the whole library
+ahead = 5
+filter = "genre:Jazz OR genre:Soul"
 weight_by = ["rating", "less-played"]
 min_rating = 0
 window = 200
@@ -121,6 +136,7 @@ The panel on the right shows the **Queue**: what played before (**History**), wh
 - Drag tracks from a list onto the panel to add them to the queue.
 - **Save as playlist** saves the queue as a playlist.
 - **Clear** removes everything but the playing track.
+- With **Continue with Related Tracks** or **Auto-DJ** on, the tracks Helikodu added are listed under **Added by Helikodu**, and a box after the last track says what comes next (see [Endless play and the Auto-DJ](#endless-play-and-the-auto-dj)).
 
 With shuffle on, "Previous" retraces the tracks in the order they actually played; turning shuffle off returns to the album order.
 

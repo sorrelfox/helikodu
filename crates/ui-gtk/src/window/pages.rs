@@ -661,6 +661,13 @@ impl MainWindow {
                     action.set_enabled(on);
                 }
             }
+            // A radio needs one seed.
+            if let Some(action) = self
+                .lookup_action("sel-start-radio")
+                .and_downcast::<gio::SimpleAction>()
+            {
+                action.set_enabled(actions::radio_seed(target).is_some());
+            }
         }
         pages.target.replace(target);
     }

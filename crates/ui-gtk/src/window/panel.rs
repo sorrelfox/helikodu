@@ -6,9 +6,11 @@
 //! the Signal path tab is in [`signal_path`].
 
 pub(crate) mod lyrics;
+pub(crate) mod queue_end;
 mod signal_path;
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -75,6 +77,11 @@ mod imp {
         pub(super) lyrics: RefCell<Option<Rc<lyrics::LyricsPage>>>,
         pub(super) covers: RefCell<Option<Rc<CoverCache>>>,
         pub(super) signal: RefCell<Option<Rc<signal_path::SignalPathPage>>>,
+        pub(super) backend: RefCell<Option<Backend>>,
+        pub(super) playback: RefCell<std::rc::Weak<Playback>>,
+        /// Whether endless play or the Auto-DJ had nothing more to add when
+        /// the queue was last shown, so its toast shows once.
+        pub(super) nothing_to_add: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -141,7 +148,7 @@ fn section(text: &str) -> gtk::ListBoxRow {
     row
 }
 
-fn track_row(track: &TrackRow, classes: &[&str]) -> gtk::ListBoxRow {
+fn track_row(track: &TrackRow, classes: &[&str], added: bool) -> gtk::ListBoxRow {
     let row = gtk::ListBoxRow::new();
     if let Some(entry) = track.entry {
         // The entry, for activation.
@@ -158,9 +165,9 @@ fn track_row(track: &TrackRow, classes: &[&str]) -> gtk::ListBoxRow {
         lead.add_css_class("hk-queue-lead");
         line.append(&lead);
     } else {
-        let lead = gtk::Label::new(Some(
-            &track.number.map(|n| n.to_string()).unwrap_or_default(),
-        ));
+        // Rows Helikodu added come from anywhere: no track number.
+        let number = track.number.filter(|_| !added);
+        let lead = gtk::Label::new(Some(&number.map(|n| n.to_string()).unwrap_or_default()));
         lead.add_css_class("hk-queue-lead");
         lead.set_xalign(0.5);
         line.append(&lead);
@@ -173,6 +180,13 @@ fn track_row(track: &TrackRow, classes: &[&str]) -> gtk::ListBoxRow {
     let title = TitleLine::new(&text, &[]);
     title.set_copies(track.key, track.copies);
     line.append(&title);
+    if added {
+        line.append(&queue_end::spark());
+        row.add_css_class("added");
+        row.update_property(&[gtk::accessible::Property::Description(&tr(
+            "Added by Helikodu",
+        ))]);
+    }
     let length = label(
         &track.duration.map(format::duration).unwrap_or_default(),
         &["hk-t3", "hk-secondary", "hk-numeric"],
@@ -189,6 +203,8 @@ impl Panel {
     pub(crate) fn bind(&self, backend: &Backend, playback: &Rc<Playback>, covers: &Rc<CoverCache>) {
         let imp = self.imp();
         imp.covers.replace(Some(covers.clone()));
+        imp.backend.replace(Some(backend.clone()));
+        imp.playback.replace(Rc::downgrade(playback));
         let artists = NowLinks::new(&["hk-t2"]);
         artists.set_backend(backend);
         imp.artist.set_visible(false);
@@ -211,7 +227,7 @@ impl Panel {
         let weak = self.downgrade();
         playback.connect(move |view, change| {
             if let Some(panel) = weak.upgrade()
-                && matches!(change, Change::Queue | Change::Track)
+                && matches!(change, Change::Queue | Change::Track | Change::Modes)
             {
                 panel.update(view);
             }
@@ -281,6 +297,58 @@ impl Panel {
         imp.hide_button.set_visible(!integrated);
     }
 
+    /// Shows the toast about nothing more to add once, when it happens while
+    /// the queue is not in view.
+    fn note_nothing_to_add(
+        &self,
+        view: &PlayerView,
+        settings: &helikodu_model::settings::PlaybackSettings,
+    ) {
+        let imp = self.imp();
+        let nothing = view.queue.nothing_to_add
+            && matches!(
+                view.modes.repeat,
+                crate::backend::RepeatMode::Endless | crate::backend::RepeatMode::AutoDj
+            );
+        if nothing == imp.nothing_to_add.replace(nothing) || !nothing {
+            return;
+        }
+        let revealed = self
+            .parent()
+            .and_downcast::<gtk::Revealer>()
+            .is_none_or(|r| r.reveals_child());
+        if self.is_mapped() && revealed && imp.queue_tab.is_active() {
+            return;
+        }
+        let Some(window) = self.root().and_downcast::<crate::window::MainWindow>() else {
+            return;
+        };
+        let weak = window.downgrade();
+        window.toast_marked(
+            &queue_end::toast_text(view.modes.repeat, settings),
+            crate::window::ToastLead::Warning,
+            Some(&tr("Settings…")),
+            true,
+            move || {
+                if let Some(window) = weak.upgrade() {
+                    crate::dialogs::settings::open_at(
+                        &window,
+                        crate::dialogs::settings::Page::Playback,
+                        queue_end::SETTINGS_ROW,
+                    );
+                }
+            },
+        );
+    }
+
+    /// Shows the queue again, after a change of the settings it words.
+    pub(crate) fn refresh_queue(&self) {
+        let playback = self.imp().playback.borrow().upgrade();
+        if let Some(playback) = playback {
+            self.update(&playback.view());
+        }
+    }
+
     /// The queue list, whose rows are named by their entry.
     pub(crate) fn queue_list(&self) -> gtk::ListBox {
         self.imp().list.get()
@@ -335,36 +403,50 @@ impl Panel {
 
         crate::widgets::remove_rows(&imp.list);
         let queue = &view.queue;
-        if queue.items.is_empty() {
+        let settings = imp
+            .backend
+            .borrow()
+            .as_ref()
+            .map(|b| b.services().settings().playback.clone())
+            .unwrap_or_default();
+        let end = queue_end::words(view.modes.repeat, queue, &settings);
+        self.note_nothing_to_add(view, &settings);
+        if queue.items.is_empty() && end.is_none() {
             imp.queue_stack.set_visible_child_name("empty");
             imp.summary.set_text("");
             return;
         }
         imp.queue_stack.set_visible_child_name("list");
+        let added: HashSet<u64> = queue.added.iter().copied().collect();
+        let is_added = |t: &TrackRow| t.entry.is_some_and(|e| added.contains(&e));
         let current = queue.current;
-        let split = current.unwrap_or(0);
+        let split = current.unwrap_or(0).min(queue.items.len());
         if split > 0 {
             imp.list.append(&section(&tr("History")));
             for track in &queue.items[..split] {
-                imp.list.append(&track_row(track, &["history"]));
+                imp.list
+                    .append(&track_row(track, &["history"], is_added(track)));
             }
         }
-        let upcoming_from = match current {
+        let upcoming_from = match current.filter(|&i| i < queue.items.len()) {
             Some(index) => {
                 imp.list.append(&section(&tr("Now playing")));
+                let track = &queue.items[index];
                 imp.list
-                    .append(&track_row(&queue.items[index], &["current"]));
+                    .append(&track_row(track, &["current"], is_added(track)));
                 index + 1
             }
             None => 0,
         };
         let upcoming = &queue.items[upcoming_from.min(queue.items.len())..];
+        let (helikodu, own): (Vec<&TrackRow>, Vec<&TrackRow>) =
+            upcoming.iter().partition(|t| is_added(t));
         let (queued, context): (Vec<&TrackRow>, Vec<&TrackRow>) =
-            upcoming.iter().partition(|t| !t.from_context);
+            own.into_iter().partition(|t| !t.from_context);
         if !queued.is_empty() {
             imp.list.append(&section(&tr("Next in queue")));
             for track in queued {
-                imp.list.append(&track_row(track, &[]));
+                imp.list.append(&track_row(track, &[], false));
             }
         }
         if !context.is_empty() {
@@ -374,8 +456,39 @@ impl Panel {
             };
             imp.list.append(&section(&heading));
             for track in context {
-                imp.list.append(&track_row(track, &[]));
+                imp.list.append(&track_row(track, &[], false));
             }
+        }
+        if !helikodu.is_empty() {
+            imp.list.append(&section(&tr("Added by Helikodu")));
+            for track in helikodu {
+                imp.list.append(&track_row(track, &[], true));
+            }
+        }
+        if let Some(end) = &end {
+            let weak = self.downgrade();
+            let change = move || {
+                if let Some(window) = weak
+                    .upgrade()
+                    .and_then(|p| p.root())
+                    .and_downcast::<crate::window::MainWindow>()
+                {
+                    crate::dialogs::settings::open_at(
+                        &window,
+                        crate::dialogs::settings::Page::Playback,
+                        queue_end::SETTINGS_ROW,
+                    );
+                }
+            };
+            let backend = imp.backend.borrow().clone();
+            let turn_off = move || {
+                if let Some(backend) = &backend {
+                    backend.send(PlayerRequest::SetRepeatMode(
+                        crate::backend::RepeatMode::Off,
+                    ));
+                }
+            };
+            imp.list.append(&queue_end::row(end, change, turn_off));
         }
         imp.clear_button.set_sensitive(queue.items.len() > 1);
         let total: Duration = upcoming.iter().filter_map(|t| t.duration).sum();

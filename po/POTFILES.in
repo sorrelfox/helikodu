@@ -20,6 +20,8 @@ crates/ui-gtk/src/widgets/waveform_seek_bar.rs
 crates/ui-gtk/src/window/pane_handle.rs
 crates/ui-gtk/src/widgets/side_column.rs
 crates/ui-gtk/src/window/panel.rs
+crates/ui-gtk/src/window/panel/queue_end.rs
+crates/ui-gtk/src/related.rs
 crates/ui-gtk/src/window.rs
 crates/ui-gtk/src/window/sidebar.rs
 crates/ui-gtk/src/window/toast_overlay.rs
@@ -37,6 +39,7 @@ crates/ui-gtk/src/dialogs/settings/managed_folder.rs
 crates/ui-gtk/src/dialogs/settings/loudness.rs
 crates/ui-gtk/src/dialogs/settings/output.rs
 crates/ui-gtk/src/dialogs/settings/playback.rs
+crates/ui-gtk/src/dialogs/settings/smart_play.rs
 crates/ui-gtk/src/dialogs/shortcuts.rs
 crates/ui-gtk/src/dialogs/tag_editor.rs
 crates/ui-gtk/src/dialogs/volume_confirm.rs

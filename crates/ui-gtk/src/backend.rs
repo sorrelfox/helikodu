@@ -1406,6 +1406,9 @@ pub enum PlayerRequest {
     RadioRandom,
     /// Starts endless play from a library track, album or artist.
     StartRadio(RadioSeed),
+    /// Puts back the queue, the position and the Repeat mode as they were
+    /// before the last `StartRadio`.
+    UndoRadio,
     /// Sets the start of the A-B loop at the playing position.
     LoopStartHere,
     /// Sets the end of the A-B loop at the playing position; the loop then plays.
@@ -1678,6 +1681,13 @@ pub struct QueueSnapshot {
     pub current: Option<usize>,
     /// Whether "Revert" has a track of the queue to go back to.
     pub can_revert: bool,
+    /// The entries that endless play or the Auto-DJ added, in play order.
+    pub added: Vec<u64>,
+    /// The seed of a radio that endless play continues from; `None` while it
+    /// continues from the queue's last track.
+    pub radio: Option<RadioSeed>,
+    /// Endless play or the Auto-DJ found nothing more to add.
+    pub nothing_to_add: bool,
 }
 
 /// What the core reports.

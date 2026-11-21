@@ -15,6 +15,7 @@ use helikodu_model::player::{EnqueueAt, EntryId, QueueContext, RepeatMode};
 use helikodu_model::settings::{SeedKind, SmartPlaySettings};
 
 use super::{Actor, ContextRequest, Direction, Notice, PlayerEvent, Slot};
+use crate::player::SmartQueue;
 
 /// How many entries "Revert" remembers.
 const REMEMBERED_SKIPS: usize = 50;
@@ -35,6 +36,7 @@ impl Actor {
             return;
         }
         self.apply_smart_play(settings);
+        self.set_nothing_to_add(false);
         let tracks: Vec<TrackRef> = self.queue.items().iter().map(|e| e.track.clone()).collect();
         let keys = self.keys_for(&tracks);
         self.queue.rekey(|_| keys);
@@ -143,15 +145,10 @@ impl Actor {
             if upcoming > 0 {
                 return;
             }
-            let seed = match self.endless_seed {
-                Some(seed) => seed,
-                None => {
-                    let Some(seed) = self.seed_from_queue() else {
-                        return;
-                    };
-                    self.endless_seed = Some(seed);
-                    seed
-                }
+            // A radio's seed stays; otherwise each batch follows the queue's
+            // last track as it is then.
+            let Some(seed) = self.endless_seed.or_else(|| self.seed_from_queue()) else {
+                return;
             };
             let settings = self.smart.endless.clone();
             let avoid = self.avoided(settings.window);
@@ -176,12 +173,47 @@ impl Actor {
         match picked {
             Ok(tracks) if !tracks.is_empty() => {
                 let tracks = self.keyed(tracks.into_iter().map(TrackRef::Library).collect());
-                self.queue.enqueue(tracks, EnqueueAt::End);
+                let ids = self.queue.enqueue(tracks, EnqueueAt::End);
+                self.added.extend(ids);
+                self.smart_dirty = true;
+                self.set_nothing_to_add(false);
             }
-            Ok(_) => {}
+            Ok(_) => self.set_nothing_to_add(true),
             Err(error) => self.emit(PlayerEvent::Notice(Notice::ContextUnavailable {
                 reason: error.to_string(),
             })),
+        }
+    }
+
+    /// Notes whether endless play or the Auto-DJ found nothing to add.
+    pub(super) fn set_nothing_to_add(&mut self, nothing: bool) {
+        if self.nothing_to_add != nothing {
+            self.nothing_to_add = nothing;
+            self.smart_dirty = true;
+        }
+    }
+
+    /// What endless play and the Auto-DJ did to the queue, for its snapshot;
+    /// forgets the added entries that left the queue.
+    pub(super) fn smart_queue(&mut self) -> SmartQueue {
+        self.smart_dirty = false;
+        let added: Vec<EntryId> = if self.added.is_empty() {
+            Vec::new()
+        } else {
+            self.queue
+                .items()
+                .iter()
+                .map(|e| e.id)
+                .filter(|id| self.added.contains(id))
+                .collect()
+        };
+        if added.len() != self.added.len() {
+            self.added = added.iter().copied().collect();
+        }
+        SmartQueue {
+            added,
+            radio_seed: self.endless_seed,
+            nothing_to_add: self.nothing_to_add,
         }
     }
 
@@ -336,8 +368,28 @@ impl Actor {
                     self.queue.set_repeat(RepeatMode::Endless);
                     self.emit(PlayerEvent::ModesChanged(self.queue.modes()));
                 }
+                let before: HashSet<EntryId> = self.queue.items().iter().map(|e| e.id).collect();
                 self.play_tracks(context, tracks, 0);
                 self.endless_seed = Some(seed);
+                // The related tracks were added by the radio; the seed track and
+                // an album's own tracks were not.
+                if !matches!(seed, PlaySeed::Album(_)) {
+                    let seed_track = match seed {
+                        PlaySeed::Track(track) => Some(TrackRef::Library(track)),
+                        _ => None,
+                    };
+                    let related: Vec<EntryId> = self
+                        .queue
+                        .items()
+                        .iter()
+                        .filter(|e| {
+                            !before.contains(&e.id) && Some(&e.track) != seed_track.as_ref()
+                        })
+                        .map(|e| e.id)
+                        .collect();
+                    self.added.extend(related);
+                }
+                self.smart_dirty = true;
             }
             Ok(_) => self.emit(PlayerEvent::Notice(Notice::ContextUnavailable {
                 reason: "nothing in the library is related to it".into(),

@@ -16,6 +16,8 @@ use helikodu_model::player::{
 
 use helikodu_model::settings::SpeedSettings;
 
+use crate::library::PlaySeed;
+
 use super::timers::{AbLoop, SleepTimerStatus};
 
 /// The queue as it is at one version.
@@ -34,6 +36,26 @@ pub struct QueueSnapshot {
     pub modes: PlayModes,
     /// Whether "Revert" has an entry of the queue to go back to.
     pub can_revert: bool,
+    /// What endless play and the Auto-DJ did to the queue.
+    pub smart: SmartQueue,
+}
+
+/// What endless play and the Auto-DJ added to the queue, and what they continue
+/// from.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SmartQueue {
+    /// The entries of the queue that endless play or the Auto-DJ added (also the
+    /// related tracks of a radio), in play order. An entry keeps its place here
+    /// when it is moved.
+    pub added: Vec<EntryId>,
+    /// The seed of a radio started with
+    /// [`StartRadio`](super::PlayerCommand::StartRadio), which endless play
+    /// continues from; `None` while endless play continues from the last track
+    /// of the queue, as `playback.endless.seed` says.
+    pub radio_seed: Option<PlaySeed>,
+    /// Endless play or the Auto-DJ looked for tracks to add last time and found
+    /// none: the music stops after the last track.
+    pub nothing_to_add: bool,
 }
 
 impl QueueSnapshot {

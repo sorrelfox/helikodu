@@ -28,6 +28,7 @@ mod playlists;
 mod query;
 mod services;
 mod signal;
+mod smart;
 
 pub use services::MemoryServices;
 pub use signal::{playback_stats, signal_path};
@@ -1424,6 +1425,14 @@ struct FakeState {
     skipped: Vec<(usize, Duration)>,
     /// The playback speed.
     speed: super::PlaybackSpeed,
+    /// The entries endless play, the Auto-DJ or a radio added.
+    added: Vec<u64>,
+    /// The seed of the radio playing.
+    radio: Option<super::RadioSeed>,
+    /// Whether there was nothing more to add.
+    nothing_to_add: bool,
+    /// What the last radio replaced, for its Undo.
+    before_radio: Option<Box<smart::BeforeRadio>>,
 }
 
 /// A player that only pretends: it follows requests and reports updates at once.
@@ -1469,6 +1478,14 @@ impl FakePlayer {
             items: state.queue.clone(),
             current: state.current,
             can_revert: state.skipped.iter().any(|&(i, _)| i < state.queue.len()),
+            added: state
+                .queue
+                .iter()
+                .filter_map(|t| t.entry)
+                .filter(|e| state.added.contains(e))
+                .collect(),
+            radio: state.radio,
+            nothing_to_add: state.nothing_to_add,
         };
         let elapsed = state.elapsed;
         // Another speed changes the samples, as the player's would.
@@ -1549,6 +1566,7 @@ impl FakePlayer {
             state.state = PlaybackState::Playing;
             state.elapsed = Duration::ZERO;
         }
+        self.forget_smart();
         self.announce();
     }
 }
@@ -1835,7 +1853,13 @@ impl FakePlayer {
             PlayerRequest::SetShuffleMode(mode) => {
                 self.change_modes(|m| m.shuffle = mode);
             }
-            PlayerRequest::SetRepeatMode(mode) => self.change_modes(|m| m.repeat = mode),
+            PlayerRequest::SetRepeatMode(mode) => {
+                self.change_modes(|m| m.repeat = mode);
+                self.continue_queue();
+                self.announce();
+            }
+            PlayerRequest::StartRadio(seed) => self.start_radio(seed),
+            PlayerRequest::UndoRadio => self.undo_radio(),
             PlayerRequest::SetConsume(on) => self.change_modes(|m| m.consume = on),
             PlayerRequest::SetPlayScope(scope) => self.change_modes(|m| m.scope = scope),
             PlayerRequest::SetFollowCursor(on) => self.change_modes(|m| m.follow_cursor = on),
@@ -1869,7 +1893,7 @@ impl FakePlayer {
                     self.announce();
                 }
             }
-            PlayerRequest::RadioRandom | PlayerRequest::StartRadio(_) => {}
+            PlayerRequest::RadioRandom => {}
             PlayerRequest::SetStopAfterMode(mode) => {
                 {
                     let mut state = self.state.borrow_mut();

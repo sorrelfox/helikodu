@@ -8,8 +8,8 @@
 //! the menu is open, and its `win.sel-*` actions act on it: play, play next,
 //! add to the queue or a playlist, go to the album or artist, edit tags, rate,
 //! open the containing folder, show the copies of a track's file, open the
-//! Labels popover, choose the tracks' own equalizer or none at all, and
-//! remove from a playlist or the queue.
+//! Labels popover, choose the tracks' own equalizer or none at all, start a
+//! radio, and remove from a playlist or the queue.
 
 use std::rc::Rc;
 
@@ -17,8 +17,8 @@ use gtk::prelude::*;
 use gtk::{gdk, gio, glib};
 
 use crate::backend::{
-    AlbumKey, ArtistKey, Backend, GenreKey, PlayerRequest, PlaylistKey, PlaylistRow, TrackKey,
-    TrackRow,
+    AlbumKey, ArtistKey, Backend, GenreKey, PlayerRequest, PlaylistKey, PlaylistRow, RadioSeed,
+    TrackKey, TrackRow,
 };
 use crate::i18n::{fill, ntr, tr};
 use crate::window::MainWindow;
@@ -161,6 +161,65 @@ pub(crate) fn similar_seed(target: &Target) -> Option<crate::backend::SimilarSee
     }
 }
 
+/// The seed of a radio from `target`: one library track, an album or an
+/// artist; `None` for several tracks.
+pub(crate) fn radio_seed(target: &Target) -> Option<RadioSeed> {
+    match target {
+        Target::Tracks { .. } => match target.rows().as_slice() {
+            [one] => Some(RadioSeed::Track(one.key.0)),
+            _ => None,
+        },
+        Target::Album(key) => Some(RadioSeed::Album(i64::try_from(key.0).ok()?)),
+        Target::Artist(key) => Some(RadioSeed::Artist(i64::try_from(key.0).ok()?)),
+        Target::Genre(_) => None,
+    }
+}
+
+/// Starts a radio from `target` and says so in a toast whose Undo puts the
+/// queue back.
+fn start_radio(window: &MainWindow, backend: Backend, target: Target) {
+    let Some(seed) = radio_seed(&target) else {
+        return;
+    };
+    let weak = window.downgrade();
+    glib::spawn_future_local(async move {
+        let name = match &target {
+            Target::Album(key) => {
+                let key = *key;
+                backend
+                    .query(move |l| l.album(key))
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(|d| d.row.title)
+            }
+            Target::Artist(key) => {
+                let key = *key;
+                backend
+                    .query(move |l| l.artist(key))
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(|d| d.row.name)
+            }
+            _ => target.rows().first().map(|r| r.title.clone()),
+        };
+        backend.send(PlayerRequest::StartRadio(seed));
+        let Some(window) = weak.upgrade() else { return };
+        let text = fill(&tr("Radio started from “{}”"), &[&name.unwrap_or_default()]);
+        let has_radio = gtk::IconTheme::for_display(&WidgetExt::display(&window))
+            .has_icon("helikodu-radio-symbolic");
+        let icon = if has_radio {
+            "helikodu-radio-symbolic"
+        } else {
+            "media-playlist-repeat-symbolic"
+        };
+        window.toast_led(&text, icon, &tr("Undo"), true, move || {
+            backend.send(PlayerRequest::UndoRadio);
+        });
+    });
+}
+
 /// Which of the actions that depend on the target apply to `target`: go to
 /// album, go to artist, remove.
 pub(crate) fn applies(target: &Target) -> (bool, bool, bool) {
@@ -231,6 +290,12 @@ pub(crate) fn menu(target: &Target, playlists: &[PlaylistRow]) -> gio::Menu {
     }
     add.append_section(None, &lists);
     play.append_submenu(Some(&tr("Add to Playlist")), &add);
+    if matches!(
+        target,
+        Target::Tracks { .. } | Target::Album(_) | Target::Artist(_)
+    ) {
+        play.append_item(&item(&tr("Start Radio"), "win.sel-start-radio"));
+    }
     match target {
         Target::Tracks { rows, .. } if rows.len() > 1 => {
             let label = fill(
@@ -986,6 +1051,7 @@ pub(crate) fn install(window: &MainWindow) {
         });
     });
     let no_track_equalizer = simple("sel-no-track-equalizer", no_track_equalizers);
+    let radio = simple("sel-start-radio", start_radio);
     let copies = gio::ActionEntry::builder("show-copies")
         .parameter_type(Some(glib::VariantTy::UINT64))
         .activate(|window: &MainWindow, _, target| {
@@ -1034,5 +1100,6 @@ pub(crate) fn install(window: &MainWindow) {
         trash,
         track_equalizer,
         no_track_equalizer,
+        radio,
     ]);
 }

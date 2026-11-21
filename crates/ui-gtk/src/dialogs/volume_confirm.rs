@@ -76,6 +76,7 @@ pub(crate) fn starts_playback(request: &PlayerRequest, state: PlaybackState) -> 
         | PlayerRequest::PlayGenre { .. }
         | PlayerRequest::PlayComposer { .. }
         | PlayerRequest::PlayYears { .. }
+        | PlayerRequest::StartRadio(_)
         | PlayerRequest::PlayEntry(_) => true,
         _ => false,
     }

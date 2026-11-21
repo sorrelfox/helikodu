@@ -93,7 +93,7 @@ pub use self::config::{
 pub use self::error::PlayerError;
 pub use self::event::{EndReason, Notice, PlayerEvent};
 pub use self::outputs::{list_outputs, next_output, resolve_backend, sound_backends};
-pub use self::shared::{NowPlaying, PlayerStatus, QueueSnapshot, Splice};
+pub use self::shared::{NowPlaying, PlayerStatus, QueueSnapshot, SmartQueue, Splice};
 pub use self::timers::{AbLoop, SLEEP_FADE, SleepTimerStatus, SleepWhen};
 
 /// A running player. Dropping it ends the listen in progress, saves the session,

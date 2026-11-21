@@ -912,6 +912,11 @@ impl MainWindow {
         }
     }
 
+    /// Shows the queue panel again after a change of the settings it words.
+    pub(crate) fn refresh_queue_panel(&self) {
+        self.imp().panel.refresh_queue();
+    }
+
     /// Removes the toast shown when its text is `text`.
     pub(crate) fn dismiss_toast_if(&self, text: &str) {
         if let Some(toasts) = self.imp().toasts.borrow().as_ref()

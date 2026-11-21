@@ -16,7 +16,7 @@ use helikodu_model::library::{TrackId, TrackRef};
 use helikodu_model::player::{QueueContext, RepeatMode, ShuffleMode};
 use helikodu_model::settings::{PlaybackSettings, SmartPlaySettings, SpeedSettings};
 use helikodu_service::bus::Subscription;
-use helikodu_service::library::MusicLibrary;
+use helikodu_service::library::{MusicLibrary, PlaySeed};
 use helikodu_service::player::{Player, PlayerCommand, PlayerEvent, SinkPacing};
 
 use crate::media::{folder, next_path, null_output, player_with, until, wav_files, wav_output};
@@ -122,6 +122,75 @@ fn the_auto_dj_keeps_tracks_ahead_from_an_empty_queue() {
         "three ahead: {} entries, at {current}",
         queue.entries.len()
     );
+}
+
+#[test]
+fn the_queue_snapshot_marks_what_helikodu_added() {
+    let mut settings = smart();
+    settings.auto_dj.ahead = 3;
+    let s = setup("added_marks", 6, 150, false, settings);
+    play(&s, &s.tracks[..1]);
+    s.player.send(PlayerCommand::Stop).unwrap();
+    s.player
+        .send(PlayerCommand::SetRepeat(RepeatMode::AutoDj))
+        .unwrap();
+    s.player.sync().unwrap();
+    let queue = s.player.queue();
+    assert_eq!(queue.entries.len(), 4, "{:?}", queue.entries);
+    let added: Vec<_> = queue.entries[1..].iter().map(|e| e.id).collect();
+    assert_eq!(queue.smart.added, added);
+    assert!(!queue.smart.nothing_to_add);
+    assert_eq!(queue.smart.radio_seed, None);
+    // A moved entry stays marked; a removed one leaves the list.
+    s.player
+        .send(PlayerCommand::Move {
+            entry: added[2],
+            to: 0,
+        })
+        .unwrap();
+    s.player
+        .send(PlayerCommand::Remove(vec![added[0]]))
+        .unwrap();
+    s.player.sync().unwrap();
+    let queue = s.player.queue();
+    assert!(queue.smart.added.contains(&added[2]));
+    assert!(!queue.smart.added.contains(&added[0]));
+}
+
+#[test]
+fn nothing_to_add_is_reported_when_no_track_matches() {
+    let mut settings = smart();
+    settings.auto_dj.filter = "title:\"no such title\"".into();
+    let s = setup("nothing_to_add", 3, 150, false, settings);
+    s.player
+        .send(PlayerCommand::SetRepeat(RepeatMode::AutoDj))
+        .unwrap();
+    s.player.sync().unwrap();
+    let queue = s.player.queue();
+    assert!(queue.entries.is_empty());
+    assert!(queue.smart.nothing_to_add);
+    // Another mode forgets it.
+    s.player
+        .send(PlayerCommand::SetRepeat(RepeatMode::Off))
+        .unwrap();
+    s.player.sync().unwrap();
+    assert!(!s.player.queue().smart.nothing_to_add);
+}
+
+#[test]
+fn a_radio_keeps_its_seed_and_marks_the_related_tracks() {
+    let s = setup("radio_marks", 5, 150, false, smart());
+    s.player
+        .send(PlayerCommand::StartRadio(PlaySeed::Track(s.tracks[1])))
+        .unwrap();
+    s.player.send(PlayerCommand::Stop).unwrap();
+    s.player.sync().unwrap();
+    let queue = s.player.queue();
+    assert_eq!(queue.modes.repeat, RepeatMode::Endless);
+    assert_eq!(queue.smart.radio_seed, Some(PlaySeed::Track(s.tracks[1])));
+    assert_eq!(queue.entries[0].track, TrackRef::Library(s.tracks[1]));
+    assert!(!queue.smart.added.contains(&queue.entries[0].id));
+    assert_eq!(queue.smart.added.len(), queue.entries.len() - 1);
 }
 
 #[test]

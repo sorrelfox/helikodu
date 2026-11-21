@@ -5,7 +5,8 @@
 //! the store, the language choice, the full-output confirmation (also for
 //! requests from other programs), the tag editor with mixed values, the first
 //! run, the output switcher, Supported formats, About and Keyboard shortcuts,
-//! and the settings of the track analysis and what uses it.
+//! and the settings of the track analysis and what uses it; and the groups
+//! of smarter playback on Settings › Playback.
 //!
 //! Like `widgets.rs`, this program runs only under the headless compositor:
 //!
@@ -1487,6 +1488,272 @@ fn analysis_settings_rows(app: &gtk::Application) {
 /// With `HELIKODU_SETTINGS_SHOTS=DIR`, writes the pages of the track analysis
 /// and what uses it (Playback scrolled to Silence, Loudness with the leveller
 /// at work, Library scrolled to Track analysis, Advanced) to `DIR`.
+/// The check box labelled `text`.
+fn check(root: &impl IsA<gtk::Widget>, name: &str, text: &str) -> gtk::CheckButton {
+    let group: gtk::Widget = named(root, name);
+    descendants(&group)
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::CheckButton>().ok())
+        .find(|c| c.label().as_deref() == Some(text))
+        .unwrap_or_else(|| panic!("no check box {text}"))
+}
+
+/// Settings › Playback: Shuffle, Intro scan and When the queue ends with its
+/// two cards and the user's own weights write `[playback.shuffle]`,
+/// `intro_scan_s`, `[playback.endless]` and `[playback.auto_dj]` at once.
+fn smart_play_settings(app: &gtk::Application) {
+    use helikodu_model::settings::{PlayWeight, SeedKind};
+    let (window, backend) = window(app);
+    let services = backend.services();
+    let settings = window.open_settings("playback");
+    wait_for("the playback page", || {
+        window.settings_page().as_deref() == Some("playback")
+    });
+    spin(100);
+    // Shuffle.
+    check(&settings, "shuffle-favour", "Higher rated tracks").set_active(true);
+    check(&settings, "shuffle-favour", "Tracks played less often").set_active(true);
+    assert_eq!(
+        services.settings().playback.shuffle.weight_by,
+        [PlayWeight::Rating, PlayWeight::LessPlayed]
+    );
+    let floor: gtk::DropDown = named(&settings, "shuffle-min-rating");
+    assert_eq!(
+        choices(&floor),
+        [
+            "No limit",
+            "1 star",
+            "1½ stars",
+            "2 stars",
+            "2½ stars",
+            "3 stars",
+            "3½ stars",
+            "4 stars",
+            "4½ stars",
+            "5 stars"
+        ]
+    );
+    floor.set_selected(3);
+    assert_eq!(services.settings().playback.shuffle.min_rating, 4);
+    let skip: gtk::SearchEntry = named(&settings, "shuffle-skip-query");
+    skip.set_text("genre:Christmas");
+    wait_for("the skip query", || {
+        services.settings().playback.shuffle.skip_query == "genre:Christmas"
+    });
+    assert!(
+        skip.has_css_class("hk-query"),
+        "a query is set in the query font"
+    );
+    // A query that cannot be read keeps the last one that could, and says why.
+    skip.set_text("genre:\"Christmas");
+    wait_for("the parser's message", || {
+        texts(&settings).contains("The quotes are not closed.")
+    });
+    assert_eq!(
+        services.settings().playback.shuffle.skip_query,
+        "genre:Christmas"
+    );
+    // Intro scan.
+    let intro: gtk::DropDown = named(&settings, "intro-scan");
+    assert_eq!(
+        choices(&intro),
+        [
+            "3 seconds",
+            "5 seconds",
+            "10 seconds",
+            "15 seconds",
+            "20 seconds",
+            "30 seconds",
+            "60 seconds",
+            "120 seconds"
+        ]
+    );
+    assert_eq!(intro.selected(), 2);
+    intro.set_selected(3);
+    assert_eq!(services.settings().playback.intro_scan_s, 15);
+    // Continue with related tracks.
+    let related: gtk::Widget = named(&settings, "related-to");
+    button(&related, "Its artist")
+        .downcast::<gtk::ToggleButton>()
+        .unwrap()
+        .set_active(true);
+    assert_eq!(services.settings().playback.endless.seed, SeedKind::Artist);
+    let alike: gtk::DropDown = named(&settings, "how-alike");
+    assert_eq!(
+        choices(&alike),
+        [
+            "A mix",
+            "Same artist",
+            "Same genre",
+            "Sounds alike",
+            "Your own weights"
+        ]
+    );
+    assert_eq!(alike.selected(), 0);
+    let weights: gtk::Widget = named(&settings, "related-weights");
+    assert!(!weights.is_visible());
+    let note: gtk::Label = named(&settings, "how-alike-note");
+    assert_eq!(
+        note.text(),
+        "Artist and genre count most; years, labels and play counts a little."
+    );
+    alike.set_selected(4);
+    assert!(weights.is_visible());
+    assert_eq!(
+        note.text(),
+        "Set below how much each likeness counts, from 0 to 10."
+    );
+    let sliders: Vec<gtk::Scale> = descendants(&weights)
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Scale>().ok())
+        .collect();
+    assert_eq!(sliders.len(), 7);
+    let sound = sliders
+        .iter()
+        .find(|s| {
+            descendants(&s.parent().unwrap()).iter().any(|w| {
+                w.downcast_ref::<gtk::Label>()
+                    .is_some_and(|l| l.text() == "Sounds alike")
+            })
+        })
+        .unwrap();
+    sound.set_value(3.0);
+    assert_eq!(services.settings().playback.endless.weights.sound, 3);
+    // A named choice hides the weights and keeps the user's for the next time.
+    alike.set_selected(1);
+    assert!(!weights.is_visible());
+    let w = services.settings().playback.endless.weights;
+    assert_eq!((w.artist, w.album_artist, w.genre, w.sound), (10, 6, 0, 0));
+    alike.set_selected(4);
+    assert_eq!(services.settings().playback.endless.weights.sound, 3);
+    assert_eq!(sound.value(), 3.0);
+    for slider in &sliders {
+        slider.set_value(0.0);
+    }
+    assert_eq!(note.text(), "Set at least one likeness above 0.");
+    let years: gtk::SpinButton = named(&settings, "related-years");
+    years.set_value(8.0);
+    assert_eq!(services.settings().playback.endless.year_range, 8);
+    let batch: gtk::SpinButton = named(&settings, "related-batch");
+    batch.set_value(20.0);
+    assert_eq!(services.settings().playback.endless.batch, 20);
+    // Out of range goes to the nearest allowed value.
+    batch.set_text("500");
+    batch.update();
+    assert_eq!(services.settings().playback.endless.batch, 100);
+    let window_size: gtk::SpinButton = named(&settings, "related-window");
+    window_size.set_value(250.0);
+    assert_eq!(services.settings().playback.endless.window, 250);
+    let filter: gtk::SearchEntry = named(&settings, "related-filter");
+    filter.set_text("genre:Jazz");
+    wait_for("the related filter", || {
+        services.settings().playback.endless.filter == "genre:Jazz"
+    });
+    // Auto-DJ.
+    let ahead: gtk::SpinButton = named(&settings, "auto-dj-ahead");
+    assert_eq!(ahead.value(), 5.0);
+    ahead.set_value(8.0);
+    assert_eq!(services.settings().playback.auto_dj.ahead, 8);
+    let dj_window: gtk::SpinButton = named(&settings, "auto-dj-window");
+    assert_eq!(dj_window.value(), 200.0);
+    check(&settings, "auto-dj-favour", "Tracks not played for a while").set_active(true);
+    assert!(
+        services
+            .settings()
+            .playback
+            .auto_dj
+            .weight_by
+            .contains(&PlayWeight::NotRecentlyPlayed)
+    );
+    let dj_floor: gtk::DropDown = named(&settings, "auto-dj-min-rating");
+    dj_floor.set_selected(9);
+    assert_eq!(services.settings().playback.auto_dj.min_rating, 10);
+    let dj_filter: gtk::SearchEntry = named(&settings, "auto-dj-filter");
+    dj_filter.set_text("genre:Soul");
+    wait_for("the Auto-DJ filter", || {
+        services.settings().playback.auto_dj.filter == "genre:Soul"
+    });
+    // Opened again, the controls show what is stored.
+    settings.close();
+    spin(50);
+    let settings = window.open_settings("playback");
+    spin(100);
+    let alike: gtk::DropDown = named(&settings, "how-alike");
+    assert_eq!(alike.selected(), 4);
+    let skip: gtk::SearchEntry = named(&settings, "shuffle-skip-query");
+    assert_eq!(skip.text(), "genre:Christmas");
+    assert!(check(&settings, "shuffle-favour", "Higher rated tracks").is_active());
+    settings.close();
+    window.destroy();
+}
+
+/// Screenshots of the new groups of Settings › Playback, with
+/// `HELIKODU_SETTINGS_SHOTS`.
+fn smart_play_settings_screenshots(app: &gtk::Application) {
+    let Some(folder) = std::env::var_os("HELIKODU_SETTINGS_SHOTS").map(std::path::PathBuf::from)
+    else {
+        println!("smart_play_settings_screenshots: skipped; set HELIKODU_SETTINGS_SHOTS");
+        return;
+    };
+    std::fs::create_dir_all(&folder).unwrap();
+    let (window, backend) = window(app);
+    let settings = window.open_settings("playback");
+    spin(300);
+    let scroll_to = |name: &str, above: f64| {
+        let target: gtk::Widget = named(&settings, name);
+        let mut scroller = target.parent();
+        while let Some(widget) = scroller.clone() {
+            if widget.is::<gtk::ScrolledWindow>() {
+                break;
+            }
+            scroller = widget.parent();
+        }
+        let scroller = scroller.and_downcast::<gtk::ScrolledWindow>().unwrap();
+        let point = target
+            .compute_point(&scroller.child().unwrap(), &gtk::graphene::Point::zero())
+            .unwrap();
+        scroller
+            .vadjustment()
+            .set_value(f64::from(point.y()) - above);
+        spin(300);
+    };
+    let save = |name: &str| {
+        let file = folder.join(format!("settings-{name}.png"));
+        helikodu_ui_gtk::snapshot::save_png(&settings, &file).unwrap();
+        println!("wrote {}", file.display());
+    };
+    scroll_to("shuffle-favour", 30.0);
+    save("playback-shuffle");
+    backend
+        .services()
+        .update_settings(&mut |s| s.playback.endless.weights.sound = 2)
+        .unwrap();
+    settings.close();
+    spin(50);
+    let settings2 = window.open_settings("playback");
+    spin(300);
+    let target: gtk::Widget = named(&settings2, "related-card");
+    let mut scroller = target.parent();
+    while let Some(widget) = scroller.clone() {
+        if widget.is::<gtk::ScrolledWindow>() {
+            break;
+        }
+        scroller = widget.parent();
+    }
+    let scroller = scroller.and_downcast::<gtk::ScrolledWindow>().unwrap();
+    let point = target
+        .compute_point(&scroller.child().unwrap(), &gtk::graphene::Point::zero())
+        .unwrap();
+    scroller
+        .vadjustment()
+        .set_value(f64::from(point.y()) - 40.0);
+    spin(300);
+    let file = folder.join("settings-playback-related.png");
+    helikodu_ui_gtk::snapshot::save_png(&settings2, &file).unwrap();
+    println!("wrote {}", file.display());
+    window.destroy();
+}
+
 fn analysis_settings_screenshots(app: &gtk::Application) {
     use helikodu_ui_gtk::backend::{SignalLamp, StageKind};
     let Some(folder) = std::env::var_os("HELIKODU_SETTINGS_SHOTS").map(std::path::PathBuf::from)
@@ -1687,6 +1954,11 @@ const TESTS: &[Test] = &[
     (
         "analysis_settings_screenshots",
         analysis_settings_screenshots,
+    ),
+    ("smart_play_settings", smart_play_settings),
+    (
+        "smart_play_settings_screenshots",
+        smart_play_settings_screenshots,
     ),
 ];
 

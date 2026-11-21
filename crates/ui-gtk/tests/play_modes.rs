@@ -8,8 +8,9 @@
 //! go back to and the toast after it, the repeat button's plus for the modes
 //! that add tracks, the speed chip and popover, the tag editor's Playback
 //! group with the equalizer of a track and the context menu's equalizer items,
-//! the play button's menu, the deck's icon sizes under two icon themes, and no
-//! frames drawn while paused with the chips shown. `HELIKODU_PLAYMODE_SHOTS=DIR`
+//! "Start Radio" with its Undo toast, the play button's menu, the deck's icon
+//! sizes under two icon themes, and no frames drawn while paused with the
+//! chips shown. `HELIKODU_PLAYMODE_SHOTS=DIR`
 //! saves screenshots, dark and light, to `DIR`.
 //!
 //! GTK needs a display and the main thread, so this program has its own main
@@ -798,6 +799,71 @@ fn play_mode_track_flags(app: &gtk::Application) {
     window.destroy();
 }
 
+/// "Start Radio" in the context menu of one track replaces the queue with it
+/// and related tracks, turns on endless play and says so in a toast whose
+/// Undo puts the queue back; with several tracks selected it is insensitive.
+fn start_radio_from_the_context_menu(app: &gtk::Application) {
+    use helikodu_ui_gtk::backend::AlbumKey;
+    let (window, _) = playing_window(app);
+    let queue_texts = |window: &MainWindow| -> Vec<String> {
+        descendants(window.queue_list().upcast_ref())
+            .into_iter()
+            .filter_map(|w| w.downcast::<gtk::Label>().ok())
+            .map(|l| l.text().to_string())
+            .collect()
+    };
+    let before = queue_texts(&window);
+    window.open_album(AlbumKey(2));
+    spin(300);
+    let menu = window
+        .demo_album_track_menu()
+        .and_downcast::<gtk::PopoverMenu>()
+        .expect("the album page's track menu opens");
+    let mut labels = Vec::new();
+    menu_labels(&menu.menu_model().unwrap(), &mut labels);
+    let at = labels
+        .iter()
+        .position(|l| l == "Start Radio")
+        .expect("Start Radio");
+    // It ends the play section, after the Add to Playlist submenu.
+    let add = labels.iter().position(|l| l == "Add to Playlist").unwrap();
+    let go = labels.iter().position(|l| l == "Go to Album").unwrap();
+    assert!(add < at && at + 1 == go, "{labels:?}");
+    let radio = window
+        .lookup_action("sel-start-radio")
+        .and_downcast::<gio::SimpleAction>()
+        .unwrap();
+    assert!(radio.is_enabled());
+    menu.popdown();
+    WidgetExt::activate_action(&window, "win.sel-start-radio", None).unwrap();
+    wait_for("the toast", || {
+        window
+            .toast_text()
+            .is_some_and(|t| t.starts_with("Radio started from “"))
+    });
+    wait_for("the radio's queue", || {
+        queue_texts(&window)
+            .iter()
+            .any(|t| t == "Added by Helikodu")
+    });
+    let toast_undo = descendants(window.upcast_ref())
+        .into_iter()
+        .filter_map(|w| w.downcast::<gtk::Button>().ok())
+        .find(|b| b.label().as_deref() == Some("Undo") && b.is_mapped())
+        .expect("the toast's Undo");
+    toast_undo.emit_clicked();
+    wait_for("the queue as it was", || queue_texts(&window) == before);
+    // Several tracks: no seed.
+    assert!(window.open_first_playlist());
+    wait_for("the entries", || !window.playlist_titles().is_empty());
+    let menu = window.demo_track_menu().expect("the context menu opens");
+    wait_for("the menu", || menu.is_visible());
+    assert!(!radio.is_enabled());
+    menu.popdown();
+    window.destroy();
+    spin(50);
+}
+
 /// The labels of `menu` and its sections and submenus, depth first.
 fn menu_labels(menu: &gio::MenuModel, out: &mut Vec<String>) {
     for i in 0..menu.n_items() {
@@ -1163,6 +1229,10 @@ const TESTS: &[Test] = &[
         play_mode_follow_playing_is_remembered,
     ),
     ("play_mode_favourite_heart", play_mode_favourite_heart),
+    (
+        "start_radio_from_the_context_menu",
+        start_radio_from_the_context_menu,
+    ),
 ];
 
 fn main() -> ExitCode {

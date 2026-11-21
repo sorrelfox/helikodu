@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Settings › Playback: the Previous button, the seek step, when a play
-//! counts, what playing an album does to the queue, crossfades (from the
+//! counts, what playing an album does to the queue, shuffle, intro scan and
+//! what happens when the queue ends (in [`smart_play`]), crossfades (from the
 //! track analysis, where it has one) and fades, leaving out and skipping
 //! silence, the start-up queue, long tracks, power, and the decoders of synthesized
 //! formats (the SoundFont for MIDI, the song lengths of SID tunes, how often a
@@ -15,7 +16,7 @@ use gtk::prelude::*;
 use gtk::{gio, glib};
 use helikodu_model::settings::{ContextAction, StartAction};
 
-use super::{Context, page_body};
+use super::{Context, page_body, smart_play};
 use crate::backend::Update;
 use crate::backend::services::{AnalysisProgress, Settings};
 use crate::dialogs::common::{
@@ -28,7 +29,7 @@ use crate::widgets::label;
 
 /// A dropdown over `values` showing `text` for each; a stored value that is
 /// not offered is added so that it shows as it is.
-fn value_dropdown<T: Copy + PartialEq + Ord + 'static>(
+pub(super) fn value_dropdown<T: Copy + PartialEq + Ord + 'static>(
     context: &Rc<Context>,
     values: &[T],
     current: T,
@@ -52,7 +53,7 @@ fn value_dropdown<T: Copy + PartialEq + Ord + 'static>(
     choice
 }
 
-fn seconds(n: u32) -> String {
+pub(super) fn seconds(n: u32) -> String {
     fill(
         &ntr("{} second", "{} seconds", n as usize),
         &[&n.to_string()],
@@ -329,6 +330,20 @@ pub(super) fn page(context: &Rc<Context>) -> gtk::Widget {
     body.append(&row(&tr("Seek step"), None, &seek_step(context)));
     body.append(&row(&tr("Count a play"), None, &count_play(context)));
     body.append(&row(&tr("Playing an album"), None, &album(context)));
+    body.append(&row(&tr("Shuffle"), None, &smart_play::shuffle(context)));
+    body.append(&row(
+        &tr("Intro scan"),
+        None,
+        &smart_play::intro_scan(context),
+    ));
+    body.append(&divider());
+    let queue_ends = row(
+        &tr("When the queue ends"),
+        Some(&smart_play::queue_ends_note()),
+        &smart_play::queue_ends(context),
+    );
+    queue_ends.set_widget_name(smart_play::SETTINGS_ROW);
+    body.append(&queue_ends);
     body.append(&divider());
     body.append(&row(&tr("Crossfade"), None, &crossfade(context)));
     body.append(&row(&tr("Fades"), None, &fades(context)));

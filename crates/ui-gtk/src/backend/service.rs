@@ -115,6 +115,23 @@ fn playlist_type(kind: ServicePlaylistType) -> PlaylistType {
     }
 }
 
+/// What endless play and the Auto-DJ did to the queue of `snapshot`, as the
+/// panel shows it.
+fn smart_queue(snapshot: &Snapshot) -> QueueSnapshot {
+    use helikodu_service::library::PlaySeed;
+    let smart = &snapshot.smart;
+    QueueSnapshot {
+        added: smart.added.iter().map(|id| id.get()).collect(),
+        radio: smart.radio_seed.map(|seed| match seed {
+            PlaySeed::Track(id) => super::RadioSeed::Track(id.get()),
+            PlaySeed::Album(id) => super::RadioSeed::Album(id.get()),
+            PlaySeed::Artist(id) => super::RadioSeed::Artist(id.get()),
+        }),
+        nothing_to_add: smart.nothing_to_add,
+        ..QueueSnapshot::default()
+    }
+}
+
 fn album_key(id: AlbumId) -> AlbumKey {
     AlbumKey(u64::try_from(id.get()).unwrap_or(0))
 }
@@ -1736,6 +1753,17 @@ pub struct ServicePlayer {
     mpris: Option<Arc<Mpris>>,
     /// The analyzer's measurements, while a view shows them.
     analyzer: std::cell::RefCell<Option<AnalyzerWatch>>,
+    /// The queue, the position and the playback state before the last radio
+    /// started, for its Undo.
+    before_radio: std::cell::RefCell<Option<BeforeRadio>>,
+}
+
+/// What a radio replaced.
+#[derive(Debug)]
+struct BeforeRadio {
+    queue: Arc<Snapshot>,
+    position: MediaTime,
+    playback: ServicePlayback,
 }
 
 impl ServicePlayer {
@@ -1745,6 +1773,36 @@ impl ServicePlayer {
         } else {
             ShuffleMode::Off
         }));
+    }
+
+    /// Puts the queue back as `before` holds it: its tracks from the context
+    /// they came with, the current one at its position, the playback state and
+    /// the Repeat mode. Nothing is added meanwhile: Repeat is off until the
+    /// end.
+    fn restore_queue(&self, before: &BeforeRadio) {
+        self.command(PlayerCommand::SetRepeat(RepeatMode::Off));
+        self.command(PlayerCommand::Clear);
+        if let Some(entry) = self.service.player().queue().current_entry() {
+            self.command(PlayerCommand::Remove(vec![entry.id]));
+        }
+        let queue = &before.queue;
+        let tracks: Vec<TrackRef> = queue.entries.iter().map(|e| e.track.clone()).collect();
+        if !tracks.is_empty() {
+            self.command(PlayerCommand::PlayTracks {
+                context: queue.context.clone(),
+                tracks,
+                start: queue.current.unwrap_or(0),
+            });
+            if before.position > MediaTime::ZERO {
+                self.command(PlayerCommand::Seek(before.position));
+            }
+            match before.playback {
+                ServicePlayback::Playing | ServicePlayback::Buffering => {}
+                ServicePlayback::Paused => self.command(PlayerCommand::Pause),
+                _ => self.command(PlayerCommand::Stop),
+            }
+        }
+        self.command(PlayerCommand::SetRepeat(queue.modes.repeat));
     }
 
     fn command(&self, command: PlayerCommand) {
@@ -2030,7 +2088,18 @@ impl PlayerControl for ServicePlayer {
                     super::RadioSeed::Album(id) => PlaySeed::Album(AlbumId::from_raw(id)),
                     super::RadioSeed::Artist(id) => PlaySeed::Artist(PersonId::from_raw(id)),
                 };
+                let status = self.service.player().status();
+                self.before_radio.replace(Some(BeforeRadio {
+                    queue: self.service.player().queue(),
+                    position: status.position,
+                    playback: status.playback,
+                }));
                 self.command(PlayerCommand::StartRadio(seed));
+            }
+            PlayerRequest::UndoRadio => {
+                if let Some(before) = self.before_radio.take() {
+                    self.restore_queue(&before);
+                }
             }
             PlayerRequest::LoopStartHere => self.command(PlayerCommand::LoopStartHere),
             PlayerRequest::LoopEndHere => self.command(PlayerCommand::LoopEndHere),
@@ -2264,6 +2333,7 @@ impl Forwarder {
                 items,
                 current: snapshot.current,
                 can_revert: snapshot.can_revert,
+                ..smart_queue(&snapshot)
             }));
             return;
         };
@@ -2306,6 +2376,7 @@ impl Forwarder {
                 items,
                 current: snapshot.current,
                 can_revert: snapshot.can_revert,
+                ..smart_queue(&snapshot)
             }));
         });
     }
@@ -2782,6 +2853,7 @@ pub fn connect(service: Service, options: ServiceOptions) -> Result<Backend, Bac
         positions,
         mpris,
         analyzer: std::cell::RefCell::new(None),
+        before_radio: std::cell::RefCell::new(None),
     });
     services::follow_folders(&service, true);
     let services = Arc::new(services::ServiceServices {

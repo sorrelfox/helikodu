@@ -1,0 +1,37 @@
+/* SPDX-FileCopyrightText: 2026 sorrelfox and Helikodu contributors */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/*
+ * Smarter playback: the cards of "When the queue ends" on Settings ›
+ * Playback, its number entries and weights, and the queue panel's block of
+ * what comes next with the spark of the rows Helikodu added.
+ */
+
+/* Cards of "When the queue ends" on the Playback page. */
+.hk-card { border-radius: 8px; border: 1px solid var(--hk-line); }
+.hk-card > .head { min-height: 46px; padding: 4px 14px; }
+.hk-card > .head .hk-card-title { font-weight: 500; }
+.hk-card > .row { min-height: 38px; padding: 3px 10px 3px 14px; border-top: 1px solid var(--hk-line); }
+.hk-card > .row .label { min-width: 150px; color: var(--hk-t2); }
+.hk-card > .weights { padding: 8px 14px 12px; border-top: 1px solid var(--hk-line); }
+entry.hk-number, spinbutton.hk-number { min-height: 30px; min-width: 0; }
+spinbutton.hk-number {
+  border-radius: 7px; border: 1px solid var(--hk-line); background-color: var(--hk-field);
+  color: var(--hk-t1); box-shadow: none; outline: none;
+}
+spinbutton.hk-number:focus-within { border-color: var(--hk-accent-fill); box-shadow: 0 0 0 3px var(--hk-sel); }
+spinbutton.hk-number > text { padding: 0 10px; }
+entry.hk-input.hk-small-query { min-height: 30px; }
+flowbox.hk-favour > flowboxchild { padding: 0; }
+.hk-query-problem { font-size: 12px; color: var(--hk-t2); }
+.hk-query-problem image { -gtk-icon-size: 12px; }
+.hk-weight .value { font-family: monospace; color: var(--hk-t2); }
+.hk-weight scale.hk-slider { min-height: 22px; }
+
+/* What comes next, after the last row of the queue. */
+.hk-queue-next { margin-top: 10px; padding: 10px 8px 8px 12px; border-radius: 8px; border: 1px solid var(--hk-line); }
+.hk-queue-next .hk-next-title { font-weight: 500; }
+.hk-queue-next .detail { font-size: 12px; color: var(--hk-t3); }
+button.hk-btn.text.hk-queue-next-button { min-height: 26px; font-size: 12px; }
+list.hk-queue > row.section.end { padding: 0; }
+.hk-auto-mark { -gtk-icon-size: 12px; color: var(--hk-t3); }

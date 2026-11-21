@@ -19,6 +19,7 @@ mod output;
 mod playback;
 mod search;
 mod shortcuts;
+mod smart_play;
 pub(crate) mod track_analysis;
 mod your_data;
 
@@ -159,25 +160,7 @@ impl Context {
             entry.set_text("");
         }
         self.stack.set_visible_child_name(page.id());
-        let Some(shown) = self.stack.child_by_name(page.id()) else {
-            return;
-        };
-        let name = name.to_owned();
-        // Once the page has its size.
-        glib::timeout_add_local_once(std::time::Duration::from_millis(30), move || {
-            let Some(target) = find_widget(&shown, |w| w.widget_name() == name.as_str()) else {
-                return;
-            };
-            if let Some(scroller) = shown.downcast_ref::<gtk::ScrolledWindow>()
-                && let Some(body) = scroller.child()
-                && let Some(point) = target.compute_point(&body, &gtk::graphene::Point::zero())
-            {
-                scroller
-                    .vadjustment()
-                    .set_value(f64::from(point.y()) - 18.0);
-            }
-            target.child_focus(gtk::DirectionType::TabForward);
-        });
+        scroll_to_setting(&self.stack, page, name);
     }
 
     /// Builds every page again from the stored settings, keeping the page shown.
@@ -186,6 +169,46 @@ impl Context {
             rebuild();
         }
     }
+}
+
+/// Scrolls `page` of `stack` to the setting whose widget is called `name`,
+/// which takes the focus, once the page has its size.
+fn scroll_to_setting(stack: &gtk::Stack, page: Page, name: &str) {
+    let Some(shown) = stack.child_by_name(page.id()) else {
+        return;
+    };
+    let name = name.to_owned();
+    glib::timeout_add_local_once(std::time::Duration::from_millis(30), move || {
+        let Some(target) = find_widget(&shown, |w| w.widget_name() == name.as_str()) else {
+            return;
+        };
+        if let Some(scroller) = shown.downcast_ref::<gtk::ScrolledWindow>()
+            && let Some(body) = scroller.child()
+            && let Some(point) = target.compute_point(&body, &gtk::graphene::Point::zero())
+        {
+            scroller
+                .vadjustment()
+                .set_value(f64::from(point.y()) - 18.0);
+        }
+        target.child_focus(gtk::DirectionType::TabForward);
+    });
+}
+
+/// Opens the Settings window over `main` at `page`, scrolled to the setting
+/// whose widget is called `name`.
+pub(crate) fn open_at(main: &MainWindow, page: Page, name: &str) -> gtk::Window {
+    let window = open(main, Some(page));
+    if let Some(stack) = find_stack(&window) {
+        if let Some(entry) =
+            find_widget(&window, |w| w.is::<gtk::SearchEntry>()).and_downcast::<gtk::SearchEntry>()
+            && !entry.text().is_empty()
+        {
+            entry.set_text("");
+        }
+        stack.set_visible_child_name(page.id());
+        scroll_to_setting(&stack, page, name);
+    }
+    window
 }
 
 /// A scrolled page body with the design's padding and row spacing.
@@ -214,30 +237,6 @@ fn build_page(page: Page, context: &Rc<Context>) -> gtk::Widget {
 
 /// Opens the Settings window over `main` at `page` (or the page shown last),
 /// or brings it to the front.
-/// Opens the Settings window at `page` and scrolls to the widget named `row`.
-pub(crate) fn open_at(main: &MainWindow, page: Page, row: &str) {
-    let window = open(main, Some(page));
-    let row = row.to_owned();
-    // Once the page has its size.
-    glib::timeout_add_local_once(std::time::Duration::from_millis(60), move || {
-        let Some(target) = find_widget(&window, |w| w.widget_name() == row.as_str()) else {
-            return;
-        };
-        let scroller = target
-            .ancestor(gtk::ScrolledWindow::static_type())
-            .and_downcast::<gtk::ScrolledWindow>();
-        if let Some(scroller) = scroller
-            && let Some(body) = scroller.child()
-            && let Some(point) = target.compute_point(&body, &gtk::graphene::Point::zero())
-        {
-            scroller
-                .vadjustment()
-                .set_value(f64::from(point.y()) - 18.0);
-        }
-        target.child_focus(gtk::DirectionType::TabForward);
-    });
-}
-
 pub(crate) fn open(main: &MainWindow, page: Option<Page>) -> gtk::Window {
     let parent = main.upcast_ref::<gtk::Window>();
     if let Some(window) = find_open(parent, NAME) {

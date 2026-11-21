@@ -194,8 +194,18 @@ pub(super) struct Actor {
     smart: SmartPlaySettings,
     /// The tracks `playback.shuffle.skip_query` finds.
     shuffle_skips: HashSet<TrackId>,
-    /// What endless play continues from, once chosen; a new queue forgets it.
+    /// The seed of a radio, which endless play continues from; a new queue
+    /// forgets it. Without one, endless play continues from the queue's last
+    /// track each time.
     endless_seed: Option<helikodu_library::PlaySeed>,
+    /// The entries endless play or the Auto-DJ added; entries that left the
+    /// queue are dropped when the queue is published.
+    added: HashSet<EntryId>,
+    /// Endless play or the Auto-DJ found nothing to add the last time it looked.
+    nothing_to_add: bool,
+    /// Whether `added`, `nothing_to_add` or `endless_seed` changed since the
+    /// queue was last published.
+    smart_dirty: bool,
     /// The library tracks that started lately, newest last.
     recent: VecDeque<TrackId>,
     /// The entries "Next" moved on from, newest last, with where they were, for
@@ -280,6 +290,9 @@ impl Actor {
             smart: SmartPlaySettings::default(),
             shuffle_skips: HashSet::new(),
             endless_seed: None,
+            added: HashSet::new(),
+            nothing_to_add: false,
+            smart_dirty: false,
             recent: VecDeque::new(),
             skipped: Vec::new(),
             radio_seek: None,
@@ -405,9 +418,13 @@ impl Actor {
     /// sentinel, and saves the session when it is due.
     fn after_input(&mut self) {
         let can_revert = self.can_revert();
-        if self.queue.version() != self.published_version || can_revert != self.published_revert {
+        if self.queue.version() != self.published_version
+            || can_revert != self.published_revert
+            || self.smart_dirty
+        {
             self.published_version = self.queue.version();
             self.published_revert = can_revert;
+            let smart = self.smart_queue();
             self.shared.set_queue(QueueSnapshot {
                 version: self.queue.version(),
                 context: self.queue.context().clone(),
@@ -415,6 +432,7 @@ impl Actor {
                 current: self.queue.current_index(),
                 modes: self.queue.modes(),
                 can_revert,
+                smart,
             });
             self.emit(PlayerEvent::QueueChanged {
                 version: self.queue.version(),
@@ -647,6 +665,7 @@ impl Actor {
             }
             PlayerCommand::SetRepeat(repeat) => {
                 self.queue.set_repeat(repeat);
+                self.set_nothing_to_add(false);
                 self.continue_queue();
                 self.modes_changed();
             }
@@ -1125,6 +1144,8 @@ impl Actor {
 
     fn play_tracks(&mut self, context: QueueContext, tracks: Vec<TrackRef>, start: usize) {
         self.endless_seed = None;
+        self.set_nothing_to_add(false);
+        self.smart_dirty = true;
         self.skipped.clear();
         let tracks = self.keyed(tracks);
         let append = self.prefs.append_contexts && self.queue.len() > 0;
