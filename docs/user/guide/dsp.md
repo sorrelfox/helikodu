@@ -12,6 +12,15 @@
 
 The readout at the bottom says whether the samples pass unchanged (**Bit-perfect**) or are processed (**DSP active**, in 32-bit float). When every stage is off, the samples are untouched and bit-perfect playback stays bit-perfect. The [Signal path](audio-output.md#the-signal-path) tab of the right panel shows the stages while music plays.
 
+## Correction for your headphones
+
+The AutoEQ project publishes equalizer settings that bring many headphones and earphones closer to a neutral sound. Helikodu does not include them (it never goes online, and the measurements belong to their authors), but it reads the file the project gives:
+
+1. On the AutoEQ website (autoeq.app), choose your headphones and download the parametric equalizer settings as `ParametricEQ.txt` (the format for EqualizerAPO).
+2. In **Settings → DSP and EQ**, choose **Parametric** and **Import AutoEQ file**, and pick the downloaded file. **Save preset** keeps it, for example under the name of the headphones; presets can be kept per output device.
+
+The same file can also be the equalizer of single tracks: `helikodu-cli dsp track-eq set ID --autoeq FILE` (see [More processing in the settings file](#more-processing-in-the-settings-file)).
+
 ## More processing in the settings file
 
 The compressor, convolution, pitch shift, the order of the stages, saved chains and the equalizers of single tracks have no page in the settings window yet. You set them in `settings.toml` (see [Settings](settings.md)) or with `helikodu-cli dsp`, which writes the same file. The running program reads a changed file the next time it starts. Every one of these is off by default; when they are off, playback stays bit-perfect.
