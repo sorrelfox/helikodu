@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Each smart playlist can show its own columns: **Columns**, at the end of its rule line, shows or hides **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length**, and the choice is remembered per smart playlist. The stars of the **Rating** column rate a track.
+
 ### Changed
 
 - On an album page, the facts of the selected track come first in the details column, above the album's.
@@ -13,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - The **Most played** lists of artist pages and of Home had no context menu; a right click (or the Menu key) now opens the menu of tracks.
+- Rules of a smart playlist edited just after it was opened could be replaced by the rules read as it opened.
 - The Labels list opened from **Labels…** closed again at once when it had only a few rows, as before the first label exists. The list of completions in the search filter could close the same way.
 
 ## [0.9.4] - 2026-11-20

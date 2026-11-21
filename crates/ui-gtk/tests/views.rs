@@ -193,6 +193,42 @@ fn smart_playlists_folders_and_pins(app: &gtk::Application) {
         text,
         "rating=0 samplerate>=88200 (codec:flac OR codec:dsd) added<12m sort:added desc limit:100"
     );
+    // Each smart playlist shows the columns chosen for it.
+    let usual = [
+        "#",
+        "Title",
+        "Artist",
+        "Album",
+        "Format",
+        "Added ↓",
+        "Length",
+    ];
+    assert_eq!(window.smart_playlist_headers(), usual);
+    window.smart_playlist_show_column("rating", true);
+    window.smart_playlist_show_column("album", false);
+    assert_eq!(
+        window.smart_playlist_headers(),
+        [
+            "#",
+            "Title",
+            "Artist",
+            "Format",
+            "Added ↓",
+            "Rating",
+            "Length"
+        ]
+    );
+    assert!(window.open_playlist_named("Recently added", false));
+    wait_for("the other smart playlist", 2, || {
+        window.smart_playlist_headers().len() == usual.len()
+    });
+    assert!(window.open_playlist_named("Unrated hi-res", false));
+    wait_for("its columns and rules", 2, || {
+        window
+            .smart_playlist_headers()
+            .contains(&"Rating".to_owned())
+            && window.smart_playlist_state().0 == chips
+    });
     // Editing the text changes the rules, and text that cannot be read keeps them.
     window.smart_playlist_text("genre:jazz year<1970");
     wait_for("the new rules", 2, || {

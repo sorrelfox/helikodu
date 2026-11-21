@@ -39,7 +39,7 @@ Folders hold playlists and other folders. Click a folder in the sidebar to open 
 
 A smart playlist holds the tracks that match its rules, and follows your library: tracks that start to match come in, tracks that stop matching leave. Create one with **New playlist** ▸ **Smart playlist** in the sidebar, or **Save as smart playlist** on the search results of a query.
 
-Opened from the sidebar, a smart playlist shows its rules in words above its tracks. A click on a column header sorts the table for this visit; the rules keep their own order. **Edit rules** (or a click on a rule) opens the rule builder:
+Opened from the sidebar, a smart playlist shows its rules in words above its tracks. A click on a column header sorts the table for this visit; the rules keep their own order. **Columns**, at the end of the rule line, shows or hides columns for this smart playlist only: **#**, **Artist**, **Album**, **Genre**, **Year**, **Format**, **Added**, **Plays**, **Rating** and **Length** (the title always shows). Each smart playlist remembers its own choice. Click the stars in the **Rating** column to rate a track. **Edit rules** (or a click on a rule) opens the rule builder:
 
 - **Match all** or **any** of the rules. Each rule is a field, a condition and a value. **Add group** makes a group of rules that matches **any** or **all** of them.
 - **Limit to** keeps the first tracks, minutes, hours or gigabytes, in the order chosen under **sorted by**.

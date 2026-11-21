@@ -30,6 +30,10 @@ pub struct UiState {
     /// Whether "Follow the playing track" is on: the queue panel scrolls to
     /// each new track. The play modes themselves are kept with the session.
     pub follow_playing: bool,
+    /// The columns each smart playlist shows, by the playlist's number in the
+    /// library, in the order shown (`["number", "title", "rating"]`). A smart
+    /// playlist that is not listed shows the usual columns.
+    pub smart_columns: std::collections::BTreeMap<String, Vec<String>>,
 }
 
 impl UiState {
@@ -65,6 +69,7 @@ impl Default for UiState {
             last_view: String::new(),
             mini_player: MiniPlayerState::default(),
             follow_playing: false,
+            smart_columns: std::collections::BTreeMap::new(),
         }
     }
 }

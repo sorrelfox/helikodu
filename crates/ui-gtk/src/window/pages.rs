@@ -780,6 +780,9 @@ impl MainWindow {
             if let Some(view) = pages.playlist.get() {
                 view.ratings_changed(keys, stars);
             }
+            if let Some(view) = pages.smart.get() {
+                view.ratings_changed(keys, stars);
+            }
         }
         if let Some(album) = self.imp().album.borrow().as_ref() {
             album.ratings_changed(keys, stars);
@@ -1375,6 +1378,23 @@ impl MainWindow {
             let (chips, text) = p.smart().rule_texts();
             (chips, text, p.smart().track_count())
         })
+    }
+
+    /// The headers of the open smart playlist's table (for tests).
+    #[doc(hidden)]
+    pub fn smart_playlist_headers(&self) -> Vec<String> {
+        self.pages()
+            .map(|p| p.smart().header_texts())
+            .unwrap_or_default()
+    }
+
+    /// Shows or hides a column of the open smart playlist, as its Columns menu
+    /// does (for tests).
+    #[doc(hidden)]
+    pub fn smart_playlist_show_column(&self, id: &str, on: bool) {
+        if let Some(pages) = self.pages() {
+            pages.smart().demo_show_column(id, on);
+        }
     }
 
     /// Types query text into the open smart playlist's editor (for tests).

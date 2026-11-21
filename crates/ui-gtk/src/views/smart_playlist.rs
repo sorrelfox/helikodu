@@ -28,7 +28,7 @@ use helikodu_service::library::{parse_query, print_query};
 
 use super::smart_rules::{Cond, FIELDS, Node, Rule, Rules, UNITS, field_label, orders, unit_label};
 use crate::backend::{
-    Backend, PlayerRequest, PlaylistKey, PlaylistRow, Query, SmartTrack, TrackKey,
+    Backend, PlayerRequest, PlaylistKey, PlaylistRow, Query, SmartTrack, TrackKey, TrackRow,
 };
 use crate::dialogs::common::dropdown;
 use crate::format;
@@ -38,28 +38,140 @@ use crate::playback::{Change, Playback};
 use crate::views::actions::{self, Target};
 use crate::views::artists::button;
 use crate::views::table::{PlayingRows, TableCell, cell_at, selected_positions};
-use crate::widgets::{CoverArt, PlayingIndicator, WrapBox, label};
+use crate::widgets::{CoverArt, PlayingIndicator, RatingStars, WrapBox, label};
 
-/// The columns of a table: label, width (0 shares the rest), right-aligned.
-fn columns(editing: bool) -> Vec<(String, i32, bool)> {
-    if editing {
-        vec![
-            ("#".to_owned(), 20, true),
-            (tr("Title"), 0, false),
-            (tr("Artist"), 0, false),
-            (tr("Format"), 84, false),
-            (tr("Added"), 86, true),
-        ]
-    } else {
-        vec![
-            ("#".to_owned(), 22, true),
-            (tr("Title"), 0, false),
-            (tr("Artist"), 0, false),
-            (tr("Album"), 0, false),
-            (tr("Format"), 92, false),
-            (tr("Added"), 96, true),
-            (tr("Length"), 48, true),
-        ]
+/// A column of a table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Column {
+    Number,
+    Title,
+    Artist,
+    Album,
+    Genre,
+    Year,
+    Format,
+    Added,
+    Plays,
+    Rating,
+    Length,
+}
+
+/// The columns the Columns menu offers, in the order they are shown.
+const COLUMNS: [Column; 11] = [
+    Column::Number,
+    Column::Title,
+    Column::Artist,
+    Column::Album,
+    Column::Genre,
+    Column::Year,
+    Column::Format,
+    Column::Added,
+    Column::Plays,
+    Column::Rating,
+    Column::Length,
+];
+
+/// The columns of a smart playlist whose columns were never chosen.
+const USUAL: [Column; 7] = [
+    Column::Number,
+    Column::Title,
+    Column::Artist,
+    Column::Album,
+    Column::Format,
+    Column::Added,
+    Column::Length,
+];
+
+/// The columns of the results beside the rules while editing.
+const EDITING: [Column; 5] = [
+    Column::Number,
+    Column::Title,
+    Column::Artist,
+    Column::Format,
+    Column::Added,
+];
+
+impl Column {
+    /// Its name in `ui-state.toml` and in the actions of the Columns menu.
+    fn id(self) -> &'static str {
+        match self {
+            Self::Number => "number",
+            Self::Title => "title",
+            Self::Artist => "artist",
+            Self::Album => "album",
+            Self::Genre => "genre",
+            Self::Year => "year",
+            Self::Format => "format",
+            Self::Added => "added",
+            Self::Plays => "plays",
+            Self::Rating => "rating",
+            Self::Length => "length",
+        }
+    }
+
+    fn from_id(id: &str) -> Option<Self> {
+        COLUMNS.into_iter().find(|c| c.id() == id)
+    }
+
+    /// Its header.
+    fn title(self) -> String {
+        match self {
+            Self::Number => "#".to_owned(),
+            Self::Title => tr("Title"),
+            Self::Artist => tr("Artist"),
+            Self::Album => tr("Album"),
+            Self::Genre => tr("Genre"),
+            Self::Year => tr("Year"),
+            Self::Format => tr("Format"),
+            Self::Added => tr("Added"),
+            Self::Plays => tr("Plays"),
+            Self::Rating => tr("Rating"),
+            Self::Length => tr("Length"),
+        }
+    }
+
+    /// Its width; 0 shares the room left.
+    fn width(self, editing: bool) -> i32 {
+        match (self, editing) {
+            (Self::Number, true) => 20,
+            (Self::Number, false) => 22,
+            (Self::Format, true) => 84,
+            (Self::Format, false) => 92,
+            (Self::Added, true) => 86,
+            (Self::Added, false) => 96,
+            (Self::Year | Self::Plays | Self::Length, _) => 48,
+            (Self::Rating, _) => 86,
+            (Self::Title | Self::Artist | Self::Album | Self::Genre, _) => 0,
+        }
+    }
+
+    /// Whether its text is aligned to the right.
+    fn right(self) -> bool {
+        matches!(
+            self,
+            Self::Number | Self::Year | Self::Added | Self::Plays | Self::Length
+        )
+    }
+}
+
+/// The order of two tracks by `column`.
+fn compare(column: Column, a: &SmartTrack, b: &SmartTrack) -> std::cmp::Ordering {
+    let (x, y) = (&a.row, &b.row);
+    match column {
+        Column::Number => std::cmp::Ordering::Equal,
+        Column::Title => x.title.to_lowercase().cmp(&y.title.to_lowercase()),
+        Column::Artist => x.artist.to_lowercase().cmp(&y.artist.to_lowercase()),
+        Column::Album => x
+            .album_title
+            .to_lowercase()
+            .cmp(&y.album_title.to_lowercase()),
+        Column::Genre => x.genre.to_lowercase().cmp(&y.genre.to_lowercase()),
+        Column::Year => x.year.cmp(&y.year),
+        Column::Format => format::short(&x.format).cmp(&format::short(&y.format)),
+        Column::Added => a.added.cmp(&b.added),
+        Column::Plays => x.plays.cmp(&y.plays),
+        Column::Rating => x.rating.cmp(&y.rating),
+        Column::Length => x.duration.cmp(&y.duration),
     }
 }
 
@@ -264,7 +376,11 @@ pub(crate) struct SmartPlaylistView {
     info: RefCell<Option<PlaylistRow>>,
     tracks: RefCell<Vec<SmartTrack>>,
     /// The table's order for this visit: column and descending.
-    sorted: Cell<Option<(usize, bool)>>,
+    sorted: Cell<Option<(Column, bool)>>,
+    /// The columns of the table, as chosen for this smart playlist.
+    shown_columns: RefCell<Vec<Column>>,
+    /// The actions of the Columns menu.
+    column_actions: RefCell<Option<gio::SimpleActionGroup>>,
     rules: RefCell<Rules>,
     query: RefCell<Query>,
     /// The rules cannot be shown as rows and are edited as text.
@@ -273,6 +389,9 @@ pub(crate) struct SmartPlaylistView {
     /// Set while the controls are filled in, so their signals change nothing.
     filling: Cell<bool>,
     generation: Cell<u64>,
+    /// Counts the readings of the rules and their edits: a reading that
+    /// finishes after a later one or after an edit is dropped.
+    rules_generation: Cell<u64>,
     /// The cells of both tables, marked where the playing track is.
     playing: PlayingRows,
 }
@@ -414,6 +533,13 @@ impl SmartPlaylistView {
         order.set_max_width_chars(1);
         rule_line.append(&order);
         rule_line.append(&live());
+        let columns_button = gtk::MenuButton::new();
+        columns_button.set_label(&tr("Columns"));
+        columns_button.add_css_class("hk-sort");
+        columns_button.set_valign(gtk::Align::Center);
+        columns_button.set_margin_start(6);
+        columns_button.set_tooltip_text(Some(&tr("Show or hide columns")));
+        rule_line.append(&columns_button);
         viewing.append(&rule_line);
         let view = table(false);
         viewing.append(&view.header);
@@ -580,14 +706,18 @@ impl SmartPlaylistView {
             info: RefCell::new(None),
             tracks: RefCell::new(Vec::new()),
             sorted: Cell::new(None),
+            shown_columns: RefCell::new(USUAL.to_vec()),
+            column_actions: RefCell::new(None),
             rules: RefCell::new(Rules::default()),
             query: RefCell::new(Query::default()),
             text_only: Cell::new(false),
             editing: Cell::new(false),
             filling: Cell::new(false),
             generation: Cell::new(0),
+            rules_generation: Cell::new(0),
             playing: PlayingRows::default(),
         });
+        crate::widgets::menu_names::set_menu_later(&columns_button, &view.columns_menu());
         view.fill_header(false);
         view.fill_header(true);
         view.view.list.set_factory(Some(&view.factory(false)));
@@ -613,6 +743,16 @@ impl SmartPlaylistView {
         if editing { &self.results } else { &self.view }
     }
 
+    /// The columns a table shows: those chosen for this smart playlist, or
+    /// the results' own while editing.
+    fn columns(&self, editing: bool) -> Vec<Column> {
+        if editing {
+            EDITING.to_vec()
+        } else {
+            self.shown_columns.borrow().clone()
+        }
+    }
+
     /// The header of a table: buttons that sort it for this visit.
     fn fill_header(self: &Rc<Self>, editing: bool) {
         let header = &self.table(editing).header;
@@ -626,43 +766,44 @@ impl SmartPlaylistView {
             .sort
             .first()
             .is_some_and(|k| k.by == helikodu_model::query::SortBy::Field(Field::Added));
-        for (i, (text, width, right)) in columns(editing).into_iter().enumerate() {
+        for column in self.columns(editing) {
             let arrow = match sorted {
-                Some((column, descending)) if column == i => {
+                Some((c, descending)) if c == column => {
                     Some(if descending { " ↓" } else { " ↑" })
                 }
-                None if text == tr("Added") && rules_sort_added => Some(" ↓"),
+                None if column == Column::Added && rules_sort_added => Some(" ↓"),
                 _ => None,
             };
             let l = label(
-                &format!("{text}{}", arrow.unwrap_or("")),
+                &format!("{}{}", column.title(), arrow.unwrap_or("")),
                 &["hk-section-label"],
             );
             if arrow.is_some() {
                 l.add_css_class("hk-sort-key");
             }
-            if right {
+            if column.right() {
                 l.set_xalign(1.0);
             }
             let b = gtk::Button::new();
             b.add_css_class("hk-header-button");
             b.set_child(Some(&l));
+            let width = column.width(editing);
             if width > 0 {
                 b.set_size_request(width, -1);
             } else {
                 b.set_hexpand(true);
                 l.set_max_width_chars(1);
             }
-            if i == 0 {
+            if column == Column::Number {
                 b.set_sensitive(false);
             }
             let weak = Rc::downgrade(self);
             b.connect_clicked(move |_| {
                 if let Some(view) = weak.upgrade() {
-                    view.sort_by(i);
+                    view.sort_by(column);
                 }
             });
-            if i == 1 && !editing {
+            if column == Column::Title && !editing {
                 // The rows' title cell starts with a cover.
                 let cell = gtk::Box::new(gtk::Orientation::Horizontal, 10);
                 cell.set_hexpand(true);
@@ -679,6 +820,7 @@ impl SmartPlaylistView {
 
     fn factory(self: &Rc<Self>, editing: bool) -> gtk::SignalListItemFactory {
         let factory = gtk::SignalListItemFactory::new();
+        let columns = self.columns(editing);
         let weak = Rc::downgrade(self);
         factory.connect_setup(move |_, item| {
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
@@ -686,19 +828,25 @@ impl SmartPlaylistView {
             };
             let line = gtk::Box::new(gtk::Orientation::Horizontal, 16);
             line.add_css_class("hk-playlist-row");
-            for (i, (_, width, right)) in columns(editing).into_iter().enumerate() {
-                let mut classes = vec!["hk-t2"];
-                if i == 0 {
-                    classes = vec!["hk-t3", "hk-numeric"];
-                } else if i == 1 {
-                    classes = vec!["hk-medium"];
-                } else if columns(editing)[i].0 == tr("Format") {
-                    classes = vec!["hk-t3", "hk-mono-meta"];
-                } else if right {
-                    classes = vec!["hk-t2", "hk-numeric"];
+            for column in &columns {
+                let width = column.width(editing);
+                if *column == Column::Rating {
+                    let stars = RatingStars::default();
+                    stars.set_halign(gtk::Align::Start);
+                    stars.set_valign(gtk::Align::Center);
+                    stars.set_size_request(width, -1);
+                    line.append(&stars);
+                    continue;
                 }
+                let classes = match column {
+                    Column::Number => vec!["hk-t3", "hk-numeric"],
+                    Column::Title => vec!["hk-medium"],
+                    Column::Format => vec!["hk-t3", "hk-mono-meta"],
+                    c if c.right() => vec!["hk-t2", "hk-numeric"],
+                    _ => vec!["hk-t2"],
+                };
                 let l = label("", &classes);
-                if right {
+                if column.right() {
                     l.set_xalign(1.0);
                 }
                 if width > 0 {
@@ -707,7 +855,7 @@ impl SmartPlaylistView {
                     l.set_hexpand(true);
                     l.set_max_width_chars(1);
                 }
-                if i == 0 {
+                if *column == Column::Number {
                     // The number, or the indicator in the playing row.
                     let lead = gtk::Stack::new();
                     lead.set_size_request(width, -1);
@@ -716,7 +864,7 @@ impl SmartPlaylistView {
                     indicator.set_halign(gtk::Align::End);
                     lead.add_named(&indicator, Some("playing"));
                     line.append(&lead);
-                } else if i == 1 && !editing {
+                } else if *column == Column::Title && !editing {
                     let cell = gtk::Box::new(gtk::Orientation::Horizontal, 10);
                     cell.set_hexpand(true);
                     let cover = CoverArt::new(24, 4.0);
@@ -731,6 +879,24 @@ impl SmartPlaylistView {
             let cell = TableCell::new(&line);
             if let Some(view) = weak.upgrade() {
                 view.playing.add(&cell);
+                let mut child = line.first_child();
+                while let Some(widget) = child {
+                    child = widget.next_sibling();
+                    let Some(stars) = widget.downcast_ref::<RatingStars>() else {
+                        continue;
+                    };
+                    let weak_view = Rc::downgrade(&view);
+                    let weak_cell = cell.downgrade();
+                    stars.set_editable(move |stars| {
+                        let (Some(view), Some(cell)) = (weak_view.upgrade(), weak_cell.upgrade())
+                        else {
+                            return;
+                        };
+                        if let Some(row) = cell.item().and_then(|item| item.row()) {
+                            view.rate(&row, stars);
+                        }
+                    });
+                }
             }
             item.set_child(Some(&cell));
         });
@@ -765,6 +931,24 @@ impl SmartPlaylistView {
         factory
     }
 
+    /// The text of `column` in the row of `track`.
+    fn cell_text(column: Column, track: &SmartTrack, position: usize) -> String {
+        let row = &track.row;
+        match column {
+            Column::Number => (position + 1).to_string(),
+            Column::Title => row.title.clone(),
+            Column::Artist => row.artist.clone(),
+            Column::Album => row.album_title.clone(),
+            Column::Genre => row.genre.clone(),
+            Column::Year => row.year.map(|y| y.to_string()).unwrap_or_default(),
+            Column::Format => format::short(&row.format),
+            Column::Added => date(track.added),
+            Column::Plays => row.plays.to_string(),
+            Column::Rating => String::new(),
+            Column::Length => row.duration.map(format::duration).unwrap_or_default(),
+        }
+    }
+
     fn show_row(&self, cell: &TableCell, track: &TrackItem, editing: bool) {
         let Some(row) = track.row() else { return };
         let Some(line) = cell.child() else { return };
@@ -775,27 +959,21 @@ impl SmartPlaylistView {
             .iter()
             .find(|t| t.row.key == row.key)
             .and_then(|t| t.added);
-        let mut texts = vec![
-            (position + 1).to_string(),
-            row.title.clone(),
-            row.artist.clone(),
-        ];
-        if !editing {
-            texts.push(row.album_title.clone());
-        }
-        texts.push(format::short(&row.format));
-        texts.push(date(added));
-        if !editing {
-            texts.push(row.duration.map(format::duration).unwrap_or_default());
-        }
+        let shown = SmartTrack {
+            row: (*row).clone(),
+            added,
+        };
         let playing = !row.missing && self.playing.contains(Some(row.key));
         cell.set_playing(playing);
         let mut child = line.first_child();
-        let mut i = 0;
-        while let Some(widget) = child {
+        for column in self.columns(editing) {
+            let Some(widget) = child else { break };
             child = widget.next_sibling();
-            let text = texts.get(i).cloned().unwrap_or_default();
-            if let Some(l) = widget.downcast_ref::<gtk::Label>() {
+            let text = Self::cell_text(column, &shown, position);
+            if let Some(stars) = widget.downcast_ref::<RatingStars>() {
+                stars.set_rating(row.rating);
+                stars.set_visible(!row.missing);
+            } else if let Some(l) = widget.downcast_ref::<gtk::Label>() {
                 l.set_text(&text);
             } else if let Some(lead) = widget.downcast_ref::<gtk::Stack>() {
                 lead.set_visible_child_name(if playing { "playing" } else { "number" });
@@ -810,12 +988,148 @@ impl SmartPlaylistView {
                     l.set_text(&text);
                 }
             }
-            i += 1;
         }
         if row.missing {
             cell.add_css_class("hk-missing");
         } else {
             cell.remove_css_class("hk-missing");
+        }
+    }
+
+    /// Rates the track of a row from its stars, as the context menu does.
+    fn rate(&self, row: &Rc<TrackRow>, stars: Option<u8>) {
+        if let Some(window) = self.window() {
+            actions::rate(
+                &window,
+                self.backend.clone(),
+                Target::tracks(vec![row.clone()]),
+                stars,
+            );
+        }
+    }
+
+    /// Keeps a changed rating in the rows of `keys`, in place.
+    pub(crate) fn ratings_changed(&self, keys: &[TrackKey], stars: Option<u8>) {
+        for track in self
+            .tracks
+            .borrow_mut()
+            .iter_mut()
+            .filter(|t| keys.contains(&t.row.key))
+        {
+            track.row.rating = stars;
+        }
+        for table in [&self.view, &self.results] {
+            for i in 0..table.store.n_items() {
+                if let Some(item) = table.store.item(i).and_downcast::<TrackItem>()
+                    && keys.contains(&item.key())
+                    && let Some(row) = item.row()
+                {
+                    let mut row = (*row).clone();
+                    row.rating = stars;
+                    item.fill(Rc::new(row));
+                }
+            }
+        }
+    }
+
+    /// The Columns menu: a box for each column but the title, which always
+    /// shows.
+    fn columns_menu(self: &Rc<Self>) -> gio::Menu {
+        let group = gio::SimpleActionGroup::new();
+        let menu = gio::Menu::new();
+        for column in COLUMNS {
+            let shown = self.shown_columns.borrow().contains(&column);
+            let action = gio::SimpleAction::new_stateful(column.id(), None, &shown.to_variant());
+            if column == Column::Title {
+                action.set_enabled(false);
+            } else {
+                let weak = Rc::downgrade(self);
+                action.connect_change_state(move |action, value| {
+                    let Some(on) = value.and_then(|v| v.get::<bool>()) else {
+                        return;
+                    };
+                    action.set_state(&on.to_variant());
+                    if let Some(view) = weak.upgrade() {
+                        view.show_column(column, on);
+                    }
+                });
+            }
+            group.add_action(&action);
+            menu.append(
+                Some(&column.title()),
+                Some(&format!("smart-columns.{}", column.id())),
+            );
+        }
+        self.root.insert_action_group("smart-columns", Some(&group));
+        self.column_actions.replace(Some(group));
+        menu
+    }
+
+    /// Shows or hides `column` in this smart playlist and remembers it.
+    fn show_column(self: &Rc<Self>, column: Column, on: bool) {
+        let shown: Vec<Column> = COLUMNS
+            .into_iter()
+            .filter(|c| {
+                if *c == column {
+                    on
+                } else {
+                    self.shown_columns.borrow().contains(c)
+                }
+            })
+            .collect();
+        if let Some(key) = self.key.get() {
+            let store = self.backend.ui_state();
+            let mut state = store.load();
+            state.smart_columns.insert(
+                key.0.to_string(),
+                shown.iter().map(|c| c.id().to_owned()).collect(),
+            );
+            if let Err(error) = store.save(&state) {
+                log::warn!("cannot save the window state: {error}");
+            }
+        }
+        self.use_columns(shown);
+    }
+
+    /// The columns remembered for the smart playlist `key`.
+    fn remembered_columns(&self, key: PlaylistKey) -> Vec<Column> {
+        let state = self.backend.ui_state().load();
+        let Some(ids) = state.smart_columns.get(&key.0.to_string()) else {
+            return USUAL.to_vec();
+        };
+        let chosen: Vec<Column> = ids.iter().filter_map(|id| Column::from_id(id)).collect();
+        // In the usual order, and never without the title.
+        COLUMNS
+            .into_iter()
+            .filter(|c| *c == Column::Title || chosen.contains(c))
+            .collect()
+    }
+
+    /// Shows the table with `columns`.
+    fn use_columns(self: &Rc<Self>, columns: Vec<Column>) {
+        if *self.shown_columns.borrow() == columns {
+            return;
+        }
+        if let Some((sorted, _)) = self.sorted.get()
+            && !columns.contains(&sorted)
+        {
+            self.sorted.set(None);
+        }
+        self.shown_columns.replace(columns);
+        if let Some(group) = self.column_actions.borrow().as_ref() {
+            for column in COLUMNS {
+                if let Some(action) = group
+                    .lookup_action(column.id())
+                    .and_downcast::<gio::SimpleAction>()
+                {
+                    action.set_state(&self.shown_columns.borrow().contains(&column).to_variant());
+                }
+            }
+        }
+        self.fill_header(false);
+        self.view.list.set_factory(Some(&self.factory(false)));
+        if !self.editing.get() {
+            self.show_rows();
         }
     }
 
@@ -973,6 +1287,7 @@ impl SmartPlaylistView {
             self.summary.set_text("");
             self.problem.set_visible(false);
             self.text.set_visible(false);
+            self.use_columns(self.remembered_columns(key));
             self.load_rules();
         }
         self.set_editing(editing);
@@ -1015,12 +1330,15 @@ impl SmartPlaylistView {
 
     fn load_rules(self: &Rc<Self>) {
         let Some(key) = self.key.get() else { return };
+        let generation = self.rules_generation.get() + 1;
+        self.rules_generation.set(generation);
         let backend = self.backend.clone();
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
             let result = backend.query(move |l| l.smart_query(key)).await;
             let Some(view) = weak.upgrade() else { return };
-            if view.key.get() != Some(key) {
+            // Rules read before a later reading, or before an edit, are old.
+            if view.key.get() != Some(key) || view.rules_generation.get() != generation {
                 return;
             }
             match result {
@@ -1388,6 +1706,7 @@ impl SmartPlaylistView {
     /// Saves the rules when they read as a query that differs from the saved one.
     fn save(self: &Rc<Self>) {
         let Some(key) = self.key.get() else { return };
+        self.rules_generation.set(self.rules_generation.get() + 1);
         let query = if self.text_only.get() {
             self.query.borrow().clone()
         } else {
@@ -1580,41 +1899,18 @@ impl SmartPlaylistView {
     fn shown(&self) -> Vec<SmartTrack> {
         let mut tracks = self.tracks.borrow().clone();
         let editing = self.editing.get();
-        if let Some((column, descending)) = self.sorted.get() {
-            let name = columns(editing)
-                .get(column)
-                .map(|c| c.0.clone())
-                .unwrap_or_default();
-            let key = |t: &SmartTrack| -> (String, Option<SystemTime>, Duration) {
-                let text = if name == tr("Title") {
-                    t.row.title.to_lowercase()
-                } else if name == tr("Artist") {
-                    t.row.artist.to_lowercase()
-                } else if name == tr("Album") {
-                    t.row.album_title.to_lowercase()
-                } else if name == tr("Format") {
-                    format::short(&t.row.format)
-                } else {
-                    String::new()
-                };
-                (text, t.added, t.row.duration.unwrap_or_default())
-            };
+        if let Some((column, descending)) = self.sorted.get()
+            && self.columns(editing).contains(&column)
+        {
             tracks.sort_by(|a, b| {
-                let (ka, kb) = (key(a), key(b));
-                let order = if name == tr("Added") {
-                    ka.1.cmp(&kb.1)
-                } else if name == tr("Length") {
-                    ka.2.cmp(&kb.2)
-                } else {
-                    ka.0.cmp(&kb.0)
-                };
+                let order = compare(column, a, b);
                 if descending { order.reverse() } else { order }
             });
         }
         tracks
     }
 
-    fn sort_by(self: &Rc<Self>, column: usize) {
+    fn sort_by(self: &Rc<Self>, column: Column) {
         let next = match self.sorted.get() {
             Some((c, false)) if c == column => Some((column, true)),
             Some((c, true)) if c == column => None,
@@ -1736,6 +2032,30 @@ impl SmartPlaylistView {
     }
 
     /// The rule line's chips and the query text (for tests).
+    /// The headers of the table (for tests).
+    pub(crate) fn header_texts(&self) -> Vec<String> {
+        let mut texts = Vec::new();
+        let mut child = self.view.header.first_child();
+        while let Some(widget) = child {
+            child = widget.next_sibling();
+            let button = widget
+                .downcast_ref::<gtk::Button>()
+                .cloned()
+                .or_else(|| widget.last_child().and_downcast::<gtk::Button>());
+            if let Some(l) = button.and_then(|b| b.child()).and_downcast::<gtk::Label>() {
+                texts.push(l.text().to_string());
+            }
+        }
+        texts
+    }
+
+    /// Ticks or clears a column in the Columns menu (for tests).
+    pub(crate) fn demo_show_column(&self, id: &str, on: bool) {
+        if let Some(group) = self.column_actions.borrow().clone() {
+            group.change_action_state(id, &on.to_variant());
+        }
+    }
+
     pub(crate) fn rule_texts(&self) -> (Vec<String>, String) {
         let mut chips = Vec::new();
         let mut child = self.chips.first_child();
