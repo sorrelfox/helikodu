@@ -122,6 +122,18 @@ SPDX-License-Identifier: CC0-1.0
   <translation type="gettext">helikodu</translation>
 
   <releases>
+    <release version="1.0.0" date="2026-11-23">
+      <description>
+        <p>The first stable release:</p>
+        <ul>
+          <li>The tracks of an album page can be sorted by number, title, plays, rating or length</li>
+          <li>Changes to the settings file made while Helikodu runs apply at once</li>
+          <li>Undo after Start Radio puts the queue back exactly</li>
+          <li>Lyrics files beside a track are found by has:lyrics</li>
+          <li>Fixes for generator playlists, convolution and playback at another speed</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.5" date="2026-11-21" type="development">
       <description>
         <p>More sound processing and smarter playback:</p>

@@ -24,9 +24,6 @@ Helikodu plays the music you own, from your own computer. It plays practically e
 
 The name is Estonian: *heli* means "sound" and *kodu* means "home". Say it HE-li-ko-du.
 
-> [!NOTE]
-> Version 0.9.0 is the release candidate for 1.0. The features are frozen: until 1.0, only fixes, translations and documentation follow.
-
 ## What it does
 
 - **Plays practically every audio format.** FLAC, ALAC, WAV, MP3, AAC, Opus, Vorbis, DSD, tracker modules, game music, SID tunes, MIDI and many more, with CUE sheets and chapters, and the sound track of video files. Helikodu never shows video.

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helikodu\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 08:33-0500\n"
+"POT-Creation-Date: 2026-11-21 13:37-0500\n"
 "PO-Revision-Date: 2026-11-18 12:00+0000\n"
 "Last-Translator: Helikodu contributors\n"
 "Language-Team: Chinese (Simplified) <https://github.com/sorrelfox/helikodu>\n"
@@ -34,12 +34,12 @@ msgstr "音乐播放器"
 msgid "Play and organize your music library, offline"
 msgstr "离线播放和整理您的音乐库"
 
-#. Translators: search terms, separated and ended by semicolons. Do not
-#. translate or localize the semicolons.
+#. Translators: search terms, separated and ended by semicolons. Do not translate or localize the semicolons.
 #: data/io.github.sorrelfox.Helikodu.desktop:9
 msgid "music;audio;player;library;playlist;album;flac;mp3;ogg;opus;gapless;"
 msgstr ""
-"音乐;音频;播放器;音乐库;播放列表;专辑;无缝播放;music;audio;player;library;playlist;album;flac;mp3;ogg;opus;gapless;"
+"音乐;音频;播放器;音乐库;播放列表;专辑;无缝播"
+"放;music;audio;player;library;playlist;album;flac;mp3;ogg;opus;gapless;"
 
 #: data/io.github.sorrelfox.Helikodu.desktop:24
 msgid "Play or Pause"
@@ -62,7 +62,9 @@ msgid ""
 "Helikodu is an audio player and music library manager for your own music, "
 "kept on your own computer. It works entirely offline: it never connects to "
 "the internet and sends no telemetry."
-msgstr "Helikodu 是一款音频播放器和音乐库管理器，用来管理您保存在自己电脑上的音乐。它完全离线工作：从不连接互联网，也不发送任何遥测数据。"
+msgstr ""
+"Helikodu 是一款音频播放器和音乐库管理器，用来管理您保存在自己电脑上的音乐。它"
+"完全离线工作：从不连接互联网，也不发送任何遥测数据。"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:24
 msgid ""
@@ -74,7 +76,8 @@ msgstr "几乎可以播放所有音频格式，包括视频文件中的音轨"
 msgid ""
 "Gapless playback, bit-perfect output where the hardware allows it, and "
 "ReplayGain 2.0 loudness normalization"
-msgstr "无缝播放，在硬件允许时进行比特完美输出，并支持 ReplayGain 2.0 响度标准化"
+msgstr ""
+"无缝播放，在硬件允许时进行比特完美输出，并支持 ReplayGain 2.0 响度标准化"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:26
 msgid ""
@@ -96,8 +99,8 @@ msgstr "在 GNOME、KDE Plasma 和其他桌面上支持媒体控制、媒体键�
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:30
 #: crates/ui-gtk/src/dialogs/common.rs:448
 msgid ""
-"In the Flatpak, Helikodu has no network access at all and asks only for what"
-" its features need:"
+"In the Flatpak, Helikodu has no network access at all and asks only for what "
+"its features need:"
 msgstr "在 Flatpak 中，Helikodu 完全无法访问网络，只请求其功能所需的权限："
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:35
@@ -105,13 +108,15 @@ msgstr "在 Flatpak 中，Helikodu 完全无法访问网络，只请求其功能
 msgid ""
 "Your Music folder, to read and change it: for the library, the tag editor, "
 "organizing files and cover files. Other folders are added in the settings"
-msgstr "你的“音乐”文件夹，用于读取和修改：音乐库、标签编辑器、整理文件和封面文件。其他文件夹可在设置中添加"
+msgstr ""
+"你的“音乐”文件夹，用于读取和修改：音乐库、标签编辑器、整理文件和封面文件。其"
+"他文件夹可在设置中添加"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:36
 #: crates/ui-gtk/src/dialogs/common.rs:456
 msgid ""
-"The sound system (PipeWire and PulseAudio), to play and to choose the output"
-" device"
+"The sound system (PipeWire and PulseAudio), to play and to choose the output "
+"device"
 msgstr "声音系统（PipeWire 和 PulseAudio），用于播放和选择输出设备"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:37
@@ -198,139 +203,171 @@ msgid "Your music library in the dark style"
 msgstr "深色样式下的音乐库"
 
 #: data/io.github.sorrelfox.Helikodu.metainfo.xml:127
+msgid "The first stable release:"
+msgstr "首个稳定版本："
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+msgid ""
+"The tracks of an album page can be sorted by number, title, plays, rating or "
+"length"
+msgstr "专辑页面的曲目可按编号、标题、播放次数、评分或时长排序"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+msgid "Changes to the settings file made while Helikodu runs apply at once"
+msgstr "在 Helikodu 运行时对设置文件所做的更改会立即生效"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+msgid "Undo after Start Radio puts the queue back exactly"
+msgstr "“开始电台”后的“撤销”会将队列完全恢复原样"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+msgid "Lyrics files beside a track are found by has:lyrics"
+msgstr "has:lyrics 也能找到曲目旁的歌词文件"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+msgid ""
+"Fixes for generator playlists, convolution and playback at another speed"
+msgstr "修复了生成式播放列表、卷积以及以其他速度播放时的问题"
+
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:139
 msgid "More sound processing and smarter playback:"
 msgstr "更多声音处理和更智能的播放："
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:129
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:141
 msgid ""
 "A compressor with a night mode, room correction by convolution, pitch shift "
 "and playback speed"
 msgstr "带夜间模式的压缩器、卷积房间校正、变调和播放速度"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:130
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
 msgid ""
-"The processing stages in an order of your choice, saved as named chains, and"
-" an equalizer for single tracks"
+"The processing stages in an order of your choice, saved as named chains, and "
+"an equalizer for single tracks"
 msgstr "按你选择的顺序排列并保存为命名链的处理阶段，以及单曲均衡器"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:131
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
 msgid ""
 "Endless play with related tracks, an Auto-DJ, and shuffle that favours or "
 "skips tracks"
 msgstr "用相关曲目无尽播放、自动 DJ，以及优先或跳过曲目的随机播放"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:132
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
 msgid ""
 "Tracks that sound alike, found on your computer without any online service"
 msgstr "在你的计算机上找到听感相似的曲目，无需任何在线服务"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:133
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
 msgid "Generator playlists, made by steps"
 msgstr "由步骤构成的生成式播放列表"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:139
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:151
 msgid "Track analysis and library features:"
 msgstr "曲目分析与音乐库功能："
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:141
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:153
 msgid ""
 "Tracks are analysed in the background: crossfades follow the music, silence "
-"can be left out or skipped, and a leveller evens out tracks without loudness"
-" values"
-msgstr "曲目在后台分析：交叉淡化跟随音乐进行，静音可以省略或跳过，电平调节器会平衡没有响度值的曲目"
+"can be left out or skipped, and a leveller evens out tracks without loudness "
+"values"
+msgstr ""
+"曲目在后台分析：交叉淡化跟随音乐进行，静音可以省略或跳过，电平调节器会平衡没"
+"有响度值的曲目"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:142
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
 msgid ""
 "Import play counts, ratings and playlists from Rhythmbox, Strawberry, "
 "Clementine, Lollypop and iTunes, and move your own data to another computer"
 msgstr ""
-"从 Rhythmbox、Strawberry、Clementine、Lollypop 和 iTunes "
-"导入播放次数、评分和播放列表，并将自己的数据迁移到另一台计算机"
+"从 Rhythmbox、Strawberry、Clementine、Lollypop 和 iTunes 导入播放次数、评分和"
+"播放列表，并将自己的数据迁移到另一台计算机"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:143
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
 msgid "Labels for tracks, albums and artists, and fields of your own"
 msgstr "曲目、专辑和艺人的标签，以及自定义字段"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:144
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:156
 msgid "An optional managed music folder"
 msgstr "可选的托管音乐文件夹"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:145
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:157
 msgid ""
 "Naming patterns with functions and conditions, and the track table grouped "
 "by any field"
 msgstr "支持函数和条件的命名模式，以及可按任意字段分组的曲目表"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:146
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:158
 msgid ""
 "Music that was playing when Helikodu closed plays on when it starts again"
 msgstr "关闭 Helikodu 时正在播放的音乐，会在下次启动时继续播放"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:152
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:163
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:164
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:175
 msgid "Fixes for the release candidate:"
 msgstr "候选发布版本的修复："
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:154
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:166
 msgid ""
 "The Flatpak file installs Helikodu from its own signed repository, so that "
 "it gets updates"
 msgstr "Flatpak 文件会从 Helikodu 自己的签名仓库安装，因此可以获得更新"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:155
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:167
 msgid ""
 "The tray menu in KDE Plasma no longer shows wrong items after it changes"
 msgstr "KDE Plasma 的系统托盘菜单在变化后不再显示错误的项目"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:156
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:168
 msgid "Every page fits a narrow window"
 msgstr "每个页面都能放进窄窗口"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:157
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:169
 msgid "Helikodu uses less memory"
 msgstr "Helikodu 占用的内存更少"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:165
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:177
 msgid "With Now Playing open, the window can be made as small as elsewhere"
 msgstr "打开“正在播放”时，窗口可以像其他界面一样缩小"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:166
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:178
 msgid "The Favourite button shows the same heart on every desktop"
 msgstr "收藏按钮在所有桌面上都显示同样的心形"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:167
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:179
 msgid "The ring around the cover of the playing album is drawn whole"
 msgstr "正在播放的专辑封面周围的边框会完整显示"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:174
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:186
 msgid ""
 "The release candidate for 1.0: smart playlists and a query language for "
-"search, lyrics, a play history, Home and a mini player, tag tools with undo,"
-" file organizing, converting and folder sync, a cover manager, a waveform "
+"search, lyrics, a play history, Home and a mini player, tag tools with undo, "
+"file organizing, converting and folder sync, a cover manager, a waveform "
 "seek bar, library backups, an offline user guide and better screen reader "
 "and keyboard access."
 msgstr ""
-"1.0 "
-"的候选发布版本：智能播放列表和用于搜索的查询语言、歌词、播放历史、主页和迷你播放器、支持撤销的标签工具、文件整理、格式转换和文件夹同步、封面管理器、波形进度条、音乐库备份、离线用户指南，以及更好的屏幕阅读器和键盘操作支持。"
+"1.0 的候选发布版本：智能播放列表和用于搜索的查询语言、歌词、播放历史、主页和"
+"迷你播放器、支持撤销的标签工具、文件整理、格式转换和文件夹同步、封面管理器、"
+"波形进度条、音乐库备份、离线用户指南，以及更好的屏幕阅读器和键盘操作支持。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:185
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:197
 msgid ""
-"The first beta: graphic and parametric equalizers, crossfeed, channel mixing"
-" and a limiter, crossfades and fades, loudness measurement, a signal path "
-"view, PulseAudio and JACK output, and tracker modules, game music, SID tunes"
-" and MIDI files."
+"The first beta: graphic and parametric equalizers, crossfeed, channel mixing "
+"and a limiter, crossfades and fades, loudness measurement, a signal path "
+"view, PulseAudio and JACK output, and tracker modules, game music, SID tunes "
+"and MIDI files."
 msgstr ""
-"首个 Beta 版本：图示均衡器和参数均衡器、交叉馈送、声道混合和限幅器、交叉淡化和淡入淡出、响度测量、信号路径视图、PulseAudio 和 JACK"
-" 输出，以及对 Tracker 模块音乐、游戏音乐、SID 音乐和 MIDI 文件的支持。"
+"首个 Beta 版本：图示均衡器和参数均衡器、交叉馈送、声道混合和限幅器、交叉淡化"
+"和淡入淡出、响度测量、信号路径视图、PulseAudio 和 JACK 输出，以及对 Tracker "
+"模块音乐、游戏音乐、SID 音乐和 MIDI 文件的支持。"
 
-#: data/io.github.sorrelfox.Helikodu.metainfo.xml:195
+#: data/io.github.sorrelfox.Helikodu.metainfo.xml:207
 msgid ""
 "The first alpha: a music library with albums, artists, genres, folders, "
 "tracks, search and playlists, gapless and bit-perfect playback with "
 "ReplayGain, a tag editor, and desktop integration through MPRIS."
 msgstr ""
-"首个 Alpha 版本：包含专辑、艺术家、流派、文件夹、曲目、搜索和播放列表的音乐库，支持 ReplayGain "
-"的无缝播放和比特完美播放，标签编辑器，以及通过 MPRIS 实现的桌面集成。"
+"首个 Alpha 版本：包含专辑、艺术家、流派、文件夹、曲目、搜索和播放列表的音乐"
+"库，支持 ReplayGain 的无缝播放和比特完美播放，标签编辑器，以及通过 MPRIS 实现"
+"的桌面集成。"
 
 #: crates/ui-gtk/resources/ui/albums.ui:10
 msgid "Sort By"
@@ -345,12 +382,12 @@ msgid "Album Artist"
 msgstr "专辑艺术家"
 
 #: crates/ui-gtk/resources/ui/albums.ui:17
-#: crates/ui-gtk/resources/ui/album.ui:244
-#: crates/ui-gtk/src/views/album.rs:788 crates/ui-gtk/src/views/albums.rs:140
+#: crates/ui-gtk/resources/ui/album.ui:253 crates/ui-gtk/src/views/album.rs:868
+#: crates/ui-gtk/src/views/album.rs:1005 crates/ui-gtk/src/views/albums.rs:140
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:43
-#: crates/ui-gtk/src/views/folders.rs:287
-#: crates/ui-gtk/src/views/genres.rs:158 crates/ui-gtk/src/views/genres.rs:273
-#: crates/ui-gtk/src/views/playlist.rs:72 crates/ui-gtk/src/views/tracks.rs:71
+#: crates/ui-gtk/src/views/folders.rs:287 crates/ui-gtk/src/views/genres.rs:158
+#: crates/ui-gtk/src/views/genres.rs:273 crates/ui-gtk/src/views/playlist.rs:72
+#: crates/ui-gtk/src/views/tracks.rs:71
 #: crates/ui-gtk/src/tools/tag_preview.rs:168
 #: crates/ui-gtk/src/views/history.rs:384
 #: crates/ui-gtk/src/views/category.rs:252
@@ -360,10 +397,10 @@ msgstr "专辑艺术家"
 #: crates/ui-gtk/src/views/smart_rules.rs:549
 #: crates/ui-gtk/src/widgets/insert_popover/catalogue.rs:73
 #: crates/ui-gtk/src/views/labels.rs:265
-#: crates/ui-gtk/src/views/generator.rs:456
-#: crates/ui-gtk/src/views/generator.rs:498
+#: crates/ui-gtk/src/views/generator.rs:463
+#: crates/ui-gtk/src/views/generator.rs:509
 #: crates/ui-gtk/src/views/generator_steps.rs:101
-#: crates/ui-gtk/src/views/similar.rs:324
+#: crates/ui-gtk/src/views/similar.rs:325
 msgid "Title"
 msgstr "标题"
 
@@ -393,9 +430,8 @@ msgstr "添加日期"
 #: crates/ui-gtk/resources/ui/albums.ui:44
 #: crates/ui-gtk/resources/ui/albums.ui:128
 #: crates/ui-gtk/src/window/sidebar.rs:51
-#: crates/ui-gtk/src/views/artists.rs:680
-#: crates/ui-gtk/src/views/search.rs:593 crates/ui-gtk/src/play_modes.rs:71
-#: crates/ui-gtk/src/views/statistics.rs:615
+#: crates/ui-gtk/src/views/artists.rs:680 crates/ui-gtk/src/views/search.rs:593
+#: crates/ui-gtk/src/play_modes.rs:71 crates/ui-gtk/src/views/statistics.rs:615
 #: crates/ui-gtk/src/tools/cover_manager.rs:727
 #: crates/ui-gtk/src/views/labels.rs:243
 msgid "Albums"
@@ -422,8 +458,8 @@ msgstr "高解析度"
 #: crates/ui-gtk/resources/ui/albums.ui:104
 #: crates/ui-gtk/src/views/albums.rs:143
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:45
-#: crates/ui-gtk/src/views/artists.rs:151
-#: crates/ui-gtk/src/views/genres.rs:164 crates/ui-gtk/src/views/genres.rs:276
+#: crates/ui-gtk/src/views/artists.rs:151 crates/ui-gtk/src/views/genres.rs:164
+#: crates/ui-gtk/src/views/genres.rs:276
 #: crates/ui-gtk/src/tools/tag_preview.rs:170
 #: crates/ui-gtk/src/popovers/query_completion.rs:56
 #: crates/ui-gtk/src/views/category.rs:576
@@ -438,7 +474,7 @@ msgstr "专辑艺术家"
 msgid "Sort order"
 msgstr "排序顺序"
 
-#: crates/ui-gtk/resources/ui/album.ui:33 crates/ui-gtk/src/views/album.rs:778
+#: crates/ui-gtk/resources/ui/album.ui:33 crates/ui-gtk/src/views/album.rs:995
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:60
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:46
 #: crates/ui-gtk/src/views/artists.rs:232
@@ -454,10 +490,10 @@ msgstr "排序顺序"
 #: crates/ui-gtk/src/tools/cover_manager.rs:713
 #: crates/ui-gtk/src/views/tracks/grouping.rs:38
 #: crates/ui-gtk/src/views/labels.rs:265
-#: crates/ui-gtk/src/views/generator.rs:458
-#: crates/ui-gtk/src/views/generator.rs:500
+#: crates/ui-gtk/src/views/generator.rs:465
+#: crates/ui-gtk/src/views/generator.rs:511
 #: crates/ui-gtk/src/views/generator_steps.rs:103
-#: crates/ui-gtk/src/views/similar.rs:326
+#: crates/ui-gtk/src/views/similar.rs:327
 msgid "Album"
 msgstr "专辑"
 
@@ -473,7 +509,7 @@ msgstr "专辑"
 #: crates/ui-gtk/src/window/playlists.rs:232
 #: crates/ui-gtk/src/mini_player.rs:181 crates/ui-gtk/src/mini_player.rs:504
 #: crates/ui-gtk/src/window/desktop.rs:435
-#: crates/ui-gtk/src/views/generator.rs:179
+#: crates/ui-gtk/src/views/generator.rs:182
 #: crates/ui-gtk/src/views/similar.rs:177
 msgid "Play"
 msgstr "播放"
@@ -482,14 +518,13 @@ msgstr "播放"
 #: crates/ui-gtk/resources/ui/deck.ui:120
 #: crates/ui-gtk/resources/ui/deck.ui:122
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:333
-#: crates/ui-gtk/src/views/artists.rs:173
-#: crates/ui-gtk/src/views/genres.rs:151
+#: crates/ui-gtk/src/views/artists.rs:173 crates/ui-gtk/src/views/genres.rs:151
 #: crates/ui-gtk/src/views/playlist.rs:194
 #: crates/ui-gtk/src/views/category.rs:245
 #: crates/ui-gtk/src/views/smart_playlist.rs:495
 #: crates/ui-gtk/src/shortcuts.rs:102 crates/ui-gtk/src/deck/compact.rs:68
 #: crates/ui-gtk/src/views/labels.rs:209
-#: crates/ui-gtk/src/views/generator.rs:181
+#: crates/ui-gtk/src/views/generator.rs:184
 msgid "Shuffle"
 msgstr "随机播放"
 
@@ -514,13 +549,13 @@ msgstr "添加到队列"
 #: crates/ui-gtk/src/views/smart_playlist.rs:503
 #: crates/ui-gtk/src/views/smart_playlist.rs:504
 #: crates/ui-gtk/src/views/labels.rs:216 crates/ui-gtk/src/views/labels.rs:217
-#: crates/ui-gtk/src/views/generator.rs:190
-#: crates/ui-gtk/src/views/generator.rs:191
+#: crates/ui-gtk/src/views/generator.rs:193
+#: crates/ui-gtk/src/views/generator.rs:194
 msgid "More"
 msgstr "更多"
 
-#: crates/ui-gtk/resources/ui/album.ui:252
-#: crates/ui-gtk/src/views/album.rs:792 crates/ui-gtk/src/views/album.rs:956
+#: crates/ui-gtk/resources/ui/album.ui:266 crates/ui-gtk/src/views/album.rs:876
+#: crates/ui-gtk/src/views/album.rs:1009 crates/ui-gtk/src/views/album.rs:1186
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1538
 #: crates/ui-gtk/src/views/artists.rs:233 crates/ui-gtk/src/views/tracks.rs:77
 #: crates/ui-gtk/src/tools/duplicates.rs:718
@@ -531,8 +566,8 @@ msgstr "更多"
 msgid "Plays"
 msgstr "播放次数"
 
-#: crates/ui-gtk/resources/ui/album.ui:260
-#: crates/ui-gtk/src/views/album.rs:962
+#: crates/ui-gtk/resources/ui/album.ui:279 crates/ui-gtk/src/views/album.rs:879
+#: crates/ui-gtk/src/views/album.rs:1192
 #: crates/ui-gtk/src/widgets/rating_stars.rs:200
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:773
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:820
@@ -543,8 +578,8 @@ msgstr "播放次数"
 msgid "Rating"
 msgstr "评分"
 
-#: crates/ui-gtk/resources/ui/album.ui:268
-#: crates/ui-gtk/src/views/album.rs:937
+#: crates/ui-gtk/resources/ui/album.ui:292 crates/ui-gtk/src/views/album.rs:880
+#: crates/ui-gtk/src/views/album.rs:1167
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1494
 #: crates/ui-gtk/src/views/artists.rs:234
 #: crates/ui-gtk/src/views/folders.rs:288
@@ -555,43 +590,42 @@ msgstr "评分"
 #: crates/ui-gtk/src/views/smart_playlist.rs:129
 #: crates/ui-gtk/src/views/smart_rules.rs:229
 #: crates/ui-gtk/src/views/labels.rs:284
-#: crates/ui-gtk/src/views/generator.rs:472
+#: crates/ui-gtk/src/views/generator.rs:480
 #: crates/ui-gtk/src/views/generator_steps.rs:104
-#: crates/ui-gtk/src/views/similar.rs:328
+#: crates/ui-gtk/src/views/similar.rs:329
 msgid "Length"
 msgstr "时长"
 
-#: crates/ui-gtk/resources/ui/album.ui:282
-#: crates/ui-gtk/src/window/sidebar.rs:53
-#: crates/ui-gtk/src/views/search.rs:613 crates/ui-gtk/src/views/tracks.rs:217
-#: crates/ui-gtk/src/views/tracks.rs:274 crates/ui-gtk/src/views/tracks.rs:328
-#: crates/ui-gtk/src/window/pages.rs:472 crates/ui-gtk/src/play_modes.rs:70
-#: crates/ui-gtk/src/views/statistics.rs:603
+#: crates/ui-gtk/resources/ui/album.ui:308
+#: crates/ui-gtk/src/window/sidebar.rs:53 crates/ui-gtk/src/views/search.rs:613
+#: crates/ui-gtk/src/views/tracks.rs:217 crates/ui-gtk/src/views/tracks.rs:274
+#: crates/ui-gtk/src/views/tracks.rs:328 crates/ui-gtk/src/window/pages.rs:488
+#: crates/ui-gtk/src/play_modes.rs:70 crates/ui-gtk/src/views/statistics.rs:603
 #: crates/ui-gtk/src/views/labels.rs:255 crates/ui-gtk/src/views/labels.rs:292
 msgid "Tracks"
 msgstr "曲目"
 
-#: crates/ui-gtk/resources/ui/album.ui:324 crates/ui-gtk/src/window.rs:489
+#: crates/ui-gtk/resources/ui/album.ui:350 crates/ui-gtk/src/window.rs:491
 #: crates/ui-gtk/src/dialogs/maintenance.rs:285
 msgid "Details"
 msgstr "详细信息"
 
-#: crates/ui-gtk/resources/ui/album.ui:347
+#: crates/ui-gtk/resources/ui/album.ui:373
 #: crates/ui-gtk/src/views/smart_rules.rs:214
 #: crates/ui-gtk/src/tools/user_fields.rs:225
 msgid "Kind"
 msgstr "类型"
 
-#: crates/ui-gtk/resources/ui/album.ui:375
+#: crates/ui-gtk/resources/ui/album.ui:401
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1672
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1726
 msgid "Edit tags"
 msgstr "编辑标签"
 
-#: crates/ui-gtk/resources/ui/album.ui:385
+#: crates/ui-gtk/resources/ui/album.ui:411
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:146
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1431
-#: crates/ui-gtk/src/window/pages.rs:1101
+#: crates/ui-gtk/src/window/pages.rs:1117
 #: crates/ui-gtk/src/tools/converter.rs:1030
 #: crates/ui-gtk/src/dialogs/maintenance.rs:222
 msgid "Open folder"
@@ -629,7 +663,7 @@ msgstr "上一首"
 #: crates/ui-gtk/resources/ui/deck.ui:178
 #: crates/ui-gtk/resources/ui/deck.ui:180
 #: crates/ui-gtk/resources/ui/main_window.ui:90 crates/ui-gtk/src/deck.rs:615
-#: crates/ui-gtk/src/window.rs:835 crates/ui-gtk/src/play_modes.rs:295
+#: crates/ui-gtk/src/window.rs:837 crates/ui-gtk/src/play_modes.rs:295
 #: crates/ui-gtk/src/window/desktop.rs:438
 msgid "Next"
 msgstr "下一首"
@@ -685,9 +719,8 @@ msgid "Edit"
 msgstr "编辑"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:40
-#: crates/ui-gtk/src/views/actions.rs:217
-#: crates/ui-gtk/src/window/pages.rs:713 crates/ui-gtk/src/shortcuts.rs:161
-#: crates/ui-gtk/src/tools/import.rs:940
+#: crates/ui-gtk/src/views/actions.rs:217 crates/ui-gtk/src/window/pages.rs:729
+#: crates/ui-gtk/src/shortcuts.rs:161 crates/ui-gtk/src/tools/import.rs:940
 #: crates/ui-gtk/src/tools/replaced.rs:251
 msgid "Undo"
 msgstr "撤销"
@@ -733,8 +766,7 @@ msgstr "跳转到正在播放的曲目"
 #: crates/ui-gtk/src/dialogs/track_flags.rs:29
 #: crates/ui-gtk/src/window/play_modes.rs:257
 #: crates/ui-gtk/src/window/play_modes.rs:393
-#: crates/ui-gtk/src/window/play_modes.rs:402
-#: crates/ui-gtk/src/shortcuts.rs:36
+#: crates/ui-gtk/src/window/play_modes.rs:402 crates/ui-gtk/src/shortcuts.rs:36
 msgid "Playback"
 msgstr "播放"
 
@@ -746,8 +778,7 @@ msgstr "播放/暂停"
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:534
 #: crates/ui-gtk/src/dialogs/settings/output.rs:341
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:624
-#: crates/ui-gtk/src/play_modes.rs:290
-#: crates/ui-gtk/src/tools/file_tools.rs:75
+#: crates/ui-gtk/src/play_modes.rs:290 crates/ui-gtk/src/tools/file_tools.rs:75
 #: crates/ui-gtk/src/tools/managed_runs.rs:529
 #: crates/ui-gtk/src/shortcuts.rs:75 crates/ui-gtk/src/tools/converter.rs:1034
 #: crates/ui-gtk/src/tools/sync_export.rs:726
@@ -782,8 +813,7 @@ msgid "Rescan"
 msgstr "重新扫描"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:116
-#: crates/ui-gtk/src/window/panel.rs:425
-#: crates/ui-gtk/src/views/history.rs:350
+#: crates/ui-gtk/src/window/panel.rs:425 crates/ui-gtk/src/views/history.rs:350
 #: crates/ui-gtk/src/views/history.rs:775 crates/ui-gtk/src/views/home.rs:349
 msgid "History"
 msgstr "历史记录"
@@ -897,7 +927,7 @@ msgid "Forward"
 msgstr "前进"
 
 #: crates/ui-gtk/resources/ui/main_window.ui:290
-#: crates/ui-gtk/src/window/narrow.rs:373
+#: crates/ui-gtk/src/window/narrow.rs:376
 msgid "Search artists, albums, tracks"
 msgstr "搜索艺术家、专辑、曲目"
 
@@ -928,7 +958,7 @@ msgstr "面板"
 msgid "Queue"
 msgstr "队列"
 
-#: crates/ui-gtk/resources/ui/panel.ui:33 crates/ui-gtk/src/views/album.rs:973
+#: crates/ui-gtk/resources/ui/panel.ui:33 crates/ui-gtk/src/views/album.rs:1203
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1315
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1772
 #: crates/ui-gtk/src/views/now_playing.rs:232
@@ -973,40 +1003,40 @@ msgstr "清除"
 msgid "Remove everything but the playing track"
 msgstr "移除正在播放的曲目以外的所有曲目"
 
-#: crates/ui-gtk/src/backend/service.rs:412
-#: crates/ui-gtk/src/backend/service.rs:1088
+#: crates/ui-gtk/src/backend/service.rs:413
+#: crates/ui-gtk/src/backend/service.rs:1089
 #: crates/ui-gtk/src/backend/service/browse.rs:139
 msgid "Unknown title"
 msgstr "未知标题"
 
-#: crates/ui-gtk/src/backend/service.rs:525
-#: crates/ui-gtk/src/backend/service/generators.rs:143
-#: crates/ui-gtk/src/backend/service/generators.rs:147
+#: crates/ui-gtk/src/backend/service.rs:526
+#: crates/ui-gtk/src/backend/service/generators.rs:161
+#: crates/ui-gtk/src/backend/service/generators.rs:165
 msgid "The playlist is gone."
 msgstr "该播放列表已不存在。"
 
-#: crates/ui-gtk/src/backend/service.rs:543
-#: crates/ui-gtk/src/backend/service.rs:1004
+#: crates/ui-gtk/src/backend/service.rs:544
+#: crates/ui-gtk/src/backend/service.rs:1005
 msgid "There is no library."
 msgstr "没有音乐库。"
 
-#: crates/ui-gtk/src/backend/service.rs:557
+#: crates/ui-gtk/src/backend/service.rs:558
 #: crates/ui-gtk/src/backend/service/insights.rs:114
 msgid "Unknown album"
 msgstr "未知专辑"
 
-#: crates/ui-gtk/src/backend/service.rs:561
+#: crates/ui-gtk/src/backend/service.rs:562
 #: crates/ui-gtk/src/backend/service/insights.rs:115
 msgid "Various artists"
 msgstr "群星"
 
-#: crates/ui-gtk/src/backend/service.rs:1020
+#: crates/ui-gtk/src/backend/service.rs:1021
 #: crates/ui-gtk/src/backend/service/services.rs:541
 #: crates/ui-gtk/src/backend/service/services.rs:883
 msgid "The library has stopped."
 msgstr "音乐库已停止运行。"
 
-#: crates/ui-gtk/src/backend/service.rs:1038
+#: crates/ui-gtk/src/backend/service.rs:1039
 #: crates/ui-gtk/src/backend/service/mpris.rs:63
 #: crates/ui-gtk/src/backend/sample/playlists.rs:168
 #: crates/ui-gtk/src/tools/import_view.rs:441
@@ -1014,20 +1044,20 @@ msgstr "音乐库已停止运行。"
 msgid "Favourites"
 msgstr "收藏"
 
-#: crates/ui-gtk/src/backend/service.rs:1812
+#: crates/ui-gtk/src/backend/service.rs:1772
 msgid "The player has stopped. Restart Helikodu to play again."
 msgstr "播放器已停止运行。请重新启动 Helikodu 以继续播放。"
 
-#: crates/ui-gtk/src/backend/service.rs:2187
+#: crates/ui-gtk/src/backend/service.rs:2137
 msgid "No sound (null output)"
 msgstr "无声音（空输出）"
 
-#: crates/ui-gtk/src/backend/service.rs:2188
+#: crates/ui-gtk/src/backend/service.rs:2138
 #: crates/ui-gtk/src/popovers/output_switcher.rs:37
 msgid "WAV file"
 msgstr "WAV 文件"
 
-#: crates/ui-gtk/src/backend/service.rs:2190
+#: crates/ui-gtk/src/backend/service.rs:2140
 #: crates/ui-gtk/src/dialogs/first_run.rs:231
 #: crates/ui-gtk/src/dialogs/settings/output.rs:127
 #: crates/ui-gtk/src/dialogs/settings/output.rs:158
@@ -1035,37 +1065,44 @@ msgstr "WAV 文件"
 msgid "System default"
 msgstr "系统默认"
 
-#: crates/ui-gtk/src/backend/service.rs:2192
+#: crates/ui-gtk/src/backend/service.rs:2142
 #, rust-format
 msgid "Default device ({})"
 msgstr "默认设备（{}）"
 
-#: crates/ui-gtk/src/backend/service.rs:2565
+#: crates/ui-gtk/src/backend/service.rs:2515
 #, rust-format
 msgid "Cannot play {}: {}"
 msgstr "无法播放 {}：{}"
 
-#: crates/ui-gtk/src/backend/service.rs:2575
+#: crates/ui-gtk/src/backend/service.rs:2525
 msgid ""
 "Helikodu did not end normally last time. The queue was restored, paused."
 msgstr "Helikodu 上次没有正常退出。播放队列已恢复，并处于暂停状态。"
 
-#: crates/ui-gtk/src/backend/service.rs:2578
+#: crates/ui-gtk/src/backend/service.rs:2528
 #, rust-format
 msgid "Cannot play this: {}"
 msgstr "无法播放：{}"
 
-#: crates/ui-gtk/src/backend/service.rs:2581
+#: crates/ui-gtk/src/backend/service.rs:2531
 #, rust-format
 msgid "The queue could not be saved: {}"
 msgstr "无法保存播放队列：{}"
 
-#: crates/ui-gtk/src/backend/service.rs:2584
+#: crates/ui-gtk/src/backend/service.rs:2534
 #, rust-format
 msgid "The playback settings of the track could not be saved: {}"
 msgstr "无法保存该曲目的播放设置：{}"
 
-#: crates/ui-gtk/src/backend/service.rs:2808
+#: crates/ui-gtk/src/backend/service.rs:2564
+#, rust-format
+msgid ""
+"The settings file was changed but cannot be used: {}. The settings stay as "
+"they were."
+msgstr "设置文件已更改，但无法使用：{}。设置保持不变。"
+
+#: crates/ui-gtk/src/backend/service.rs:2778
 msgid "Playing music"
 msgstr "正在播放音乐"
 
@@ -1076,7 +1113,7 @@ msgstr "播放器"
 #: crates/ui-gtk/src/deck.rs:256 crates/ui-gtk/src/views/album_tile.rs:261
 #: crates/ui-gtk/src/window/panel.rs:178 crates/ui-gtk/src/window/panel.rs:374
 #: crates/ui-gtk/src/window/panel/queue_end.rs:135
-#: crates/ui-gtk/src/window.rs:831 crates/ui-gtk/src/views/artists.rs:816
+#: crates/ui-gtk/src/window.rs:833 crates/ui-gtk/src/views/artists.rs:816
 #: crates/ui-gtk/src/views/genres.rs:390
 #: crates/ui-gtk/src/views/playlist.rs:488
 #: crates/ui-gtk/src/views/playlist.rs:1080
@@ -1108,8 +1145,8 @@ msgstr "播放器"
 #: crates/ui-gtk/src/tools/cover_manager.rs:474
 #: crates/ui-gtk/src/tools/import.rs:294 crates/ui-gtk/src/tools/import.rs:565
 #: crates/ui-gtk/src/tools/import.rs:569 crates/ui-gtk/src/tools/import.rs:750
-#: crates/ui-gtk/src/tools/replaced.rs:373
-#: crates/ui-gtk/src/views/labels.rs:84 crates/ui-gtk/src/views/labels.rs:920
+#: crates/ui-gtk/src/tools/replaced.rs:373 crates/ui-gtk/src/views/labels.rs:84
+#: crates/ui-gtk/src/views/labels.rs:920
 #, rust-format
 msgid "{} · {}"
 msgstr "{} · {}"
@@ -1154,8 +1191,6 @@ msgstr "下一首：{}"
 msgid "{} h {} min"
 msgstr "{} 小时 {} 分钟"
 
-#. Unit abbreviations, as elsewhere: one msgid for
-#. every number.
 #: crates/ui-gtk/src/format.rs:50 crates/ui-gtk/src/popovers/sleep_timer.rs:43
 #: crates/ui-gtk/src/tools/verify_files.rs:353
 #: crates/ui-gtk/src/views/statistics.rs:44
@@ -1163,10 +1198,7 @@ msgstr "{} 小时 {} 分钟"
 msgid "{} min"
 msgstr "{} 分钟"
 
-#. / `number`, written with a decimal point, with the locale's decimal
-#. separator.
-#. Translators: the decimal separator of numbers such as 44.1 kHz or −6.3 dB:
-#. "." or ",".
+#. Translators: the decimal separator of numbers such as 44.1 kHz or −6.3 dB: "." or ",".
 #: crates/ui-gtk/src/format.rs:74
 msgctxt "decimal separator"
 msgid "."
@@ -1177,8 +1209,6 @@ msgstr "."
 msgid "{} kHz / {}-bit"
 msgstr "{} kHz / {} 位"
 
-#. / A rate as `96 kHz`.
-#. / A rate as `44.1 kHz`.
 #: crates/ui-gtk/src/format.rs:113 crates/ui-gtk/src/window/panel.rs:392
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1472
 #: crates/ui-gtk/src/popovers/output_switcher.rs:78
@@ -1191,22 +1221,21 @@ msgstr "{} kHz / {} 位"
 #: crates/ui-gtk/src/widgets/eq_graph.rs:77
 #: crates/ui-gtk/src/views/smart_rules.rs:386
 #: crates/ui-gtk/src/tools/converter.rs:182
+#: crates/ui-gtk/src/window/convolution_notice.rs:87
 #, rust-format
 msgid "{} kHz"
 msgstr "{} kHz"
 
-#: crates/ui-gtk/src/format.rs:117
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1455
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:202
+#: crates/ui-gtk/src/format.rs:117 crates/ui-gtk/src/dialogs/tag_editor.rs:1455
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:205
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 #: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:263
 #: crates/ui-gtk/src/tools/converter.rs:191
 msgid "Mono"
 msgstr "单声道"
 
-#: crates/ui-gtk/src/format.rs:118
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1456
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:201
+#: crates/ui-gtk/src/format.rs:118 crates/ui-gtk/src/dialogs/tag_editor.rs:1456
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:204
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 #: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:264
 #: crates/ui-gtk/src/tools/converter.rs:190
@@ -1224,51 +1253,45 @@ msgstr[0] "{} 声道"
 msgid "Album gain {} dB"
 msgstr "专辑增益 {} dB"
 
-#. Translators: the separator of thousands in numbers such as 1,284: "," "."
-#. or a narrow space.
+#. Translators: the separator of thousands in numbers such as 1,284: "," "." or a narrow space.
 #: crates/ui-gtk/src/format.rs:141
 msgctxt "thousands separator"
 msgid ","
 msgstr ","
 
-#: crates/ui-gtk/src/views/album.rs:264
+#: crates/ui-gtk/src/views/album.rs:307
 #, rust-format
 msgid "Track {}: {}"
 msgstr "第 {} 首：{}"
 
-#: crates/ui-gtk/src/views/album.rs:268
+#: crates/ui-gtk/src/views/album.rs:311
 #: crates/ui-gtk/src/views/album/book.rs:181
 #, rust-format
 msgid "{}, playing"
 msgstr "{}，正在播放"
 
-#: crates/ui-gtk/src/views/album.rs:445
+#: crates/ui-gtk/src/views/album.rs:490
 msgid "Album not found"
 msgstr "找不到专辑"
 
-#: crates/ui-gtk/src/views/album.rs:465
+#: crates/ui-gtk/src/views/album.rs:510
 #, rust-format
 msgid "{} chapter"
 msgid_plural "{} chapters"
 msgstr[0] "{} 个章节"
 
-#. / The rows of "What changes" for `totals`: those with nothing are left out.
-#. / `user_data` takes the words of a data file, whose counts are raised, not
-#. / added.
-#: crates/ui-gtk/src/views/album.rs:470
+#: crates/ui-gtk/src/views/album.rs:515
 #: crates/ui-gtk/src/views/album_tile.rs:256
 #: crates/ui-gtk/src/dialogs/settings/library.rs:61
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:74
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1728
-#: crates/ui-gtk/src/views/artists.rs:666
-#: crates/ui-gtk/src/views/genres.rs:386
+#: crates/ui-gtk/src/views/artists.rs:666 crates/ui-gtk/src/views/genres.rs:386
 #: crates/ui-gtk/src/views/playlist.rs:490
 #: crates/ui-gtk/src/views/playlist.rs:728
 #: crates/ui-gtk/src/views/playlist.rs:935
 #: crates/ui-gtk/src/views/playlist.rs:1071
 #: crates/ui-gtk/src/views/search.rs:578 crates/ui-gtk/src/views/search.rs:960
-#: crates/ui-gtk/src/views/search.rs:1266
-#: crates/ui-gtk/src/views/tracks.rs:777
+#: crates/ui-gtk/src/views/search.rs:1266 crates/ui-gtk/src/views/tracks.rs:777
 #: crates/ui-gtk/src/tools/missing_files.rs:263
 #: crates/ui-gtk/src/popovers/query_completion.rs:150
 #: crates/ui-gtk/src/views/category.rs:489
@@ -1282,29 +1305,29 @@ msgstr[0] "{} 个章节"
 #: crates/ui-gtk/src/views/tracks/grouping.rs:115
 #: crates/ui-gtk/src/views/labels.rs:72 crates/ui-gtk/src/views/labels.rs:772
 #: crates/ui-gtk/src/window/labels.rs:48
-#: crates/ui-gtk/src/views/generator.rs:133
-#: crates/ui-gtk/src/views/generator.rs:1028
+#: crates/ui-gtk/src/views/generator.rs:136
+#: crates/ui-gtk/src/views/generator.rs:1039
 #: crates/ui-gtk/src/views/generator_steps.rs:225
-#: crates/ui-gtk/src/views/list_table.rs:411
+#: crates/ui-gtk/src/views/list_table.rs:529
 #, rust-format
 msgid "{} track"
 msgid_plural "{} tracks"
 msgstr[0] "{} 首曲目"
 
-#: crates/ui-gtk/src/views/album.rs:476
+#: crates/ui-gtk/src/views/album.rs:521
 #, rust-format
 msgid "read by {}"
 msgstr "由 {} 朗读"
 
-#: crates/ui-gtk/src/views/album.rs:502
+#: crates/ui-gtk/src/views/album.rs:547
 msgid "Author"
 msgstr "作者"
 
-#: crates/ui-gtk/src/views/album.rs:504
+#: crates/ui-gtk/src/views/album.rs:549
 msgid "Read by"
 msgstr "朗读者"
 
-#: crates/ui-gtk/src/views/album.rs:507
+#: crates/ui-gtk/src/views/album.rs:552
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:51
 #: crates/ui-gtk/src/views/genres.rs:132 crates/ui-gtk/src/views/tracks.rs:79
 #: crates/ui-gtk/src/tools/tag_preview.rs:177
@@ -1318,16 +1341,15 @@ msgstr "朗读者"
 msgid "Genre"
 msgstr "流派"
 
-#. The tag of the files, apart from the user's own labels.
-#: crates/ui-gtk/src/views/album.rs:511
+#: crates/ui-gtk/src/views/album.rs:556
 msgid "Record label"
 msgstr "唱片公司"
 
-#: crates/ui-gtk/src/views/album.rs:514
+#: crates/ui-gtk/src/views/album.rs:559
 msgid "Released"
 msgstr "发行年份"
 
-#: crates/ui-gtk/src/views/album.rs:517 crates/ui-gtk/src/views/album.rs:970
+#: crates/ui-gtk/src/views/album.rs:562 crates/ui-gtk/src/views/album.rs:1200
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1525
 #: crates/ui-gtk/src/views/tracks.rs:80 crates/ui-gtk/src/tools/copies.rs:535
 #: crates/ui-gtk/src/tools/duplicates.rs:719
@@ -1336,10 +1358,9 @@ msgstr "发行年份"
 msgid "Added"
 msgstr "添加日期"
 
-#: crates/ui-gtk/src/views/album.rs:520 crates/ui-gtk/src/views/album.rs:982
+#: crates/ui-gtk/src/views/album.rs:565 crates/ui-gtk/src/views/album.rs:1212
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1422
-#: crates/ui-gtk/src/views/folders.rs:289
-#: crates/ui-gtk/src/tools/copies.rs:534
+#: crates/ui-gtk/src/views/folders.rs:289 crates/ui-gtk/src/tools/copies.rs:534
 #: crates/ui-gtk/src/tools/duplicates.rs:717
 #: crates/ui-gtk/src/tools/managed_folder.rs:1207
 #: crates/ui-gtk/src/views/statistics.rs:639
@@ -1347,16 +1368,15 @@ msgstr "添加日期"
 msgid "Size"
 msgstr "大小"
 
-#: crates/ui-gtk/src/views/album.rs:532 crates/ui-gtk/src/views/album.rs:985
-#: crates/ui-gtk/src/window.rs:109
-#: crates/ui-gtk/src/dialogs/tag_editor.rs:1418
+#: crates/ui-gtk/src/views/album.rs:577 crates/ui-gtk/src/views/album.rs:1215
+#: crates/ui-gtk/src/window.rs:110 crates/ui-gtk/src/dialogs/tag_editor.rs:1418
 #: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:483
 #: crates/ui-gtk/src/tools/copies.rs:532
 #: crates/ui-gtk/src/tools/duplicates.rs:715
 msgid "File"
 msgstr "文件"
 
-#: crates/ui-gtk/src/views/album.rs:534
+#: crates/ui-gtk/src/views/album.rs:579
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1421
 #: crates/ui-gtk/src/views/smart_rules.rs:212
 #: crates/ui-gtk/src/window/playlists.rs:464
@@ -1365,34 +1385,32 @@ msgstr "文件"
 msgid "Folder"
 msgstr "文件夹"
 
-#: crates/ui-gtk/src/views/album.rs:708
+#: crates/ui-gtk/src/views/album.rs:764
 #, rust-format
 msgid "Disc {}"
 msgstr "碟片 {}"
 
-#: crates/ui-gtk/src/views/album.rs:709
+#: crates/ui-gtk/src/views/album.rs:765
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:49
 #: crates/ui-gtk/src/views/tracks.rs:885
 #: crates/ui-gtk/src/tools/tag_preview.rs:174
 msgid "Disc"
 msgstr "碟片"
 
-#. / The kinds of the Kind dropdown, in its order.
-#. / The names of [`KINDS`].
-#: crates/ui-gtk/src/views/album.rs:776
+#: crates/ui-gtk/src/views/album.rs:868 crates/ui-gtk/src/views/album.rs:1005
+msgid "Chapter"
+msgstr "章节"
+
+#: crates/ui-gtk/src/views/album.rs:874 crates/ui-gtk/src/views/album.rs:1007
+msgid "Starts at"
+msgstr "开始时间"
+
+#: crates/ui-gtk/src/views/album.rs:993
 #: crates/ui-gtk/src/views/album/book.rs:21
 msgid "Audiobook"
 msgstr "有声书"
 
-#: crates/ui-gtk/src/views/album.rs:788
-msgid "Chapter"
-msgstr "章节"
-
-#: crates/ui-gtk/src/views/album.rs:790
-msgid "Starts at"
-msgstr "开始时间"
-
-#: crates/ui-gtk/src/views/album.rs:920
+#: crates/ui-gtk/src/views/album.rs:1150
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:44
 #: crates/ui-gtk/src/views/playlist.rs:73 crates/ui-gtk/src/views/tracks.rs:72
 #: crates/ui-gtk/src/views/tracks.rs:885
@@ -1404,15 +1422,15 @@ msgstr "开始时间"
 #: crates/ui-gtk/src/views/smart_rules.rs:551
 #: crates/ui-gtk/src/views/facet_browser.rs:53
 #: crates/ui-gtk/src/views/labels.rs:265
-#: crates/ui-gtk/src/views/generator.rs:457
-#: crates/ui-gtk/src/views/generator.rs:499
+#: crates/ui-gtk/src/views/generator.rs:464
+#: crates/ui-gtk/src/views/generator.rs:510
 #: crates/ui-gtk/src/views/generator_steps.rs:102
-#: crates/ui-gtk/src/views/similar.rs:325
-#: crates/ui-gtk/src/views/similar.rs:474
+#: crates/ui-gtk/src/views/similar.rs:326
+#: crates/ui-gtk/src/views/similar.rs:477
 msgid "Artist"
 msgstr "艺术家"
 
-#: crates/ui-gtk/src/views/album.rs:923
+#: crates/ui-gtk/src/views/album.rs:1153
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:52
 #: crates/ui-gtk/src/tools/tag_preview.rs:178
 #: crates/ui-gtk/src/popovers/query_completion.rs:58
@@ -1424,24 +1442,24 @@ msgid "Composer"
 msgstr "作曲家"
 
 #. Translators: the field of the track number, "Track [3] of [12]".
-#: crates/ui-gtk/src/views/album.rs:927 crates/ui-gtk/src/views/album.rs:933
+#: crates/ui-gtk/src/views/album.rs:1157 crates/ui-gtk/src/views/album.rs:1163
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:48
 #: crates/ui-gtk/src/tools/tag_preview.rs:295
 msgctxt "track number"
 msgid "Track"
 msgstr "曲目"
 
-#: crates/ui-gtk/src/views/album.rs:929
+#: crates/ui-gtk/src/views/album.rs:1159
 #, rust-format
 msgid "Disc {}, track {}"
 msgstr "碟片 {}，第 {} 首"
 
-#: crates/ui-gtk/src/views/album.rs:941 crates/ui-gtk/src/window/panel.rs:397
+#: crates/ui-gtk/src/views/album.rs:1171 crates/ui-gtk/src/window/panel.rs:397
 #, rust-format
 msgid "{} kbit/s"
 msgstr "{} kbit/s"
 
-#: crates/ui-gtk/src/views/album.rs:944
+#: crates/ui-gtk/src/views/album.rs:1174
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1464
 #: crates/ui-gtk/src/views/playlist.rs:76 crates/ui-gtk/src/views/tracks.rs:75
 #: crates/ui-gtk/src/tools/copies.rs:533
@@ -1455,14 +1473,14 @@ msgstr "{} kbit/s"
 msgid "Format"
 msgstr "格式"
 
-#: crates/ui-gtk/src/views/album.rs:949
+#: crates/ui-gtk/src/views/album.rs:1179
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:420
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:494
 #: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:515
 msgid "Gain"
 msgstr "增益"
 
-#: crates/ui-gtk/src/views/album.rs:951
+#: crates/ui-gtk/src/views/album.rs:1181
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1386
 #: crates/ui-gtk/src/widgets/bipolar_scale.rs:188
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:419
@@ -1479,7 +1497,7 @@ msgstr "增益"
 msgid "{} dB"
 msgstr "{} dB"
 
-#: crates/ui-gtk/src/views/album.rs:958
+#: crates/ui-gtk/src/views/album.rs:1188
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1527
 #: crates/ui-gtk/src/views/smart_rules.rs:234
 #: crates/ui-gtk/src/views/home.rs:368
@@ -1487,7 +1505,7 @@ msgstr "{} dB"
 msgid "Last played"
 msgstr "上次播放"
 
-#: crates/ui-gtk/src/views/album.rs:964
+#: crates/ui-gtk/src/views/album.rs:1194
 #: crates/ui-gtk/src/dialogs/settings/smart_play.rs:64
 #: crates/ui-gtk/src/views/smart_rules.rs:382
 #, rust-format
@@ -1495,11 +1513,11 @@ msgid "{} star"
 msgid_plural "{} stars"
 msgstr[0] "{} 星"
 
-#: crates/ui-gtk/src/views/album.rs:973
+#: crates/ui-gtk/src/views/album.rs:1203
 msgid "Yes"
 msgstr "有"
 
-#: crates/ui-gtk/src/views/album.rs:977
+#: crates/ui-gtk/src/views/album.rs:1207
 #: crates/ui-gtk/src/dialogs/settings/library.rs:654
 #: crates/ui-gtk/src/tools/copies.rs:500 crates/ui-gtk/src/tools/copies.rs:540
 msgid "Copies"
@@ -1520,8 +1538,7 @@ msgstr "音乐库目前还不能区分格式"
 msgid "Add music folder"
 msgstr "添加音乐文件夹"
 
-#: crates/ui-gtk/src/views/albums.rs:608
-#: crates/ui-gtk/src/window/pages.rs:1103
+#: crates/ui-gtk/src/views/albums.rs:608 crates/ui-gtk/src/window/pages.rs:1119
 msgid "Open files"
 msgstr "打开文件"
 
@@ -1533,7 +1550,9 @@ msgstr "音乐库是空的"
 msgid ""
 "Add a folder with music to build your library. You can also drop files here "
 "to play them without adding them."
-msgstr "添加一个存放音乐的文件夹来建立音乐库。也可以把文件拖放到这里直接播放，无需添加到音乐库。"
+msgstr ""
+"添加一个存放音乐的文件夹来建立音乐库。也可以把文件拖放到这里直接播放，无需添"
+"加到音乐库。"
 
 #: crates/ui-gtk/src/views/albums.rs:622
 msgid "No albums match"
@@ -1785,12 +1804,12 @@ msgstr "按听感"
 msgid "by your own weights"
 msgstr "按自定义权重"
 
-#: crates/ui-gtk/src/window.rs:485
+#: crates/ui-gtk/src/window.rs:487
 #, rust-format
 msgid "{} was disconnected. Playback is paused."
 msgstr "{} 已断开连接。播放已暂停。"
 
-#: crates/ui-gtk/src/window.rs:807
+#: crates/ui-gtk/src/window.rs:809
 #, rust-format
 msgid "The library cannot be read: {}"
 msgstr "无法读取音乐库：{}"
@@ -1800,15 +1819,13 @@ msgid "Home"
 msgstr "主页"
 
 #: crates/ui-gtk/src/window/sidebar.rs:52
-#: crates/ui-gtk/src/views/artists.rs:137
-#: crates/ui-gtk/src/views/search.rs:568
+#: crates/ui-gtk/src/views/artists.rs:137 crates/ui-gtk/src/views/search.rs:568
 #: crates/ui-gtk/src/views/statistics.rs:627
 #: crates/ui-gtk/src/views/labels.rs:232
 msgid "Artists"
 msgstr "艺术家"
 
-#: crates/ui-gtk/src/window/sidebar.rs:54
-#: crates/ui-gtk/src/views/genres.rs:122
+#: crates/ui-gtk/src/window/sidebar.rs:54 crates/ui-gtk/src/views/genres.rs:122
 msgid "Genres"
 msgstr "流派"
 
@@ -1834,13 +1851,13 @@ msgid "Hide the sidebar"
 msgstr "隐藏侧边栏"
 
 #: crates/ui-gtk/src/window/sidebar.rs:180
-#: crates/ui-gtk/src/views/actions.rs:764
-#: crates/ui-gtk/src/window/pages.rs:861 crates/ui-gtk/src/shortcuts.rs:158
+#: crates/ui-gtk/src/views/actions.rs:764 crates/ui-gtk/src/window/pages.rs:877
+#: crates/ui-gtk/src/shortcuts.rs:158
 msgid "New playlist"
 msgstr "新建播放列表"
 
 #: crates/ui-gtk/src/window/sidebar.rs:189
-#: crates/ui-gtk/src/window/pages.rs:1063
+#: crates/ui-gtk/src/window/pages.rs:1079
 #: crates/ui-gtk/src/tools/import.rs:1139
 msgid "Playlists"
 msgstr "播放列表"
@@ -1893,7 +1910,6 @@ msgstr "该文件没有副本。"
 msgid "The main copy cannot be read to compare."
 msgstr "无法读取主副本以进行比较。"
 
-#. / The error of a file operation without a library.
 #: crates/ui-gtk/src/backend/service/services.rs:529
 #: crates/ui-gtk/src/backend/service/services.rs:555
 #: crates/ui-gtk/src/backend/service/services.rs:671
@@ -1908,8 +1924,8 @@ msgstr "无法读取主副本以进行比较。"
 #: crates/ui-gtk/src/backend/services.rs:891
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:164
 #: crates/ui-gtk/src/backend/service/export.rs:57
-#: crates/ui-gtk/src/backend/sample/services.rs:1058
 #: crates/ui-gtk/src/backend/sample/services.rs:1063
+#: crates/ui-gtk/src/backend/sample/services.rs:1068
 #: crates/ui-gtk/src/backend/interchange.rs:196
 #: crates/ui-gtk/src/backend/service/interchange.rs:63
 #: crates/ui-gtk/src/backend/fields.rs:46
@@ -1959,8 +1975,8 @@ msgstr "音乐库为只读，更改不会被保留：{}"
 
 #: crates/ui-gtk/src/backend/service/services.rs:1454
 msgid ""
-"The backup was put back. The library as it was before is kept in the backups"
-" folder."
+"The backup was put back. The library as it was before is kept in the backups "
+"folder."
 msgstr "备份已恢复。恢复前的音乐库已保存在备份文件夹中。"
 
 #: crates/ui-gtk/src/backend/service/services.rs:1457
@@ -2004,7 +2020,8 @@ msgid ""
 "Foundation, either version 3 of the License, or (at your option) any later "
 "version."
 msgstr ""
-"Helikodu 是自由软件：您可以依据自由软件基金会发布的 GNU 通用公共许可证条款（许可证第 3 版，或由您选择的任何更高版本）重新发布和修改它。"
+"Helikodu 是自由软件：您可以依据自由软件基金会发布的 GNU 通用公共许可证条款"
+"（许可证第 3 版，或由您选择的任何更高版本）重新发布和修改它。"
 
 #: crates/ui-gtk/src/dialogs/about.rs:239
 msgid ""
@@ -2012,7 +2029,9 @@ msgid ""
 "warranty; without even the implied warranty of merchantability or fitness "
 "for a particular purpose. See the GNU General Public License for more "
 "details."
-msgstr "发布它是希望它能有所用处，但不提供任何担保，甚至不包括对适销性或特定用途适用性的默示担保。详情请参阅 GNU 通用公共许可证。"
+msgstr ""
+"发布它是希望它能有所用处，但不提供任何担保，甚至不包括对适销性或特定用途适用"
+"性的默示担保。详情请参阅 GNU 通用公共许可证。"
 
 #: crates/ui-gtk/src/dialogs/about.rs:242
 msgid ""
@@ -2051,7 +2070,8 @@ msgid ""
 "© 2026 sorrelfox and Helikodu contributors. Free software under the GNU "
 "General Public License, version 3 or later. It comes with no warranty."
 msgstr ""
-"© 2026 sorrelfox 和 Helikodu 贡献者。依据 GNU 通用公共许可证第 3 版或更高版本发布的自由软件。不提供任何担保。"
+"© 2026 sorrelfox 和 Helikodu 贡献者。依据 GNU 通用公共许可证第 3 版或更高版本"
+"发布的自由软件。不提供任何担保。"
 
 #: crates/ui-gtk/src/dialogs/about.rs:389
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:321
@@ -2119,7 +2139,9 @@ msgstr "您的音乐在哪里？"
 msgid ""
 "Helikodu plays your files where they are. Nothing is copied, and nothing is "
 "changed until you edit tags or organize files."
-msgstr "Helikodu 直接在原位置播放您的文件。不会复制任何文件；在您编辑标签或整理文件之前，也不会更改任何内容。"
+msgstr ""
+"Helikodu 直接在原位置播放您的文件。不会复制任何文件；在您编辑标签或整理文件之"
+"前，也不会更改任何内容。"
 
 #: crates/ui-gtk/src/dialogs/first_run.rs:305
 msgid "Add another folder"
@@ -2221,7 +2243,6 @@ msgstr "游戏音频流"
 msgid "Other formats"
 msgstr "其他格式"
 
-#. / Why a decoder or family is missing, in plain words.
 #: crates/ui-gtk/src/dialogs/formats.rs:55
 #, rust-format
 msgid "This package was built without {}."
@@ -2397,8 +2418,7 @@ msgstr "此更改未保存：{}"
 
 #: crates/ui-gtk/src/dialogs/settings.rs:252
 #: crates/ui-gtk/src/dialogs/settings.rs:254
-#: crates/ui-gtk/src/dialogs/settings.rs:264
-#: crates/ui-gtk/src/shortcuts.rs:183
+#: crates/ui-gtk/src/dialogs/settings.rs:264 crates/ui-gtk/src/shortcuts.rs:183
 msgid "Settings"
 msgstr "设置"
 
@@ -2431,7 +2451,9 @@ msgid ""
 "ID3v2.4 is the current version. Choose ID3v2.3 if an old car stereo or "
 "portable player shows no tags. Tag fields that Helikodu does not know are "
 "kept as they are."
-msgstr "ID3v2.4 是当前版本。如果旧的车载音响或便携播放器不显示标签，请选择 ID3v2.3。Helikodu 不认识的标签字段会原样保留。"
+msgstr ""
+"ID3v2.4 是当前版本。如果旧的车载音响或便携播放器不显示标签，请选择 ID3v2.3。"
+"Helikodu 不认识的标签字段会原样保留。"
 
 #. Translators: {} is a dropdown with file sizes ("1 GB").
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:67
@@ -2445,7 +2467,8 @@ msgid ""
 "power fails. A change in place is faster for huge files but has no such "
 "safety net. The tag editor tells you before it happens."
 msgstr ""
-"较小的文件会先写入一个经过校验的副本再替换，即使断电也很安全。对超大文件来说，原位修改更快，但没有这种安全保障。标签编辑器会在执行前提醒您。"
+"较小的文件会先写入一个经过校验的副本再替换，即使断电也很安全。对超大文件来"
+"说，原位修改更快，但没有这种安全保障。标签编辑器会在执行前提醒您。"
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:93
 msgid "Also write ratings to the tags of the files"
@@ -2464,7 +2487,9 @@ msgstr "同时将播放次数写入文件标签"
 msgid ""
 "Written in the background a few minutes after the last play, never into the "
 "file that is playing. These writes are not on the Undo history."
-msgstr "在最后一次播放几分钟后于后台写入，绝不会写入正在播放的文件。这些写入不会记入撤销历史。"
+msgstr ""
+"在最后一次播放几分钟后于后台写入，绝不会写入正在播放的文件。这些写入不会记入"
+"撤销历史。"
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:191
 msgid "Backups"
@@ -2541,13 +2566,15 @@ msgstr "重置所有设置？"
 msgid ""
 "Every setting goes back to its default. This cannot be undone. The library "
 "folders, playlists, ratings and play counts are kept."
-msgstr "所有设置都将恢复为默认值。此操作无法撤销。音乐库文件夹、播放列表、评分和播放次数会保留。"
+msgstr ""
+"所有设置都将恢复为默认值。此操作无法撤销。音乐库文件夹、播放列表、评分和播放"
+"次数会保留。"
 
 #: crates/ui-gtk/src/dialogs/settings/advanced.rs:394
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1811
 #: crates/ui-gtk/src/dialogs/volume_confirm.rs:209
-#: crates/ui-gtk/src/views/search.rs:1192
-#: crates/ui-gtk/src/window/pages.rs:981 crates/ui-gtk/src/tools/trash.rs:118
+#: crates/ui-gtk/src/views/search.rs:1192 crates/ui-gtk/src/window/pages.rs:997
+#: crates/ui-gtk/src/tools/trash.rs:118
 #: crates/ui-gtk/src/tools/tag_tools.rs:114
 #: crates/ui-gtk/src/tools/rename.rs:59
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:131
@@ -2676,7 +2703,9 @@ msgstr "紫色"
 msgid ""
 "Uses the accent colour of your desktop, or amber if the desktop has none. "
 "Helikodu adjusts it to stay readable."
-msgstr "使用桌面的强调色；如果桌面没有强调色，则使用琥珀色。Helikodu 会自动调整颜色，以保持清晰易读。"
+msgstr ""
+"使用桌面的强调色；如果桌面没有强调色，则使用琥珀色。Helikodu 会自动调整颜色，"
+"以保持清晰易读。"
 
 #: crates/ui-gtk/src/dialogs/settings/appearance.rs:219
 msgid "Integrated"
@@ -2985,7 +3014,6 @@ msgstr "未应用：{}"
 msgid "Covers"
 msgstr "封面"
 
-#. The pictures of the seek bar.
 #: crates/ui-gtk/src/dialogs/settings/library.rs:533
 msgid "Waveforms"
 msgstr "波形"
@@ -3078,7 +3106,9 @@ msgstr "让 Helikodu 为您整理一个文件夹"
 msgid ""
 "It copies or moves the music you add into that folder and names the files "
 "for you. Your other folders stay as they are."
-msgstr "它会将您添加的音乐复制或移动到该文件夹，并为文件命名。您的其他文件夹保持不变。"
+msgstr ""
+"它会将您添加的音乐复制或移动到该文件夹，并为文件命名。您的其他文件夹保持不"
+"变。"
 
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:192
 #: crates/ui-gtk/src/tools/organizer.rs:173
@@ -3104,7 +3134,8 @@ msgstr "此文件夹已添加到音乐库文件夹中。"
 msgid ""
 "For music added from now on. Files already in the folder keep their names; "
 "Organize files renames them."
-msgstr "适用于今后添加的音乐。文件夹中已有的文件保留原名；“整理文件”会重命名它们。"
+msgstr ""
+"适用于今后添加的音乐。文件夹中已有的文件保留原名；“整理文件”会重命名它们。"
 
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:354
 msgid "Names"
@@ -3138,6 +3169,7 @@ msgstr "将音乐库收集到此处…"
 #: crates/ui-gtk/src/dialogs/settings/managed_folder.rs:422
 #: crates/ui-gtk/src/tools/managed_folder.rs:1241
 #: crates/ui-gtk/src/tools/managed_runs.rs:219
+#: crates/ui-gtk/src/window/convolution_notice.rs:94
 msgid "Details…"
 msgstr "详细信息…"
 
@@ -3178,7 +3210,8 @@ msgstr "所有专辑以相同的响度播放，同一专辑内曲目之间的差
 msgid ""
 "Album loudness while an album plays in order, track loudness otherwise, for "
 "example in shuffle."
-msgstr "按顺序播放专辑时使用专辑响度，其他情况下（例如随机播放时）使用曲目响度。"
+msgstr ""
+"按顺序播放专辑时使用专辑响度，其他情况下（例如随机播放时）使用曲目响度。"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:60
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:375
@@ -3292,7 +3325,6 @@ msgstr "测量值"
 msgid "Signal path right now"
 msgstr "当前信号路径"
 
-#. / The diagnostics line of a path, for the clipboard.
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:453
 #: crates/ui-gtk/src/popovers/output_switcher.rs:500
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:378
@@ -3321,12 +3353,14 @@ msgstr "{} {}（{}）"
 msgid ""
 "This track has no loudness values, so its level is evened out as it plays. "
 "Playback is not bit-perfect while this is on."
-msgstr "此曲目没有响度值，因此会在播放时统一其电平。开启此功能时，播放不是比特完美的。"
+msgstr ""
+"此曲目没有响度值，因此会在播放时统一其电平。开启此功能时，播放不是比特完美"
+"的。"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:485
 msgid ""
-"Changing the level changes the samples, so playback is not bit-perfect while"
-" this is on."
+"Changing the level changes the samples, so playback is not bit-perfect while "
+"this is on."
 msgstr "改变电平会改变采样数据，因此开启此功能时，播放不是比特完美的。"
 
 #: crates/ui-gtk/src/dialogs/settings/loudness.rs:506
@@ -3455,8 +3489,7 @@ msgstr "固定为 100%（比特完美）"
 
 #: crates/ui-gtk/src/dialogs/settings/output.rs:339
 #: crates/ui-gtk/src/deck/modes.rs:223 crates/ui-gtk/src/play_modes.rs:285
-#: crates/ui-gtk/src/mini_player.rs:504
-#: crates/ui-gtk/src/window/desktop.rs:435
+#: crates/ui-gtk/src/mini_player.rs:504 crates/ui-gtk/src/window/desktop.rs:435
 msgid "Pause"
 msgstr "暂停"
 
@@ -3804,13 +3837,17 @@ msgstr "在曲目淡出处开始交叉淡化"
 msgid ""
 "Used while a crossfade between tracks is on. A long fade is overlapped "
 "longer, an abrupt end briefly, and never longer than the length chosen."
-msgstr "在曲目之间的交叉淡化开启时使用。较长的淡出重叠较久，突然的结尾只短暂重叠，且绝不会超过所选的时长。"
+msgstr ""
+"在曲目之间的交叉淡化开启时使用。较长的淡出重叠较久，突然的结尾只短暂重叠，且"
+"绝不会超过所选的时长。"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:459
 msgid ""
 "Tracks that follow each other on an album always join without a crossfade. "
 "Nothing is crossfaded on a bit-perfect path."
-msgstr "同一专辑中前后相接的曲目始终直接衔接，不做交叉淡化。比特完美路径上不进行任何交叉淡化。"
+msgstr ""
+"同一专辑中前后相接的曲目始终直接衔接，不做交叉淡化。比特完美路径上不进行任何"
+"交叉淡化。"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:501
 msgid "Settings › Library"
@@ -3827,7 +3864,9 @@ msgid ""
 msgid_plural ""
 "Both need a track to be analysed: {} of {} are so far ({}). Nothing is left "
 "out on a bit-perfect path."
-msgstr[0] "两者都需要先分析曲目：目前已分析 {} / {} 首（{}）。在比特完美路径上不会省略任何内容。"
+msgstr[0] ""
+"两者都需要先分析曲目：目前已分析 {} / {} 首（{}）。在比特完美路径上不会省略任"
+"何内容。"
 
 #: crates/ui-gtk/src/dialogs/settings/playback.rs:522
 #, rust-format
@@ -3937,7 +3976,9 @@ msgstr "循环部分播放 {0} 后淡出，淡出时长 {1}"
 msgid ""
 "For tracker modules and game music that repeat a part. Tunes whose length "
 "nothing states play for {} before the fade."
-msgstr "适用于会重复某一部分的 Tracker 模块音乐和游戏音乐。没有任何时长信息的乐曲会先播放 {}，然后淡出。"
+msgstr ""
+"适用于会重复某一部分的 Tracker 模块音乐和游戏音乐。没有任何时长信息的乐曲会先"
+"播放 {}，然后淡出。"
 
 #: crates/ui-gtk/src/dialogs/settings/smart_play.rs:61
 msgid "No limit"
@@ -3994,7 +4035,9 @@ msgstr "跳过与此搜索查询匹配的曲目"
 msgid ""
 "Every track still plays once in each round; the favoured ones come earlier. "
 "Tracks without a rating are never skipped for their rating."
-msgstr "每首曲目在每一轮中仍会播放一次，优先的曲目会排得更靠前。没有评分的曲目不会因评分而被跳过。"
+msgstr ""
+"每首曲目在每一轮中仍会播放一次，优先的曲目会排得更靠前。没有评分的曲目不会因"
+"评分而被跳过。"
 
 #: crates/ui-gtk/src/dialogs/settings/smart_play.rs:360
 msgid "Seconds of each track that intro scan plays"
@@ -4019,7 +4062,7 @@ msgid "Recently played tracks that are not added again"
 msgstr "不再添加的最近播放曲目"
 
 #: crates/ui-gtk/src/dialogs/settings/smart_play.rs:432
-#: crates/ui-gtk/src/views/generator.rs:1494
+#: crates/ui-gtk/src/views/generator.rs:1533
 msgid "tracks"
 msgstr "首曲目"
 
@@ -4027,7 +4070,8 @@ msgstr "首曲目"
 msgid ""
 "How the two Repeat modes that keep the music going choose their tracks. The "
 "mode itself is chosen in the Repeat menu."
-msgstr "两种让音乐持续播放的循环模式如何选择曲目。模式本身在“循环播放”菜单中选择。"
+msgstr ""
+"两种让音乐持续播放的循环模式如何选择曲目。模式本身在“循环播放”菜单中选择。"
 
 #: crates/ui-gtk/src/dialogs/settings/smart_play.rs:456
 msgid "Continue with related tracks"
@@ -4123,13 +4167,16 @@ msgid ""
 msgid_plural ""
 "Sounds alike uses the track analysis, so it works for tracks that are "
 "analysed: {} of {} so far. At 0 a likeness is not used."
-msgstr[0] "“听感相似”使用曲目分析，因此只适用于已分析的曲目：目前已分析 {} / {} 首。设为 0 的相似之处不会使用。"
+msgstr[0] ""
+"“听感相似”使用曲目分析，因此只适用于已分析的曲目：目前已分析 {} / {} 首。设"
+"为 0 的相似之处不会使用。"
 
 #: crates/ui-gtk/src/dialogs/settings/smart_play.rs:751
 msgid ""
 "Sounds alike uses the track analysis, so it works for tracks that are "
 "analysed. At 0 a likeness is not used."
-msgstr "“听感相似”使用曲目分析，因此只适用于已分析的曲目。设为 0 的相似之处不会使用。"
+msgstr ""
+"“听感相似”使用曲目分析，因此只适用于已分析的曲目。设为 0 的相似之处不会使用。"
 
 #: crates/ui-gtk/src/dialogs/settings/smart_play.rs:761
 #: crates/ui-gtk/src/play_modes.rs:86
@@ -4340,8 +4387,8 @@ msgstr "另存为文件…"
 #: crates/ui-gtk/src/tools/import_moved.rs:41
 #: crates/ui-gtk/src/tools/user_fields.rs:326
 #: crates/ui-gtk/src/tools/user_fields.rs:1008
-#: crates/ui-gtk/src/views/generator.rs:1201
-#: crates/ui-gtk/src/views/generator.rs:1202
+#: crates/ui-gtk/src/views/generator.rs:1213
+#: crates/ui-gtk/src/views/generator.rs:1214
 msgid "Remove"
 msgstr "移除"
 
@@ -4399,8 +4446,8 @@ msgstr "歌词属于单个文件。请为单首曲目打开标签编辑器来修
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1329
 msgid ""
-"Lines that start with a time, such as [01:23.45], are shown in step with the"
-" music."
+"Lines that start with a time, such as [01:23.45], are shown in step with the "
+"music."
 msgstr "以时间开头的行（例如 [01:23.45]）会随音乐同步显示。"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1408
@@ -4410,8 +4457,7 @@ msgid_plural "{} pictures"
 msgstr[0] "{} 张图片"
 
 #: crates/ui-gtk/src/dialogs/tag_editor.rs:1420
-#: crates/ui-gtk/src/views/artists.rs:132
-#: crates/ui-gtk/src/views/genres.rs:114
+#: crates/ui-gtk/src/views/artists.rs:132 crates/ui-gtk/src/views/genres.rs:114
 #: crates/ui-gtk/src/views/search.rs:1119
 #: crates/ui-gtk/src/views/category.rs:191
 #: crates/ui-gtk/src/tools/user_fields.rs:213
@@ -4590,7 +4636,9 @@ msgstr "以最大输出电平播放？"
 msgid ""
 "{} will receive the sound at a fixed 100 %. The volume control in Helikodu "
 "will no longer lower it, so turn your amplifier or headphones down first."
-msgstr "{} 将以固定的 100% 接收声音。Helikodu 中的音量控制将无法再降低音量，因此请先调低功放或耳机的音量。"
+msgstr ""
+"{} 将以固定的 100% 接收声音。Helikodu 中的音量控制将无法再降低音量，因此请先"
+"调低功放或耳机的音量。"
 
 #: crates/ui-gtk/src/dialogs/volume_confirm.rs:187
 msgid "Now"
@@ -4747,7 +4795,7 @@ msgid "Go to Artist"
 msgstr "转到艺术家"
 
 #: crates/ui-gtk/src/views/actions.rs:318
-#: crates/ui-gtk/src/window/pages.rs:1567
+#: crates/ui-gtk/src/window/pages.rs:1592
 msgid "Show Similar Tracks"
 msgstr "显示相似曲目"
 
@@ -4758,8 +4806,7 @@ msgid "Pin to the Sidebar"
 msgstr "固定到侧边栏"
 
 #: crates/ui-gtk/src/views/actions.rs:333
-#: crates/ui-gtk/src/views/actions.rs:357
-#: crates/ui-gtk/src/views/labels.rs:324
+#: crates/ui-gtk/src/views/actions.rs:357 crates/ui-gtk/src/views/labels.rs:324
 msgid "Labels…"
 msgstr "标签…"
 
@@ -4884,8 +4931,7 @@ msgstr "此艺术家没有自己的页面。"
 msgid "This track has no file to rename."
 msgstr "此曲目没有可重命名的文件。"
 
-#: crates/ui-gtk/src/views/artists.rs:133
-#: crates/ui-gtk/src/views/genres.rs:115
+#: crates/ui-gtk/src/views/artists.rs:133 crates/ui-gtk/src/views/genres.rs:115
 #: crates/ui-gtk/src/views/category.rs:203
 msgid "Number of Albums"
 msgstr "专辑数量"
@@ -4895,8 +4941,7 @@ msgstr "专辑数量"
 msgid "Sort the artists"
 msgstr "对艺术家排序"
 
-#: crates/ui-gtk/src/views/artists.rs:171
-#: crates/ui-gtk/src/views/genres.rs:146
+#: crates/ui-gtk/src/views/artists.rs:171 crates/ui-gtk/src/views/genres.rs:146
 #: crates/ui-gtk/src/views/category.rs:240
 #: crates/ui-gtk/src/views/labels.rs:204
 msgid "Play all"
@@ -4924,16 +4969,15 @@ msgstr "未选择艺术家"
 msgid "Choose an artist to see their releases."
 msgstr "选择一位艺术家以查看其发行作品。"
 
-#: crates/ui-gtk/src/views/artists.rs:581
-#: crates/ui-gtk/src/views/genres.rs:350
+#: crates/ui-gtk/src/views/artists.rs:581 crates/ui-gtk/src/views/genres.rs:350
 #: crates/ui-gtk/src/views/category.rs:443
 #, rust-format
 msgid "{}, {} album"
 msgid_plural "{}, {} albums"
 msgstr[0] "{}，{} 张专辑"
 
-#: crates/ui-gtk/src/views/artists.rs:651
-#: crates/ui-gtk/src/views/genres.rs:382 crates/ui-gtk/src/views/search.rs:574
+#: crates/ui-gtk/src/views/artists.rs:651 crates/ui-gtk/src/views/genres.rs:382
+#: crates/ui-gtk/src/views/search.rs:574
 #: crates/ui-gtk/src/views/category.rs:485
 #: crates/ui-gtk/src/tools/cover_manager.rs:198
 #: crates/ui-gtk/src/tools/import_view.rs:289
@@ -5119,7 +5163,7 @@ msgstr "编辑于 {}"
 #: crates/ui-gtk/src/window/playlists.rs:444
 #: crates/ui-gtk/src/tools/sync_export.rs:547
 #: crates/ui-gtk/src/tools/import_view.rs:420
-#: crates/ui-gtk/src/views/generator.rs:1278
+#: crates/ui-gtk/src/views/generator.rs:1290
 msgid "Playlist"
 msgstr "播放列表"
 
@@ -5138,8 +5182,8 @@ msgstr "锁定以防更改"
 msgid "Playlist entries"
 msgstr "播放列表条目"
 
-#: crates/ui-gtk/src/views/playlist.rs:391
-#: crates/ui-gtk/src/tools/copies.rs:69 crates/ui-gtk/src/tools/copies.rs:78
+#: crates/ui-gtk/src/views/playlist.rs:391 crates/ui-gtk/src/tools/copies.rs:69
+#: crates/ui-gtk/src/tools/copies.rs:78
 #: crates/ui-gtk/src/tools/duplicates.rs:100
 #: crates/ui-gtk/src/tools/managed_folder.rs:175
 msgid "The file is missing"
@@ -5176,7 +5220,7 @@ msgstr "解锁"
 #: crates/ui-gtk/src/views/playlist.rs:1076
 #: crates/ui-gtk/src/views/tracks.rs:906
 #: crates/ui-gtk/src/views/smart_playlist.rs:1948
-#: crates/ui-gtk/src/views/generator.rs:705
+#: crates/ui-gtk/src/views/generator.rs:716
 #, rust-format
 msgid "{} selected"
 msgid_plural "{} selected"
@@ -5224,14 +5268,13 @@ msgid "Remove Missing Tracks"
 msgstr "移除缺失的曲目"
 
 #: crates/ui-gtk/src/views/playlist.rs:1305
-#: crates/ui-gtk/src/window/pages.rs:912
+#: crates/ui-gtk/src/window/pages.rs:928
 msgid "Playlist name"
 msgstr "播放列表名称"
 
 #: crates/ui-gtk/src/views/playlist.rs:1307
 #: crates/ui-gtk/src/views/search.rs:1127
-#: crates/ui-gtk/src/tools/organizer.rs:75
-#: crates/ui-gtk/src/tools/rename.rs:61
+#: crates/ui-gtk/src/tools/organizer.rs:75 crates/ui-gtk/src/tools/rename.rs:61
 #: crates/ui-gtk/src/window/playlists.rs:850
 msgid "Rename"
 msgstr "重命名"
@@ -5262,8 +5305,8 @@ msgstr "搜索结果"
 
 #: crates/ui-gtk/src/views/search.rs:216
 msgid ""
-"Nothing in your library matches. Check the spelling, or try fewer or shorter"
-" words."
+"Nothing in your library matches. Check the spelling, or try fewer or shorter "
+"words."
 msgstr "音乐库中没有匹配的内容。请检查拼写，或尝试使用更少或更短的词。"
 
 #: crates/ui-gtk/src/views/search.rs:224
@@ -5372,8 +5415,8 @@ msgstr "删除已保存的搜索“{}”？"
 msgid "The tracks it finds stay in the library."
 msgstr "它找到的曲目会保留在音乐库中。"
 
-#: crates/ui-gtk/src/views/search.rs:1192
-#: crates/ui-gtk/src/window/pages.rs:981 crates/ui-gtk/src/tools.rs:206
+#: crates/ui-gtk/src/views/search.rs:1192 crates/ui-gtk/src/window/pages.rs:997
+#: crates/ui-gtk/src/tools.rs:206
 msgid "Delete"
 msgstr "删除"
 
@@ -5386,8 +5429,7 @@ msgstr "浏览"
 msgid "Browse by genre, artist and album"
 msgstr "按流派、艺术家和专辑浏览"
 
-#: crates/ui-gtk/src/views/tracks.rs:236
-#: crates/ui-gtk/src/views/history.rs:366
+#: crates/ui-gtk/src/views/tracks.rs:236 crates/ui-gtk/src/views/history.rs:366
 msgid "Filter"
 msgstr "筛选"
 
@@ -5416,68 +5458,68 @@ msgstr "自定义字段"
 msgid "Sorted by {}"
 msgstr "按{}排序"
 
-#: crates/ui-gtk/src/window/pages.rs:329
+#: crates/ui-gtk/src/window/pages.rs:345
 msgid "Search the library"
 msgstr "搜索音乐库"
 
-#: crates/ui-gtk/src/window/pages.rs:969
+#: crates/ui-gtk/src/window/pages.rs:985
 #, rust-format
 msgid "Delete the folder “{}”?"
 msgstr "删除文件夹“{}”？"
 
-#: crates/ui-gtk/src/window/pages.rs:970
+#: crates/ui-gtk/src/window/pages.rs:986
 msgid "The playlists in it move up a level."
 msgstr "其中的播放列表将上移一级。"
 
-#: crates/ui-gtk/src/window/pages.rs:974
+#: crates/ui-gtk/src/window/pages.rs:990
 #, rust-format
 msgid "Delete the playlist “{}”?"
 msgstr "删除播放列表“{}”？"
 
-#: crates/ui-gtk/src/window/pages.rs:975
+#: crates/ui-gtk/src/window/pages.rs:991
 msgid "Its tracks stay in the library. This cannot be undone."
 msgstr "其中的曲目会保留在音乐库中。此操作无法撤销。"
 
-#: crates/ui-gtk/src/window/pages.rs:1018
+#: crates/ui-gtk/src/window/pages.rs:1034
 msgid "M3U8 playlists"
 msgstr "M3U8 播放列表"
 
-#: crates/ui-gtk/src/window/pages.rs:1019
+#: crates/ui-gtk/src/window/pages.rs:1035
 msgid "M3U playlists"
 msgstr "M3U 播放列表"
 
-#: crates/ui-gtk/src/window/pages.rs:1020
+#: crates/ui-gtk/src/window/pages.rs:1036
 msgid "PLS playlists"
 msgstr "PLS 播放列表"
 
-#: crates/ui-gtk/src/window/pages.rs:1021
+#: crates/ui-gtk/src/window/pages.rs:1037
 msgid "XSPF playlists"
 msgstr "XSPF 播放列表"
 
-#: crates/ui-gtk/src/window/pages.rs:1029
+#: crates/ui-gtk/src/window/pages.rs:1045
 msgid "Export playlist"
 msgstr "导出播放列表"
 
-#: crates/ui-gtk/src/window/pages.rs:1049
+#: crates/ui-gtk/src/window/pages.rs:1065
 #, rust-format
 msgid "{} track exported"
 msgid_plural "{} tracks exported"
 msgstr[0] "已导出 {} 首曲目"
 
-#: crates/ui-gtk/src/window/pages.rs:1070
+#: crates/ui-gtk/src/window/pages.rs:1086
 msgid "Import playlist"
 msgstr "导入播放列表"
 
-#: crates/ui-gtk/src/window/pages.rs:1090
+#: crates/ui-gtk/src/window/pages.rs:1106
 #, rust-format
 msgid "Imported “{}”"
 msgstr "已导入“{}”"
 
-#: crates/ui-gtk/src/window/pages.rs:1144
+#: crates/ui-gtk/src/window/pages.rs:1160
 msgid "There is nothing to play there."
 msgstr "那里没有可播放的内容。"
 
-#: crates/ui-gtk/src/window/pages.rs:1178
+#: crates/ui-gtk/src/window/pages.rs:1194
 msgid "The selected track has no copies."
 msgstr "所选曲目没有副本。"
 
@@ -5494,8 +5536,8 @@ msgid_plural "Left out: {} files cannot be read"
 msgstr[0] "已略过：{} 个文件无法读取"
 
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:92
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:171
 #: crates/ui-gtk/src/dialogs/settings/dsp.rs:174
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:177
 msgid "Bypassed"
 msgstr "已旁路"
 
@@ -5522,37 +5564,37 @@ msgid "{}, device at {}"
 msgstr "{}，设备采样率 {}"
 
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:211
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:92
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:95
 msgid "Pitch"
 msgstr "音高"
 
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:212
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:93
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:96
 msgid "Equalizer"
 msgstr "均衡器"
 
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:213
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:94
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:97
 msgid "Convolution"
 msgstr "卷积"
 
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:214
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:95
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:98
 msgid "Crossfeed"
 msgstr "交叉馈送"
 
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:215
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:96
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:99
 msgid "Channel mix"
 msgstr "声道混合"
 
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:216
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:97
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:100
 msgid "Compressor"
 msgstr "压缩器"
 
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:217
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:98
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:101
 msgid "Limiter"
 msgstr "限幅器"
 
@@ -5570,7 +5612,7 @@ msgstr "{} · 未经改动"
 #: crates/ui-gtk/src/widgets/signal_path_list.rs:342
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:42
 #: crates/ui-gtk/src/widgets/signal_path_chain.rs:75
-#: crates/ui-gtk/src/views/generator.rs:1236
+#: crates/ui-gtk/src/views/generator.rs:1248
 msgid "Source"
 msgstr "音源"
 
@@ -5685,8 +5727,7 @@ msgstr "返回音乐库（F11）"
 #: crates/ui-gtk/src/views/now_playing.rs:231
 #: crates/ui-gtk/src/tools/managed_runs.rs:304
 #: crates/ui-gtk/src/tools/cover_manager.rs:672
-#: crates/ui-gtk/src/tools/import.rs:672
-#: crates/ui-gtk/src/tools/import.rs:1470
+#: crates/ui-gtk/src/tools/import.rs:672 crates/ui-gtk/src/tools/import.rs:1470
 #: crates/ui-gtk/src/tools/import_view.rs:132
 #: crates/ui-gtk/src/tools/import_view.rs:141
 msgid "Show"
@@ -5842,7 +5883,9 @@ msgstr "添加歌词…"
 msgid ""
 "Helikodu looks for a .lrc or .txt file with the name of the track in its "
 "folder, and for lyrics in its tags."
-msgstr "Helikodu 会在曲目所在的文件夹中查找与曲目同名的 .lrc 或 .txt 文件，也会查找其标签中的歌词。"
+msgstr ""
+"Helikodu 会在曲目所在的文件夹中查找与曲目同名的 .lrc 或 .txt 文件，也会查找其"
+"标签中的歌词。"
 
 #: crates/ui-gtk/src/window/panel/lyrics.rs:157
 msgid "Offset"
@@ -6034,8 +6077,7 @@ msgstr "{} Hz"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:214
 #: crates/ui-gtk/src/tools/import.rs:466 crates/ui-gtk/src/tools/import.rs:506
-#: crates/ui-gtk/src/tools/import.rs:629
-#: crates/ui-gtk/src/tools/import.rs:1013
+#: crates/ui-gtk/src/tools/import.rs:629 crates/ui-gtk/src/tools/import.rs:1013
 #: crates/ui-gtk/src/tools/import.rs:1215
 msgid "Import"
 msgstr "导入"
@@ -6060,8 +6102,7 @@ msgid_plural "{} of {} filters"
 msgstr[0] "{} / {} 个滤波器"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:254
-msgid ""
-"No filters yet. Add one, or import a ParametricEQ.txt file from AutoEQ."
+msgid "No filters yet. Add one, or import a ParametricEQ.txt file from AutoEQ."
 msgstr "还没有滤波器。请添加一个，或从 AutoEQ 导入 ParametricEQ.txt 文件。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:289
@@ -6149,7 +6190,6 @@ msgstr "预设名称"
 msgid "Preset “{}” saved"
 msgstr "预设“{}”已保存"
 
-#. The preset row.
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:713
 #: crates/ui-gtk/src/dialogs/settings/dsp/equalizer.rs:718
 msgid "Equalizer preset"
@@ -6197,146 +6237,146 @@ msgstr "拖动控制点，或选中后按上下方向键调整。双击可将其
 msgid "Reset to flat"
 msgstr "重置为平直"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:161
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:164
 #, rust-format
 msgid "{} file cannot be read"
 msgid_plural "{} files cannot be read"
 msgstr[0] "{} 个文件无法读取"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:177
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:180
 #, rust-format
 msgid "Track: {}"
 msgstr "曲目：{}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:183
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:186
 #: crates/ui-gtk/src/dialogs/track_equalizer.rs:45
 #, rust-format
 msgid "{} filter"
 msgid_plural "{} filters"
 msgstr[0] "{} 个滤波器"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:185
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:188
 msgid "10 bands"
 msgstr "10 段"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:186
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:189
 msgid "31 bands"
 msgstr "31 段"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:194
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:197
 #, rust-format
 msgid "{} Hz / {} dB"
 msgstr "{} Hz / {} dB"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:203
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:206
 msgid "Swapped"
 msgstr "左右互换"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:206
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:209
 #, rust-format
 msgid "{}, balance {}"
 msgstr "{}，平衡 {}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:212
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:215
 #, rust-format
 msgid "Lookahead {} ms"
 msgstr "前瞻 {} 毫秒"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:225
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:228
 #, rust-format
 msgid "pitch {}"
 msgstr "音高 {}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:228
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:231
 #, rust-format
 msgid "EQ {}"
 msgstr "均衡器 {}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:230
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:233
 msgid "convolution"
 msgstr "卷积"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:231
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:234
 msgid "crossfeed"
 msgstr "交叉馈送"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:232
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:235
 msgid "channel mixer"
 msgstr "声道混合器"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:234
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:237
 msgid "compressor"
 msgstr "压缩器"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:236
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:239
 #, rust-format
 msgid "compressor {}"
 msgstr "压缩器 {}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:240
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:243
 msgid "limiter"
 msgstr "限幅器"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:330
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:333
 #: crates/ui-gtk/src/dialogs/track_equalizer.rs:76
 msgid "Own settings"
 msgstr "独立设置"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:520
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:542
 #, rust-format
 msgid "This track plays with its own equalizer, “{}”"
 msgstr "此曲目使用其自己的均衡器“{}”播放"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:546
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:568
 msgid "BIT-PERFECT"
 msgstr "比特完美"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:551
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:573
 #, rust-format
 msgid "Every stage is off → {}"
 msgstr "所有处理阶段均已关闭 → {}"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:552
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:574
 msgid "Every stage is off. The samples pass unchanged."
 msgstr "所有处理阶段均已关闭。采样数据原样通过。"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:557
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:579
 msgid "DSP ACTIVE · 32-BIT FLOAT"
 msgstr "DSP 已启用 · 32 位浮点"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:573
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:595
 #, rust-format
 msgid "Adds {} ms"
 msgstr "增加 {} 毫秒"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:575
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:597
 msgid "TPDF dither"
 msgstr "TPDF 抖动"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:671
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:711
 msgid "Processing right now"
 msgstr "当前处理"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:699
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:739
 msgid "Track settings…"
 msgstr "曲目设置…"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:702
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:742
 msgid ""
-"The settings below are the main equalizer. They are heard again when another"
-" track plays."
+"The settings below are the main equalizer. They are heard again when another "
+"track plays."
 msgstr "下面的设置是主均衡器。播放其他曲目时会再次使用它。"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:716
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:756
 msgid "Use the equalizers of single tracks"
 msgstr "使用单首曲目的均衡器"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:718
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:758
 msgid ""
 "A track that has its own equalizer plays with that one in place of this one."
 msgstr "拥有自己均衡器的曲目会用它代替此均衡器播放。"
 
-#: crates/ui-gtk/src/dialogs/settings/dsp.rs:782
+#: crates/ui-gtk/src/dialogs/settings/dsp.rs:822
 #, rust-format
 msgid "{} track has one."
 msgid_plural "{} tracks have one."
@@ -6374,10 +6414,12 @@ msgstr "{} Hz · {} dB"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:166
 msgid ""
-"For headphones. A little of each channel is mixed into the other, as happens"
-" with loudspeakers in a room. The sound moves from inside the head towards "
+"For headphones. A little of each channel is mixed into the other, as happens "
+"with loudspeakers in a room. The sound moves from inside the head towards "
 "the front."
-msgstr "适用于耳机。将每个声道的少量信号混入另一个声道，就像在房间里用扬声器听音乐时那样。声像会从头部内部移向前方。"
+msgstr ""
+"适用于耳机。将每个声道的少量信号混入另一个声道，就像在房间里用扬声器听音乐时"
+"那样。声像会从头部内部移向前方。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:181
 msgid "Default"
@@ -6433,7 +6475,9 @@ msgid ""
 "Changes how the channels reach the device. Mono, swap and balance apply to "
 "every track. The surround setting applies to files with more channels than "
 "the device has."
-msgstr "改变各声道送达设备的方式。单声道、左右互换和平衡适用于所有曲目。环绕声设置适用于声道数多于设备的文件。"
+msgstr ""
+"改变各声道送达设备的方式。单声道、左右互换和平衡适用于所有曲目。环绕声设置适"
+"用于声道数多于设备的文件。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:324
 msgid "Swap left and right"
@@ -6471,7 +6515,9 @@ msgid ""
 "A safety net against clipping. When a peak would go above full scale, the "
 "limiter turns the level down for a moment. The rest of the time it leaves "
 "the sound alone."
-msgstr "防止削波的安全保障。当峰值将超过满刻度时，限幅器会短暂降低电平；其余时间不会改变声音。"
+msgstr ""
+"防止削波的安全保障。当峰值将超过满刻度时，限幅器会短暂降低电平；其余时间不会"
+"改变声音。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:464
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:490
@@ -6505,8 +6551,8 @@ msgstr "活动"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/stages.rs:515
 msgid ""
-"The automatic preamp of the equalizer already prevents most clipping, so the"
-" limiter rarely has to act."
+"The automatic preamp of the equalizer already prevents most clipping, so the "
+"limiter rarely has to act."
 msgstr "均衡器的自动前置放大已能防止大多数削波，因此限幅器很少需要介入。"
 
 #: crates/ui-gtk/src/dialogs/track_equalizer.rs:44
@@ -6555,8 +6601,8 @@ msgstr "从下次开始播放该曲目时起"
 
 #: crates/ui-gtk/src/dialogs/track_equalizer.rs:205
 msgid ""
-"Plays without any equalizer, the main one included. Kept in the library, not"
-" in the file."
+"Plays without any equalizer, the main one included. Kept in the library, not "
+"in the file."
 msgstr "不使用任何均衡器播放，包括主均衡器。保存在音乐库中，而不是文件中。"
 
 #: crates/ui-gtk/src/dialogs/track_equalizer.rs:208
@@ -6565,8 +6611,8 @@ msgstr "比特完美播放时不应用。"
 
 #: crates/ui-gtk/src/dialogs/track_equalizer.rs:211
 msgid ""
-"Replaces the main equalizer while this track plays. Kept in the library, not"
-" in the file."
+"Replaces the main equalizer while this track plays. Kept in the library, not "
+"in the file."
 msgstr "播放此曲目时代替主均衡器。保存在音乐库中，而不是文件中。"
 
 #: crates/ui-gtk/src/dialogs/track_equalizer.rs:214
@@ -6612,7 +6658,6 @@ msgstr "自动"
 msgid "Dither: automatic, TPDF, always last"
 msgstr "抖动：自动，TPDF，始终在最后"
 
-#. / "Compressor, stage 6 of 7, off".
 #: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:221
 msgid "on"
 msgstr "开"
@@ -6693,8 +6738,8 @@ msgstr "当前处理链的名称"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:795
 msgid ""
-"A chain keeps the order of the stages and which are on. Each stage keeps its"
-" own values."
+"A chain keeps the order of the stages and which are on. Each stage keeps its "
+"own values."
 msgstr "处理链会保存各阶段的顺序以及哪些阶段已开启。每个阶段保留自己的参数值。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/chain.rs:886
@@ -6716,13 +6761,11 @@ msgstr "{}，当前的处理链"
 msgid "Deleted the chain “{}”"
 msgstr "已删除处理链“{}”"
 
-#. / A ratio: `4 : 1`, `2.5 : 1`.
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:40
 #, rust-format
 msgid "{} : 1"
 msgstr "{} : 1"
 
-#. The preset.
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:57
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:284
 msgid "Night"
@@ -6777,21 +6820,27 @@ msgstr "稍微平衡电平。"
 msgid ""
 "Night adds up to {} dB of makeup gain. A sudden loud sound can go over full "
 "scale for a few milliseconds; the limiter catches that."
-msgstr "夜间最多增加 {} dB 补偿增益。突然的响声可能会在几毫秒内超过满刻度，限幅器会处理这种情况。"
+msgstr ""
+"夜间最多增加 {} dB 补偿增益。突然的响声可能会在几毫秒内超过满刻度，限幅器会处"
+"理这种情况。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:210
 #, rust-format
 msgid ""
-"Gentle adds up to {} dB of makeup gain. A sudden loud sound can go over full"
-" scale for a few milliseconds; the limiter catches that."
-msgstr "柔和最多增加 {} dB 补偿增益。突然的响声可能会在几毫秒内超过满刻度，限幅器会处理这种情况。"
+"Gentle adds up to {} dB of makeup gain. A sudden loud sound can go over full "
+"scale for a few milliseconds; the limiter catches that."
+msgstr ""
+"柔和最多增加 {} dB 补偿增益。突然的响声可能会在几毫秒内超过满刻度，限幅器会处"
+"理这种情况。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:213
 #, rust-format
 msgid ""
 "Your values add up to {} dB of makeup gain. A sudden loud sound can go over "
 "full scale for a few milliseconds; the limiter catches that."
-msgstr "您设置的值最多增加 {} dB 补偿增益。突然的响声可能会在几毫秒内超过满刻度，限幅器会处理这种情况。"
+msgstr ""
+"您设置的值最多增加 {} dB 补偿增益。突然的响声可能会在几毫秒内超过满刻度，限幅"
+"器会处理这种情况。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:248
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:313
@@ -6804,9 +6853,11 @@ msgstr "{} 至 {}"
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:280
 msgid ""
 "Brings loud passages down and lifts quiet ones, so that music stays "
-"comfortable at a low volume. Night is for listening late, when the volume is"
-" low."
-msgstr "压低响亮段落，提升安静段落，让音乐在低音量下也听起来舒适。“夜间”适合深夜低音量收听。"
+"comfortable at a low volume. Night is for listening late, when the volume is "
+"low."
+msgstr ""
+"压低响亮段落，提升安静段落，让音乐在低音量下也听起来舒适。“夜间”适合深夜低音"
+"量收听。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/compressor.rs:285
 msgid "Compressor preset"
@@ -6930,9 +6981,11 @@ msgstr "{}%"
 #: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:435
 msgid ""
 "Applies an impulse response to everything that plays, for example a room "
-"correction measured with a program such as REW. The files are WAV files, one"
-" for each sample rate."
-msgstr "对所有播放的声音应用脉冲响应，例如用 REW 等程序测量的房间校正。这些文件为 WAV 文件，每个采样率一个。"
+"correction measured with a program such as REW. The files are WAV files, one "
+"for each sample rate."
+msgstr ""
+"对所有播放的声音应用脉冲响应，例如用 REW 等程序测量的房间校正。这些文件为 "
+"WAV 文件，每个采样率一个。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:453
 #: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:566
@@ -6962,7 +7015,8 @@ msgstr "脉冲响应"
 msgid ""
 "A file chosen by hand comes before the folder. Any other sample rate uses "
 "the file with the nearest rate, resampled."
-msgstr "手动选择的文件优先于文件夹。其他采样率使用采样率最接近的文件，并进行重采样。"
+msgstr ""
+"手动选择的文件优先于文件夹。其他采样率使用采样率最接近的文件，并进行重采样。"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/convolution.rs:505
 msgid "Normalize"
@@ -7013,8 +7067,7 @@ msgstr "重置为 0"
 
 #: crates/ui-gtk/src/dialogs/settings/dsp/pitch.rs:74
 msgid ""
-"Pitch shift adds about 33 ms of delay. It sounds best within a few "
-"semitones."
+"Pitch shift adds about 33 ms of delay. It sounds best within a few semitones."
 msgstr "变调会增加约 33 毫秒延迟。在几个半音以内效果最好。"
 
 #: crates/ui-gtk/src/dialogs/track_flags.rs:30
@@ -7234,7 +7287,7 @@ msgid "Minutes until playback stops"
 msgstr "距停止播放的分钟数"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:131
-#: crates/ui-gtk/src/views/generator.rs:1494
+#: crates/ui-gtk/src/views/generator.rs:1533
 msgid "minutes"
 msgstr "分钟"
 
@@ -7277,7 +7330,9 @@ msgstr "届时正在播放的曲目结束后，播放将暂停。"
 msgid ""
 "The sound fades over the last 30 seconds, then playback pauses. On a bit-"
 "perfect path it pauses without a fade."
-msgstr "声音会在最后 30 秒内逐渐淡出，然后播放暂停。在比特完美路径上则直接暂停，不做淡出。"
+msgstr ""
+"声音会在最后 30 秒内逐渐淡出，然后播放暂停。在比特完美路径上则直接暂停，不做"
+"淡出。"
 
 #: crates/ui-gtk/src/popovers/sleep_timer.rs:353
 #, rust-format
@@ -7607,8 +7662,8 @@ msgstr "没有符合筛选条件的组。"
 
 #: crates/ui-gtk/src/tools/duplicates.rs:238
 msgid ""
-"One file reached by two paths takes its space once: nothing here is moved to"
-" the trash."
+"One file reached by two paths takes its space once: nothing here is moved to "
+"the trash."
 msgstr "经由两个路径访问的同一文件只占用一份空间：这里的文件不会被移到回收站。"
 
 #: crates/ui-gtk/src/tools/duplicates.rs:242
@@ -7699,7 +7754,9 @@ msgid ""
 "They go to the desktop Trash, where you can restore them; {} will be freed "
 "when the Trash is emptied. Each file is checked again just before it moves, "
 "and one that changed stays where it is."
-msgstr "这些文件将被移到桌面回收站，您可以从那里恢复它们；清空回收站后将释放 {}。每个文件在移动前都会再次检查，有变化的文件会保留在原处。"
+msgstr ""
+"这些文件将被移到桌面回收站，您可以从那里恢复它们；清空回收站后将释放 {}。每个"
+"文件在移动前都会再次检查，有变化的文件会保留在原处。"
 
 #: crates/ui-gtk/src/tools/trash.rs:109
 msgid "Files to move"
@@ -7723,8 +7780,7 @@ msgstr "保留在原处：文件已更改，或已不再与主副本完全相同
 
 #: crates/ui-gtk/src/tools/trash.rs:163
 msgid ""
-"Left in place: it is the same file as another path in the library, not a "
-"copy"
+"Left in place: it is the same file as another path in the library, not a copy"
 msgstr "保留在原处：它与音乐库中的另一路径指向同一文件，并非副本"
 
 #: crates/ui-gtk/src/tools/trash.rs:165
@@ -7801,8 +7857,8 @@ msgstr "插入字段"
 #: crates/ui-gtk/src/tools/tag_tools.rs:319
 #, rust-format
 msgid ""
-"The pattern is compared with the file name without its extension. Use {skip}"
-" for a part you do not need."
+"The pattern is compared with the file name without its extension. Use {skip} "
+"for a part you do not need."
 msgstr "模式会与不含扩展名的文件名进行比较。不需要的部分请用 {skip} 表示。"
 
 #: crates/ui-gtk/src/tools/tag_tools.rs:324
@@ -8035,8 +8091,7 @@ msgstr "与模式不符"
 #: crates/ui-gtk/src/tools/tag_preview.rs:397
 #, rust-format
 msgid ""
-"{} of {} file names fits the pattern · values in grey are already in the "
-"tags"
+"{} of {} file names fits the pattern · values in grey are already in the tags"
 msgid_plural ""
 "{} of {} file names fit the pattern · values in grey are already in the tags"
 msgstr[0] "{} 个文件名（共 {} 个）符合模式 · 灰色的值已存在于标签中"
@@ -8280,8 +8335,6 @@ msgstr "文件缺失，因此无法移动"
 msgid "A CUE sheet refers to this file by its name"
 msgstr "有 CUE 文件按名称引用此文件"
 
-#. / Fills the "Into" dropdown: each file's own folder, each library folder,
-#. / a folder chosen before, and "Choose a folder…".
 #: crates/ui-gtk/src/tools/organizer.rs:161
 #: crates/ui-gtk/src/tools/organizer.rs:930
 msgid "The library folder each file is in"
@@ -8403,8 +8456,8 @@ msgstr "模式"
 
 #: crates/ui-gtk/src/tools/organizer.rs:977
 msgid ""
-"Every move is written down first, so a run can be undone later, even after a"
-" restart."
+"Every move is written down first, so a run can be undone later, even after a "
+"restart."
 msgstr "每次移动都会先记录下来，因此之后（即使重新启动后）也能撤销整理操作。"
 
 #: crates/ui-gtk/src/tools/organizer.rs:984
@@ -8651,9 +8704,10 @@ msgstr "这些文件需要 {}。托管文件夹所在的驱动器有 {} 可用�
 
 #: crates/ui-gtk/src/tools/managed_folder.rs:605
 msgid ""
-"Choose fewer files, or free some space. The run cannot start until the files"
-" fit."
-msgstr "请选择较少的文件，或释放一些空间。在空间足以容纳这些文件之前，任务无法开始。"
+"Choose fewer files, or free some space. The run cannot start until the files "
+"fit."
+msgstr ""
+"请选择较少的文件，或释放一些空间。在空间足以容纳这些文件之前，任务无法开始。"
 
 #: crates/ui-gtk/src/tools/managed_folder.rs:643
 msgid "Looking at the files…"
@@ -8723,7 +8777,7 @@ msgstr "正在复制…"
 #: crates/ui-gtk/src/tools/managed_folder.rs:1085
 #: crates/ui-gtk/src/tools/converter.rs:994
 #: crates/ui-gtk/src/tools/import.rs:1013
-#: crates/ui-gtk/src/views/generator.rs:1223
+#: crates/ui-gtk/src/views/generator.rs:1235
 msgid "From"
 msgstr "原格式"
 
@@ -8836,7 +8890,6 @@ msgstr "正在收集音乐库"
 msgid "Adding music"
 msgstr "正在添加音乐"
 
-#. / "Continue places the rest. Roll back removes the 37 copies; …".
 #: crates/ui-gtk/src/tools/managed_cut_short.rs:47
 msgid "Continue places the rest."
 msgstr "“继续”会放置其余文件。"
@@ -9117,8 +9170,8 @@ msgstr "文件在 {} 处中断，其余部分无法播放。"
 #: crates/ui-gtk/src/tools/verify_files.rs:142
 #, rust-format
 msgid ""
-"Ends {} s before the length written in the file. The end of the track may be"
-" missing."
+"Ends {} s before the length written in the file. The end of the track may be "
+"missing."
 msgstr "比文件中记录的时长提前 {} 秒结束。曲目的结尾可能缺失。"
 
 #: crates/ui-gtk/src/tools/verify_files.rs:152
@@ -9303,7 +9356,6 @@ msgstr[0] "{} 个相同副本"
 msgid "Searches cannot be saved here."
 msgstr "无法在此处保存搜索。"
 
-#. / The error of a backend that cannot do something.
 #: crates/ui-gtk/src/backend.rs:1205
 msgid "This is not available here."
 msgstr "此功能在这里不可用。"
@@ -9612,11 +9664,11 @@ msgstr "结果的顺序"
 msgid "How many tracks to keep"
 msgstr "保留多少首曲目"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:320
+#: crates/ui-gtk/src/popovers/query_completion.rs:322
 msgid "Completions"
 msgstr "补全建议"
 
-#: crates/ui-gtk/src/popovers/query_completion.rs:330
+#: crates/ui-gtk/src/popovers/query_completion.rs:332
 msgid "Tab completes · Up and Down choose · Esc closes"
 msgstr "Tab 补全 · 上下方向键选择 · Esc 关闭"
 
@@ -9657,14 +9709,12 @@ msgstr "总计 {}"
 msgid "Yesterday"
 msgstr "昨天"
 
-#. Translators: a day in the play history, as strftime: "Saturday 15
-#. November".
+#. Translators: a day in the play history, as strftime: "Saturday 15 November".
 #: crates/ui-gtk/src/views/history.rs:224
 msgid "%A %e %B"
 msgstr "%-m月%-d日 %A"
 
-#. Translators: a day of an earlier year, as strftime: "Saturday 15 November
-#. 2025".
+#. Translators: a day of an earlier year, as strftime: "Saturday 15 November 2025".
 #: crates/ui-gtk/src/views/history.rs:227
 msgid "%A %e %B %Y"
 msgstr "%Y年%-m月%-d日 %A"
@@ -9708,8 +9758,7 @@ msgid "Nothing played"
 msgstr "没有播放记录"
 
 #: crates/ui-gtk/src/views/history.rs:422
-msgid ""
-"Tracks you listen to are listed here by day, with where they came from."
+msgid "Tracks you listen to are listed here by day, with where they came from."
 msgstr "您收听过的曲目会按日期列在这里，并注明播放来源。"
 
 #: crates/ui-gtk/src/views/history.rs:578
@@ -9902,7 +9951,7 @@ msgid "Match {} of these rules"
 msgstr "满足以下 {} 规则"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:590
-#: crates/ui-gtk/src/views/generator.rs:1490
+#: crates/ui-gtk/src/views/generator.rs:1529
 #: crates/ui-gtk/src/views/generator_steps.rs:46
 msgid "Limit"
 msgstr "上限"
@@ -9944,7 +9993,7 @@ msgid "Query text"
 msgstr "查询文本"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:1308
-#: crates/ui-gtk/src/views/generator.rs:868
+#: crates/ui-gtk/src/views/generator.rs:879
 msgid "Done editing"
 msgstr "完成编辑"
 
@@ -10015,8 +10064,7 @@ msgid "updates as the library changes"
 msgstr "随音乐库的变化而更新"
 
 #: crates/ui-gtk/src/views/smart_playlist.rs:1955
-msgid ""
-"The rules set the order. To reorder by hand, save a copy as a playlist."
+msgid "The rules set the order. To reorder by hand, save a copy as a playlist."
 msgstr "顺序由规则决定。如需手动调整顺序，请将副本另存为播放列表。"
 
 #. Translators: the conditions of a smart playlist's rule, in the
@@ -10721,7 +10769,7 @@ msgstr "随机电台"
 msgid "Revert to the skipped track"
 msgstr "回到跳过的曲目"
 
-#: crates/ui-gtk/src/shortcuts.rs:135 crates/ui-gtk/src/window/narrow.rs:368
+#: crates/ui-gtk/src/shortcuts.rs:135 crates/ui-gtk/src/window/narrow.rs:371
 msgid "Search"
 msgstr "搜索"
 
@@ -10844,7 +10892,8 @@ msgstr "在其他应用程序中"
 msgid ""
 "These work while another window is in front. The desktop chooses the keys "
 "and shows them here."
-msgstr "当其他窗口位于前台时，这些快捷键依然有效。按键由桌面环境指定，并显示在这里。"
+msgstr ""
+"当其他窗口位于前台时，这些快捷键依然有效。按键由桌面环境指定，并显示在这里。"
 
 #: crates/ui-gtk/src/dialogs/settings/shortcuts.rs:466
 msgid "Set up in the desktop…"
@@ -10861,7 +10910,7 @@ msgstr "全部重置…"
 #. Translators: {0} is the number of tracks analysed, {1} the
 #. number of all tracks, which chooses the form.
 #: crates/ui-gtk/src/dialogs/settings/track_analysis.rs:35
-#: crates/ui-gtk/src/views/similar.rs:630
+#: crates/ui-gtk/src/views/similar.rs:633
 #, rust-format
 msgid "{} of {} track analysed"
 msgid_plural "{} of {} tracks analysed"
@@ -10875,7 +10924,6 @@ msgstr "交叉淡化使用固定时长，且不省略静音。"
 msgid "Every track is analysed."
 msgstr "所有曲目都已分析。"
 
-#. Waiting for the delay after the start or a scan.
 #: crates/ui-gtk/src/dialogs/settings/track_analysis.rs:50
 msgid "Starts in a moment."
 msgstr "即将开始。"
@@ -10912,8 +10960,9 @@ msgid ""
 "can find tracks that sound alike. Tracks analysed by an earlier version are "
 "analysed once more. Nothing is written to the files."
 msgstr ""
-"为每首曲目查找一次静音和响度，用于交叉淡化、静音处理和电平调节器，并记录曲目的听感，以便 Helikodu "
-"查找听感相似的曲目。由早期版本分析过的曲目会再分析一次。不会向文件写入任何内容。"
+"为每首曲目查找一次静音和响度，用于交叉淡化、静音处理和电平调节器，并记录曲目"
+"的听感，以便 Helikodu 查找听感相似的曲目。由早期版本分析过的曲目会再分析一"
+"次。不会向文件写入任何内容。"
 
 #: crates/ui-gtk/src/dialogs/settings/search.rs:163
 #, rust-format
@@ -11173,7 +11222,6 @@ msgstr "播放时长"
 msgid "{} a track on average"
 msgstr "平均每首 {}"
 
-#. / Listening this year: four figures.
 #: crates/ui-gtk/src/views/statistics.rs:657
 msgid "Listening"
 msgstr "收听"
@@ -11234,8 +11282,7 @@ msgstr "有字段缺少结尾的 }。"
 msgid "{} names no field."
 msgstr "{} 中没有指定字段名称。"
 
-#: crates/ui-gtk/src/tools.rs:61
-#: crates/ui-gtk/src/backend/sample/fields.rs:130
+#: crates/ui-gtk/src/tools.rs:61 crates/ui-gtk/src/backend/sample/fields.rs:130
 #, rust-format
 msgid "There is no field called {}."
 msgstr "没有名为 {} 的字段。"
@@ -11589,8 +11636,7 @@ msgid "An album, an artist or a search"
 msgstr "专辑、艺术家或搜索"
 
 #: crates/ui-gtk/src/tools/sync_export.rs:296
-msgid ""
-"Type a search: album:, artist: and the other fields of the search work."
+msgid "Type a search: album:, artist: and the other fields of the search work."
 msgstr "输入搜索内容：可以使用 album:、artist: 及其他搜索字段。"
 
 #: crates/ui-gtk/src/tools/sync_export.rs:346
@@ -11617,8 +11663,7 @@ msgstr "目标位置未连接。请连接后再同步。"
 
 #: crates/ui-gtk/src/tools/sync_export.rs:456
 #, rust-format
-msgid ""
-"{} file Helikodu did not put there stands in the way and is left alone."
+msgid "{} file Helikodu did not put there stands in the way and is left alone."
 msgid_plural ""
 "{} files Helikodu did not put there stand in the way and are left alone."
 msgstr[0] "有 {} 个不是由 Helikodu 放置的文件占用了所需位置，将保持原样。"
@@ -11887,7 +11932,7 @@ msgid "Another conversion or sync is running. Stop it first."
 msgstr "另一个转换或同步任务正在运行。请先停止它。"
 
 #: crates/ui-gtk/src/backend/service/export.rs:99
-#: crates/ui-gtk/src/backend/service/generators.rs:480
+#: crates/ui-gtk/src/backend/service/generators.rs:499
 msgid "The album is gone."
 msgstr "该专辑已不存在。"
 
@@ -11921,7 +11966,8 @@ msgid ""
 "ratings and play counts changed since then are lost. The library as it is "
 "now is kept in the backups folder. Helikodu starts again to do it."
 msgstr ""
-"音乐库将恢复到创建备份时的状态：此后更改的播放列表、评分和播放次数将会丢失。当前的音乐库会保存在备份文件夹中。Helikodu 将重新启动以完成恢复。"
+"音乐库将恢复到创建备份时的状态：此后更改的播放列表、评分和播放次数将会丢失。"
+"当前的音乐库会保存在备份文件夹中。Helikodu 将重新启动以完成恢复。"
 
 #: crates/ui-gtk/src/dialogs/maintenance.rs:153
 msgid "Backup"
@@ -11939,7 +11985,9 @@ msgstr "Helikodu 意外停止运行"
 msgid ""
 "A report was saved on this computer. Nothing was sent anywhere. To report "
 "the problem, copy the report and add it to a bug report."
-msgstr "已在这台电脑上保存了一份报告，没有发送到任何地方。如需报告此问题，请复制该报告并将其附加到错误报告中。"
+msgstr ""
+"已在这台电脑上保存了一份报告，没有发送到任何地方。如需报告此问题，请复制该报"
+"告并将其附加到错误报告中。"
 
 #: crates/ui-gtk/src/dialogs/maintenance.rs:220
 msgid "Report"
@@ -11951,8 +11999,7 @@ msgstr "报告已复制到剪贴板。"
 
 #: crates/ui-gtk/src/dialogs/maintenance.rs:283
 msgid ""
-"Helikodu stopped unexpectedly last time. A report was saved on this "
-"computer."
+"Helikodu stopped unexpectedly last time. A report was saved on this computer."
 msgstr "Helikodu 上次意外停止运行。已在这台电脑上保存了一份报告。"
 
 #: crates/ui-gtk/src/dialogs/maintenance.rs:316
@@ -12068,8 +12115,7 @@ msgstr "Helikodu 数据"
 msgid "Another player"
 msgstr "其他播放器"
 
-#: crates/ui-gtk/src/tools/import.rs:241
-#: crates/ui-gtk/src/tools/import.rs:1029
+#: crates/ui-gtk/src/tools/import.rs:241 crates/ui-gtk/src/tools/import.rs:1029
 msgid "A Helikodu data file"
 msgstr "Helikodu 数据文件"
 
@@ -12112,8 +12158,7 @@ msgstr "{} 资料库"
 msgid "Choose a Helikodu data file"
 msgstr "选择 Helikodu 数据文件"
 
-#: crates/ui-gtk/src/tools/import.rs:369
-#: crates/ui-gtk/src/tools/import.rs:1429
+#: crates/ui-gtk/src/tools/import.rs:369 crates/ui-gtk/src/tools/import.rs:1429
 msgid "Helikodu data file"
 msgstr "Helikodu 数据文件"
 
@@ -12171,8 +12216,7 @@ msgid "The {} entry was not found by its path."
 msgid_plural "None of the {} entries were found by their path."
 msgstr[0] "{} 个条目均未能按路径找到。"
 
-#: crates/ui-gtk/src/tools/import.rs:596
-#: crates/ui-gtk/src/tools/import.rs:1124
+#: crates/ui-gtk/src/tools/import.rs:596 crates/ui-gtk/src/tools/import.rs:1124
 msgid "What changes"
 msgstr "将要更改的内容"
 
@@ -12206,7 +12250,8 @@ msgstr "次数取两者中较大的值，因此将此文件导入两次不会有
 msgid ""
 "Plays are added to yours. Importing this file again later adds only the "
 "plays made since."
-msgstr "播放次数会累加到您的次数上。以后再次导入此文件时，只会添加此后产生的播放。"
+msgstr ""
+"播放次数会累加到您的次数上。以后再次导入此文件时，只会添加此后产生的播放。"
 
 #: crates/ui-gtk/src/tools/import.rs:661
 msgid "Nothing"
@@ -12264,7 +12309,8 @@ msgid ""
 msgid_plural ""
 "The plays, skips, history and places in playlists of {} missing tracks were "
 "moved to their new files."
-msgstr[0] "{} 首缺失曲目的播放次数、跳过次数、历史记录和在播放列表中的位置已移到新文件。"
+msgstr[0] ""
+"{} 首缺失曲目的播放次数、跳过次数、历史记录和在播放列表中的位置已移到新文件。"
 
 #: crates/ui-gtk/src/tools/import.rs:789
 #, rust-format
@@ -12287,7 +12333,8 @@ msgstr "撤销会将播放次数、历史记录和在播放列表中的位置移
 msgid ""
 "Undo takes back what this import added. Plays made since stay, and its "
 "playlists are deleted."
-msgstr "撤销会收回此次导入添加的内容。此后产生的播放会保留，导入的播放列表会被删除。"
+msgstr ""
+"撤销会收回此次导入添加的内容。此后产生的播放会保留，导入的播放列表会被删除。"
 
 #: crates/ui-gtk/src/tools/import.rs:933
 #, rust-format
@@ -12333,7 +12380,9 @@ msgstr "适用于音乐曾位于其他文件夹，或位于 Windows 或 Mac 上�
 msgid ""
 "If the music was in another folder there, tell Helikodu where it is now. "
 "Until then entries are matched by their tags only."
-msgstr "如果音乐在那里位于其他文件夹，请告诉 Helikodu 它现在的位置。在此之前，条目仅按标签匹配。"
+msgstr ""
+"如果音乐在那里位于其他文件夹，请告诉 Helikodu 它现在的位置。在此之前，条目仅"
+"按标签匹配。"
 
 #: crates/ui-gtk/src/tools/import.rs:1096
 msgid "Add a folder that moved…"
@@ -12382,7 +12431,8 @@ msgstr "现位置"
 msgid ""
 "Everything under the old folder is looked for under the new one. Windows "
 "paths match without regard to capitals."
-msgstr "旧文件夹下的所有内容都会在新文件夹下查找。Windows 路径匹配时不区分大小写。"
+msgstr ""
+"旧文件夹下的所有内容都会在新文件夹下查找。Windows 路径匹配时不区分大小写。"
 
 #: crates/ui-gtk/src/tools/import_moved.rs:148
 msgid "Where the music is now"
@@ -12670,7 +12720,9 @@ msgstr "已替换的曲目"
 msgid ""
 "Plays, skips, history and places in playlists move to the new file, and the "
 "counts add up. The new file keeps its own rating if it has one."
-msgstr "播放次数、跳过次数、历史记录和在播放列表中的位置会移到新文件，次数会累加。如果新文件有自己的评分，则保留该评分。"
+msgstr ""
+"播放次数、跳过次数、历史记录和在播放列表中的位置会移到新文件，次数会累加。如"
+"果新文件有自己的评分，则保留该评分。"
 
 #: crates/ui-gtk/src/tools/replaced.rs:588
 msgid "Carry"
@@ -12786,19 +12838,21 @@ msgstr "字段保存在音乐库中，并立即生效。"
 #: crates/ui-gtk/src/tools/user_fields.rs:800
 #, rust-format
 msgid ""
-"Write {} in names, or {} in searches. A search works the field out for every"
-" track first, which takes longer on a very large library."
-msgstr "在名称中写 {}，在搜索中写 {}。搜索会先为每首曲目算出该字段，因此在非常大的音乐库中耗时较长。"
+"Write {} in names, or {} in searches. A search works the field out for every "
+"track first, which takes longer on a very large library."
+msgstr ""
+"在名称中写 {}，在搜索中写 {}。搜索会先为每首曲目算出该字段，因此在非常大的音"
+"乐库中耗时较长。"
 
 #: crates/ui-gtk/src/tools/user_fields.rs:812
 #, rust-format
 msgid ""
-"As in Vorbis comments, for example MOOD. {} in MP3 and {} in MP4 are read as"
-" the same tag. The tag editor writes this tag like any other field. Write {}"
-" in names, or {} in searches."
+"As in Vorbis comments, for example MOOD. {} in MP3 and {} in MP4 are read as "
+"the same tag. The tag editor writes this tag like any other field. Write {} "
+"in names, or {} in searches."
 msgstr ""
-"与 Vorbis 注释相同，例如 MOOD。MP3 中的 {} 和 MP4 中的 {} "
-"会被读取为同一个标签。标签编辑器会像其他字段一样写入此标签。在名称中写 {}，在搜索中写 {}。"
+"与 Vorbis 注释相同，例如 MOOD。MP3 中的 {} 和 MP4 中的 {} 会被读取为同一个标"
+"签。标签编辑器会像其他字段一样写入此标签。在名称中写 {}，在搜索中写 {}。"
 
 #: crates/ui-gtk/src/tools/user_fields.rs:927
 msgid "Save the new field?"
@@ -12828,8 +12882,7 @@ msgstr "移除字段 {}？"
 
 #: crates/ui-gtk/src/tools/user_fields.rs:1006
 msgid ""
-"Searches, smart playlists and naming patterns that name it no longer find "
-"it."
+"Searches, smart playlists and naming patterns that name it no longer find it."
 msgstr "引用它的搜索、智能播放列表和命名模式将再也找不到它。"
 
 #: crates/ui-gtk/src/tools/user_fields.rs:1061
@@ -12841,7 +12894,8 @@ msgstr "无值"
 msgid ""
 "A name has the letters a to z and _, starts with a letter, and is not a "
 "field, a function or a word of searches."
-msgstr "名称只能包含字母 a 到 z 和 _，必须以字母开头，且不能是字段、函数或搜索用词。"
+msgstr ""
+"名称只能包含字母 a 到 z 和 _，必须以字母开头，且不能是字段、函数或搜索用词。"
 
 #: crates/ui-gtk/src/tools/user_fields/draft.rs:233
 #, rust-format
@@ -13153,12 +13207,14 @@ msgstr "淡出"
 msgid ""
 "Not analysed yet. Helikodu analyses tracks in the background; until then a "
 "crossfade uses its fixed length and no silence is left out of this track."
-msgstr "尚未分析。Helikodu 会在后台分析曲目；在此之前，交叉淡化使用固定时长，且不会省略此曲目中的静音。"
+msgstr ""
+"尚未分析。Helikodu 会在后台分析曲目；在此之前，交叉淡化使用固定时长，且不会省"
+"略此曲目中的静音。"
 
 #: crates/ui-gtk/src/dialogs/analysis_band.rs:227
 msgid ""
-"This file could not be read for analysis. Helikodu tries again when the file"
-" changes."
+"This file could not be read for analysis. Helikodu tries again when the file "
+"changes."
 msgstr "无法读取此文件进行分析。文件发生更改时，Helikodu 会重试。"
 
 #: crates/ui-gtk/src/views/tracks/grouping.rs:50
@@ -13216,6 +13272,11 @@ msgstr "表达式…"
 msgid "Press Enter to group the tracks by what the expression gives."
 msgstr "按 Enter 键，按表达式的结果对曲目分组。"
 
+#: crates/ui-gtk/src/window/convolution_notice.rs:86
+#, rust-format
+msgid "The impulse response for {} cannot be read"
+msgstr "无法读取 {} 的脉冲响应"
+
 #: crates/ui-gtk/src/window/import_offer.rs:43
 #, rust-format
 msgid "{}’s plays and ratings can be brought over"
@@ -13261,7 +13322,9 @@ msgid ""
 "A label is a word of your own, such as “late night” or “to sort”, that you "
 "give to tracks, albums and artists. Labels are kept in the library, not in "
 "the files."
-msgstr "标签是您自己定的词，例如“深夜”或“待整理”，可以添加到曲目、专辑和艺术家上。标签保存在音乐库中，而不是文件中。"
+msgstr ""
+"标签是您自己定的词，例如“深夜”或“待整理”，可以添加到曲目、专辑和艺术家上。标"
+"签保存在音乐库中，而不是文件中。"
 
 #: crates/ui-gtk/src/views/labels.rs:328
 #, rust-format
@@ -13454,186 +13517,185 @@ msgstr "没有这位艺术家。"
 msgid "A label cannot be merged into itself."
 msgstr "标签不能合并到自身。"
 
-#: crates/ui-gtk/src/views/generator.rs:121
-#: crates/ui-gtk/src/views/generator.rs:123
+#: crates/ui-gtk/src/views/generator.rs:124
+#: crates/ui-gtk/src/views/generator.rs:126
 msgid "Make again"
 msgstr "重新生成"
 
-#: crates/ui-gtk/src/views/generator.rs:170
+#: crates/ui-gtk/src/views/generator.rs:173
 msgid "Generator playlist"
 msgstr "生成式播放列表"
 
-#: crates/ui-gtk/src/views/generator.rs:185
-#: crates/ui-gtk/src/views/generator.rs:233
-#: crates/ui-gtk/src/views/generator.rs:664
-#: crates/ui-gtk/src/views/generator.rs:870
+#: crates/ui-gtk/src/views/generator.rs:188
+#: crates/ui-gtk/src/views/generator.rs:236
+#: crates/ui-gtk/src/views/generator.rs:675
+#: crates/ui-gtk/src/views/generator.rs:881
 msgid "Edit steps"
 msgstr "编辑步骤"
 
-#: crates/ui-gtk/src/views/generator.rs:214
+#: crates/ui-gtk/src/views/generator.rs:217
 msgid "Steps"
 msgstr "步骤"
 
-#: crates/ui-gtk/src/views/generator.rs:218
+#: crates/ui-gtk/src/views/generator.rs:221
 msgid "Tracks of the generator playlist"
 msgstr "生成式播放列表的曲目"
 
-#: crates/ui-gtk/src/views/generator.rs:230
+#: crates/ui-gtk/src/views/generator.rs:233
 msgid "The steps leave no tracks."
 msgstr "经过这些步骤后没有剩余曲目。"
 
-#: crates/ui-gtk/src/views/generator.rs:248
-msgid ""
-"The steps set the order. To reorder by hand, save a copy as a playlist."
+#: crates/ui-gtk/src/views/generator.rs:251
+msgid "The steps set the order. To reorder by hand, save a copy as a playlist."
 msgstr "顺序由步骤决定。如需手动排序，请将副本另存为播放列表。"
 
-#: crates/ui-gtk/src/views/generator.rs:264
+#: crates/ui-gtk/src/views/generator.rs:267
 msgid "Each step works on the tracks the step before it left."
 msgstr "每个步骤都处理上一步骤留下的曲目。"
 
-#: crates/ui-gtk/src/views/generator.rs:274
+#: crates/ui-gtk/src/views/generator.rs:277
 msgid "Make again when opened"
 msgstr "打开时重新生成"
 
-#: crates/ui-gtk/src/views/generator.rs:276
+#: crates/ui-gtk/src/views/generator.rs:279
 msgid "Off: the tracks stay as they are until you choose Make again."
 msgstr "关闭时：在您选择“重新生成”之前，曲目保持不变。"
 
-#: crates/ui-gtk/src/views/generator.rs:303
+#: crates/ui-gtk/src/views/generator.rs:306
 msgid "Tracks the steps leave"
 msgstr "经过步骤后剩余的曲目"
 
-#: crates/ui-gtk/src/views/generator.rs:616
+#: crates/ui-gtk/src/views/generator.rs:627
 msgid "Making it again…"
 msgstr "正在重新生成…"
 
-#: crates/ui-gtk/src/views/generator.rs:624
+#: crates/ui-gtk/src/views/generator.rs:635
 msgid "could not be made again"
 msgstr "无法重新生成"
 
-#: crates/ui-gtk/src/views/generator.rs:710
+#: crates/ui-gtk/src/views/generator.rs:721
 msgid "made again each time it is opened"
 msgstr "每次打开时重新生成"
 
-#: crates/ui-gtk/src/views/generator.rs:712
+#: crates/ui-gtk/src/views/generator.rs:723
 msgid "kept until you choose Make again"
 msgstr "保留到您选择“重新生成”为止"
 
-#: crates/ui-gtk/src/views/generator.rs:816
+#: crates/ui-gtk/src/views/generator.rs:827
 #, rust-format
 msgid "“{}” was made again: {} track"
 msgid_plural "“{}” was made again: {} tracks"
 msgstr[0] "已重新生成“{}”：{} 首曲目"
 
-#: crates/ui-gtk/src/views/generator.rs:967
+#: crates/ui-gtk/src/views/generator.rs:978
 msgid "Making…"
 msgstr "正在生成…"
 
-#: crates/ui-gtk/src/views/generator.rs:1035
+#: crates/ui-gtk/src/views/generator.rs:1046
 msgid "As the steps are now"
 msgstr "按当前步骤"
 
-#: crates/ui-gtk/src/views/generator.rs:1049
+#: crates/ui-gtk/src/views/generator.rs:1060
 msgid "Choose a playlist"
 msgstr "选择播放列表"
 
-#: crates/ui-gtk/src/views/generator.rs:1091
+#: crates/ui-gtk/src/views/generator.rs:1103
 msgid "Add step"
 msgstr "添加步骤"
 
-#: crates/ui-gtk/src/views/generator.rs:1124
+#: crates/ui-gtk/src/views/generator.rs:1136
 #, rust-format
 msgid "The playlist “{}” no longer exists"
 msgstr "播放列表“{}”已不存在"
 
-#: crates/ui-gtk/src/views/generator.rs:1126
+#: crates/ui-gtk/src/views/generator.rs:1138
 msgid ""
 "Choose another playlist or remove this step. Until then the tracks stay as "
 "they were."
 msgstr "请选择其他播放列表或移除此步骤。在此之前，曲目保持原样。"
 
-#: crates/ui-gtk/src/views/generator.rs:1131
+#: crates/ui-gtk/src/views/generator.rs:1143
 #, rust-format
 msgid "For example: {}"
 msgstr "例如：{}"
 
-#: crates/ui-gtk/src/views/generator.rs:1135
+#: crates/ui-gtk/src/views/generator.rs:1147
 msgid "Until then the tracks stay as they were."
 msgstr "在此之前，曲目保持原样。"
 
-#: crates/ui-gtk/src/views/generator.rs:1163
+#: crates/ui-gtk/src/views/generator.rs:1175
 msgid "Drag to move the step"
 msgstr "拖动以移动步骤"
 
-#: crates/ui-gtk/src/views/generator.rs:1190
+#: crates/ui-gtk/src/views/generator.rs:1202
 #, rust-format
 msgid "{} track left"
 msgid_plural "{} tracks left"
 msgstr[0] "剩余 {} 首曲目"
 
-#: crates/ui-gtk/src/views/generator.rs:1224
-#: crates/ui-gtk/src/views/generator.rs:1364
+#: crates/ui-gtk/src/views/generator.rs:1236
+#: crates/ui-gtk/src/views/generator.rs:1403
 msgid "Kind of step"
 msgstr "步骤类型"
 
-#: crates/ui-gtk/src/views/generator.rs:1232
+#: crates/ui-gtk/src/views/generator.rs:1244
 msgid "The library"
 msgstr "音乐库"
 
-#: crates/ui-gtk/src/views/generator.rs:1232
+#: crates/ui-gtk/src/views/generator.rs:1244
 msgid "A playlist"
 msgstr "播放列表"
 
-#: crates/ui-gtk/src/views/generator.rs:1232
+#: crates/ui-gtk/src/views/generator.rs:1244
 msgid "A search"
 msgstr "搜索"
 
-#: crates/ui-gtk/src/views/generator.rs:1307
+#: crates/ui-gtk/src/views/generator.rs:1319
 msgid "Query"
 msgstr "查询"
 
 #. Translators: in the Exclude step of a generator playlist,
 #. before the dropdown of playlists.
-#: crates/ui-gtk/src/views/generator.rs:1392
+#: crates/ui-gtk/src/views/generator.rs:1431
 msgid "the tracks of"
 msgstr "以下播放列表中的曲目："
 
-#: crates/ui-gtk/src/views/generator.rs:1401
+#: crates/ui-gtk/src/views/generator.rs:1440
 #: crates/ui-gtk/src/views/generator_steps.rs:44
 msgid "Sort by"
 msgstr "排序方式"
 
-#: crates/ui-gtk/src/views/generator.rs:1419
+#: crates/ui-gtk/src/views/generator.rs:1458
 msgid "Direction"
 msgstr "方向"
 
-#: crates/ui-gtk/src/views/generator.rs:1452
+#: crates/ui-gtk/src/views/generator.rs:1491
 #: crates/ui-gtk/src/views/generator_steps.rs:45
 msgid "At most"
 msgstr "最多"
 
 #. Translators: "At most [2] per [artist]" in a generator step.
-#: crates/ui-gtk/src/views/generator.rs:1457
+#: crates/ui-gtk/src/views/generator.rs:1496
 msgid "per"
 msgstr "首，每"
 
-#: crates/ui-gtk/src/views/generator.rs:1458
+#: crates/ui-gtk/src/views/generator.rs:1497
 msgid "artist"
 msgstr "艺术家"
 
-#: crates/ui-gtk/src/views/generator.rs:1458
+#: crates/ui-gtk/src/views/generator.rs:1497
 msgid "album"
 msgstr "专辑"
 
-#: crates/ui-gtk/src/views/generator.rs:1459
+#: crates/ui-gtk/src/views/generator.rs:1498
 msgid "Per"
 msgstr "每"
 
-#: crates/ui-gtk/src/views/generator.rs:1495
+#: crates/ui-gtk/src/views/generator.rs:1534
 msgid "Unit"
 msgstr "单位"
 
-#: crates/ui-gtk/src/views/generator.rs:1514
+#: crates/ui-gtk/src/views/generator.rs:1553
 #, rust-format
 msgid "Step {}"
 msgstr "第 {} 步"
@@ -13823,7 +13885,6 @@ msgstr[0] "{} 天前生成"
 msgid "made {}"
 msgstr "生成于 {}"
 
-#. / "As made 2 days ago": the results pane's note on the last result.
 #. Translators: {} is "made 2 days ago" or "made 9 Nov 2026".
 #: crates/ui-gtk/src/views/generator_steps.rs:371
 #, rust-format
@@ -13843,8 +13904,7 @@ msgid "This track could not be analysed"
 msgstr "无法分析此曲目"
 
 #: crates/ui-gtk/src/views/similar.rs:69
-msgid ""
-"Its file could not be read. Helikodu tries again when the file changes."
+msgid "Its file could not be read. Helikodu tries again when the file changes."
 msgstr "无法读取其文件。文件更改后，Helikodu 会再次尝试。"
 
 #: crates/ui-gtk/src/views/similar.rs:72
@@ -13856,7 +13916,9 @@ msgid ""
 "Helikodu notes how tracks sound as part of the track analysis. Turn it on "
 "under Settings › Library, and the list appears here once this track is "
 "analysed."
-msgstr "Helikodu 在曲目分析过程中记录曲目的听感。在“设置 › 音乐库”中开启后，此曲目分析完成时，列表就会显示在这里。"
+msgstr ""
+"Helikodu 在曲目分析过程中记录曲目的听感。在“设置 › 音乐库”中开启后，此曲目分"
+"析完成时，列表就会显示在这里。"
 
 #: crates/ui-gtk/src/views/similar.rs:78
 msgid "Too few tracks are analysed so far"
@@ -13868,9 +13930,11 @@ msgid ""
 "Helikodu can compare this track with the {} track it has analysed, which is "
 "too few for a useful list. The list appears here once more are done."
 msgid_plural ""
-"Helikodu can compare this track with the {} tracks it has analysed, which is"
-" too few for a useful list. The list appears here once more are done."
-msgstr[0] "Helikodu 可以将此曲目与其已分析的 {} 首曲目进行比较，但数量太少，无法生成有用的列表。分析更多曲目后，列表会显示在这里。"
+"Helikodu can compare this track with the {} tracks it has analysed, which is "
+"too few for a useful list. The list appears here once more are done."
+msgstr[0] ""
+"Helikodu 可以将此曲目与其已分析的 {} 首曲目进行比较，但数量太少，无法生成有用"
+"的列表。分析更多曲目后，列表会显示在这里。"
 
 #: crates/ui-gtk/src/views/similar.rs:89
 msgid "These tracks have not been analysed yet"
@@ -13881,7 +13945,9 @@ msgid ""
 "Helikodu notes how each track sounds while it analyses the library in the "
 "background. The list appears here by itself once the analysis has reached "
 "these tracks."
-msgstr "Helikodu 在后台分析音乐库时记录每首曲目的听感。分析进行到这些曲目时，列表会自动显示在这里。"
+msgstr ""
+"Helikodu 在后台分析音乐库时记录每首曲目的听感。分析进行到这些曲目时，列表会自"
+"动显示在这里。"
 
 #: crates/ui-gtk/src/views/similar.rs:95
 msgid "This track has not been analysed yet"
@@ -13892,7 +13958,9 @@ msgid ""
 "Helikodu notes how each track sounds while it analyses the library in the "
 "background. The list appears here by itself once the analysis has reached "
 "this track."
-msgstr "Helikodu 在后台分析音乐库时记录每首曲目的听感。分析进行到此曲目时，列表会自动显示在这里。"
+msgstr ""
+"Helikodu 在后台分析音乐库时记录每首曲目的听感。分析进行到此曲目时，列表会自动"
+"显示在这里。"
 
 #: crates/ui-gtk/src/views/similar.rs:168
 msgid "Sounds like"
@@ -13907,7 +13975,9 @@ msgid ""
 "Compared by sound alone: how bright each track is, how noisy or tonal, how "
 "busy its rhythm and how much its loudness varies. Tags are not used, so the "
 "list can cross genres. Take it as a guide."
-msgstr "仅按声音比较：每首曲目有多明亮、偏噪声还是偏音调、节奏有多密集，以及响度变化有多大。不使用标签，因此列表可能跨越流派。仅供参考。"
+msgstr ""
+"仅按声音比较：每首曲目有多明亮、偏噪声还是偏音调、节奏有多密集，以及响度变化"
+"有多大。不使用标签，因此列表可能跨越流派。仅供参考。"
 
 #: crates/ui-gtk/src/views/similar.rs:201
 msgid "Tracks that sound alike"
@@ -13923,49 +13993,49 @@ msgid "Show {} more"
 msgstr "再显示 {} 首"
 
 #: crates/ui-gtk/src/views/similar.rs:265
-#: crates/ui-gtk/src/views/similar.rs:615
+#: crates/ui-gtk/src/views/similar.rs:618
 msgid "Open the analysis settings"
 msgstr "打开分析设置"
 
-#: crates/ui-gtk/src/views/similar.rs:353
+#: crates/ui-gtk/src/views/similar.rs:356
 #, rust-format
 msgid "{}, {} of 100"
 msgstr "{}，{}/100"
 
-#: crates/ui-gtk/src/views/similar.rs:466
+#: crates/ui-gtk/src/views/similar.rs:469
 #, rust-format
 msgid "Album by {}"
 msgstr "{} 的专辑"
 
-#: crates/ui-gtk/src/views/similar.rs:542
+#: crates/ui-gtk/src/views/similar.rs:545
 #, rust-format
 msgid "The {} closest track"
 msgid_plural "The {} closest tracks"
 msgstr[0] "最接近的 {} 首曲目"
 
-#: crates/ui-gtk/src/views/similar.rs:548
+#: crates/ui-gtk/src/views/similar.rs:551
 #, rust-format
 msgid "All {} track that sounds alike"
 msgid_plural "All {} tracks that sound alike"
 msgstr[0] "全部 {} 首听感相似的曲目"
 
-#: crates/ui-gtk/src/views/similar.rs:576
+#: crates/ui-gtk/src/views/similar.rs:579
 #, rust-format
 msgid "the {} track that sounds most like its tracks"
 msgid_plural "the {} tracks that sound most like its tracks"
 msgstr[0] "与其曲目听感最接近的 {} 首曲目"
 
-#: crates/ui-gtk/src/views/similar.rs:585
+#: crates/ui-gtk/src/views/similar.rs:588
 #, rust-format
 msgid "the {} track that sounds most like it"
 msgid_plural "the {} tracks that sound most like it"
 msgstr[0] "听感最接近的 {} 首曲目"
 
-#: crates/ui-gtk/src/views/similar.rs:613
+#: crates/ui-gtk/src/views/similar.rs:616
 msgid "Turn it on in Settings…"
 msgstr "在设置中开启…"
 
-#: crates/ui-gtk/src/views/similar.rs:677
+#: crates/ui-gtk/src/views/similar.rs:680
 #, rust-format
 msgid "Sounds like {}"
 msgstr "听感与 {} 相似"
@@ -13983,7 +14053,9 @@ msgstr "听感与 {} 相似"
 #~ msgid ""
 #~ "Finds the silence and the loudness of each track once, for crossfades, "
 #~ "silence and the leveller. Nothing is written to the files."
-#~ msgstr "为每首曲目查找一次静音和响度，用于交叉淡化、静音处理和电平调节器。不会向文件写入任何内容。"
+#~ msgstr ""
+#~ "为每首曲目查找一次静音和响度，用于交叉淡化、静音处理和电平调节器。不会向文"
+#~ "件写入任何内容。"
 
 #~ msgid "Stop after"
 #~ msgstr "播完后停止"
@@ -14192,7 +14264,8 @@ msgstr "听感与 {} 相似"
 
 #, rust-format
 #~ msgid ""
-#~ "{} of {} file names fit the pattern · values in grey are already in the tags"
+#~ "{} of {} file names fit the pattern · values in grey are already in the "
+#~ "tags"
 #~ msgstr "{} 个文件名（共 {} 个）符合模式 · 灰色的值已存在于标签中"
 
 #, rust-format
